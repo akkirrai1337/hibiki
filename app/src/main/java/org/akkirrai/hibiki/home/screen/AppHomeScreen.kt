@@ -20,8 +20,6 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.unit.Dp
 import org.akkirrai.hibiki.platform.AppSystemBackHandler
 import androidx.compose.ui.unit.dp
-import org.akkirrai.hibiki.catalog.filters.AppCatalogFilterSheet
-import org.akkirrai.hibiki.catalog.filters.defaultCatalogFilterYearRange
 import org.akkirrai.hibiki.library.LibraryCategory
 import org.akkirrai.hibiki.catalog.model.Anime
 import org.akkirrai.hibiki.search.model.AnimeSearchFilters

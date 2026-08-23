@@ -56,7 +56,6 @@ import org.akkirrai.hibiki.player.AppPlayerPlaylistButton
 import org.akkirrai.hibiki.player.AppPlayerTopOverlay
 import org.akkirrai.hibiki.player.AppPlayerBottomOverlay
 import org.akkirrai.hibiki.player.AppPlayerActionControls
-import org.akkirrai.hibiki.player.AppPlayerPanelOverlays
 import org.akkirrai.hibiki.player.dispatchAdjacentPlayerEpisodeSelection
 import org.akkirrai.hibiki.player.dispatchPlayerEpisodeSelection
 import org.akkirrai.hibiki.player.dispatchPlayerClose

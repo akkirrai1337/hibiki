@@ -27,16 +27,11 @@ import kotlinx.datetime.toLocalDateTime
 import org.akkirrai.beakokit.api.AnimeKey
 import org.akkirrai.hibiki.design.UiDimens
 import org.akkirrai.hibiki.design.component.source.AppSourceBadge
-import org.akkirrai.hibiki.library.LibraryCategory
-import org.akkirrai.hibiki.library.LibraryEntry
 import org.akkirrai.hibiki.library.state.LibraryUiState
 import org.akkirrai.hibiki.library.state.buildLibraryFilterCatalog
-import org.akkirrai.hibiki.library.ui.isRussianLibraryLanguage
 import org.akkirrai.hibiki.library.state.toAnimeSearchFilters
 import org.akkirrai.hibiki.library.state.toLibrarySearchFilters
 import org.akkirrai.hibiki.catalog.model.Anime
-import org.akkirrai.hibiki.catalog.filters.AppCatalogFilterSheet
-import org.akkirrai.hibiki.catalog.filters.defaultCatalogFilterYearRange
 import org.akkirrai.hibiki.core.source.AppSourceDescriptor
 import org.akkirrai.hibiki.core.source.AppSourceIconImage
 import org.akkirrai.hibiki.app.settings.LanguageMode

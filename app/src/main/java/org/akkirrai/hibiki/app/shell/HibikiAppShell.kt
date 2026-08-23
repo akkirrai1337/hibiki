@@ -33,7 +33,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.Job
-import org.akkirrai.hibiki.app.shell.layout.AppProductionRoot
 import org.akkirrai.hibiki.app.shell.navigation.*
 import org.akkirrai.hibiki.app.shell.settings.*
 import org.akkirrai.hibiki.app.destination.profile.*
@@ -50,7 +49,6 @@ import org.akkirrai.hibiki.app.shell.runtime.*
 import org.akkirrai.hibiki.app.destination.library.*
 import org.akkirrai.hibiki.app.shell.overlay.*
 import org.akkirrai.hibiki.app.shell.source.*
-import org.akkirrai.hibiki.app.shell.overlay.HibikiAppShellOverlayLayer
 import org.akkirrai.hibiki.catalog.AnimeCatalogRepository
 import org.akkirrai.hibiki.catalog.presentation.AnimeCatalogPresenter
 import org.akkirrai.hibiki.catalog.presentation.SourcesSearchPresenter

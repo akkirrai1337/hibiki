@@ -5,8 +5,6 @@ import org.akkirrai.hibiki.catalog.sort.*
 import org.akkirrai.hibiki.catalog.state.*
 import org.akkirrai.hibiki.catalog.presentation.AnimeCatalogUiState
 
-import org.akkirrai.hibiki.catalog.filters.*
-
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Box
