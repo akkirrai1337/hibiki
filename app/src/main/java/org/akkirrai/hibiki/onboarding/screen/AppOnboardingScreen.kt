@@ -19,7 +19,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.app.settings.NotificationPermissionState
-import org.akkirrai.hibiki.platform.AppSystemBackHandler
+import androidx.activity.compose.BackHandler
 import org.akkirrai.hibiki.core.source.AppSourceDescriptor
 import org.akkirrai.hibiki.core.source.AppSourceIconImage
 import org.akkirrai.hibiki.text.AppTextKey
@@ -64,10 +64,11 @@ fun AppOnboardingScreen(
         }
     }
 
-    AppSystemBackHandler(
+    BackHandler(
         enabled = onboardingBackEnabled(step),
         onBack = { step.previous()?.let { stepName = it.name } },
-    ) {
+    )
+    run {
         Surface(
             modifier = modifier.fillMaxSize(),
             color = MaterialTheme.colorScheme.background,

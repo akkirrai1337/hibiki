@@ -12,7 +12,7 @@ import org.akkirrai.hibiki.library.LibraryCategory
 import org.akkirrai.hibiki.library.LibraryRepository
 import org.akkirrai.hibiki.catalog.model.Anime
 import org.akkirrai.hibiki.player.model.TitleWatchState
-import org.akkirrai.hibiki.platform.AppSystemBackHandler
+import androidx.activity.compose.BackHandler
 import org.akkirrai.hibiki.core.source.AppSourceDescriptor
 
 internal data class DetailsRouteState(
@@ -72,7 +72,7 @@ internal fun DetailsRoute(
             },
         ),
         backHandler = { onBack ->
-            AppSystemBackHandler(enabled = true, onBack = onBack) {}
+            BackHandler(enabled = true, onBack = onBack)
         },
         canWatch = canWatch,
         resumeState = state.detailsResumeState,

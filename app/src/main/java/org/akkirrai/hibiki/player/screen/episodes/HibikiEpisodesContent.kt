@@ -33,7 +33,6 @@ import org.akkirrai.hibiki.player.buildEpisodeRowHeadline
 import org.akkirrai.hibiki.player.resolveEpisodeProgressStatus
 import org.akkirrai.hibiki.player.toEpisodeDownloadActionState
 import org.akkirrai.hibiki.details.model.rememberNextEpisodeEta
-import org.akkirrai.hibiki.platform.currentEpochSeconds
 import org.akkirrai.hibiki.profile.LocalProfileData
 import org.akkirrai.hibiki.text.AppTextKey
 import org.akkirrai.hibiki.text.appText
@@ -87,7 +86,7 @@ internal fun HibikiEpisodesContent(
     }
     val nextEpisodeEta = rememberNextEpisodeEta(
         nextEpisodeAt = anime.nextEpisodeAt,
-        nowEpochSeconds = ::currentEpochSeconds,
+        nowEpochSeconds = { System.currentTimeMillis() / 1_000L },
         daysHoursLabel = { days, hours -> appText(AppTextKey.NextEpisodeEtaDaysHours).formatAppText(days, hours) },
         hoursMinutesSecondsLabel = { hours, minutes, seconds ->
             appText(AppTextKey.NextEpisodeEtaHoursMinutesSeconds).formatAppText(hours, minutes, seconds)

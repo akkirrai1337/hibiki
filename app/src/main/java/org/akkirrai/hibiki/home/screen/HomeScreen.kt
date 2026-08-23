@@ -18,7 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.unit.Dp
-import org.akkirrai.hibiki.platform.AppSystemBackHandler
+import androidx.activity.compose.BackHandler
 import androidx.compose.ui.unit.dp
 import org.akkirrai.hibiki.library.LibraryCategory
 import org.akkirrai.hibiki.app.libraryText
@@ -61,7 +61,7 @@ fun HomeScreen(
         isImeVisible = isImeVisible || searchFieldFocused,
         isSearchActive = state.isSearchActive,
     )
-    AppSystemBackHandler(
+    BackHandler(
         enabled = searchBackAction != HomeSearchBackAction.None,
         onBack = {
             when (searchBackAction) {
@@ -75,7 +75,8 @@ fun HomeScreen(
                 HomeSearchBackAction.None -> Unit
             }
         },
-    ) {
+    )
+    run {
         var isFilterSheetOpen by remember { mutableStateOf(false) }
         androidx.compose.foundation.layout.Box(modifier = modifier) {
             AppHomeContentSwitcher(

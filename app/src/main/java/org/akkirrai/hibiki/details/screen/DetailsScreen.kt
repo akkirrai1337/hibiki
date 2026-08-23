@@ -67,8 +67,7 @@ import org.akkirrai.hibiki.catalog.model.RelatedAnime
 import org.akkirrai.hibiki.player.model.TitleWatchState
 import org.akkirrai.hibiki.player.formatEpisodeNumber
 import org.akkirrai.hibiki.player.formatPlaybackPosition
-import org.akkirrai.hibiki.platform.currentEpochSeconds
-import org.akkirrai.hibiki.platform.AppSystemBackHandler
+import androidx.activity.compose.BackHandler
 import org.akkirrai.hibiki.app.settings.LocalAppLanguage
 import org.akkirrai.hibiki.app.settings.isEnglishAppLanguage
 import org.akkirrai.hibiki.core.source.resolveEpisodesLabel
@@ -198,7 +197,7 @@ fun DetailsScreen(
     }
     val nextEpisodeEta = rememberNextEpisodeEta(
         nextEpisodeAt = uiModel.anime.nextEpisodeAt,
-        nowEpochSeconds = ::currentEpochSeconds,
+        nowEpochSeconds = { System.currentTimeMillis() / 1_000L },
         daysHoursLabel = { days, hours ->
             appText(AppTextKey.NextEpisodeEtaDaysHours).formatAppText(days, hours)
         },
@@ -231,10 +230,11 @@ fun DetailsScreen(
     } ?: fallbackColorScheme
 
     MaterialTheme(colorScheme = detailsColorScheme) {
-        AppSystemBackHandler(
+        BackHandler(
             enabled = currentOverlay != null,
             onBack = { setOverlay(null) },
-        ) {
+        )
+        run {
             Surface(
                 modifier = modifier.fillMaxSize(),
                 color = MaterialTheme.colorScheme.background,

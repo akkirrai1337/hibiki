@@ -66,7 +66,7 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import org.akkirrai.beakokit.api.SourceId
-import org.akkirrai.hibiki.platform.AppSystemBackHandler
+import androidx.activity.compose.BackHandler
 import org.akkirrai.hibiki.design.component.button.AppSplitActionButton
 import org.akkirrai.hibiki.text.AppTextKey
 import org.akkirrai.hibiki.text.appText
@@ -220,7 +220,7 @@ fun SourcesTabsScreen(
             .collect(actions.onSelectedTabChange)
     }
 
-    AppSystemBackHandler(
+    BackHandler(
         enabled = activeSearchOpen,
         onBack = {
             focusManager.clearFocus()
@@ -234,7 +234,8 @@ fun SourcesTabsScreen(
                 sourcesSearchOpen = false
             }
         },
-    ) {
+    )
+    run {
         Column(modifier = modifier.fillMaxSize()) {
             AppMihonSourcesToolbar(
             title = appText(AppTextKey.Sources),

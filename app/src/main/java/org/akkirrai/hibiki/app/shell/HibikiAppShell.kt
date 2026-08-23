@@ -128,7 +128,7 @@ import org.akkirrai.hibiki.player.model.WatchSource
 import org.akkirrai.hibiki.player.model.WatchEpisode
 import org.akkirrai.hibiki.player.model.PlaybackContext
 import org.akkirrai.hibiki.player.model.PlaybackRoute
-import org.akkirrai.hibiki.platform.AppSystemBackHandler
+import androidx.activity.compose.BackHandler
 
 @Composable
 internal fun HibikiAppShell(
@@ -460,12 +460,13 @@ internal fun HibikiAppShell(
         ) {
             Surface(modifier = modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
                 playbackCallbacks.playerWindowMode(routePresentation.isPlayerRoute)
-                AppSystemBackHandler(
+                BackHandler(
                     enabled = appBackHandlerEnabled(
                         state = navigationState,
                     ),
                     onBack = systemBackCoordinator::handle,
-                ) {
+                )
+                run {
                 Box {
                     val settingsActions = appSettingsState.createActions()
                     val topLevelDestination = routePresentation.topLevelDestination

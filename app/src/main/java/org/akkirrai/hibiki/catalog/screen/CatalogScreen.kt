@@ -35,7 +35,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import org.akkirrai.hibiki.design.UiDimens
-import org.akkirrai.hibiki.platform.AppSystemBackHandler
+import androidx.activity.compose.BackHandler
 import org.akkirrai.hibiki.library.LibraryCategory
 import org.akkirrai.hibiki.app.libraryText
 import org.akkirrai.hibiki.catalog.model.Anime
@@ -119,14 +119,15 @@ fun CatalogScreen(
         }
     }
 
-    AppSystemBackHandler(
+    BackHandler(
         enabled = searchFieldFocused,
         onBack = {
             focusManager.clearFocus()
             keyboardController?.hide()
             searchFieldFocused = false
         },
-    ) {
+    )
+    run {
         Box(modifier = modifier) {
         PullToRefreshBox(
             isRefreshing = isPullRefreshing && state.isLoading && !state.isLoadingMore,
