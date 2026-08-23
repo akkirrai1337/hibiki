@@ -13,6 +13,8 @@ import org.akkirrai.hibiki.library.LibraryRepository
 import org.akkirrai.hibiki.app.navigation.AppDestination
 import org.akkirrai.hibiki.profile.LocalProfileDataRepository
 import org.akkirrai.hibiki.app.settings.LanguageMode
+import org.akkirrai.hibiki.app.settings.SettingsScreenActions
+import org.akkirrai.hibiki.app.settings.SettingsScreenState
 
 /** Complete shared input contract for rendering one destination route. */
 internal class AppDestinationContentInput(
@@ -45,8 +47,8 @@ internal data class LibraryContentInput(
 )
 
 internal data class SettingsContentInput(
-    val actions: AppDestinationSettingsActions,
-    val state: AppDestinationSettingsState,
+    val actions: SettingsScreenActions,
+    val state: SettingsScreenState,
     val listsState: AppDestinationSettingsListsState,
 )
 

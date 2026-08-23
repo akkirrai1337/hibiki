@@ -77,6 +77,8 @@ import org.akkirrai.hibiki.app.settings.InMemoryAppSettingsStore
 import org.akkirrai.hibiki.app.settings.NotificationPermissionState
 import org.akkirrai.hibiki.app.settings.DiscordRpcUiState
 import org.akkirrai.hibiki.app.settings.resolveAppLanguageTag
+import org.akkirrai.hibiki.app.settings.SettingsScreenState
+import org.akkirrai.hibiki.app.settings.SettingsScreenActions
 import org.akkirrai.hibiki.text.AppTextResourceLocale
 import org.akkirrai.hibiki.text.AppTextKey
 import org.akkirrai.hibiki.text.appText
@@ -575,6 +577,16 @@ internal fun HibikiAppShell(
                         val animatedTab = animatedDestination.toAppDestination(
                             settingsVisible = selectedTab == AppDestination.SETTINGS,
                         )
+                        val navigationActions = createHibikiAppShellDestinationNavigationActions(
+                            detailsNavigationActions = detailsNavigationActions,
+                            watchFlowNavigationActions = watchFlowNavigationActions,
+                            rootNavigationCoordinator = rootNavigationCoordinator,
+                            activeDownloadMode = activeDownloadMode,
+                            updateNavigationState = { reduce ->
+                                navigationState = reduce(navigationState)
+                            },
+                            onSourceSelected = sourceSelectionCoordinator::select,
+                        )
                         AppDestinationContent(
                             routeOverride = animatedRoute,
                             input = AppDestinationContentInput(
@@ -629,16 +641,7 @@ internal fun HibikiAppShell(
                                 ),
                             ),
                             navigation = NavigationContentInput(
-                                actions = createHibikiAppShellDestinationNavigationActions(
-                                    detailsNavigationActions = detailsNavigationActions,
-                                    watchFlowNavigationActions = watchFlowNavigationActions,
-                                    rootNavigationCoordinator = rootNavigationCoordinator,
-                                    activeDownloadMode = activeDownloadMode,
-                                    updateNavigationState = { reduce ->
-                                        navigationState = reduce(navigationState)
-                                    },
-                                    onSourceSelected = sourceSelectionCoordinator::select,
-                                ),
+                                actions = navigationActions,
                                 detailsOverlayState = AppDestinationDetailsOverlayState(
                                     posterPreviewOpen = navigationState.activeOverlay == AppOverlay.DetailsPosterPreview,
                                     onPosterPreviewOpenChange = overlayActions::setDetailsPosterPreviewOpen,
@@ -703,23 +706,31 @@ internal fun HibikiAppShell(
                                 ),
                             ),
                             settings = SettingsContentInput(
-                                actions = AppDestinationSettingsActions(
+                                actions = SettingsScreenActions(
                                     onLanguageModeChange = settingsActions.onLanguageModeChange,
                                     onThemeChange = settingsActions.onThemeChange,
                                     onThemeModeChange = settingsActions.onThemeModeChange,
                                     onSystemColorSchemeChange = settingsActions.onSystemColorSchemeChange,
                                     onAmoledChange = settingsActions.onAmoledChange,
                                     onAutoSkipChange = settingsActions.onAutoSkipChange,
-                                    onConfigureNotifications = platformCallbacks.onConfigureNotifications,
+                                    onNotificationsClick = platformCallbacks.onConfigureNotifications,
                                     onDiscordClick = discordSettingsActions.onClick,
                                     onDiscordChange = discordSettingsActions.onChange,
                                     onCheckForUpdates = platformCallbacks.onCheckForUpdates,
                                     onExportLogs = platformCallbacks.onExportLogs,
+                                    onGitHubClick = platformCallbacks.onGitHubClick,
+                                    onBackClick = navigationActions.onSettingsBack,
+                                    // No host currently supplies an external-sources repository
+                                    // state to this destination -- preserved as-is (matches the
+                                    // previous defaulted params) rather than wired up here, since
+                                    // that would be a behavior change, not a refactor.
+                                    onExternalSourcesClick = {},
                                 ),
-                                state = AppDestinationSettingsState(
+                                state = SettingsScreenState(
+                                    languageMode = appSettingsState.languageMode,
                                     darkTheme = appSettingsState.darkTheme,
                                     themeMode = appSettingsState.themeMode,
-                                    appVersionName = appVersionName,
+                                    versionName = appVersionName,
                                     useSystemColorScheme = appSettingsState.useSystemColorScheme,
                                     useAmoledTheme = appSettingsState.useAmoledTheme,
                                     autoSkipSegments = appSettingsState.autoSkipSegments,
@@ -728,6 +739,7 @@ internal fun HibikiAppShell(
                                     discordEnabled = platformCallbacks.discordRpcController?.isEnabled() == true,
                                     discordAvailable = platformCallbacks.discordRpcController != null,
                                     notificationsAvailable = platformCallbacks.notificationsAvailable,
+                                    externalSourcesCount = 0,
                                 ),
                                 listsState = AppDestinationSettingsListsState(
                                     settings = settingsListState,
