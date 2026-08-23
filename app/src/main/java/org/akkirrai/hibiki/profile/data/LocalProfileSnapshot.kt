@@ -93,6 +93,11 @@ fun LocalProfileData.buildRecentLibraryItems(
 ): List<RecentLibraryItem> = library
     .asSequence()
     .filter { it.addedAt != null && it.anime.title.isNotBlank() }
+    // Recent is an auto-assigned bookkeeping flag (set the moment playback starts), not a real
+    // category the user chose -- an entry that's only Recent was never actually added to the
+    // library and shouldn't show up here (it would otherwise fall through
+    // primaryLibraryCategory()'s Recent/Saved exclusion and get mislabeled as "Saved").
+    .filter { it.categories.any { category -> category != LibraryCategory.Recent } }
     .sortedByDescending { it.addedAt }
     .map { item ->
         val category = item.categories.primaryLibraryCategory()
