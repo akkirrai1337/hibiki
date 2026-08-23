@@ -367,8 +367,12 @@ internal fun HibikiAppShell(
         } },
         setPlaybackJob = { playbackJob = it },
         onSourceSelected = playbackCallbacks.onWatchSourceSelected,
-        setAutoSkipSegments = { appSettingsState.autoSkipSegments = it },
-        setAutoPlayNextEpisode = { appSettingsState.autoPlayNextEpisode = it },
+        // Also persist immediately (matching HibikiSettingsActions.onAutoSkipChange's own
+        // set+save pattern for the Settings screen) -- appSettingsState is a separate in-memory
+        // cache from the AppPreferences store the player itself reads via
+        // LocalAppPreferencesState, and nothing else was flushing this particular change through.
+        setAutoSkipSegments = { appSettingsState.autoSkipSegments = it; appSettingsState.saveTo() },
+        setAutoPlayNextEpisode = { appSettingsState.autoPlayNextEpisode = it; appSettingsState.saveTo() },
         libraryRepository = libraryRepository,
         onLibraryChanged = refreshLocalData,
     )
