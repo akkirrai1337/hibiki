@@ -7,6 +7,7 @@ import org.akkirrai.beakokit.model.AnimeTitle
 import org.akkirrai.beakokit.model.RelatedAnimeTitle
 import org.akkirrai.hibiki.details.model.isAnnouncementStatus
 import org.akkirrai.hibiki.catalog.model.Anime
+import org.akkirrai.hibiki.catalog.model.AniListMatchHints
 import org.akkirrai.hibiki.catalog.model.AnimeRating
 import org.akkirrai.hibiki.catalog.model.AnimeTrailer
 import org.akkirrai.hibiki.catalog.model.RelatedAnime
@@ -60,6 +61,16 @@ fun AnimeTitle.toAppAnime(
         franchiseAnime = franchiseAnime.map { it.toAppRelatedAnime(sourceId) },
         relatedAnime = relatedAnime.map { it.toAppRelatedAnime(sourceId) },
         releaseDate = formatReleaseDateLabel(year, season, preferEnglish),
+        aniListMatchHints = AniListMatchHints(
+            russianName = russianName,
+            englishName = englishName,
+            originalName = originalName,
+            japaneseName = japaneseName,
+            synonyms = synonyms,
+            year = year,
+            type = type,
+            episodeCount = episodeCount,
+        ),
     )
 }
 

@@ -3,6 +3,7 @@ package org.akkirrai.hibiki.details.screen
 import org.akkirrai.hibiki.details.state.*
 import org.akkirrai.hibiki.details.model.*
 
+import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -279,6 +280,7 @@ fun DetailsScreen(
                         },
                         mediaContent = { mediaModifier ->
                             val heroPrimaryUrl = mediaData.trailer?.thumbnailUrl
+                                ?: uiModel.anime.bannerUrl
                                 ?: uiModel.anime.screenshots.firstOrNull()
                                 ?: uiModel.anime.posterUrl
                             val heroFallbackUrl = if (heroPrimaryUrl != uiModel.anime.posterUrl) {
@@ -288,14 +290,23 @@ fun DetailsScreen(
                             }
                             AppDetailsHeroMedia(
                                 imageContent = {
-                                    AppPosterImage(
-                                        primaryUrl = heroPrimaryUrl,
-                                        fallbackUrl = heroFallbackUrl,
-                                        contentDescription = null,
-                                        modifier = Modifier.fillMaxSize(),
-                                        contentScale = ContentScale.Crop,
-                                        placeholder = { AppDetailsImagePlaceholder(modifier = Modifier.fillMaxSize()) },
-                                    )
+                                    // Crossfade instead of an abrupt swap: the banner from AniList
+                                    // arrives asynchronously after the trailer/screenshot/poster
+                                    // hero already rendered, so switching heroPrimaryUrl mid-visit
+                                    // must blend rather than flicker.
+                                    Crossfade(
+                                        targetState = heroPrimaryUrl to heroFallbackUrl,
+                                        label = "detailsHeroImage",
+                                    ) { (primaryUrl, fallbackUrl) ->
+                                        AppPosterImage(
+                                            primaryUrl = primaryUrl,
+                                            fallbackUrl = fallbackUrl,
+                                            contentDescription = null,
+                                            modifier = Modifier.fillMaxSize(),
+                                            contentScale = ContentScale.Crop,
+                                            placeholder = { AppDetailsImagePlaceholder(modifier = Modifier.fillMaxSize()) },
+                                        )
+                                    }
                                 },
                                 frameContent = resumeState?.let {
                                     resumeFrameContent?.let { content ->
@@ -388,6 +399,28 @@ fun DetailsScreen(
                             genres = uiModel.anime.genres,
                             title = appText(AppTextKey.Genres),
                             horizontalPadding = DetailsContentHorizontalPadding,
+                        )
+                    }
+                }
+                if (uiModel.anime.characters.isNotEmpty()) {
+                    // AniList data lands asynchronously after the rest of the screen -- animate
+                    // this item's insertion so it eases in instead of shoving content down.
+                    item(key = "anilist-characters") {
+                        DetailsCharactersSection(
+                            characters = uiModel.anime.characters,
+                            title = appText(AppTextKey.Characters),
+                            horizontalPadding = DetailsContentHorizontalPadding,
+                            modifier = Modifier.animateItem(),
+                        )
+                    }
+                }
+                if (uiModel.anime.directors.isNotEmpty()) {
+                    item(key = "anilist-staff") {
+                        DetailsStaffSection(
+                            directors = uiModel.anime.directors,
+                            title = appText(AppTextKey.Staff),
+                            horizontalPadding = DetailsContentHorizontalPadding,
+                            modifier = Modifier.animateItem(),
                         )
                     }
                 }

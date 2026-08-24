@@ -237,6 +237,7 @@ internal fun HibikiApp(
         OfflineTitleMetadataRepositoryImpl(dependencies.offlineTitleMetadataRepository())
     }
     val resumeFrameRepository = remember(dependencies) { dependencies.resumeFrameRepository() }
+    val aniListRepository = remember(dependencies) { dependencies.aniListRepository() }
     androidx.compose.runtime.LaunchedEffect(
         catalogRepository,
         preferences.animeSource.value,
@@ -318,6 +319,7 @@ internal fun HibikiApp(
             enableOnboarding = enableOnboarding,
             catalogRefreshKey = installedExtensionsRevision.toString(),
             catalogReady = true,
+            aniListRepository = aniListRepository,
             platformCallbacks = AppShellCallbacks(
                 discordRpcController = discordRpcController,
                 resumeFrameContent = { titleId, frameModifier ->

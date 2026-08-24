@@ -646,6 +646,8 @@
     <string name="source_material_original">Original</string>
     <string name="studio">Studio</string>
     <string name="genres">Genres</string>
+    <string name="characters">Characters</string>
+    <string name="staff">Staff</string>
     <string name="related">Related</string>
     <string name="details_related_title">Related titles</string>
     <string name="similar">Similar</string>

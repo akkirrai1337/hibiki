@@ -1,6 +1,8 @@
 package org.akkirrai.hibiki.app.di
 
 import android.content.Context
+import org.akkirrai.hibiki.core.anilist.AniListCacheRepository
+import org.akkirrai.hibiki.core.anilist.AniListRepository
 import org.akkirrai.hibiki.core.download.OfflineDownloadRepository
 import org.akkirrai.hibiki.core.source.LibraryRepository
 import org.akkirrai.hibiki.core.source.OfflineTitleMetadataRepository
@@ -27,6 +29,8 @@ class HibikiDependencies(
     fun resumeFrameRepository(): ResumeFrameRepository = ResumeFrameRepository(appContext)
 
     fun appSettingsStore(): AppSettingsStoreImpl = AppSettingsStoreImpl(appContext)
+
+    fun aniListRepository(): AniListRepository = AniListRepository(AniListCacheRepository(appContext))
 }
 
 fun Context.hibikiDependencies(): HibikiDependencies = HibikiDependencies(applicationContext)

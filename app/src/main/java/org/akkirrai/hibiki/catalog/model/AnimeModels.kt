@@ -23,6 +23,11 @@ data class Anime(
     val franchiseAnime: List<RelatedAnime> = emptyList(),
     val relatedAnime: List<RelatedAnime> = emptyList(),
     val releaseDate: String? = null,
+    val bannerUrl: String? = null,
+    val averageScore: Int? = null,
+    val characters: List<AniListCharacter> = emptyList(),
+    val directors: List<String> = emptyList(),
+    val aniListMatchHints: AniListMatchHints? = null,
 )
 
 data class AnimeTrailer(

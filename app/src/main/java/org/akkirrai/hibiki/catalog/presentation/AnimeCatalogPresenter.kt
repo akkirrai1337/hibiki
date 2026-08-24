@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.akkirrai.hibiki.catalog.model.Anime
 import org.akkirrai.hibiki.catalog.model.AnimeCatalogFilterCatalog
+import org.akkirrai.hibiki.core.anilist.AniListRepository
 import org.akkirrai.hibiki.search.model.AnimeSearchFilters
 
 data class AnimeCatalogUiState(
@@ -51,6 +52,7 @@ class AnimeCatalogPresenter(
     private val repository: AnimeCatalogRepository,
     private val scope: CoroutineScope,
     private val pageSize: Int = DEFAULT_PAGE_SIZE,
+    private val aniListRepository: AniListRepository? = null,
 ) {
     private val _state = MutableStateFlow(
         AnimeCatalogUiState(items = repository.initialItems),
@@ -68,6 +70,7 @@ class AnimeCatalogPresenter(
     private var searchJob: Job? = null
     private var filterCatalogJob: Job? = null
     private var detailsJob: Job? = null
+    private var enrichmentJob: Job? = null
     private val detailsBackStack = mutableListOf<Anime>()
 
     fun onQueryChange(query: String) {
@@ -142,6 +145,7 @@ class AnimeCatalogPresenter(
         }
         if (previous == null) {
             detailsJob?.cancel()
+            enrichmentJob?.cancel()
             _state.update { it.copy(selectedAnime = null, isDetailsLoading = false, detailsError = null) }
         } else {
             loadDetails(previous)
@@ -245,6 +249,7 @@ class AnimeCatalogPresenter(
         searchJob?.cancel()
         filterCatalogJob?.cancel()
         detailsJob?.cancel()
+        enrichmentJob?.cancel()
         detailsBackStack.clear()
     }
 
@@ -258,6 +263,7 @@ class AnimeCatalogPresenter(
         searchJob?.cancel()
         filterCatalogJob?.cancel()
         detailsJob?.cancel()
+        enrichmentJob?.cancel()
         detailsBackStack.clear()
         _state.value = state.copy(
             isLoading = false,
@@ -269,6 +275,7 @@ class AnimeCatalogPresenter(
 
     private fun loadDetails(anime: Anime) {
         detailsJob?.cancel()
+        enrichmentJob?.cancel()
         _state.update { it.copy(selectedAnime = anime, isDetailsLoading = true, detailsError = null) }
         detailsJob = scope.launch {
             try {
@@ -280,6 +287,7 @@ class AnimeCatalogPresenter(
                     val nextAnime = if (details == it.selectedAnime) it.selectedAnime else details
                     it.copy(selectedAnime = nextAnime, isDetailsLoading = false)
                 }
+                enrichWithAniList(details)
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (throwable: Throwable) {
@@ -294,8 +302,30 @@ class AnimeCatalogPresenter(
         }
     }
 
+    /** Best-effort banner/score/characters/directors patch-in, independent of [detailsJob] so a
+     *  slow or failed AniList lookup never blocks or errors the base details screen. */
+    private fun enrichWithAniList(details: Anime) {
+        val repo = aniListRepository ?: return
+        enrichmentJob = scope.launch {
+            val enrichment = runCatching { repo.enrich(details) }.getOrNull() ?: return@launch
+            _state.update { state ->
+                val current = state.selectedAnime
+                if (current == null || current.id != details.id) return@update state
+                state.copy(
+                    selectedAnime = current.copy(
+                        bannerUrl = enrichment.bannerUrl ?: current.bannerUrl,
+                        averageScore = enrichment.averageScore ?: current.averageScore,
+                        characters = enrichment.characters,
+                        directors = enrichment.directors,
+                    ),
+                )
+            }
+        }
+    }
+
     fun clearDetails() {
         detailsJob?.cancel()
+        enrichmentJob?.cancel()
         detailsBackStack.clear()
         _state.update { it.copy(selectedAnime = null, isDetailsLoading = false, detailsError = null) }
     }

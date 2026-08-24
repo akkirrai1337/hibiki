@@ -9,6 +9,9 @@ import org.akkirrai.hibiki.app.destination.content.AppDestinationTabContent
 import org.akkirrai.hibiki.app.destination.context.*
 import org.akkirrai.hibiki.app.destination.watch.*
 import org.akkirrai.hibiki.core.source.AppSourceCallbacks
+import org.akkirrai.hibiki.app.settings.LocalAppLanguage
+import org.akkirrai.hibiki.app.settings.isEnglishAppLanguage
+import androidx.compose.ui.platform.LocalConfiguration
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -53,6 +56,7 @@ import org.akkirrai.hibiki.catalog.presentation.AnimeCatalogPresenter
 import org.akkirrai.hibiki.catalog.presentation.CatalogDetailsNavigationState
 import org.akkirrai.hibiki.catalog.presentation.SourcesSearchPresenter
 import org.akkirrai.hibiki.catalog.EmptyAnimeCatalogRepository
+import org.akkirrai.hibiki.core.anilist.AniListRepository
 import org.akkirrai.hibiki.details.data.OfflineTitleMetadataRepository
 import org.akkirrai.hibiki.design.HibikiDarkColorScheme
 import org.akkirrai.hibiki.design.HibikiLightColorScheme
@@ -152,6 +156,7 @@ internal fun HibikiAppShell(
     playbackCallbacks: AppPlaybackCallbacks = AppPlaybackCallbacks(),
     catalogRefreshKey: Any? = null,
     catalogReady: Boolean = true,
+    aniListRepository: AniListRepository? = null,
 ) {
     val scope = rememberCoroutineScope {
         CoroutineExceptionHandler { _, throwable ->
@@ -160,6 +165,10 @@ internal fun HibikiAppShell(
             }
         }
     }
+    val preferEnglish = isEnglishAppLanguage(
+        LocalAppLanguage.current,
+        LocalConfiguration.current.locales[0]?.language.orEmpty().ifBlank { "en" },
+    )
     val resources = rememberHibikiAppShellResources(
         repository = repository,
         homeRepository = homeRepository,
@@ -169,6 +178,7 @@ internal fun HibikiAppShell(
         sources = sourceCallbacks.sources,
         selectedSourceId = sourceCallbacks.selectedSourceId,
         scope = scope,
+        aniListRepository = aniListRepository,
     )
     val presenter = resources.presenter
     val catalogActions = HibikiCatalogActions(presenter)
@@ -412,6 +422,7 @@ internal fun HibikiAppShell(
         navigationState = { navigationState },
         setNavigationState = { navigationState = it },
         setDetailsAnime = { detailsAnime = it },
+        preferEnglish = { preferEnglish },
     )
     val overlayActions = HibikiOverlayActions(
         navigationState = { navigationState },

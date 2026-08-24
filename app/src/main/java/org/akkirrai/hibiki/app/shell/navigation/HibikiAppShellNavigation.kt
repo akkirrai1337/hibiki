@@ -8,6 +8,7 @@ import androidx.compose.runtime.remember
 import org.akkirrai.hibiki.app.shell.player.watch.HibikiWatchFlowNavigationActions
 import org.akkirrai.hibiki.catalog.model.Anime
 import org.akkirrai.hibiki.catalog.presentation.AnimeCatalogPresenter
+import org.akkirrai.hibiki.core.source.withLocalizedEpisodesLabel
 import org.akkirrai.hibiki.app.navigation.AppDestination
 import org.akkirrai.hibiki.app.navigation.AppNavigationEvent
 import org.akkirrai.hibiki.app.navigation.AppNavigationState
@@ -134,13 +135,19 @@ internal class HibikiDetailsNavigationActions(
     private val navigationState: () -> AppNavigationState,
     private val setNavigationState: (AppNavigationState) -> Unit,
     private val setDetailsAnime: (Anime?) -> Unit,
+    private val preferEnglish: () -> Boolean,
 ) {
     fun open(anime: Anime) {
-        presenter.openDetails(anime)
-        setDetailsAnime(anime)
+        // `anime` here can come from a live search result, but just as often from a persisted
+        // snapshot (Library entry, offline-cached metadata) whose episodesLabel was baked in
+        // whatever language was active when it was saved -- re-localize before it's shown as the
+        // optimistic fallback, so it never flashes stale-language text while getDetails() loads.
+        val normalized = anime.withLocalizedEpisodesLabel(preferEnglish())
+        presenter.openDetails(normalized)
+        setDetailsAnime(normalized)
         val currentRoute = navigationState().currentRoute
-        if (currentRoute !is AppRoute.Details || currentRoute.animeId != anime.id) {
-            setNavigationState(navigationState().navigateToDetails(anime.id))
+        if (currentRoute !is AppRoute.Details || currentRoute.animeId != normalized.id) {
+            setNavigationState(navigationState().navigateToDetails(normalized.id))
         }
     }
 

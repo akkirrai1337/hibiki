@@ -18,6 +18,7 @@ import org.akkirrai.hibiki.app.shell.settings.HibikiSettingsActions
 import org.akkirrai.hibiki.app.shell.settings.createHibikiSettingsActions
 import org.akkirrai.hibiki.catalog.AnimeCatalogRepository
 import org.akkirrai.hibiki.catalog.presentation.AnimeCatalogPresenter
+import org.akkirrai.hibiki.core.anilist.AniListRepository
 import org.akkirrai.hibiki.catalog.presentation.SourcesSearchPresenter
 import org.akkirrai.hibiki.design.HibikiDarkColorScheme
 import org.akkirrai.hibiki.design.HibikiLightColorScheme
@@ -177,8 +178,11 @@ internal fun rememberHibikiAppShellResources(
     sources: List<AppSourceDescriptor>,
     selectedSourceId: String?,
     scope: CoroutineScope,
+    aniListRepository: AniListRepository? = null,
 ): HibikiAppShellResources = HibikiAppShellResources(
-    presenter = remember(repository) { AnimeCatalogPresenter(repository, scope, pageSize = HOME_SEARCH_PAGE_SIZE) },
+    presenter = remember(repository, aniListRepository) {
+        AnimeCatalogPresenter(repository, scope, pageSize = HOME_SEARCH_PAGE_SIZE, aniListRepository = aniListRepository)
+    },
     homeSearchPresenter = remember(repository) { HomeSearchPresenter(repository, scope, pageSize = HOME_SEARCH_PAGE_SIZE) },
     homePresenter = remember(homeRepository) { HomePresenter() },
     homeListState = rememberSaveable(selectedSourceId, saver = LazyListState.Saver) { LazyListState() },

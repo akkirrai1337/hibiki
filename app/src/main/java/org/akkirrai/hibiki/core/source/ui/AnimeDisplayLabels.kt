@@ -1,6 +1,7 @@
 package org.akkirrai.hibiki.core.source
 
 import org.akkirrai.beakokit.api.SourceLanguage
+import org.akkirrai.hibiki.catalog.model.Anime
 import org.akkirrai.hibiki.home.ui.resolveDisplayTypeLabel
 
 /** English-first when preferred, Russian-first otherwise -- either way the other stays as fallback. */
@@ -56,6 +57,23 @@ fun resolveEpisodesLabel(
             if (preferEnglish) "Episodes unknown" else "Количество серий неизвестно"
         else -> "$count ${episodeCountWord(count, preferEnglish)}"
     }
+}
+
+/**
+ * Re-localizes [Anime.episodesLabel] for the current UI language. An `Anime` shown as an
+ * optimistic fallback before its live details resolve (Library entries, offline-cached metadata,
+ * related-title taps) may carry a label baked in whatever language was active when it was saved
+ * to disk -- recompute it from the live [preferEnglish] so opening it never flashes stale text.
+ */
+fun Anime.withLocalizedEpisodesLabel(preferEnglish: Boolean): Anime {
+    val count = Regex("\\d+").find(episodesLabel)?.value?.toIntOrNull()
+    return copy(
+        episodesLabel = resolveEpisodesLabel(
+            releasedCount = count,
+            fallbackLabel = episodesLabel,
+            preferEnglish = preferEnglish,
+        ),
+    )
 }
 
 /** "1 episode" / "2 episodes"; "1 серия" / "2 серии" / "5 серий" -- lowercase either way. */

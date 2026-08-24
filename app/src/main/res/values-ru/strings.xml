@@ -648,6 +648,8 @@
     <string name="source_material_original">Оригинал</string>
     <string name="studio">Студия</string>
     <string name="genres">Жанры</string>
+    <string name="characters">Персонажи</string>
+    <string name="staff">Съёмочная группа</string>
     <string name="related">Связанное</string>
     <string name="details_related_title">Связанное</string>
     <string name="similar">Похожее</string>
