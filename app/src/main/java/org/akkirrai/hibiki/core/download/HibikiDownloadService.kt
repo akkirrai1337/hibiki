@@ -109,7 +109,6 @@ class HibikiDownloadService : DownloadService(
 
     companion object {
         private const val DOWNLOAD_NOTIFICATION_ID = 31_000
-        private const val PREPARATION_NOTIFICATION_ID = 31_001
 
         fun showPreparingNotification(context: Context, animeTitle: String?) {
             val localizedContext = context.applicationContext.withAppPreferencesLanguage()
@@ -126,8 +125,12 @@ class HibikiDownloadService : DownloadService(
                 )
             }
             val (completed, total) = OfflineDownloadQueue.getNotificationProgress(localizedContext)
+            // Same ID as DownloadService's own foreground notification (passed to its
+            // constructor above) on purpose -- when the real download starts moments later and
+            // posts using that ID, it replaces this one in place instead of this one being
+            // cancelled and a new one appearing after a visible gap.
             manager.notify(
-                PREPARATION_NOTIFICATION_ID,
+                DOWNLOAD_NOTIFICATION_ID,
                 NotificationCompat.Builder(localizedContext, OfflineMediaCache.DOWNLOAD_NOTIFICATION_CHANNEL_ID)
                     .setSmallIcon(R.drawable.ic_stat_hibiki)
                     .setContentTitle(
@@ -148,10 +151,12 @@ class HibikiDownloadService : DownloadService(
             )
         }
 
+        /** Only needed when preparing never leads to an actual download (e.g. it failed) --
+         *  otherwise the real download notification replaces this one by posting the same ID. */
         fun cancelPreparingNotification(context: Context) {
             context.applicationContext
                 .getSystemService(NotificationManager::class.java)
-                .cancel(PREPARATION_NOTIFICATION_ID)
+                .cancel(DOWNLOAD_NOTIFICATION_ID)
         }
     }
 }

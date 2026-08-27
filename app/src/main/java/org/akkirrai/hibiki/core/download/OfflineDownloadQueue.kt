@@ -40,7 +40,7 @@ object OfflineDownloadQueue {
     private const val SESSION_DOWNLOAD_IDS_KEY = "session_download_ids"
     private const val MAX_ACTIVE_DOWNLOADS = 2
     private const val STOP_REASON_PAUSED_BY_USER = 1
-    private const val STREAM_RESOLVE_RETRY_DELAY_MS = 500L
+    private val RESOLVE_RETRY_DELAYS_MS = longArrayOf(0L, 1_000L, 3_000L)
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val processingLock = Any()
@@ -48,6 +48,14 @@ object OfflineDownloadQueue {
     private val installedManagers = mutableSetOf<Int>()
     private val downloadsBeingRemoved = mutableSetOf<String>()
     private val successfulDownloadPlayers = ConcurrentHashMap<String, String>()
+
+    /**
+     * Download ids currently being resolved in [drain]'s background coroutine -- i.e. already
+     * taken off the persisted pending queue but not yet handed to Media3's `DownloadManager` (or
+     * marked failed). Without this, [getEpisodeStates] would report `NotDownloaded` for that whole
+     * window, visibly reverting the UI's optimistic "queued" state until resolution finishes.
+     */
+    private val resolvingIds = mutableSetOf<String>()
 
     @Volatile
     private var isProcessing = false
@@ -181,13 +189,14 @@ object OfflineDownloadQueue {
             .map { it.episodeId }
             .toSet()
         val failedIds = failedEntryIds(context)
+        val resolving = synchronized(requestLock) { resolvingIds.toSet() }
         return buildMap {
             episodeIds.forEach { episodeId ->
                 val id = downloadId(sourceId, episodeId)
                 val current = manager.currentDownloads.firstOrNull { it.request.id == id }
                 val stored = current ?: runCatching { manager.downloadIndex.getDownload(id) }.getOrNull()
                 val state = when {
-                    episodeId in pendingIds -> OfflineEpisodeDownloadState.Queued
+                    episodeId in pendingIds || id in resolving -> OfflineEpisodeDownloadState.Queued
                     stored != null -> stored.toEpisodeDownloadState()
                     id in failedIds -> OfflineEpisodeDownloadState.Failed
                     else -> OfflineEpisodeDownloadState.NotDownloaded
@@ -245,6 +254,9 @@ object OfflineDownloadQueue {
             )
             clearFailedEntries(appContext, setOf(id))
             removeFromSession(appContext, id)
+            prefs(appContext).getString(playbackKey(sourceId, episodeId), null)
+                ?.let { encoded -> runCatching { decodePlayback(JSONObject(encoded)) }.getOrNull() }
+                ?.let { playback -> OfflineStreamHeaders.remove(appContext, playback.streamUrl) }
             prefs(appContext).edit()
                 .remove(playbackKey(sourceId, episodeId))
                 .apply()
@@ -339,6 +351,9 @@ object OfflineDownloadQueue {
             synchronized(processingLock) { isProcessing = false }
             return
         }
+        synchronized(requestLock) {
+            entries.mapTo(resolvingIds) { it.downloadId }
+        }
 
         scope.launch {
             val repository = AnimeWatchRepository(context.applicationContext)
@@ -361,8 +376,13 @@ object OfflineDownloadQueue {
                                 episodeId = episode.id,
                                 playback = playback,
                             )
+                            OfflineStreamHeaders.save(context, playback.streamUrl, playback.headers)
                             clearFailedEntries(context, setOf(entry.downloadId))
-                            HibikiDownloadService.cancelPreparingNotification(context)
+                            // Not cancelling the preparing notification here -- it shares the
+                            // real download notification's ID, so sendAddDownload's foreground
+                            // notification replaces it in place moments later instead of it
+                            // disappearing for the gap between this call and the service
+                            // actually starting.
                             DownloadService.sendAddDownload(
                                 context,
                                 HibikiDownloadService::class.java,
@@ -380,6 +400,7 @@ object OfflineDownloadQueue {
                         markFailedEntry(context, entry)
                         removeFromSession(context, entry.downloadId)
                     }
+                    synchronized(requestLock) { resolvingIds.remove(entry.downloadId) }
                 }
             } finally {
                 repository.close()
@@ -415,39 +436,32 @@ object OfflineDownloadQueue {
         source: WatchSource,
         episode: WatchEpisode,
     ): PlaybackStream {
-        return try {
-            val resolved = repository.resolveFastestStream(
-                sourceId = source.sourceId,
-                episodeId = episode.id,
-                forceRefresh = false,
-                preferredPlayerName = successfulDownloadPlayers[source.sourceId],
-            )
-            resolved.playerName?.let { successfulDownloadPlayers[source.sourceId] = it }
-            resolved.playback
-        } catch (error: Throwable) {
-            successfulDownloadPlayers.remove(source.sourceId)
-            if (!error.isStreamResolveTimeout()) throw error
-            AppLogger.w(
-                TAG,
-                "Stream resolve timed out; retrying once: id=${downloadId(source.sourceId, episode.id)}",
-                error,
-            )
-            delay(STREAM_RESOLVE_RETRY_DELAY_MS)
-            val resolved = repository.resolveFastestStream(
-                sourceId = source.sourceId,
-                episodeId = episode.id,
-                forceRefresh = true,
-            )
-            resolved.playerName?.let { successfulDownloadPlayers[source.sourceId] = it }
-            resolved.playback
+        var lastError: Throwable? = null
+        RESOLVE_RETRY_DELAYS_MS.forEachIndexed { attempt, delayMs ->
+            if (attempt > 0) delay(delayMs)
+            try {
+                val resolved = repository.resolveFastestStream(
+                    sourceId = source.sourceId,
+                    episodeId = episode.id,
+                    forceRefresh = attempt > 0,
+                    preferredPlayerName = successfulDownloadPlayers[source.sourceId],
+                )
+                resolved.playerName?.let { successfulDownloadPlayers[source.sourceId] = it }
+                return resolved.playback
+            } catch (error: Throwable) {
+                lastError = error
+                successfulDownloadPlayers.remove(source.sourceId)
+                AppLogger.w(
+                    TAG,
+                    "Stream resolve attempt ${attempt + 1}/${RESOLVE_RETRY_DELAYS_MS.size} failed: " +
+                        "id=${downloadId(source.sourceId, episode.id)}",
+                    error,
+                )
+            }
         }
-    }
-
-    private fun Throwable.isStreamResolveTimeout(): Boolean {
-        val normalizedMessage = message.orEmpty().lowercase()
-        return "timeout" in normalizedMessage ||
-            "timed out" in normalizedMessage ||
-            "тайм" in normalizedMessage
+        throw lastError ?: IllegalStateException(
+            "Unable to resolve stream for ${downloadId(source.sourceId, episode.id)}",
+        )
     }
 
     private fun activeDownloadCount(manager: DownloadManager): Int {
