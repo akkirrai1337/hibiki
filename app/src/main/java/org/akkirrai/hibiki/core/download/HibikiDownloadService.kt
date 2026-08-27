@@ -93,7 +93,7 @@ class HibikiDownloadService : DownloadService(
             ?.coerceIn(0, 100)
 
         return NotificationCompat.Builder(this, OfflineMediaCache.DOWNLOAD_NOTIFICATION_CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setSmallIcon(R.drawable.ic_stat_hibiki)
             .setContentTitle(titleText)
             .setContentText(contentText)
             .setOngoing(isOngoing)
@@ -129,7 +129,7 @@ class HibikiDownloadService : DownloadService(
             manager.notify(
                 PREPARATION_NOTIFICATION_ID,
                 NotificationCompat.Builder(localizedContext, OfflineMediaCache.DOWNLOAD_NOTIFICATION_CHANNEL_ID)
-                    .setSmallIcon(R.drawable.ic_launcher_foreground)
+                    .setSmallIcon(R.drawable.ic_stat_hibiki)
                     .setContentTitle(
                         animeTitle?.trim()?.takeIf(String::isNotBlank)
                             ?: localizedContext.getString(R.string.download_notification_channel_name)
