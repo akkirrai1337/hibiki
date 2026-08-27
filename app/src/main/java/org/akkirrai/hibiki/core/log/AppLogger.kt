@@ -319,6 +319,14 @@ object AppLogger {
 
     private fun sanitize(value: String): String {
         return value
+            // Logs shouldn't reveal what a user searched for, filtered by, or watched -- episode/
+            // anime ids and titles double as private viewing history, and file paths can leak the
+            // device's local layout. Word-bounded so this doesn't clip unrelated words that merely
+            // end in one of these names (e.g. "isValid=true").
+            .replace(
+                Regex("""(?i)\b(query|searchQuery|filters|titleId|episodeId|animeId|streamUrl|path|directory)\b\s*[:=]\s*[^,;)]*"""),
+                "$1=<redacted>",
+            )
             .replace(Regex("""(?i)(authorization[:=]\s*)([^\s,;]+)"""), "$1<redacted>")
             .replace(Regex("""(?i)(set-cookie[:=]\s*[^=]+=)([^;,\s]+)"""), "$1<redacted>")
             .replace(Regex("""(?i)(yummy_token=)([^;,\s]+)"""), "$1<redacted>")
@@ -326,6 +334,9 @@ object AppLogger {
             .replace(Regex("""(?i)(refresh_token=)([^&\s]+)"""), "$1<redacted>")
             .replace(Regex("""(?i)([?&](?:token|auth|authorization|access_token|refresh_token|key|sign|hash|d_sign|pd_sign|ref_sign)=)([^&\s]+)"""), "$1<redacted>")
             .replace(Regex("""(?i)(Yummy\s+)([A-Za-z0-9._-]+)"""), "$1<redacted>")
+            // Catch-all for URL query strings carrying secrets/identifiers under names not covered
+            // by the specific rules above (e.g. signed CDN links).
+            .replace(Regex("""(?i)(https?://[^\s<>"']+?)\?[^\s<>"']*"""), "$1?<redacted>")
     }
 
     private fun formatTimestamp(date: Date): String = synchronized(timestampFormat) {
