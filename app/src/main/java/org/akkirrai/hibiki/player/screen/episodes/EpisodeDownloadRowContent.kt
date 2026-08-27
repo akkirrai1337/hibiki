@@ -10,6 +10,7 @@ import org.akkirrai.hibiki.player.model.WatchEpisode
 @Composable
 fun AppEpisodeDownloadRowContent(
     episode: WatchEpisode,
+    episodeTitle: String?,
     progress: EpisodeWatchProgress?,
     status: EpisodeProgressStatus,
     downloadState: EpisodeDownloadActionState,
@@ -49,8 +50,11 @@ fun AppEpisodeDownloadRowContent(
             pausedLabel = pausedLabel,
             downloadedLabel = downloadedLabel,
             failedLabel = failedLabel,
-        ).takeIf(String::isNotBlank),
+        ).takeIf(String::isNotBlank) ?: episodeTitle,
         inProgress = status == EpisodeProgressStatus.InProgress,
+        episodeNumber = formatEpisodeNumber(episode.number),
+        status = status,
+        progressFraction = progress?.progressFraction(status),
         enabled = enabled,
         showDownloadAction = downloadState.shouldShowAction(showDownloadControls),
         shape = shape,
@@ -70,6 +74,9 @@ private fun AppEpisodeDownloadRow(
     headline: AnnotatedString,
     subtitle: String?,
     inProgress: Boolean,
+    episodeNumber: String,
+    status: EpisodeProgressStatus,
+    progressFraction: Float?,
     enabled: Boolean,
     showDownloadAction: Boolean,
     downloadState: EpisodeDownloadActionState,
@@ -86,6 +93,9 @@ private fun AppEpisodeDownloadRow(
         headline = headline,
         subtitle = subtitle,
         inProgress = inProgress,
+        episodeNumber = episodeNumber,
+        status = status,
+        progressFraction = progressFraction,
         enabled = enabled,
         showDownloadAction = showDownloadAction,
         shape = shape,
@@ -103,4 +113,10 @@ private fun AppEpisodeDownloadRow(
             )
         },
     )
+}
+
+private fun EpisodeWatchProgress.progressFraction(status: EpisodeProgressStatus): Float? = when {
+    status == EpisodeProgressStatus.Watched -> 1f
+    durationMs > 0L && positionMs > 0L -> positionMs.toFloat() / durationMs.toFloat()
+    else -> null
 }

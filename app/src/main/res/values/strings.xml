@@ -184,6 +184,7 @@
     <string name="watch_sources_load_more">Load more</string>
     <string name="watch_source_auto_title">Auto selection</string>
     <string name="watch_episodes_empty_title">No episodes</string>
+    <string name="watch_episodes_show_more">Show more</string>
     <string name="watch_episodes_short">ep.</string>
     <string name="watch_source_fallback">Voiceover</string>
     <string name="watch_download">Download</string>

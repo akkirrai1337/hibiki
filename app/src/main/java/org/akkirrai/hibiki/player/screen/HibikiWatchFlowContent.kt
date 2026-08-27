@@ -110,7 +110,12 @@ internal fun HibikiWatchFlowContent(
         },
         backEnabled = !navigationLocked,
         backContentDescription = appText(AppTextKey.Back),
-        title = selectedWatchSource?.title ?: anime.title,
+        title = anime.title,
+        subtitle = selectedWatchSource?.let { source ->
+            source.episodeCount?.let { count ->
+                "${source.title} · $count ${appText(AppTextKey.EpisodesShort)}"
+            } ?: source.title
+        },
         modifier = modifier,
     ) { listContentPadding ->
         // The outer root transition now treats sources -> episodes as one continuous slot (so

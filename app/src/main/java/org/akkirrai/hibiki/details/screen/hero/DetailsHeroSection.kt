@@ -28,7 +28,7 @@ fun AppDetailsHeroSection(
 ) {
     val posterHeightOffset by animateDpAsState(
         targetValue = if (posterExpanded) DetailsHeroPosterExpandedOffset else DetailsHeroPosterCollapsedOffset,
-        animationSpec = androidx.compose.animation.core.tween(durationMillis = 750),
+        animationSpec = androidx.compose.animation.core.tween(durationMillis = 250),
         label = "details_poster_height",
     )
     Column(modifier = modifier.fillMaxWidth()) {

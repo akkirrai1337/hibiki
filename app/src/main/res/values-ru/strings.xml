@@ -168,6 +168,7 @@
     <string name="watch_sources_load_more">Загрузить ещё</string>
     <string name="watch_source_auto_title">Автовыбор</string>
     <string name="watch_episodes_empty_title">Серии не найдены</string>
+    <string name="watch_episodes_show_more">Показать ещё</string>
     <string name="watch_episodes_short">эп.</string>
     <string name="watch_source_fallback">Озвучка</string>
     <string name="watch_download">Скачать</string>

@@ -2,7 +2,6 @@ package org.akkirrai.hibiki.design.component.navigation
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -130,17 +129,12 @@ private fun AppBottomBarItem(
     } else {
         MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.74f)
     }
-    val interactionSource = remember { MutableInteractionSource() }
     val pillShape: Shape = RoundedCornerShape(AppBottomBarPillCornerRadius)
 
     Column(
         modifier = modifier
             .height(AppBottomBarItemHeight)
-            .clickable(
-                interactionSource = interactionSource,
-                indication = null,
-                onClick = onClick,
-            ),
+            .clickable(onClick = onClick),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {

@@ -5,7 +5,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -35,12 +34,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.style.Hyphens
 import androidx.compose.ui.text.style.LineBreak
-import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.text.TextMeasurer
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.rememberTextMeasurer
-import androidx.compose.ui.unit.Constraints
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import org.akkirrai.hibiki.design.UiDimens
@@ -78,15 +71,19 @@ fun LazyListScope.appPosterAnimeListContent(
     onItemVisible: ((Anime) -> Unit)? = null,
 ) {
     items(
-        items = items.chunked(2),
-        key = { row -> row.first().id },
-    ) { row ->
+        count = (items.size + 1) / 2,
+        key = { rowIndex -> items[rowIndex * 2].id },
+        contentType = { "anime_poster_row" },
+    ) { rowIndex ->
+        val firstItemIndex = rowIndex * 2
+        val lastItemIndex = minOf(firstItemIndex + 2, items.size)
         Row(
             modifier = modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(UiDimens.PosterGridItemGap),
             verticalAlignment = Alignment.Top,
         ) {
-            row.forEach { anime ->
+            for (itemIndex in firstItemIndex until lastItemIndex) {
+                val anime = items[itemIndex]
                 LaunchedEffect(anime.id) {
                     onItemVisible?.invoke(anime)
                 }
@@ -101,7 +98,7 @@ fun LazyListScope.appPosterAnimeListContent(
                     },
                 )
             }
-            if (row.size == 1) Spacer(modifier = Modifier.weight(1f))
+            if (lastItemIndex - firstItemIndex == 1) Spacer(modifier = Modifier.weight(1f))
         }
     }
 }
@@ -165,27 +162,15 @@ fun AppPosterAnimeCard(
                 lineBreak = LineBreak.Paragraph,
                 hyphens = Hyphens.None,
             )
-            BoxWithConstraints(Modifier.fillMaxWidth()) {
-                val density = LocalDensity.current
-                val textMeasurer = rememberTextMeasurer()
-                val title = remember(anime.title, maxWidth, titleStyle, density, textMeasurer) {
-                    wrapTitleAtWords(
-                        text = anime.title.preventTrailingOrphanWrap(),
-                        style = titleStyle,
-                        maxWidth = with(density) { maxWidth.roundToPx() },
-                        textMeasurer = textMeasurer,
-                    )
-                }
-                Text(
-                    text = title,
-                    modifier = Modifier.fillMaxWidth(),
-                    style = titleStyle,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
+            Text(
+                text = anime.title.preventTrailingOrphanWrap(),
+                modifier = Modifier.fillMaxWidth(),
+                style = titleStyle,
+                color = MaterialTheme.colorScheme.onSurface,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
             if (metaContent != null) {
                 metaContent()
             } else if (metaText.isNotBlank()) {
@@ -201,63 +186,4 @@ fun AppPosterAnimeCard(
             }
         }
     }
-}
-
-private fun wrapTitleAtWords(
-    text: String,
-    style: TextStyle,
-    maxWidth: Int,
-    textMeasurer: TextMeasurer,
-): String {
-    if (maxWidth <= 0) return text
-
-    val words = text.trim().split(Regex("\\s+"))
-    if (words.size <= 1) return text
-
-    val lines = mutableListOf<String>()
-    var currentLine = ""
-    for (word in words) {
-        val candidate = if (currentLine.isEmpty()) word else "$currentLine $word"
-        val measurement = textMeasurer.measure(
-            text = AnnotatedString(candidate),
-            style = style,
-            overflow = TextOverflow.Clip,
-            softWrap = false,
-            maxLines = 1,
-            constraints = Constraints(maxWidth = maxWidth),
-        )
-        if (currentLine.isNotEmpty() && measurement.didOverflowWidth) {
-            lines += currentLine
-            currentLine = word
-        } else {
-            currentLine = candidate
-        }
-    }
-    if (currentLine.isNotEmpty()) lines += currentLine
-
-    if (lines.size <= 2) return lines.joinToString("\n")
-
-    // More text than fits on two lines: the manual word-wrap above already produces a
-    // string that occupies exactly two lines, so the outer Text's maxLines=2/Ellipsis
-    // never sees an overflow to ellipsize itself. Ellipsize the second line here instead.
-    val firstLine = lines[0]
-    var secondLine = lines[1]
-    while (secondLine.isNotEmpty()) {
-        val candidate = "$secondLine…"
-        val measurement = textMeasurer.measure(
-            text = AnnotatedString(candidate),
-            style = style,
-            overflow = TextOverflow.Clip,
-            softWrap = false,
-            maxLines = 1,
-            constraints = Constraints(maxWidth = maxWidth),
-        )
-        if (!measurement.didOverflowWidth) {
-            secondLine = candidate
-            break
-        }
-        secondLine = secondLine.dropLast(1).trimEnd()
-    }
-
-    return "$firstLine\n$secondLine"
 }

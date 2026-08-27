@@ -10,7 +10,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 
 object AppMotion {
-    const val ScreenTransitionDurationMillis = 350
+    const val ScreenTransitionDurationMillis = 200
 }
 
 /** Default non-platform-specific palettes used when a host has no dynamic colors. */

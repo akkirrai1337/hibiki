@@ -3,6 +3,7 @@ package org.akkirrai.hibiki.app.navigation
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
+import org.akkirrai.hibiki.design.AppMotion
 import org.akkirrai.hibiki.player.model.WatchSource
 
 class AppRouteNavigationTest {
@@ -200,7 +201,7 @@ class AppRouteNavigationTest {
 
         assertEquals(first, same)
         assertTrue(first != next)
-        assertEquals(350, AppTransitionSpec(first, next).durationMillis)
+        assertEquals(AppMotion.ScreenTransitionDurationMillis, AppTransitionSpec(first, next).durationMillis)
     }
 
     @Test

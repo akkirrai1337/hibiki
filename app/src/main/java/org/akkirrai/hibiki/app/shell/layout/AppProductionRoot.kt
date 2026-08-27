@@ -2,6 +2,8 @@ package org.akkirrai.hibiki.app.shell.layout
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
@@ -95,10 +97,10 @@ fun AppProductionRoot(
                 navController = navController,
                 startDestination = startTabRoute,
                 modifier = Modifier.fillMaxSize(),
-                enterTransition = { fadeIn(animationSpec = tween(AppMotion.ScreenTransitionDurationMillis)) },
-                exitTransition = { fadeOut(animationSpec = tween(AppMotion.ScreenTransitionDurationMillis)) },
-                popEnterTransition = { fadeIn(animationSpec = tween(AppMotion.ScreenTransitionDurationMillis)) },
-                popExitTransition = { fadeOut(animationSpec = tween(AppMotion.ScreenTransitionDurationMillis)) },
+                enterTransition = { EnterTransition.None },
+                exitTransition = { ExitTransition.None },
+                popEnterTransition = { EnterTransition.None },
+                popExitTransition = { ExitTransition.None },
             ) {
                 composable<AndroidNavigationRoute.Home> { currentTabContent.value(AppTopLevelDestination.HOME) }
                 composable<AndroidNavigationRoute.Catalog> { currentTabContent.value(AppTopLevelDestination.CATALOG) }

@@ -70,6 +70,7 @@ android {
     buildTypes {
         debug {
             applicationIdSuffix = ".dev"
+            resValue("string", "app_name", "hibiki dev")
         }
         release {
             isMinifyEnabled = true
@@ -90,6 +91,7 @@ android {
     buildFeatures {
         compose = true
         buildConfig = true
+        resValues = true
     }
 }
 

@@ -3,6 +3,7 @@ package org.akkirrai.hibiki.player
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
@@ -46,6 +47,7 @@ fun WatchScreenScaffold(
     backEnabled: Boolean,
     backContentDescription: String?,
     title: String?,
+    subtitle: String? = null,
     modifier: Modifier = Modifier,
     trailingContent: @Composable (() -> Unit)? = null,
     content: @Composable BoxScope.(PaddingValues) -> Unit,
@@ -86,17 +88,29 @@ fun WatchScreenScaffold(
                     tint = MaterialTheme.colorScheme.onSurface,
                 )
             }
-            Text(
-                text = title.orEmpty(),
-                color = MaterialTheme.colorScheme.onSurface,
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.SemiBold,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
+            Column(
                 modifier = Modifier
                     .weight(1f)
                     .padding(start = WatchScreenHeaderTitleStartPadding),
-            )
+            ) {
+                Text(
+                    text = title.orEmpty(),
+                    color = MaterialTheme.colorScheme.onSurface,
+                    style = if (subtitle.isNullOrBlank()) MaterialTheme.typography.titleLarge else MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                if (!subtitle.isNullOrBlank()) {
+                    Text(
+                        text = subtitle,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.bodySmall,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
             trailingContent?.invoke()
         }
     }

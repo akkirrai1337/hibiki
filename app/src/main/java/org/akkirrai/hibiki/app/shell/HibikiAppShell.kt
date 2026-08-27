@@ -24,7 +24,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -32,6 +31,7 @@ import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Modifier
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.CancellationException
@@ -182,7 +182,9 @@ internal fun HibikiAppShell(
     )
     val presenter = resources.presenter
     val catalogActions = HibikiCatalogActions(presenter)
-    val detailsNavState by presenter.detailsNavigationState.collectAsState(initial = CatalogDetailsNavigationState())
+    val detailsNavState by presenter.detailsNavigationState.collectAsStateWithLifecycle(
+        initialValue = CatalogDetailsNavigationState(),
+    )
     val homeSearchPresenter = resources.homeSearchPresenter
     val homeSearchActions = HibikiHomeSearchActions(homeSearchPresenter)
     val homePresenter = resources.homePresenter
@@ -212,7 +214,7 @@ internal fun HibikiAppShell(
     val isLibraryFilterOverlayOpen = navigationState.activeOverlay == libraryFilterOverlay
     val selectedWatchSource = navigationState.selectedWatchSource
     val playerPresenter = resources.playerPresenter
-    val playerState by playerPresenter.state.collectAsState()
+    val playerState by playerPresenter.state.collectAsStateWithLifecycle()
     val playbackSession = remember { HibikiPlaybackSession() }
     SideEffect { playbackSession.setOnExitPlayback(playbackCallbacks.onExitPlayback) }
     var selectedSourcesTab by rememberSaveable { mutableStateOf(0) }
@@ -240,8 +242,10 @@ internal fun HibikiAppShell(
     // you press back, showing the poster instead of the resume banner's last frame for that
     // whole fade instead of only after it completes.
     var retainedDetailsResumeState by remember { mutableStateOf<TitleWatchState?>(null) }
-    if (detailsAnimeIdForResume != null) {
-        retainedDetailsResumeState = computedDetailsResumeState
+    SideEffect {
+        if (detailsAnimeIdForResume != null) {
+            retainedDetailsResumeState = computedDetailsResumeState
+        }
     }
     val detailsResumeState = retainedDetailsResumeState
     var pendingPlaybackContext by playbackSession.pendingContext
@@ -250,7 +254,10 @@ internal fun HibikiAppShell(
     val libraryActions = HibikiLibraryActions(libraryPresenter)
     val profilePresenter = resources.profilePresenter
     val homeDescriptionRequests = resources.homeDescriptionRequests
-    val discordRpcState by (platformCallbacks.discordRpcController?.state ?: kotlinx.coroutines.flow.MutableStateFlow(DiscordRpcUiState())).collectAsState()
+    val emptyDiscordRpcState = remember { kotlinx.coroutines.flow.MutableStateFlow(DiscordRpcUiState()) }
+    val discordRpcState by (
+        platformCallbacks.discordRpcController?.state ?: emptyDiscordRpcState
+    ).collectAsStateWithLifecycle()
     val discordAuthState = rememberHibikiDiscordAuthState()
     val isDiscordAuthDialogOpen = discordAuthState.isOpen(navigationState)
 

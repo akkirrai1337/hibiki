@@ -1,22 +1,18 @@
 package org.akkirrai.hibiki.app.destination.content
 
-import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.EnterTransition
-import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.Box
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.akkirrai.hibiki.app.destination.context.AppDestinationContentInput
 import org.akkirrai.hibiki.app.destination.watch.isWatchRouteDriven
 import org.akkirrai.hibiki.design.AppMotion
@@ -35,7 +31,7 @@ internal fun AppDestinationTabContent(input: AppDestinationContentInput, tab: Ap
     // from library changes -- this scope is still shared by every tab because Home's feed
     // needs libraryEntries and every tab's cards need libraryStatusByAnimeId, but it's a much
     // smaller blast radius than the root shell composable.
-    val libraryUiState by input.library.state.libraryPresenter.state.collectAsState()
+    val libraryUiState by input.library.state.libraryPresenter.state.collectAsStateWithLifecycle()
     val libraryEntries = libraryUiState.visibleEntries
     // Recent is a hidden bookkeeping flag, not a real category -- exclude it so it can never
     // shadow a title's actual library status badge on a card.
@@ -104,19 +100,11 @@ internal fun AppDestinationContent(
     // replaying the whole screen transition for a title the user never left.
     val detailsAnimeId = contentState.selectedAnime?.id
         ?.takeIf { contentState.currentRoute is org.akkirrai.hibiki.app.navigation.AppRoute.Details }
-    // No animation of its own -- the outer root transition in AppProductionRoot already
-    // fades every entry/exit of the Details route (its route field changes on every visit).
-    // Animating here too would stack a second, independent crossfade on top of that one.
-    AnimatedContent(
-        targetState = detailsAnimeId,
-        transitionSpec = { EnterTransition.None togetherWith ExitTransition.None },
-        label = "details_route_transition",
-        modifier = Modifier.fillMaxSize(),
-    ) { targetId ->
-        val anime = contentState.selectedAnime?.takeIf { it.id == targetId }
-        if (anime != null) {
-            AppDestinationDetailsRoute(input = effectiveInput, animeOverride = anime)
-        }
+    // The outer root already owns the route transition. Rendering Details directly avoids a
+    // second transition container retaining and measuring another full-screen subtree.
+    val anime = contentState.selectedAnime?.takeIf { it.id == detailsAnimeId }
+    if (anime != null) {
+        AppDestinationDetailsRoute(input = effectiveInput, animeOverride = anime)
     }
 }
 
