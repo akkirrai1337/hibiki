@@ -383,6 +383,15 @@
     <string name="source_extensions_tab_extensions">Расширения</string>
     <string name="source_extensions_tab_sources">Источники</string>
     <string name="source_extensions_repository_coming_soon">Устанавливаемые расширения скоро появятся</string>
+    <string name="source_extensions_search">Поиск</string>
+    <string name="source_extensions_filter_languages">Языки</string>
+    <string name="source_extensions_refresh">Обновить</string>
+    <string name="source_extensions_manage">Управление</string>
+    <string name="source_extensions_package_info">Источник</string>
+    <string name="source_extensions_language">Язык</string>
+    <string name="source_extensions_select">Выбрать этот источник</string>
+    <string name="source_extensions_selected">Выбрано</string>
+    <string name="source_extensions_empty">Ничего не найдено по запросу</string>
     <string name="onboarding_welcome_title">Добро пожаловать в hibiki</string>
     <string name="onboarding_welcome_description">Настроим приложение за пару шагов, чтобы вы могли сразу начать просмотр.</string>
     <string name="onboarding_get_started">Начать настройку</string>
