@@ -179,6 +179,9 @@
     <string name="watch_status_paused">На паузе</string>
     <string name="watch_status_failed">Ошибка загрузки</string>
     <string name="watch_status_watched">Просмотрено</string>
+    <string name="watch_episodes_section_title">Серии</string>
+    <string name="watch_episodes_show_more">Показать ещё</string>
+    <string name="watch_continue_episode">Продолжить серию %1$s</string>
     <string name="watch_player_playlist">Список серий</string>
     <string name="watch_player_error_title">Ошибка воспроизведения</string>
     <string name="watch_player_retry">Повторить</string>

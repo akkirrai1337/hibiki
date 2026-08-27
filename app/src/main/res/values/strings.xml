@@ -185,6 +185,9 @@
     <string name="watch_status_paused">Paused</string>
     <string name="watch_status_failed">Download failed</string>
     <string name="watch_status_watched">Watched</string>
+    <string name="watch_episodes_section_title">Episodes</string>
+    <string name="watch_episodes_show_more">Show more</string>
+    <string name="watch_continue_episode">Continue Episode %1$s</string>
     <string name="watch_player_playlist">Playlist</string>
     <string name="watch_player_error_title">Playback error</string>
     <string name="watch_player_retry">Retry</string>
