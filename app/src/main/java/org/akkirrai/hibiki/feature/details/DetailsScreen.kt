@@ -1,6 +1,7 @@
 package org.akkirrai.hibiki.feature.details
 
 import android.content.Context
+import android.graphics.drawable.Drawable
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
@@ -150,7 +151,6 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import com.materialkolor.PaletteStyle
-import com.materialkolor.ktx.animateColorScheme
 import com.materialkolor.rememberDynamicColorScheme
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -263,6 +263,11 @@ fun DetailsScreen(
         currentAnime.posterFallbackUrl,
         currentAnime.screenshots,
     ) {
+        // The hero poster's own AsyncImage load (see onPosterLoaded below) samples the color from
+        // the drawable it already decoded for display, so it normally wins this race without a
+        // second network fetch. This is only a fallback for when that image never loads (offline,
+        // request error) -- give it a brief head start instead of firing both at once.
+        if (titleSeedColor == null) delay(80)
         if (titleSeedColor == null) {
             extractTitleSeedColor(
                 context = context,
@@ -345,12 +350,11 @@ fun DetailsScreen(
     } else {
         titleColorScheme
     }
-    val animatedDetailsColorScheme = animateColorScheme(
-        colorScheme = detailsColorScheme,
-        animationSpec = { tween(durationMillis = TITLE_COLOR_TRANSITION_DURATION_MILLIS) },
-    )
-
-    MaterialTheme(colorScheme = animatedDetailsColorScheme) {
+    // Applied directly, no cross-fade -- the seed color is normally already known (cached from a
+    // previous visit, or sampled from the poster the instant it finishes decoding below), so
+    // animating it in read as a slow, late color wash instead of the title's own look appearing
+    // right away.
+    MaterialTheme(colorScheme = detailsColorScheme) {
         Surface(
             modifier = modifier
                 .fillMaxSize(),
@@ -387,6 +391,19 @@ fun DetailsScreen(
                     onResumeClick = onResumePlayback,
                     onTrailerClick = {
                         currentAnime.trailer?.playbackUrl?.let(uriHandler::openUri)
+                    },
+                    onPosterLoaded = { drawable ->
+                        if (titleSeedColor == null) {
+                            screenScope.launch(Dispatchers.Default) {
+                                extractTitleSeedColor(drawable)?.let { extractedColor ->
+                                    titleSeedColorCache[detailsStateKey] = extractedColor
+                                    storeTitleSeedColor(context, detailsStateKey, extractedColor)
+                                    withContext(Dispatchers.Main.immediate) {
+                                        if (titleSeedColor == null) titleSeedColor = extractedColor
+                                    }
+                                }
+                            }
+                        }
                     },
                 )
             }
@@ -520,6 +537,7 @@ private fun DetailHeroSection(
     onPrimaryClick: () -> Unit,
     onResumeClick: (TitleWatchState) -> Unit,
     onTrailerClick: () -> Unit,
+    onPosterLoaded: ((Drawable) -> Unit)? = null,
 ) {
     val isUserLibraryCategorySelected = libraryCategory != null && libraryCategory != LibraryCategory.Saved
     val isAtTop by remember(listState) {
@@ -556,6 +574,7 @@ private fun DetailHeroSection(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(bannerHeight),
+                onPosterLoaded = onPosterLoaded,
             )
             Box(
                 modifier = Modifier
@@ -830,6 +849,7 @@ private fun DetailHeroMedia(
     onResumeClick: (TitleWatchState) -> Unit,
     onTrailerClick: () -> Unit,
     modifier: Modifier = Modifier,
+    onPosterLoaded: ((Drawable) -> Unit)? = null,
 ) {
     val trailer = anime.trailer?.takeIf { it.playbackUrl != null }
     Box(
@@ -841,6 +861,11 @@ private fun DetailHeroMedia(
             imageUrl = trailer?.thumbnailUrl ?: anime.posterUrl,
             fallbackUrl = anime.posterUrl ?: anime.posterFallbackUrl,
             contentDescription = null,
+            // Only sample the poster for the title's accent color, not a trailer thumbnail --
+            // trailer stills are usually screenshots with a different color character, and the
+            // network-based fallback below always samples the poster, so this keeps both paths
+            // agreeing on the same color.
+            onImageLoaded = if (trailer == null) onPosterLoaded else null,
         )
 
         if (resumeState != null && resumeFrame != null) {
@@ -1944,16 +1969,31 @@ private suspend fun extractTitleSeedColor(
                     .generate()
             }.getOrNull()
         } ?: continue
-        return (
-            palette.vibrantSwatch
-                ?: palette.lightVibrantSwatch
-                ?: palette.darkVibrantSwatch
-                ?: palette.mutedSwatch
-                ?: palette.dominantSwatch
-            )?.rgb
+        paletteSeedColor(palette)?.let { return it }
     }
     return null
 }
+
+/**
+ * Same extraction as the network-fetching overload above, but off a drawable the caller already
+ * has decoded (e.g. the hero poster's own image load) instead of issuing a second, redundant
+ * network request just to sample its color.
+ */
+private suspend fun extractTitleSeedColor(drawable: Drawable): Int? = withContext(Dispatchers.Default) {
+    val bitmap = runCatching { drawable.toBitmap(width = 96, height = 96) }.getOrNull() ?: return@withContext null
+    val palette = runCatching {
+        Palette.from(bitmap).maximumColorCount(24).generate()
+    }.getOrNull() ?: return@withContext null
+    paletteSeedColor(palette)
+}
+
+private fun paletteSeedColor(palette: Palette): Int? = (
+    palette.vibrantSwatch
+        ?: palette.lightVibrantSwatch
+        ?: palette.darkVibrantSwatch
+        ?: palette.mutedSwatch
+        ?: palette.dominantSwatch
+    )?.rgb
 
 internal fun String.toAbsoluteImageUrl(): String? {
     val value = trim().trim('"').replace("\\/", "/").takeIf(String::isNotBlank) ?: return null
@@ -2034,7 +2074,6 @@ private fun storeTitleSeedColor(context: Context, key: String, color: Int) {
 private val detailsScreenStateCache = ConcurrentHashMap<String, DetailsScreenSavedState>()
 private val titleSeedColorCache = ConcurrentHashMap<String, Int>()
 private const val TITLE_COLOR_PREFERENCES_NAME = "title_color_cache"
-private const val TITLE_COLOR_TRANSITION_DURATION_MILLIS = 280
 private val DETAIL_CONTENT_START_PADDING = 24.dp
 private val DETAIL_INFORMATION_HORIZONTAL_PADDING = 12.dp
 private val DETAIL_SECTION_VISUAL_ALIGNMENT_OFFSET = 3.dp
@@ -2046,12 +2085,14 @@ private fun NetworkImage(
     fallbackUrl: String? = null,
     contentDescription: String?,
     modifier: Modifier = Modifier,
+    onImageLoaded: ((Drawable) -> Unit)? = null,
 ) {
     PosterImage(
         primaryUrl = imageUrl,
         fallbackUrl = fallbackUrl,
         contentDescription = contentDescription,
         modifier = modifier.fillMaxSize(),
+        onImageSuccess = onImageLoaded,
         placeholder = { ImagePlaceholder() }
     )
 }
