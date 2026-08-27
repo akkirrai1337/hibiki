@@ -56,9 +56,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -111,8 +113,13 @@ fun LibraryScreen(
 ) {
     val state by viewModel.uiState.collectAsState()
     val languageMode = LocalAppLanguage.current
-    val visibleEntries = state.visibleEntries
+    val allVisibleEntries = state.visibleEntries
     var isFilterDialogVisible by remember { mutableStateOf(false) }
+    var visibleCount by rememberSaveable(state.selectedCategory, state.searchQuery, state.searchFilters) {
+        mutableIntStateOf(LIBRARY_PAGE_SIZE)
+    }
+    val visibleEntries = allVisibleEntries.take(visibleCount)
+    val hasMoreEntries = visibleCount < allVisibleEntries.size
 
     LaunchedEffect(Unit) {
         PerfLogger.mark("LibraryScreen composed")
@@ -210,6 +217,16 @@ fun LibraryScreen(
                     onClick = { onAnimeClick(entry.anime) }
                 )
             }
+            if (hasMoreEntries) {
+                item(key = "show_more_library_entries") {
+                    ShowMoreLibraryEntriesRow(
+                        modifier = Modifier.padding(horizontal = UiDimens.ScreenPadding),
+                        onClick = {
+                            visibleCount = (visibleCount + LIBRARY_PAGE_SIZE).coerceAtMost(allVisibleEntries.size)
+                        },
+                    )
+                }
+            }
         }
     }
 
@@ -227,6 +244,29 @@ fun LibraryScreen(
 }
 
 private const val LIBRARY_DEFERRED_SYNC_DELAY_MS = 420L
+private const val LIBRARY_PAGE_SIZE = 30
+
+@Composable
+private fun ShowMoreLibraryEntriesRow(
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit,
+) {
+    Surface(
+        onClick = onClick,
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(17.dp),
+        color = MaterialTheme.colorScheme.surfaceContainer,
+    ) {
+        Text(
+            text = stringResource(R.string.library_show_more),
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+            color = MaterialTheme.colorScheme.primary,
+            style = MaterialTheme.typography.bodyLarge,
+            fontWeight = FontWeight.Medium,
+            textAlign = TextAlign.Center,
+        )
+    }
+}
 
 @Composable
 private fun LibraryCategoryChips(

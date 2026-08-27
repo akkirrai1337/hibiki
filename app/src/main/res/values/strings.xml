@@ -70,6 +70,7 @@
     <string name="library_saved_note">Saved titles are managed by downloaded episodes. To remove a title from here, delete the downloaded episodes.</string>
     <string name="library_remove_action">Remove from library</string>
     <string name="library_empty_title">Nothing here yet</string>
+    <string name="library_show_more">Show more</string>
     <string name="library_empty_body">Add titles to your library and they will appear here.</string>
     <string name="library_section_empty_title">This section is empty</string>
     <string name="library_category_watching">Watching</string>

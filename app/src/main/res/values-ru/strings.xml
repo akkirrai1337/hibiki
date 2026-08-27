@@ -62,6 +62,7 @@
     <string name="library_saved_note">Сохранённое управляется скачанными сериями. Чтобы убрать тайтл отсюда, удалите скачанные серии.</string>
     <string name="library_remove_action">Убрать из библиотеки</string>
     <string name="library_empty_title">Пока пусто</string>
+    <string name="library_show_more">Показать ещё</string>
     <string name="library_empty_body">Добавляй тайтлы в библиотеку, и они появятся здесь.</string>
     <string name="library_section_empty_title">В разделе пусто</string>
     <string name="library_category_watching">Смотрю</string>

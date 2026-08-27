@@ -20,7 +20,7 @@ class LibraryRepository(context: Context) {
             .map(YummyIdMigration::normalizeTitleId)
             .distinct()
 
-        return mergedIds.flatMap { id ->
+        val entries = mergedIds.flatMap { id ->
             val anime = getStoredAnime(id) ?: return@flatMap emptyList()
             getLibraryCategories(id)
                 .sortedBy(LibraryCategory::ordinal)
@@ -32,6 +32,11 @@ class LibraryRepository(context: Context) {
                     )
                 }
         }
+        // getLibraryIds() reads a SharedPreferences string set, which has no defined iteration
+        // order (and can even reorder between reads) -- without an explicit sort here, the
+        // library's display order was effectively arbitrary. Recently added first is the only
+        // order that stays stable and meaningful as the library grows into the hundreds.
+        return entries.sortedByDescending { it.addedAt ?: 0L }
     }
 
     fun getLibraryEntries(category: LibraryCategory): List<LibraryEntry> {
