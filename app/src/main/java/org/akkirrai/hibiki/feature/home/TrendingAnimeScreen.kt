@@ -56,9 +56,9 @@ import org.akkirrai.hibiki.core.design.component.AppCenteredLoading
 import org.akkirrai.hibiki.core.design.component.AppFloatingHeader
 import org.akkirrai.hibiki.core.design.component.AppFloatingPill
 import org.akkirrai.hibiki.core.design.component.AppMessageState
-import org.akkirrai.hibiki.core.design.component.verticalAnimeListContent
-import org.akkirrai.hibiki.core.design.component.LibraryStatusPosterFooter
-import org.akkirrai.hibiki.core.design.component.rememberLibraryStatusByAnimeId
+import org.akkirrai.hibiki.core.design.component.anime.verticalAnimeListContent
+import org.akkirrai.hibiki.core.design.component.anime.LibraryStatusPosterFooter
+import org.akkirrai.hibiki.core.design.component.anime.rememberLibraryStatusByAnimeId
 import org.akkirrai.hibiki.core.model.Anime
 import org.akkirrai.hibiki.core.model.buildCardMeta
 

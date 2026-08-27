@@ -1,4 +1,4 @@
-package org.akkirrai.hibiki.core.design.component
+package org.akkirrai.hibiki.core.design.component.filter
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility

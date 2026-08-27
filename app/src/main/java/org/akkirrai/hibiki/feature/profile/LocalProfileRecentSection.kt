@@ -26,7 +26,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.SubcomposeAsyncImage
 import org.akkirrai.hibiki.R
-import org.akkirrai.hibiki.core.design.component.PosterPlaceholder
+import org.akkirrai.hibiki.core.design.component.anime.PosterPlaceholder
 
 @Composable
 internal fun RecentLibraryCard(

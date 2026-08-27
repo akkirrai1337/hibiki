@@ -1,4 +1,4 @@
-package org.akkirrai.hibiki.core.design.component
+package org.akkirrai.hibiki.core.design.component.filter
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -10,6 +10,7 @@ import androidx.compose.material3.SheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import org.akkirrai.hibiki.core.design.component.AppModalBottomSheet
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

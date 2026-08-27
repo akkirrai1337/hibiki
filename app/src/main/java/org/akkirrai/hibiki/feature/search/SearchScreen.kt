@@ -34,9 +34,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.core.design.UiDimens
-import org.akkirrai.hibiki.core.design.component.searchStateVerticalListContent
-import org.akkirrai.hibiki.core.design.component.LibraryStatusPosterFooter
-import org.akkirrai.hibiki.core.design.component.rememberLibraryStatusByAnimeId
+import org.akkirrai.hibiki.core.design.component.anime.searchStateVerticalListContent
+import org.akkirrai.hibiki.core.design.component.anime.LibraryStatusPosterFooter
+import org.akkirrai.hibiki.core.design.component.anime.rememberLibraryStatusByAnimeId
 import org.akkirrai.hibiki.core.model.Anime
 import org.akkirrai.hibiki.core.model.SearchUiState
 import org.akkirrai.hibiki.core.model.buildCardMeta

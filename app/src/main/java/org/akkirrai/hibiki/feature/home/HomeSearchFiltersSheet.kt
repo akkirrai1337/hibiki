@@ -80,10 +80,10 @@ import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.app.settings.LocalAppLanguage
 import org.akkirrai.hibiki.app.settings.LocalizedAppContext
 import org.akkirrai.hibiki.core.model.AnimeSearchFilters
-import org.akkirrai.hibiki.core.design.component.AppFilterBottomSheet
-import org.akkirrai.hibiki.core.design.component.AppConnectedToggleFilter
-import org.akkirrai.hibiki.core.design.component.AppThreeStateChipFilter
-import org.akkirrai.hibiki.core.design.component.appFilterOptionText
+import org.akkirrai.hibiki.core.design.component.filter.AppFilterBottomSheet
+import org.akkirrai.hibiki.core.design.component.filter.AppConnectedToggleFilter
+import org.akkirrai.hibiki.core.design.component.filter.AppThreeStateChipFilter
+import org.akkirrai.hibiki.core.design.component.filter.appFilterOptionText
 import java.time.Year
 
 @OptIn(

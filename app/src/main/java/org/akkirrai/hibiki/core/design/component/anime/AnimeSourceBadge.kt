@@ -1,4 +1,4 @@
-package org.akkirrai.hibiki.core.design.component
+package org.akkirrai.hibiki.core.design.component.anime
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row

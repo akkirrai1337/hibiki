@@ -1,4 +1,4 @@
-package org.akkirrai.hibiki.core.design.component
+package org.akkirrai.hibiki.core.design.component.search
 
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.lazy.grid.GridItemSpan
@@ -10,6 +10,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.res.pluralStringResource
 import org.akkirrai.hibiki.R
+import org.akkirrai.hibiki.core.design.component.AppLoadMoreBlock
+import org.akkirrai.hibiki.core.design.component.anime.AnimePosterCardItem
 import org.akkirrai.hibiki.core.model.Anime
 
 fun LazyGridScope.animeSearchResultsContent(
