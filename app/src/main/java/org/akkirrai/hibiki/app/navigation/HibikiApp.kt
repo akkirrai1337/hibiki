@@ -67,7 +67,6 @@ import org.akkirrai.hibiki.feature.player.PlayerScreen
 import org.akkirrai.hibiki.feature.player.WatchSourcesScreen
 import org.akkirrai.hibiki.feature.settings.SettingsScreen
 import org.akkirrai.hibiki.feature.sources.SourceExtensionsScreen
-import org.akkirrai.hibiki.feature.settings.SourcesScreen
 import org.akkirrai.hibiki.app.settings.LocalAppLanguage
 
 @Composable
@@ -270,28 +269,7 @@ private fun HibikiNavHost(
                     onCheckForUpdates = {
                         navController.runIfCurrent(backStackEntry, onCheckForUpdates)
                     },
-                    onOpenSources = {
-                        navController.runIfCurrent(backStackEntry) {
-                            navController.navigate(AnimeNavType.SOURCES_ROUTE)
-                        }
-                    },
                     onConfigureNotifications = onConfigureNotifications,
-                )
-            }
-        }
-        composable(
-            route = AnimeNavType.SOURCES_ROUTE,
-            enterTransition = { appScreenEnterTransition() },
-            exitTransition = { appScreenExitTransition() },
-            popEnterTransition = { appScreenPopEnterTransition() },
-            popExitTransition = { appScreenPopExitTransition() },
-        ) { backStackEntry ->
-            DestinationScreenContainer {
-                SourcesScreen(
-                    onBackClick = {
-                        navController.runIfCurrent(backStackEntry) { navController.navigateUp() }
-                    },
-                    modifier = screenModifier,
                 )
             }
         }

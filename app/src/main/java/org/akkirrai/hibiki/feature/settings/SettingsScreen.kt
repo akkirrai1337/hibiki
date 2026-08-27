@@ -29,7 +29,6 @@ import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.DarkMode
 import androidx.compose.material.icons.outlined.Language
 import androidx.compose.material.icons.outlined.Notifications
-import androidx.compose.material.icons.outlined.Storage
 import androidx.compose.material.icons.outlined.Palette
 import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material.icons.outlined.SkipNext
@@ -97,7 +96,6 @@ fun SettingsScreen(
     modifier: Modifier = Modifier,
     bottomContentPadding: Dp = 24.dp,
     onCheckForUpdates: () -> Unit = {},
-    onOpenSources: () -> Unit = {},
     onConfigureNotifications: () -> Unit = {},
 ) {
     val context = LocalContext.current
@@ -179,7 +177,7 @@ fun SettingsScreen(
 
         item(key = "preferences") {
             SettingsSection(title = stringResource(R.string.settings_preferences)) {
-                SettingsItems(count = 3) { index, shape ->
+                SettingsItems(count = 2) { index, shape ->
                     when (index) {
                         0 -> SettingsVerticalItem(
                             icon = Icons.Outlined.Language,
@@ -198,14 +196,6 @@ fun SettingsScreen(
                         }
 
                         1 -> SettingsActionItem(
-                            icon = Icons.Outlined.Storage,
-                            title = stringResource(R.string.settings_sources),
-                            shape = shape,
-                            showNavigationArrow = true,
-                            onClick = onOpenSources,
-                        )
-
-                        2 -> SettingsActionItem(
                             icon = Icons.Outlined.Notifications,
                             title = stringResource(R.string.settings_notifications),
                             subtitle = notificationPermissionLabel(preferences.notificationPermissionState),
