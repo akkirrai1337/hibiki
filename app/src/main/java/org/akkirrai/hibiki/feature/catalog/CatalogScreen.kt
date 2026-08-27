@@ -118,6 +118,10 @@ fun CatalogScreen(
     val availableSorts = remember(state.filterCatalog?.capabilities) {
         state.filterCatalog?.capabilities?.let(::availableCatalogSorts) ?: CatalogSort.entries
     }
+    // Default to showing the filter control while capabilities are still loading (unknown), so
+    // it doesn't visibly pop in a moment after the screen appears -- only hide it once we
+    // actually know the source has nothing to filter by.
+    val showFilterControl = state.filterCatalog?.capabilities?.supportedFilters?.isNotEmpty() ?: true
 
     LaunchedEffect(availableSorts, state.selectedSort) {
         if (state.selectedSort !in availableSorts) {
@@ -268,6 +272,7 @@ fun CatalogScreen(
                 onQueryChange = viewModel::updateQuery,
                 onClear = { viewModel.updateQuery("") },
                 onFilterClick = { isFilterSheetOpen = true },
+                showFilter = showFilterControl,
                 modifier = Modifier.zIndex(1f),
             )
             val sortOffsetY by animateDpAsState(
