@@ -85,6 +85,9 @@
     <string name="search_filters_sort">Сортировка</string>
     <string name="search_filters_type">Тип</string>
     <string name="search_filters_status">Статус</string>
+    <string name="library_filter_status_ongoing">Онгоинг</string>
+    <string name="library_filter_status_announced">Анонс</string>
+    <string name="library_filter_status_released">Вышло</string>
     <string name="search_filters_year">Год</string>
     <string name="search_filters_year_from">От</string>
     <string name="search_filters_year_to">До</string>

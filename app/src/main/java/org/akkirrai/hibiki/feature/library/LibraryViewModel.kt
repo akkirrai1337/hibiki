@@ -16,6 +16,8 @@ import kotlinx.coroutines.launch
 import org.akkirrai.hibiki.app.di.hibikiDependencies
 import org.akkirrai.hibiki.core.download.OfflineDownloadRepository
 import org.akkirrai.hibiki.core.log.PerfLogger
+import org.akkirrai.hibiki.core.model.AnimeStatusCategory
+import org.akkirrai.hibiki.core.model.classifyAnimeStatus
 import org.akkirrai.hibiki.core.source.AnimeSearchRepository
 import org.akkirrai.hibiki.core.source.LibraryCategory
 import org.akkirrai.hibiki.core.source.LibraryEntry
@@ -269,38 +271,44 @@ data class LibraryUiState(
         get() {
             val categoryEntries = entries.filter { it.category == selectedCategory }
             return LibraryFilterCatalog(
+                // Type and status are small, closed vocabularies (TV/OVA/ONA/Movie,
+                // ongoing/announced/released) every source's data can be mapped into reliably.
+                // Genre is deliberately not offered here: it's an open, source-specific
+                // vocabulary (different sources translate or scope genres differently), and with
+                // a library mixing entries from several sources there's no way to reconcile those
+                // into one consistent set of options without a hand-maintained mapping that will
+                // never keep up with sources that don't exist yet.
                 typeOptions = categoryEntries.mapNotNull { it.anime.extractLibraryType() }.distinct().sorted(),
-                statusOptions = categoryEntries.map { it.anime.status.trim() }.filter(String::isNotBlank).distinct().sorted(),
-                genreOptions = categoryEntries.flatMap { it.anime.genres }.map(String::trim).filter(String::isNotBlank).distinct().sorted(),
+                statusOptions = AnimeStatusCategory.entries.filter { category ->
+                    categoryEntries.any { classifyAnimeStatus(it.anime.status) == category }
+                },
+                yearOptions = categoryEntries.mapNotNull { it.anime.extractLibraryYear() }.distinct().sortedDescending(),
             )
         }
 }
 
 data class LibrarySearchFilters(
     val type: String? = null,
-    val status: String? = null,
-    val includedGenres: Set<String> = emptySet(),
-    val excludedGenres: Set<String> = emptySet(),
+    val status: AnimeStatusCategory? = null,
+    val year: Int? = null,
 ) {
     fun matches(entry: LibraryEntry): Boolean {
         val anime = entry.anime
         val typeMatches = type == null || anime.extractLibraryType() == type
-        val statusMatches = status == null || anime.status.equals(status, ignoreCase = true)
-        val animeGenres = anime.genres.map(String::trim).filter(String::isNotBlank).toSet()
-        val includesMatch = includedGenres.isEmpty() || includedGenres.all { it in animeGenres }
-        val excludesMatch = excludedGenres.none { it in animeGenres }
-        return typeMatches && statusMatches && includesMatch && excludesMatch
+        val statusMatches = status == null || classifyAnimeStatus(anime.status) == status
+        val yearMatches = year == null || anime.extractLibraryYear() == year
+        return typeMatches && statusMatches && yearMatches
     }
 
     fun hasActiveFilters(): Boolean {
-        return type != null || status != null || includedGenres.isNotEmpty() || excludedGenres.isNotEmpty()
+        return type != null || status != null || year != null
     }
 }
 
 data class LibraryFilterCatalog(
     val typeOptions: List<String> = emptyList(),
-    val statusOptions: List<String> = emptyList(),
-    val genreOptions: List<String> = emptyList(),
+    val statusOptions: List<AnimeStatusCategory> = emptyList(),
+    val yearOptions: List<Int> = emptyList(),
 )
 
 private fun org.akkirrai.hibiki.core.model.Anime.extractLibraryType(): String? {
@@ -310,6 +318,13 @@ private fun org.akkirrai.hibiki.core.model.Anime.extractLibraryType(): String? {
         .firstOrNull { value ->
             value.isNotBlank() && value.any(Char::isLetter) && value.none(Char::isDigit)
         }
+}
+
+private fun org.akkirrai.hibiki.core.model.Anime.extractLibraryYear(): Int? {
+    return subtitle
+        .split(Regex("\\s*[•·|]\\s*"))
+        .map(String::trim)
+        .firstNotNullOfOrNull(String::toIntOrNull)
 }
 
 private fun orderedLibraryCategories(entries: List<LibraryEntry>): List<LibraryCategory> {

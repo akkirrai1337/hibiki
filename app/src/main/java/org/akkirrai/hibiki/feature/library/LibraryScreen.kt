@@ -29,6 +29,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.outlined.BookmarkBorder
+import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.Download
@@ -83,7 +84,6 @@ import org.akkirrai.hibiki.core.design.UiDimens
 import org.akkirrai.hibiki.core.design.component.AppMessageState
 import org.akkirrai.hibiki.core.design.component.filter.AppFilterBottomSheet
 import org.akkirrai.hibiki.core.design.component.filter.AppConnectedToggleFilter
-import org.akkirrai.hibiki.core.design.component.filter.AppThreeStateChipFilter
 import org.akkirrai.hibiki.core.design.component.filter.appFilterOptionText
 import org.akkirrai.hibiki.core.design.component.AppTonalSurface
 import org.akkirrai.hibiki.core.design.component.search.AppSearchTopBar
@@ -95,6 +95,7 @@ import org.akkirrai.hibiki.core.design.component.anime.VerticalAnimeListItem
 import org.akkirrai.hibiki.core.design.component.anime.LibraryStatusPosterFooter
 import org.akkirrai.hibiki.core.log.PerfLogger
 import org.akkirrai.hibiki.core.model.Anime
+import org.akkirrai.hibiki.core.model.AnimeStatusCategory
 import org.akkirrai.hibiki.core.model.buildLibraryMeta
 import org.akkirrai.hibiki.core.source.LibraryCategory
 import org.akkirrai.hibiki.core.source.LibraryEntry
@@ -333,24 +334,19 @@ private fun LibrarySearchFiltersSheet(
                 selected = pendingFilters.status,
                 onSelected = { pendingFilters = pendingFilters.copy(status = it) },
                 icon = { ImageVector.vectorResource(libraryStatusIcon(it)) },
-                text = { appFilterOptionText(it) },
+                text = { libraryStatusLabel(it) },
             )
 
-            AppThreeStateChipFilter(
-                title = stringResource(R.string.search_filters_genres),
-                options = catalog.genreOptions,
-                included = pendingFilters.includedGenres,
-                excluded = pendingFilters.excludedGenres,
-                onChange = { included, excluded ->
-                    pendingFilters = pendingFilters.copy(
-                        includedGenres = included,
-                        excludedGenres = excluded,
-                    )
-                },
-                id = { it },
-                text = { appFilterOptionText(it) },
-                maxCollapsedItems = 15,
-            )
+            if (catalog.yearOptions.isNotEmpty()) {
+                AppConnectedToggleFilter(
+                    title = stringResource(R.string.search_filters_year),
+                    entries = catalog.yearOptions,
+                    selected = pendingFilters.year,
+                    onSelected = { pendingFilters = pendingFilters.copy(year = it) },
+                    icon = { Icons.Outlined.CalendarMonth },
+                    text = { it.toString() },
+                )
+            }
 
             FlowRow(
                 modifier = Modifier
@@ -396,13 +392,17 @@ private fun libraryTypeIcon(type: String): Int = when (type.trim().lowercase()) 
     else -> R.drawable.animite_tv
 }
 
-private fun libraryStatusIcon(status: String): Int = when (status.trim().lowercase()) {
-    "released", "finished", "completed" -> R.drawable.animite_finished
-    "ongoing", "releasing", "airing" -> R.drawable.animite_releasing
-    "announced", "not_yet_released", "not-yet-released" -> R.drawable.animite_not_yet_released
-    "cancelled", "canceled" -> R.drawable.animite_cancelled
-    "hiatus", "paused" -> R.drawable.animite_hiatus
-    else -> R.drawable.animite_finished
+private fun libraryStatusIcon(status: AnimeStatusCategory): Int = when (status) {
+    AnimeStatusCategory.Ongoing -> R.drawable.animite_releasing
+    AnimeStatusCategory.Announced -> R.drawable.animite_not_yet_released
+    AnimeStatusCategory.Released -> R.drawable.animite_finished
+}
+
+@Composable
+private fun libraryStatusLabel(status: AnimeStatusCategory): String = when (status) {
+    AnimeStatusCategory.Ongoing -> stringResource(R.string.library_filter_status_ongoing)
+    AnimeStatusCategory.Announced -> stringResource(R.string.library_filter_status_announced)
+    AnimeStatusCategory.Released -> stringResource(R.string.library_filter_status_released)
 }
 
 @Composable

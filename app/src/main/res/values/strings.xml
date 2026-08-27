@@ -93,6 +93,9 @@
     <string name="search_filters_sort">Sort</string>
     <string name="search_filters_type">Type</string>
     <string name="search_filters_status">Status</string>
+    <string name="library_filter_status_ongoing">Ongoing</string>
+    <string name="library_filter_status_announced">Announced</string>
+    <string name="library_filter_status_released">Released</string>
     <string name="search_filters_year">Year</string>
     <string name="search_filters_year_from">From</string>
     <string name="search_filters_year_to">To</string>
