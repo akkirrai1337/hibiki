@@ -99,10 +99,13 @@ fun HibikiApp(
         )
         discordRpcManager.showGeneralStatus(currentRoute)
     }
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.surface)
+    // A plain Box + .background() modifier paints the right color but never provides
+    // LocalContentColor -- any Text/Icon that doesn't set its color explicitly then falls back
+    // to Compose's hardcoded default (black), instead of a color that's actually readable on this
+    // background. Surface sets both.
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = MaterialTheme.colorScheme.surface,
     ) {
         HibikiNavHost(
             modifier = Modifier.fillMaxSize(),

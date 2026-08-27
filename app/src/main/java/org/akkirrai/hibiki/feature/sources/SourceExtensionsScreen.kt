@@ -241,7 +241,11 @@ private fun SourceExtensionsToolbar(
     ) {
         if (searchOpen) {
             IconButton(onClick = onCloseSearch) {
-                Icon(Icons.Outlined.Close, contentDescription = stringResource(R.string.action_cancel))
+                Icon(
+                    imageVector = Icons.Outlined.Close,
+                    contentDescription = stringResource(R.string.action_cancel),
+                    tint = MaterialTheme.colorScheme.onBackground,
+                )
             }
             BasicTextField(
                 value = query,
@@ -262,7 +266,11 @@ private fun SourceExtensionsToolbar(
                 color = MaterialTheme.colorScheme.onBackground,
             )
             IconButton(onClick = onOpenSearch) {
-                Icon(Icons.Outlined.Search, contentDescription = stringResource(R.string.source_extensions_search))
+                Icon(
+                    imageVector = Icons.Outlined.Search,
+                    contentDescription = stringResource(R.string.source_extensions_search),
+                    tint = MaterialTheme.colorScheme.onBackground,
+                )
             }
         }
         if (showFilter) {
@@ -270,11 +278,16 @@ private fun SourceExtensionsToolbar(
                 Icon(
                     imageVector = Icons.Outlined.FilterList,
                     contentDescription = stringResource(R.string.source_extensions_filter_languages),
+                    tint = MaterialTheme.colorScheme.onBackground,
                 )
             }
         }
         IconButton(onClick = onRefresh) {
-            Icon(Icons.Outlined.Refresh, contentDescription = stringResource(R.string.source_extensions_refresh))
+            Icon(
+                imageVector = Icons.Outlined.Refresh,
+                contentDescription = stringResource(R.string.source_extensions_refresh),
+                tint = MaterialTheme.colorScheme.onBackground,
+            )
         }
     }
 }
@@ -385,11 +398,16 @@ private fun SourceInfoScreen(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             IconButton(onClick = onBack) {
-                Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = stringResource(R.string.cd_back))
+                Icon(
+                    imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
+                    contentDescription = stringResource(R.string.cd_back),
+                    tint = MaterialTheme.colorScheme.onBackground,
+                )
             }
             Text(
                 text = stringResource(R.string.source_extensions_package_info),
                 style = MaterialTheme.typography.titleLarge,
+                color = MaterialTheme.colorScheme.onBackground,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f),
@@ -418,10 +436,15 @@ private fun SourceInfoScreen(
                 Text(
                     text = source.name,
                     style = MaterialTheme.typography.headlineSmall,
+                    color = MaterialTheme.colorScheme.onBackground,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.padding(top = 12.dp),
                 )
-                Text(text = source.id.value, style = MaterialTheme.typography.bodySmall)
+                Text(
+                    text = source.id.value,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
             Row(
                 modifier = Modifier
@@ -456,7 +479,12 @@ private fun SourceInfoScreen(
 @Composable
 private fun SourcePackageInfoValue(value: String, label: String) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(value, textAlign = TextAlign.Center, style = MaterialTheme.typography.bodyLarge)
+        Text(
+            text = value,
+            textAlign = TextAlign.Center,
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onBackground,
+        )
         Text(
             label,
             textAlign = TextAlign.Center,
