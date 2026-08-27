@@ -390,6 +390,15 @@
     <string name="source_extensions_copy_repository">Копировать ссылку на репозиторий</string>
     <string name="source_extensions_repository_copied">Ссылка на репозиторий скопирована</string>
     <string name="source_extensions_empty">Ничего не найдено по запросу</string>
+    <string name="source_extensions_manage">Управление</string>
+    <string name="source_extensions_update">Обновить</string>
+    <string name="source_extensions_uninstall">Удалить</string>
+    <string name="source_extensions_package_info">Источник</string>
+    <string name="source_extensions_version">Версия</string>
+    <string name="source_extensions_language">Язык</string>
+    <string name="source_extensions_add_repository">Добавить репозиторий</string>
+    <string name="source_extensions_remove_repository">Удалить репозиторий</string>
+    <string name="source_extensions_repository_url_hint">https://github.com/owner/repo</string>
     <string name="onboarding_welcome_title">Добро пожаловать в hibiki</string>
     <string name="onboarding_welcome_description">Настроим приложение за пару шагов, чтобы вы могли сразу начать просмотр.</string>
     <string name="onboarding_get_started">Начать настройку</string>
