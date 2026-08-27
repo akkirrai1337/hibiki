@@ -255,7 +255,19 @@ class AnimeSearchRepository(
             null -> fallbackLabel.orEmpty().ifBlank {
                 if (preferEnglish) "Episodes unknown" else "Количество серий неизвестно"
             }
-            else -> if (preferEnglish) "$count episodes" else "$count серий"
+            else -> "$count ${episodesWord(count, preferEnglish)}"
+        }
+    }
+
+    private fun episodesWord(count: Int, preferEnglish: Boolean): String {
+        if (preferEnglish) return if (count == 1) "episode" else "episodes"
+        val mod100 = count % 100
+        val mod10 = count % 10
+        return when {
+            mod100 in 11..14 -> "серий"
+            mod10 == 1 -> "серия"
+            mod10 in 2..4 -> "серии"
+            else -> "серий"
         }
     }
 
@@ -293,7 +305,7 @@ class AnimeSearchRepository(
         return when (appPreferences?.state?.value?.languageMode ?: LanguageMode.SYSTEM) {
             LanguageMode.ENGLISH -> true
             LanguageMode.RUSSIAN -> false
-            LanguageMode.SYSTEM -> false
+            LanguageMode.SYSTEM -> appContext?.resources?.configuration?.locales?.get(0)?.language != "ru"
         }
     }
 

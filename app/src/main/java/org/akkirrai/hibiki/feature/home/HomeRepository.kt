@@ -388,11 +388,17 @@ class HomeRepository(
 
     private fun announcementLabel(): String = if (isRussianLocale()) "анонс" else "announcement"
 
-    private fun episodesCountLabel(count: Int): String {
-        return if (isRussianLocale()) {
-            "$count серий"
-        } else {
-            "$count episodes"
+    private fun episodesCountLabel(count: Int): String = "$count ${episodesWord(count)}"
+
+    private fun episodesWord(count: Int): String {
+        if (!isRussianLocale()) return if (count == 1) "episode" else "episodes"
+        val mod100 = count % 100
+        val mod10 = count % 10
+        return when {
+            mod100 in 11..14 -> "серий"
+            mod10 == 1 -> "серия"
+            mod10 in 2..4 -> "серии"
+            else -> "серий"
         }
     }
 
