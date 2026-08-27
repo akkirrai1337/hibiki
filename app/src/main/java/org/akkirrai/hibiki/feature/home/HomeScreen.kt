@@ -162,7 +162,11 @@ fun HomeScreen(
     val pullToRefreshState = rememberPullToRefreshState()
     val libraryStatusByAnimeId = rememberLibraryStatusByAnimeId()
     val selectedSourceId = LocalAppPreferencesState.current.animeSource
-    val homeListState = remember(selectedSourceId) { LazyListState() }
+    // A plain remember() here would lose scroll position across configuration changes and
+    // whenever this composable is disposed and recomposed (e.g. switching to another bottom-nav
+    // tab and back) -- rememberSaveable keeps it, while still resetting to the top when the
+    // active source (and so the whole feed) changes.
+    val homeListState = rememberSaveable(selectedSourceId, saver = LazyListState.Saver) { LazyListState() }
 
     LaunchedEffect(
         homeListState,

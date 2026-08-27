@@ -439,12 +439,19 @@ class HomeViewModel(
     }
 
     /**
-     * The first Home frame is rendered only after the visible feed has stable metadata. This
-     * prevents cards from changing height while the user is already interacting with the list.
+     * The first Home frame is rendered only after its above-the-fold cards have stable metadata,
+     * so they don't visibly change height moments after appearing. Only the first
+     * [EAGER_DESCRIPTION_COUNT] trending items are awaited here -- the rest already get their
+     * description filled in lazily as they scroll into view (see [enrichDescription], wired to
+     * each card's onItemVisible). Awaiting descriptions for the *entire* page here used to block
+     * the whole loading spinner on the slowest of up to [TRENDING_PAGE_SIZE] concurrent requests
+     * for content the user hadn't even scrolled to yet.
      */
     private suspend fun prepareHomeFeed(state: HomeUiState): HomeUiState {
-        val enrichedTrending = repository.enrichDescriptions(state.trending)
-        val descriptions = enrichedTrending
+        val eagerItems = state.trending.take(EAGER_DESCRIPTION_COUNT)
+        val enrichedEagerItems = repository.enrichDescriptions(eagerItems)
+        val enrichedTrending = enrichedEagerItems + state.trending.drop(EAGER_DESCRIPTION_COUNT)
+        val descriptions = enrichedEagerItems
             .mapNotNull { anime -> anime.description?.takeIf(String::isNotBlank)?.let { anime.id to it } }
             .toMap()
         return state.copy(
@@ -514,6 +521,7 @@ class HomeViewModel(
         const val RECENT_UPDATES_PAGE_SIZE = 12
         const val DESCRIPTION_UPDATE_BATCH_WINDOW_MS = 100L
         const val RANDOM_HISTORY_SIZE = 20
+        const val EAGER_DESCRIPTION_COUNT = 6
     }
 
     private fun observeSourceChanges() {
