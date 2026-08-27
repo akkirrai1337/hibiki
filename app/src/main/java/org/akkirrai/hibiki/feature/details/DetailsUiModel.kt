@@ -34,9 +34,15 @@ internal fun buildDetailsUiModel(
     contentFeatures: Set<SourceCapability>,
 ): DetailsUiModel {
     val relatedItems = if (SourceCapability.RELATED_TITLES in contentFeatures) {
-        (anime.franchiseAnime + anime.relatedAnime)
-            .filterNot { it.id == anime.id }
-            .distinctBy(RelatedAnime::id)
+        val sourceRelatedItems = (anime.franchiseAnime + anime.relatedAnime).distinctBy(RelatedAnime::id)
+        // Franchise lists read as a sequence (Season 1, Season 2, Movie, ...); silently dropping
+        // the title you're already viewing leaves a confusing gap, as if that entry didn't exist.
+        // Only insert it when the source didn't already include a self-reference of its own.
+        if (sourceRelatedItems.isNotEmpty() && sourceRelatedItems.none { it.id == anime.id }) {
+            listOf(anime.toRelatedAnime()) + sourceRelatedItems
+        } else {
+            sourceRelatedItems
+        }
     } else {
         emptyList()
     }
@@ -68,3 +74,11 @@ internal fun buildDetailsUiModel(
         sections = sections,
     )
 }
+
+private fun Anime.toRelatedAnime(): RelatedAnime = RelatedAnime(
+    id = id,
+    title = title,
+    posterUrl = posterUrl,
+    posterFallbackUrl = posterFallbackUrl,
+    status = status,
+)

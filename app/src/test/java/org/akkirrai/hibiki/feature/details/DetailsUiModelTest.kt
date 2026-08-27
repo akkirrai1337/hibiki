@@ -28,6 +28,40 @@ class DetailsUiModelTest {
     }
 
     @Test
+    fun `current anime leads the related section when the source omits it`() {
+        val anime = anime(related = listOf(RelatedAnime("season2", "Season 2")))
+
+        val model = buildDetailsUiModel(
+            anime = anime,
+            hero = hero,
+            description = "",
+            contentFeatures = SourceCapability.entries.toSet(),
+        )
+
+        assertEquals(
+            listOf("title", "season2"),
+            (model.sections.first() as RelatedSection).items.map { it.id },
+        )
+    }
+
+    @Test
+    fun `current anime is not duplicated when the source already includes it`() {
+        val anime = anime(related = listOf(RelatedAnime("title", "Title"), RelatedAnime("season2", "Season 2")))
+
+        val model = buildDetailsUiModel(
+            anime = anime,
+            hero = hero,
+            description = "",
+            contentFeatures = SourceCapability.entries.toSet(),
+        )
+
+        assertEquals(
+            listOf("title", "season2"),
+            (model.sections.first() as RelatedSection).items.map { it.id },
+        )
+    }
+
+    @Test
     fun `duplicate content is shown only in related section`() {
         val duplicate = RelatedAnime("same", "Same")
         val anime = anime(
