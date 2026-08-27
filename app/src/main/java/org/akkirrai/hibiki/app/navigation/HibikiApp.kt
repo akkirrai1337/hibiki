@@ -66,6 +66,7 @@ import org.akkirrai.hibiki.feature.player.EpisodesScreen
 import org.akkirrai.hibiki.feature.player.PlayerScreen
 import org.akkirrai.hibiki.feature.player.WatchSourcesScreen
 import org.akkirrai.hibiki.feature.settings.SettingsScreen
+import org.akkirrai.hibiki.feature.sources.SourceExtensionsScreen
 import org.akkirrai.hibiki.feature.settings.SourcesScreen
 import org.akkirrai.hibiki.app.settings.LocalAppLanguage
 
@@ -235,6 +236,22 @@ private fun HibikiNavHost(
                         }
                     },
                     isActive = isTopLevelDestination && currentTopLevel == TopLevelDestination.Library,
+                    bottomContentPadding = topLevelBottomContentPadding,
+                    modifier = topLevelScreenModifier,
+                )
+            }
+        }
+        topLevelComposable(route = TopLevelDestination.Sources.route) { backStackEntry ->
+            TopLevelScreenContainer(
+                destination = TopLevelDestination.Sources,
+                destinations = TopLevelDestination.entries,
+                onDestinationClick = { destination ->
+                    navController.runIfCurrent(backStackEntry) {
+                        navController.navigateTopLevelDestination(TopLevelDestination.Sources, destination)
+                    }
+                },
+            ) {
+                SourceExtensionsScreen(
                     bottomContentPadding = topLevelBottomContentPadding,
                     modifier = topLevelScreenModifier,
                 )

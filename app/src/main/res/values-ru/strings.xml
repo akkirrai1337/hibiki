@@ -15,6 +15,7 @@
     <string name="nav_home">Главная</string>
     <string name="nav_catalog">Каталог</string>
     <string name="nav_library">Библиотека</string>
+    <string name="nav_sources">Источники</string>
     <string name="nav_settings">Настройки</string>
     <string name="cd_back">Назад</string>
     <string name="cd_close">Закрыть</string>
@@ -366,6 +367,16 @@
     <string name="settings_sources_language_ru">RU</string>
     <string name="settings_sources_language_en">EN</string>
     <string name="settings_sources_empty">Источников пока нет</string>
+    <string name="source_extensions_tab_extensions">Расширения</string>
+    <string name="source_extensions_tab_sources">Источники</string>
+    <string name="source_extensions_install">Установить</string>
+    <string name="source_extensions_search">Поиск</string>
+    <string name="source_extensions_filter_languages">Языки</string>
+    <string name="source_extensions_refresh">Обновить</string>
+    <string name="source_extensions_open_repository">Открыть репозиторий</string>
+    <string name="source_extensions_copy_repository">Копировать ссылку на репозиторий</string>
+    <string name="source_extensions_repository_copied">Ссылка на репозиторий скопирована</string>
+    <string name="source_extensions_empty">Ничего не найдено по запросу</string>
     <string name="onboarding_welcome_title">Добро пожаловать в hibiki</string>
     <string name="onboarding_welcome_description">Настроим приложение за пару шагов, чтобы вы могли сразу начать просмотр.</string>
     <string name="onboarding_get_started">Начать настройку</string>
