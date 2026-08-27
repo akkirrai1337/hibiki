@@ -38,10 +38,6 @@ class LibraryRepository(context: Context) {
         return getLibraryEntries().filter { it.category == category }
     }
 
-    fun getLibraryAnime(category: LibraryCategory): List<Anime> {
-        return getLibraryEntries(category).map(LibraryEntry::anime)
-    }
-
     fun getLibraryCategory(id: String): LibraryCategory? {
         val categories = getLibraryCategories(id)
         return categories.firstOrNull { it != LibraryCategory.Saved }
@@ -90,38 +86,6 @@ class LibraryRepository(context: Context) {
             .apply()
     }
 
-    /** Imports an entry which does not exist locally while preserving its remote timestamp. */
-    fun importLibraryEntry(
-        anime: Anime,
-        categories: Set<LibraryCategory>,
-        addedAt: Long?,
-    ) {
-        if (categories.isEmpty()) return
-        val normalizedAnime = anime.normalizeIds()
-        if (getLibraryCategories(normalizedAnime.id).isNotEmpty()) return
-
-        val ids = getLibraryIds().toMutableSet().apply { add(normalizedAnime.id) }
-        val editor = prefs.edit()
-            .putStringSet(LIBRARY_IDS_KEY, ids)
-            .putString(libraryAnimeKey(normalizedAnime.id), encodeAnime(normalizedAnime).toString())
-            .putStringSet(libraryCategorySetKey(normalizedAnime.id), categories.toStorageValues())
-        val normalizedAddedAt = addedAt?.takeIf { it > 0L } ?: System.currentTimeMillis()
-        editor.putLong(libraryAddedAtKey(normalizedAnime.id), normalizedAddedAt).apply()
-    }
-
-    fun replacePrimaryCategory(id: String, category: LibraryCategory) {
-        require(category !in setOf(LibraryCategory.Favorite, LibraryCategory.Saved))
-        val categories = getLibraryCategories(id)
-            .filterTo(linkedSetOf()) { it == LibraryCategory.Favorite || it == LibraryCategory.Saved }
-            .apply { add(category) }
-        saveCategoriesOrRemove(id, categories)
-    }
-
-    fun addSupplementalCategory(id: String, category: LibraryCategory) {
-        require(category == LibraryCategory.Favorite || category == LibraryCategory.Saved)
-        saveCategoriesOrRemove(id, getLibraryCategories(id) + category)
-    }
-
     fun removeFromLibrary(id: String) {
         val remainingCategories = getLibraryCategories(id)
             .filterTo(mutableSetOf()) { it == LibraryCategory.Saved }
@@ -131,28 +95,6 @@ class LibraryRepository(context: Context) {
     fun removeSavedFromLibrary(id: String) {
         val remainingCategories = getLibraryCategories(id) - LibraryCategory.Saved
         saveCategoriesOrRemove(id, remainingCategories)
-    }
-
-    fun getFavorites(): List<Anime> {
-        return getLibraryAnime(LibraryCategory.Favorite)
-    }
-
-    fun getFavorite(id: String): Anime? {
-        return getStoredAnime(id).takeIf { LibraryCategory.Favorite in getLibraryCategories(id) }
-    }
-
-    fun isFavorite(id: String): Boolean {
-        return LibraryCategory.Favorite in getLibraryCategories(id)
-    }
-
-    fun addFavorite(anime: Anime) {
-        saveToLibrary(anime, LibraryCategory.Favorite)
-    }
-
-    fun removeFavorite(id: String) {
-        if (LibraryCategory.Favorite in getLibraryCategories(id)) {
-            saveCategoriesOrRemove(id, getLibraryCategories(id) - LibraryCategory.Favorite)
-        }
     }
 
     private fun getStoredAnime(id: String): Anime? {

@@ -20,7 +20,6 @@ import org.akkirrai.beakokit.source.yummy.YummyAnimeConfig
 import org.akkirrai.beakokit.model.AnimeSearchFilterCatalog
 import org.akkirrai.hibiki.app.settings.AppPreferences
 import org.akkirrai.hibiki.R
-import org.akkirrai.hibiki.core.account.AndroidKeystoreYummyApplicationTokenStore
 import org.akkirrai.hibiki.core.log.AppLogger
 import org.akkirrai.hibiki.core.network.AndroidChallengeSessionProvider
 
@@ -110,7 +109,7 @@ object AnimeSourceRegistry {
                 context = appContext,
                 client = client,
                 sourceId = sourceId,
-                config = createSourceConfig(appContext, sourceId),
+                config = createSourceConfig(sourceId),
                 sourceHealthReporter = sourceHealthReporter,
                 sourceExecutionPolicy = sourceExecutionPolicy,
             ),
@@ -163,16 +162,13 @@ object AnimeSourceRegistry {
         sourceExecutionPolicy = sourceExecutionPolicy,
     )
 
-    private fun createSourceConfig(context: Context, sourceId: SourceId): SourceConfig = when (sourceId) {
+    private fun createSourceConfig(sourceId: SourceId): SourceConfig = when (sourceId) {
         BuiltInSources.YUMMY_ANIME_ID -> MapSourceConfig(
-            secrets = buildMap {
-                AndroidKeystoreYummyApplicationTokenStore(context)
-                    .getEffectiveApplicationToken()
-                    .takeIf(String::isNotBlank)
-                    ?.let { token -> put(YummyAnimeConfig.APPLICATION_TOKEN, token) }
-            },
+            secrets = mapOf(YummyAnimeConfig.APPLICATION_TOKEN to DEFAULT_YUMMY_APPLICATION_TOKEN),
         )
         else -> SourceConfig.EMPTY
     }
 
+    // This header is required for stable YummyAnime API access across all sources.
+    private const val DEFAULT_YUMMY_APPLICATION_TOKEN = "wawegr8j13it4rdw"
 }

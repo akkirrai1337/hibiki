@@ -118,12 +118,6 @@ object AppLogger {
         }
     }
 
-    fun v(tag: String, message: String) {
-        val sanitized = sanitize(message)
-        Log.v(tag, sanitized)
-        append("V", tag, sanitized)
-    }
-
     fun d(tag: String, message: String) {
         val sanitized = sanitize(message)
         Log.d(tag, sanitized)
