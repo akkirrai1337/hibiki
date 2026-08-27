@@ -1862,7 +1862,7 @@ private fun isAnnouncementStatus(status: String, episodesLabel: String = ""): Bo
 }
 
 @Composable
-private fun rememberNextEpisodeEta(nextEpisodeAt: Long?): String? {
+internal fun rememberNextEpisodeEta(nextEpisodeAt: Long?): String? {
     val seconds = nextEpisodeAt?.takeIf { it > 0L } ?: return null
     var nowEpochSeconds by remember(seconds) {
         mutableLongStateOf(System.currentTimeMillis() / 1_000L)

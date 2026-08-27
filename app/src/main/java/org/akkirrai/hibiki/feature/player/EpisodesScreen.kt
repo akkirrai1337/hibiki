@@ -1,5 +1,10 @@
 package org.akkirrai.hibiki.feature.player
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandIn
@@ -26,9 +31,11 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Download
+import androidx.compose.material.icons.outlined.NotificationAdd
 import androidx.compose.material.icons.outlined.Pause
 import androidx.compose.material.icons.outlined.PlayArrow
 import androidx.compose.material.icons.outlined.VideoLibrary
@@ -52,8 +59,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -63,6 +73,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
@@ -83,11 +94,14 @@ import org.akkirrai.hibiki.core.model.EpisodeProgressStatus
 import org.akkirrai.hibiki.core.model.EpisodeWatchProgress
 import org.akkirrai.hibiki.core.model.WatchEpisode
 import org.akkirrai.hibiki.core.model.WatchSource
+import org.akkirrai.hibiki.core.reminder.EpisodeReminderScheduler
 import org.akkirrai.hibiki.core.source.LibraryCategory
 import org.akkirrai.hibiki.core.source.LibraryRepository
 import org.akkirrai.hibiki.core.source.OfflineTitleMetadataRepository
 import org.akkirrai.hibiki.core.source.WatchStateRepository
 import org.akkirrai.hibiki.core.source.watchTitleIdFromSourceId
+import org.akkirrai.hibiki.feature.details.isOngoingStatus
+import org.akkirrai.hibiki.feature.details.rememberNextEpisodeEta
 
 private const val WATCHED_END_TOLERANCE_MS = 1_000L
 private const val EPISODES_PAGE_SIZE = 24
@@ -135,6 +149,43 @@ fun EpisodesScreen(
     var downloadStates by remember(sourceId) { mutableStateOf<Map<String, OfflineEpisodeDownloadState>>(emptyMap()) }
     var downloadControlsVisible by remember(sourceId, downloadMode) { mutableStateOf(downloadMode) }
     val coroutineScope = rememberCoroutineScope()
+
+    // Cached from whatever Details visit populated it (offlineTitleMetadataRepository is also
+    // what saveToLibrary below reads from) -- this screen only otherwise knows about individual
+    // episodes, not the anime's own nextEpisodeAt/status, so there's nothing to key an upcoming-
+    // episode reminder off without it.
+    val cachedAnime = remember(titleId) { offlineTitleMetadataRepository.get(titleId) }
+    val nextEpisodeEta = rememberNextEpisodeEta(cachedAnime?.nextEpisodeAt)
+        ?.takeIf { cachedAnime != null && isOngoingStatus(cachedAnime.status) }
+    val episodeItems = (state.result as? EpisodesUiState.Content)?.items.orEmpty()
+    val nextEpisodeNumber = remember(episodeItems) {
+        (episodeItems.maxOfOrNull { it.number }?.toInt() ?: 0) + 1
+    }
+    var isEpisodeReminderSet by remember(titleId, nextEpisodeNumber) {
+        mutableStateOf(EpisodeReminderScheduler.isScheduled(context, titleId, nextEpisodeNumber))
+    }
+    fun scheduleEpisodeReminder() {
+        val nextEpisodeAt = cachedAnime?.nextEpisodeAt ?: return
+        EpisodeReminderScheduler.schedule(context, titleId, cachedAnime.title, nextEpisodeNumber, nextEpisodeAt)
+        isEpisodeReminderSet = true
+    }
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission(),
+    ) { granted -> if (granted) scheduleEpisodeReminder() }
+    val onEpisodeReminderClick: () -> Unit = onEpisodeReminderClick@{
+        if (isEpisodeReminderSet) {
+            EpisodeReminderScheduler.cancel(context, titleId, nextEpisodeNumber)
+            isEpisodeReminderSet = false
+            return@onEpisodeReminderClick
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+        ) {
+            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        } else {
+            scheduleEpisodeReminder()
+        }
+    }
 
     LaunchedEffect(state.result, sourceId, lifecycleOwner) {
         val content = state.result as? EpisodesUiState.Content ?: return@LaunchedEffect
@@ -288,8 +339,8 @@ fun EpisodesScreen(
                                         source = downloadSource,
                                         episodes = listOf(episode),
                                     )
-                                    offlineTitleMetadataRepository.get(titleId)?.let { cachedAnime ->
-                                        libraryRepository.saveToLibrary(cachedAnime, LibraryCategory.Saved)
+                                    cachedAnime?.let { anime ->
+                                        libraryRepository.saveToLibrary(anime, LibraryCategory.Saved)
                                     }
                                 }
                             },
@@ -318,6 +369,16 @@ fun EpisodesScreen(
                                 onClick = {
                                     visibleCount = (visibleCount + EPISODES_PAGE_SIZE).coerceAtMost(result.items.size)
                                 },
+                            )
+                        }
+                    } else if (nextEpisodeEta != null) {
+                        item(key = "upcoming_episode") {
+                            UpcomingEpisodeRow(
+                                episodeNumber = nextEpisodeNumber,
+                                countdownText = nextEpisodeEta,
+                                shape = itemShape,
+                                isReminderSet = isEpisodeReminderSet,
+                                onReminderClick = onEpisodeReminderClick,
                             )
                         }
                     }
@@ -434,6 +495,79 @@ private fun EpisodeResumeCard(
                 drawStopIndicator = {},
             )
         }
+    }
+}
+
+/**
+ * Read-only row for the episode the source hasn't published yet -- laid out as a trailing list
+ * row instead of a floating badge. Not clickable: there's nothing to play yet.
+ */
+@Composable
+private fun UpcomingEpisodeRow(
+    episodeNumber: Int,
+    countdownText: String,
+    shape: RoundedCornerShape,
+    isReminderSet: Boolean,
+    onReminderClick: () -> Unit,
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth().clip(shape),
+        color = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.5f),
+        shape = shape,
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = stringResource(R.string.watch_episode_headline, episodeNumber.toString()),
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f),
+            )
+            UpcomingEpisodeCountdownChip(countdownText)
+            WatchDownloadIconButton(
+                icon = if (isReminderSet) Icons.Filled.NotificationsActive else Icons.Outlined.NotificationAdd,
+                contentDescription = stringResource(
+                    if (isReminderSet) R.string.episode_reminder_scheduled else R.string.episode_reminder_schedule,
+                ),
+                active = isReminderSet,
+                onClick = onReminderClick,
+            )
+        }
+    }
+}
+
+// A smaller clone of Details' own NextEpisodeChip -- that one's sized for the large hero header,
+// and reads as too wide/heavy squeezed into a compact list row here.
+@Composable
+private fun UpcomingEpisodeCountdownChip(text: String) {
+    val chipColor = Color(0xFF80DF87)
+    Row(
+        modifier = Modifier
+            .clip(CircleShape)
+            .background(chipColor.copy(alpha = 0.2f))
+            .padding(horizontal = 6.dp, vertical = 2.dp),
+        horizontalArrangement = Arrangement.spacedBy(3.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            imageVector = ImageVector.vectorResource(R.drawable.hourglass),
+            contentDescription = null,
+            modifier = Modifier.size(12.dp),
+            tint = chipColor,
+        )
+        Text(
+            text = text,
+            color = chipColor,
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.Medium,
+            maxLines = 1,
+        )
     }
 }
 
