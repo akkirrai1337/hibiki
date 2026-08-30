@@ -39,3 +39,6 @@ AGENTS.md
 
 .tmp
 logs
+
+# Local-only scripted extension fixtures used by parsers tests, not shipped in the main repo
+parsers/src/test/resources/beakokit/extensions/

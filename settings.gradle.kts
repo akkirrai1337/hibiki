@@ -26,5 +26,3 @@ dependencyResolutionManagement {
 rootProject.name = "hibiki"
 include(":app")
 include(":parsers")
-include(":beakokit-processor")
- 

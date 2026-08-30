@@ -73,10 +73,15 @@ android {
                 "proguard-rules.pro"
             )
         }
-        create("fdroid") {
+        create("profileable") {
             initWith(getByName("release"))
-            buildConfigField("boolean", "GITHUB_UPDATES_ENABLED", "false")
+            isDebuggable = false
+            isProfileable = true
+            isMinifyEnabled = false
+            isShrinkResources = false
             matchingFallbacks += listOf("release")
+            applicationIdSuffix = ".profileable"
+            signingConfig = signingConfigs.getByName("debug")
         }
     }
     compileOptions {
