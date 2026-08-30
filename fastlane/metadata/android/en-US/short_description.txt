@@ -1,1 +1,0 @@
-Android anime app with multiple sources, playback, library, and downloads
