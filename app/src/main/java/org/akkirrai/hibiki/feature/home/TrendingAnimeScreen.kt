@@ -27,6 +27,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -71,7 +72,22 @@ fun TrendingAnimeScreen(
         factory = TrendingAnimeViewModel.Factory(LocalContext.current),
     ),
 ) {
-    val state by viewModel.uiState.collectAsState()
+    val uiState = viewModel.uiState.collectAsState()
+    val state = uiState.value
+    // Structurally-compared snapshot of what the list renders, so toggling selectedFilter
+    // (which resets/reloads items anyway) doesn't matter here, but repeated isLoadingMore/
+    // loadMoreError ticks during scroll-triggered pagination don't force a re-diff when items
+    // themselves haven't changed.
+    val listUiState by remember {
+        derivedStateOf {
+            val current = uiState.value
+            TrendingListUiState(
+                items = current.items,
+                isLoadingMore = current.isLoadingMore,
+                loadMoreError = current.loadMoreError,
+            )
+        }
+    }
     val listState = rememberLazyListState()
     val libraryStatusByAnimeId = rememberLibraryStatusByAnimeId()
 
@@ -107,73 +123,13 @@ fun TrendingAnimeScreen(
             }
 
             else -> {
-                LazyColumn(
-                    state = listState,
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(
-                        start = UiDimens.ScreenPadding,
-                        top = 86.dp,
-                        end = UiDimens.ScreenPadding,
-                        bottom = UiDimens.ScreenPadding,
-                    ),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    verticalAnimeListContent(
-                        items = state.items,
-                        metaText = { anime -> buildTrendingMeta(anime) },
-                        onAnimeClick = onAnimeClick,
-                        posterFooterContent = { anime ->
-                            libraryStatusByAnimeId[anime.id]?.let { category ->
-                                LibraryStatusPosterFooter(category)
-                            }
-                        },
-                    )
-
-                    if (state.isLoadingMore) {
-                        item(key = "trending_loading_more") {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 16.dp),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(24.dp),
-                                    strokeWidth = 2.dp,
-                                )
-                            }
-                        }
-                    }
-
-                    if (state.loadMoreError != null) {
-                        item(key = "trending_load_more_error") {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable { viewModel.loadMore() }
-                                    .padding(vertical = 12.dp),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Outlined.WarningAmber,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(16.dp),
-                                        tint = MaterialTheme.colorScheme.error,
-                                    )
-                                    Text(
-                                        text = state.loadMoreError.orEmpty(),
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.error,
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
+                TrendingAnimeList(
+                    listState = listState,
+                    listUiState = listUiState,
+                    onAnimeClick = onAnimeClick,
+                    libraryStatusByAnimeId = libraryStatusByAnimeId,
+                    onRetryLoadMore = viewModel::loadMore,
+                )
             }
         }
 
@@ -190,6 +146,89 @@ fun TrendingAnimeScreen(
                 )
             },
         )
+    }
+}
+
+private data class TrendingListUiState(
+    val items: List<Anime>,
+    val isLoadingMore: Boolean,
+    val loadMoreError: String?,
+)
+
+@Composable
+private fun TrendingAnimeList(
+    listState: androidx.compose.foundation.lazy.LazyListState,
+    listUiState: TrendingListUiState,
+    onAnimeClick: (Anime) -> Unit,
+    libraryStatusByAnimeId: Map<String, org.akkirrai.hibiki.core.source.LibraryCategory>,
+    onRetryLoadMore: () -> Unit,
+) {
+    LazyColumn(
+        state = listState,
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(
+            start = UiDimens.ScreenPadding,
+            top = 86.dp,
+            end = UiDimens.ScreenPadding,
+            bottom = UiDimens.ScreenPadding,
+        ),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        verticalAnimeListContent(
+            items = listUiState.items,
+            metaText = { anime -> buildTrendingMeta(anime) },
+            onAnimeClick = onAnimeClick,
+            posterFooterContent = { anime ->
+                libraryStatusByAnimeId[anime.id]?.let { category ->
+                    LibraryStatusPosterFooter(category)
+                }
+            },
+        )
+
+        if (listUiState.isLoadingMore) {
+            item(key = "trending_loading_more") {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 16.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(24.dp),
+                        strokeWidth = 2.dp,
+                    )
+                }
+            }
+        }
+
+        if (listUiState.loadMoreError != null) {
+            item(key = "trending_load_more_error") {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onRetryLoadMore() }
+                        .padding(vertical = 12.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.WarningAmber,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp),
+                            tint = MaterialTheme.colorScheme.error,
+                        )
+                        Text(
+                            text = listUiState.loadMoreError,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error,
+                        )
+                    }
+                }
+            }
+        }
     }
 }
 

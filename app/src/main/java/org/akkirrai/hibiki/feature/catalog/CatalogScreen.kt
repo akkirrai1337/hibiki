@@ -1,7 +1,10 @@
 package org.akkirrai.hibiki.feature.catalog
 
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -37,9 +40,13 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -68,13 +75,18 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.util.concurrent.ConcurrentHashMap
 import org.akkirrai.hibiki.R
+import org.akkirrai.hibiki.core.network.NoInternetConnectionException
+import org.akkirrai.hibiki.core.network.hasActiveInternetConnection
 import org.akkirrai.hibiki.app.settings.LocalAppLanguage
 import org.akkirrai.hibiki.app.settings.withLanguage
 import org.akkirrai.hibiki.core.design.UiDimens
@@ -83,11 +95,14 @@ import org.akkirrai.hibiki.core.design.component.AppMessageState
 import org.akkirrai.hibiki.core.design.component.search.AppSearchTopBar
 import org.akkirrai.hibiki.core.design.component.AppTopScrim
 import org.akkirrai.hibiki.core.design.component.anime.verticalAnimeListContent
+import org.akkirrai.hibiki.core.design.component.anime.animeDetailsSharedCardModifier
+import org.akkirrai.hibiki.core.design.component.anime.animeDetailsSharedPosterModifier
 import org.akkirrai.hibiki.core.design.component.anime.LibraryStatusPosterFooter
 import org.akkirrai.hibiki.core.design.component.anime.rememberLibraryStatusByAnimeId
 import org.akkirrai.hibiki.core.model.Anime
 import org.akkirrai.hibiki.core.model.AnimeSearchFilters
 import org.akkirrai.hibiki.core.model.buildCardMeta
+import org.akkirrai.hibiki.core.source.AnimeSourceRegistry
 import org.akkirrai.hibiki.feature.home.AnimeSearchFiltersSheet
 import org.akkirrai.hibiki.app.settings.withAppPreferencesLanguage
 import org.akkirrai.hibiki.app.settings.AppPreferences
@@ -97,26 +112,66 @@ import kotlinx.coroutines.delay
 import me.saket.cascade.CascadeDropdownMenu
 import me.saket.cascade.rememberCascadeState
 
-@OptIn(ExperimentalFoundationApi::class)
+@OptIn(ExperimentalFoundationApi::class, ExperimentalSharedTransitionApi::class)
 @Composable
 fun CatalogScreen(
     onAnimeClick: (Anime) -> Unit,
+    onOpenSources: () -> Unit = {},
     modifier: Modifier = Modifier,
     bottomContentPadding: androidx.compose.ui.unit.Dp = 0.dp,
+    sharedTransitionScope: SharedTransitionScope? = null,
+    animatedVisibilityScope: AnimatedVisibilityScope? = null,
     viewModel: CatalogViewModel = viewModel(
         factory = CatalogViewModel.Factory(LocalContext.current),
     ),
 ) {
-    val state by viewModel.uiState.collectAsState()
+    val uiState = viewModel.uiState.collectAsState()
+    val state = uiState.value
+    val noSourcesInstalled = AnimeSourceRegistry.sources.isEmpty()
+    // Groups the fields the anime list actually renders behind one structurally-compared
+    // snapshot, so pagination/list-affecting changes don't force LazyColumn to recompose
+    // when unrelated fields (query, filters, selectedSort, filterCatalog) change instead.
+    val listUiState by remember {
+        derivedStateOf {
+            val current = uiState.value
+            CatalogAnimeListUiState(
+                items = current.items.map { it.anime },
+                description = current.description,
+                isLoadingMore = current.isLoadingMore,
+                loadMoreError = current.loadMoreError,
+            )
+        }
+    }
     val listState = rememberLazyListState()
+    val pullToRefreshState = rememberPullToRefreshState()
     val libraryStatusByAnimeId = rememberLibraryStatusByAnimeId()
+    val sharedCardModifier: @Composable (Anime) -> Modifier = { anime ->
+        animeDetailsSharedCardModifier(anime.id, sharedTransitionScope, animatedVisibilityScope)
+    }
+    val sharedPosterModifier: @Composable (Anime) -> Modifier = { anime ->
+        animeDetailsSharedPosterModifier(anime.id, sharedTransitionScope, animatedVisibilityScope)
+    }
     var isFilterSheetOpen by remember { mutableStateOf(false) }
     var isSortMenuOpen by remember { mutableStateOf(false) }
-    var isSortVisible by remember { mutableStateOf(true) }
+    var isSortScrollVisible by remember { mutableStateOf(true) }
+    // One-way latch: stays true once the first load finishes, so later reloads (sort/filter
+    // changes, which also flip isLoading) don't hide-then-reveal the sort control again --
+    // only its very first appearance should slide out from under the search bar.
+    var hasLoadedOnce by remember { mutableStateOf(false) }
+    LaunchedEffect(state.isLoading) {
+        if (!state.isLoading) hasLoadedOnce = true
+    }
+    val isSortVisible = hasLoadedOnce && isSortScrollVisible
     val announcementLabel = stringResource(R.string.anime_meta_announcement)
     val movieLabel = stringResource(R.string.anime_meta_movie)
     val availableSorts = remember(state.filterCatalog?.capabilities) {
         state.filterCatalog?.capabilities?.let(::availableCatalogSorts) ?: CatalogSort.entries
+    }
+    val showSortControl = availableSorts.size > 1
+    val catalogContentTopPadding = if (showSortControl) {
+        CATALOG_CONTENT_TOP_PADDING
+    } else {
+        CATALOG_CONTENT_TOP_PADDING_WITHOUT_SORT
     }
     // Default to showing the filter control while capabilities are still loading (unknown), so
     // it doesn't visibly pop in a moment after the screen appears -- only hide it once we
@@ -132,10 +187,6 @@ fun CatalogScreen(
         }
     }
 
-    LaunchedEffect(state.query) {
-        delay(350)
-        viewModel.load()
-    }
     CatalogPaginationEffect(
         listState = listState,
         state = state,
@@ -143,7 +194,12 @@ fun CatalogScreen(
     )
     CatalogSortVisibilityEffect(
         listState = listState,
-        onVisibilityChange = { isSortVisible = it },
+        onVisibilityChange = { isSortScrollVisible = it },
+    )
+    CatalogDescriptionPrefetchEffect(
+        listState = listState,
+        items = listUiState.items,
+        onPrefetch = viewModel::enrichDescription,
     )
 
     Box(modifier = modifier.fillMaxSize()) {
@@ -159,94 +215,51 @@ fun CatalogScreen(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(UiDimens.ScreenPadding),
-                    actionLabel = stringResource(R.string.search_retry),
-                    onActionClick = viewModel::load,
+                    actionLabel = stringResource(
+                        if (noSourcesInstalled) R.string.action_open_sources else R.string.search_retry,
+                    ),
+                    onActionClick = if (noSourcesInstalled) onOpenSources else viewModel::load,
                     icon = Icons.Outlined.WarningAmber,
                     iconTint = MaterialTheme.colorScheme.error,
                 )
             }
 
             else -> {
-                LazyColumn(
-                    state = listState,
+                PullToRefreshBox(
+                    isRefreshing = state.isLoading,
+                    onRefresh = viewModel::refresh,
+                    state = pullToRefreshState,
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(
-                        start = UiDimens.ScreenPadding,
-                        top = CATALOG_CONTENT_TOP_PADDING,
-                        end = UiDimens.ScreenPadding,
-                        bottom = bottomContentPadding + UiDimens.ScreenPadding,
-                    ),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    indicator = {
+                        PullToRefreshDefaults.Indicator(
+                            state = pullToRefreshState,
+                            isRefreshing = state.isLoading,
+                            modifier = Modifier
+                                .align(Alignment.TopCenter)
+                                .padding(
+                                    top = if (showSortControl) {
+                                        CATALOG_PULL_REFRESH_INDICATOR_TOP_OFFSET
+                                    } else {
+                                        CATALOG_PULL_REFRESH_INDICATOR_TOP_OFFSET_WITHOUT_SORT
+                                    },
+                                ),
+                        )
+                    },
                 ) {
-                    if (state.description != null) {
-                        item(key = "catalog_description") {
-                            Text(
-                                text = state.description.orEmpty(),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.padding(top = 2.dp),
-                            )
-                        }
-                    }
-
-                    verticalAnimeListContent(
-                        items = state.items.map { it.anime },
-                        metaText = { anime -> anime.buildCardMeta(
-                                announcementLabel = announcementLabel,
-                                movieLabel = movieLabel,
-                                maxSubtitleParts = 2,
-                                separator = " • ",
-                        ) },
+                    CatalogAnimeListContent(
+                        listState = listState,
+                        listUiState = listUiState,
+                        contentTopPadding = catalogContentTopPadding,
+                        bottomContentPadding = bottomContentPadding,
+                        announcementLabel = announcementLabel,
+                        movieLabel = movieLabel,
                         onAnimeClick = onAnimeClick,
-                        posterFooterContent = { anime ->
-                            libraryStatusByAnimeId[anime.id]?.let { category ->
-                                LibraryStatusPosterFooter(category)
-                            }
-                        },
-                        onItemVisible = viewModel::enrichDescription,
-                    )
-
-                    if (state.isLoadingMore) {
-                        item(key = "catalog_loading_more") {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 16.dp),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(24.dp),
-                                    strokeWidth = 2.dp,
-                                )
-                            }
-                        }
-                    }
-
-                    if (state.loadMoreError != null) {
-                        item(key = "catalog_load_more_error") {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable(onClick = viewModel::loadMore)
-                                    .padding(vertical = 12.dp),
-                                horizontalArrangement = Arrangement.Center,
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Outlined.WarningAmber,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(16.dp),
-                                    tint = MaterialTheme.colorScheme.error,
-                                )
-                                Spacer(modifier = Modifier.size(6.dp))
-                                Text(
-                                    text = state.loadMoreError.orEmpty(),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.error,
-                                )
-                            }
-                        }
-                    }
+                        libraryStatusByAnimeId = libraryStatusByAnimeId,
+                        onRetryLoadMore = viewModel::loadMore,
+                    onItemVisible = viewModel::enrichDescription,
+                    sharedCardModifier = sharedCardModifier,
+                    sharedPosterModifier = sharedPosterModifier,
+                )
                 }
             }
         }
@@ -275,31 +288,33 @@ fun CatalogScreen(
                 showFilter = showFilterControl,
                 modifier = Modifier.zIndex(1f),
             )
-            val sortOffsetY by animateDpAsState(
-                targetValue = if (isSortVisible) {
-                    0.dp
-                } else {
-                    -(CATALOG_SORT_CONTROL_HEIGHT + CATALOG_SORT_VERTICAL_GAP)
-                },
-                animationSpec = tween(durationMillis = CATALOG_SORT_ANIMATION_DURATION_MS),
-                label = "catalog_sort_offset",
-            )
-            val sortAlpha by animateFloatAsState(
-                targetValue = if (isSortVisible) 1f else 0f,
-                animationSpec = tween(durationMillis = CATALOG_SORT_ANIMATION_DURATION_MS),
-                label = "catalog_sort_alpha",
-            )
-            CatalogSortControl(
-                selectedSort = state.selectedSort,
-                availableSorts = availableSorts,
-                expanded = isSortMenuOpen,
-                onExpandedChange = { isSortMenuOpen = it },
-                onSortSelected = viewModel::selectSort,
-                modifier = Modifier.graphicsLayer {
-                    translationY = sortOffsetY.toPx()
-                    alpha = sortAlpha
-                },
-            )
+            if (showSortControl) {
+                val sortOffsetY by animateDpAsState(
+                    targetValue = if (isSortVisible) {
+                        0.dp
+                    } else {
+                        -(CATALOG_SORT_CONTROL_HEIGHT + CATALOG_SORT_VERTICAL_GAP)
+                    },
+                    animationSpec = tween(durationMillis = CATALOG_SORT_ANIMATION_DURATION_MS),
+                    label = "catalog_sort_offset",
+                )
+                val sortAlpha by animateFloatAsState(
+                    targetValue = if (isSortVisible) 1f else 0f,
+                    animationSpec = tween(durationMillis = CATALOG_SORT_ANIMATION_DURATION_MS),
+                    label = "catalog_sort_alpha",
+                )
+                CatalogSortControl(
+                    selectedSort = state.selectedSort,
+                    availableSorts = availableSorts,
+                    expanded = isSortMenuOpen,
+                    onExpandedChange = { isSortMenuOpen = it },
+                    onSortSelected = viewModel::selectSort,
+                    modifier = Modifier.graphicsLayer {
+                        translationY = sortOffsetY.toPx()
+                        alpha = sortAlpha
+                    },
+                )
+            }
         }
     }
 
@@ -311,6 +326,115 @@ fun CatalogScreen(
             onApply = viewModel::applyFilters,
             onDismissRequest = { isFilterSheetOpen = false },
         )
+    }
+}
+
+/** The subset of [CatalogUiState] the anime list renders, compared structurally so unrelated
+ * state changes (query, filters, selectedSort, filterCatalog) don't force it to recompose. */
+private data class CatalogAnimeListUiState(
+    val items: List<Anime>,
+    val description: String?,
+    val isLoadingMore: Boolean,
+    val loadMoreError: String?,
+)
+
+@Composable
+private fun CatalogAnimeListContent(
+    listState: androidx.compose.foundation.lazy.LazyListState,
+    listUiState: CatalogAnimeListUiState,
+    contentTopPadding: androidx.compose.ui.unit.Dp,
+    bottomContentPadding: androidx.compose.ui.unit.Dp,
+    announcementLabel: String,
+    movieLabel: String,
+    onAnimeClick: (Anime) -> Unit,
+    libraryStatusByAnimeId: Map<String, org.akkirrai.hibiki.core.source.LibraryCategory>,
+    onRetryLoadMore: () -> Unit,
+    onItemVisible: (Anime) -> Unit,
+    sharedCardModifier: @Composable (Anime) -> Modifier,
+    sharedPosterModifier: @Composable (Anime) -> Modifier,
+) {
+    LazyColumn(
+        state = listState,
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(
+            start = UiDimens.ScreenPadding,
+            top = contentTopPadding,
+            end = UiDimens.ScreenPadding,
+            bottom = bottomContentPadding + UiDimens.ScreenPadding,
+        ),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        if (listUiState.description != null) {
+            item(key = "catalog_description") {
+                Text(
+                    text = listUiState.description,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 2.dp),
+                )
+            }
+        }
+
+        verticalAnimeListContent(
+            items = listUiState.items,
+            metaText = { anime -> anime.buildCardMeta(
+                    announcementLabel = announcementLabel,
+                    movieLabel = movieLabel,
+                    maxSubtitleParts = 2,
+                    separator = " • ",
+            ) },
+            onAnimeClick = onAnimeClick,
+            posterFooterContent = { anime ->
+                libraryStatusByAnimeId[anime.id]?.let { category ->
+                    LibraryStatusPosterFooter(category)
+                }
+            },
+            onItemVisible = onItemVisible,
+            sharedCardModifier = sharedCardModifier,
+            sharedPosterModifier = sharedPosterModifier,
+        )
+
+        if (listUiState.isLoadingMore) {
+            item(key = "catalog_loading_more") {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 16.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(24.dp),
+                        strokeWidth = 2.dp,
+                    )
+                }
+            }
+        }
+
+        if (listUiState.loadMoreError != null) {
+            item(key = "catalog_load_more_error") {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable(onClick = onRetryLoadMore)
+                        .padding(vertical = 12.dp),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.WarningAmber,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp),
+                        tint = MaterialTheme.colorScheme.error,
+                    )
+                    Spacer(modifier = Modifier.size(6.dp))
+                    Text(
+                        text = listUiState.loadMoreError,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                }
+            }
+        }
     }
 }
 
@@ -334,6 +458,30 @@ private fun CatalogPaginationEffect(
         }.collect { shouldLoadMore ->
             if (shouldLoadMore) onLoadMore()
         }
+    }
+}
+
+/** Starts fetching descriptions for cards a few rows below the visible window, not just the
+ * ones already on screen - so by the time the user actually scrolls to them, the description is
+ * often already there instead of popping in a beat late. Safe to call redundantly: `enrichDescription`
+ * already dedupes in-flight/complete requests, so a card that's already visible or already
+ * enriched is a no-op here. */
+@Composable
+private fun CatalogDescriptionPrefetchEffect(
+    listState: androidx.compose.foundation.lazy.LazyListState,
+    items: List<Anime>,
+    onPrefetch: (Anime) -> Unit,
+) {
+    val latestItems by rememberUpdatedState(items)
+    val latestOnPrefetch by rememberUpdatedState(onPrefetch)
+    LaunchedEffect(listState) {
+        snapshotFlow { listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index }
+            .collect { lastVisibleIndex ->
+                if (lastVisibleIndex == null) return@collect
+                for (index in (lastVisibleIndex + 1)..(lastVisibleIndex + CATALOG_DESCRIPTION_READ_AHEAD)) {
+                    latestItems.getOrNull(index)?.let(latestOnPrefetch)
+                }
+            }
     }
 }
 
@@ -550,25 +698,87 @@ class CatalogViewModel(
     private val repository: CatalogRepository,
     private val errorContext: android.content.Context,
 ) : ViewModel() {
-    private val _uiState = MutableStateFlow(CatalogUiState(isLoading = true))
+    private var activeSource = AppPreferences.readState(errorContext).animeSource
+    private val _uiState = MutableStateFlow(
+        CatalogUiState(
+            isLoading = true,
+            selectedSort = catalogSortFor(activeSource),
+        )
+    )
     val uiState: StateFlow<CatalogUiState> = _uiState.asStateFlow()
-    private val descriptionRequests = ConcurrentHashMap.newKeySet<String>()
+
+    private val descriptionUpdates = Channel<Pair<String, String>>(Channel.UNLIMITED)
+    private val descriptionRequests = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
+    private var searchJob: kotlinx.coroutines.Job? = null
 
     init {
+        load()
         viewModelScope.launch {
-            AppPreferences.animeSourceChanges.collect {
-                    _uiState.update { state ->
-                        state.copy(
-                            filterCatalog = null,
-                            filters = AnimeSearchFilters(),
-                            items = emptyList(),
-                            currentPage = 0,
-                            canLoadMore = false,
-                        )
-                    }
-                    load()
+            AppPreferences.animeSourceChanges.collect { source ->
+                AppPreferences.saveCatalogSort(
+                    context = errorContext,
+                    source = activeSource,
+                    sort = _uiState.value.selectedSort.name,
+                )
+                activeSource = source
+                _uiState.update { state ->
+                    state.copy(
+                        filterCatalog = null,
+                        filters = AnimeSearchFilters(),
+                        selectedSort = catalogSortFor(source),
+                        items = emptyList(),
+                        currentPage = 0,
+                        canLoadMore = false,
+                    )
                 }
+                load()
+            }
         }
+        observeDescriptionUpdates()
+    }
+
+    /** Some sources (e.g. AnimePahe) don't include a description on catalog/search cards at
+     * all - only on the details page. Fetches it lazily as cards scroll into view (wired to
+     * each card's onItemVisible) instead of blocking the whole page load. Only the
+     * `description` field is ever merged back into the card - the details fetch can return a
+     * less complete `Anime` than the catalog parse did (e.g. a source's details page missing a
+     * field the listing had), and swapping in the whole object used to silently drop those
+     * fields (year disappearing from the card's meta line was one instance). */
+    fun enrichDescription(anime: Anime) {
+        if (!anime.description.isNullOrBlank() || !descriptionRequests.add(anime.id)) return
+        viewModelScope.launch(Dispatchers.IO) {
+            runCatching { repository.enrichDescription(anime) }
+                .onSuccess { enriched ->
+                    val description = enriched.description
+                    if (!description.isNullOrBlank()) descriptionUpdates.trySend(anime.id to description)
+                }
+                .also { descriptionRequests.remove(anime.id) }
+        }
+    }
+
+    private fun observeDescriptionUpdates() {
+        viewModelScope.launch {
+            for (firstUpdate in descriptionUpdates) {
+                val updates = linkedMapOf(firstUpdate)
+                delay(DESCRIPTION_UPDATE_BATCH_WINDOW_MS)
+                while (true) {
+                    val nextUpdate = descriptionUpdates.tryReceive().getOrNull() ?: break
+                    updates[nextUpdate.first] = nextUpdate.second
+                }
+                _uiState.update { state -> state.replaceDescriptions(updates) }
+            }
+        }
+    }
+
+    private fun CatalogUiState.replaceDescriptions(updates: Map<String, String>): CatalogUiState {
+        var changed = false
+        val updatedItems = items.map { card ->
+            updates[card.anime.id]?.let { description ->
+                changed = true
+                CatalogAnimeCard(card.anime.copy(description = description))
+            } ?: card
+        }
+        return if (changed) copy(items = updatedItems) else this
     }
 
     fun load() {
@@ -585,6 +795,7 @@ class CatalogViewModel(
                 )
             }
             runCatching {
+                ensureInternetConnection()
                 repository.loadPage(
                     page = 1,
                     filters = filters,
@@ -592,13 +803,22 @@ class CatalogViewModel(
                     sort = sort,
                 )
             }.onSuccess { page ->
+                val knownDescriptions = currentState.items
+                    .mapNotNull { card -> card.anime.description?.takeIf { it.isNotBlank() }?.let { card.anime.id to it } }
+                    .toMap()
+                val withKnownDescriptions = page.items.map { card ->
+                    if (!card.anime.description.isNullOrBlank()) return@map card
+                    val known = knownDescriptions[card.anime.id] ?: return@map card
+                    CatalogAnimeCard(card.anime.copy(description = known))
+                }
+                val items = eagerlyEnrichFirstItems(withKnownDescriptions)
                 _uiState.update { state ->
                     state.copy(
                         isLoading = false,
                         title = "",
                         description = page.description,
                         filterCatalog = page.filterCatalog,
-                        items = page.items,
+                        items = items,
                         currentPage = page.currentPage,
                         canLoadMore = page.canLoadMore,
                     )
@@ -614,35 +834,58 @@ class CatalogViewModel(
         }
     }
 
+    /** The first frame is rendered only after its above-the-fold cards have a description, so
+     * they don't visibly pop in moments after the catalog appears (mirrors Home's eager
+     * treatment of its trending list). Only the first [EAGER_DESCRIPTION_COUNT] cards are
+     * awaited here - the rest still fill in lazily as they scroll into view via
+     * [enrichDescription]. A source that already includes descriptions in its catalog listing
+     * (e.g. AnimeVost) pays nothing extra here: every eager item's description is already
+     * non-blank, so the network call is skipped entirely. */
+    private suspend fun eagerlyEnrichFirstItems(items: List<CatalogAnimeCard>): List<CatalogAnimeCard> {
+        val eagerCount = EAGER_DESCRIPTION_COUNT.coerceAtMost(items.size)
+        if (eagerCount == 0) return items
+        val enrichedEager = coroutineScope {
+            items.take(eagerCount).map { card ->
+                async {
+                    if (!card.anime.description.isNullOrBlank()) return@async card
+                    val description = runCatching { repository.enrichDescription(card.anime) }
+                        .getOrNull()?.description
+                    if (description.isNullOrBlank()) card else CatalogAnimeCard(card.anime.copy(description = description))
+                }
+            }.awaitAll()
+        }
+        return enrichedEager + items.drop(eagerCount)
+    }
+
     fun updateQuery(query: String) {
+        if (query == _uiState.value.query) return
         _uiState.update { it.copy(query = query, items = emptyList(), currentPage = 0, canLoadMore = false) }
+        searchJob?.cancel()
+        searchJob = viewModelScope.launch {
+            delay(350)
+            load()
+        }
     }
 
     fun selectSort(sort: CatalogSort) {
         if (_uiState.value.selectedSort == sort) return
+        AppPreferences.saveCatalogSort(
+            context = errorContext,
+            source = activeSource,
+            sort = sort.name,
+        )
         _uiState.update { it.copy(selectedSort = sort, items = emptyList(), currentPage = 0, canLoadMore = false) }
         load()
     }
 
-    fun enrichDescription(anime: Anime) {
-        if (!anime.description.isNullOrBlank() || !descriptionRequests.add(anime.id)) return
-        viewModelScope.launch(Dispatchers.IO) {
-            runCatching { repository.enrichDescription(anime) }
-                .onSuccess { enriched ->
-                    if (enriched.description.isNullOrBlank()) {
-                        descriptionRequests.remove(anime.id)
-                        return@onSuccess
-                    }
-                    _uiState.update { state ->
-                        state.copy(
-                            items = state.items.map { card ->
-                                if (card.anime.id == enriched.id) card.copy(anime = enriched) else card
-                            },
-                        )
-                    }
-                }
-                .onFailure { descriptionRequests.remove(anime.id) }
-        }
+    fun refresh() {
+        if (!_uiState.value.isLoading) load()
+    }
+
+    private fun catalogSortFor(source: org.akkirrai.beakokit.api.SourceId): CatalogSort {
+        return AppPreferences.readCatalogSort(errorContext, source)
+            ?.let { stored -> runCatching { CatalogSort.valueOf(stored) }.getOrNull() }
+            ?: CatalogSort.Popular
     }
 
     fun applyFilters(filters: AnimeSearchFilters) {
@@ -670,6 +913,7 @@ class CatalogViewModel(
                 )
             }
             runCatching {
+                ensureInternetConnection()
                 repository.loadPage(
                     page = nextPage,
                     filters = state.filters,
@@ -701,8 +945,20 @@ class CatalogViewModel(
     }
 
     override fun onCleared() {
+        descriptionUpdates.close()
         repository.close()
         super.onCleared()
+    }
+
+    private fun ensureInternetConnection() {
+        if (!hasActiveInternetConnection(errorContext)) {
+            throw NoInternetConnectionException(errorContext.getString(R.string.home_error_no_internet))
+        }
+    }
+
+    private companion object {
+        const val DESCRIPTION_UPDATE_BATCH_WINDOW_MS = 100L
+        const val EAGER_DESCRIPTION_COUNT = 6
     }
 
     class Factory(
@@ -741,7 +997,7 @@ enum class CatalogSort(@androidx.annotation.StringRes val labelRes: Int) {
     Updated(R.string.catalog_sort_updated),
 }
 
-private val CatalogSort.searchSort: AnimeSearchSort
+internal val CatalogSort.searchSort: AnimeSearchSort
     get() = when (this) {
         CatalogSort.Alphabetical -> AnimeSearchSort.TITLE
         CatalogSort.Popular -> AnimeSearchSort.RATING
@@ -768,5 +1024,14 @@ private val CATALOG_CONTENT_TOP_PADDING = CATALOG_HEADER_TOP_PADDING +
     CATALOG_SORT_VERTICAL_GAP +
     CATALOG_SORT_CONTROL_HEIGHT +
     CATALOG_SORT_VERTICAL_GAP
+private val CATALOG_CONTENT_TOP_PADDING_WITHOUT_SORT = CATALOG_HEADER_TOP_PADDING + CATALOG_SEARCH_BAR_HEIGHT +
+    CATALOG_SORT_VERTICAL_GAP
+private val CATALOG_PULL_REFRESH_INDICATOR_TOP_OFFSET = CATALOG_HEADER_TOP_PADDING +
+    CATALOG_SEARCH_BAR_HEIGHT +
+    CATALOG_SORT_VERTICAL_GAP +
+    CATALOG_SORT_CONTROL_HEIGHT - 8.dp
+private val CATALOG_PULL_REFRESH_INDICATOR_TOP_OFFSET_WITHOUT_SORT =
+    CATALOG_HEADER_TOP_PADDING + CATALOG_SEARCH_BAR_HEIGHT - 8.dp
 private const val CATALOG_SORT_ANIMATION_DURATION_MS = 220
 private const val CATALOG_SCROLL_THRESHOLD = 3
+private const val CATALOG_DESCRIPTION_READ_AHEAD = 3

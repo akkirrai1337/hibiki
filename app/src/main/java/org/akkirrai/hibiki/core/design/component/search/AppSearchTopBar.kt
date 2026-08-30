@@ -19,6 +19,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.annotation.StringRes
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -35,6 +36,7 @@ fun AppSearchTopBar(
     onClear: () -> Unit,
     onFilterClick: () -> Unit = {},
     showFilter: Boolean = true,
+    @StringRes placeholderResId: Int = R.string.search_placeholder,
     modifier: Modifier = Modifier,
 ) {
     Row(
@@ -66,7 +68,7 @@ fun AppSearchTopBar(
             ) {
                 if (query.isEmpty()) {
                     Text(
-                        text = stringResource(R.string.search_placeholder),
+                        text = stringResource(placeholderResId),
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.86f),
                         maxLines = 1,

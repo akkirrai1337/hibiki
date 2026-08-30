@@ -39,7 +39,7 @@ class HomeViewModel(
         HomeUiState(isLoading = true)
     )
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
-    private val descriptionUpdates = Channel<Anime>(Channel.UNLIMITED)
+    private val descriptionUpdates = Channel<Pair<String, String>>(Channel.UNLIMITED)
 
     init {
         PerfLogger.mark("HomeViewModel created")
@@ -153,18 +153,19 @@ class HomeViewModel(
         }
     }
 
+    /** Only the `description` field is ever merged back into the card - the details fetch can
+     * return a less complete `Anime` than the original listing did (e.g. a source's details
+     * page missing a field the listing had), and swapping in the whole object used to silently
+     * drop those fields (year disappearing from a card's meta line was one instance). */
     fun enrichDescription(anime: Anime) {
         if (!anime.description.isNullOrBlank() || !descriptionRequests.add(anime.id)) return
         viewModelScope.launch(Dispatchers.IO) {
             runCatching { repository.enrichDescription(anime) }
                 .onSuccess { enriched ->
-                    if (enriched.description.isNullOrBlank()) {
-                        descriptionRequests.remove(anime.id)
-                        return@onSuccess
-                    }
-                    descriptionUpdates.trySend(enriched)
+                    val description = enriched.description
+                    if (!description.isNullOrBlank()) descriptionUpdates.trySend(anime.id to description)
                 }
-                .onFailure { descriptionRequests.remove(anime.id) }
+                .also { descriptionRequests.remove(anime.id) }
         }
     }
 
@@ -393,18 +394,18 @@ class HomeViewModel(
     private fun observeDescriptionUpdates() {
         viewModelScope.launch {
             for (firstUpdate in descriptionUpdates) {
-                val updates = linkedMapOf(firstUpdate.id to firstUpdate)
+                val updates = linkedMapOf(firstUpdate)
                 delay(DESCRIPTION_UPDATE_BATCH_WINDOW_MS)
                 while (true) {
                     val nextUpdate = descriptionUpdates.tryReceive().getOrNull() ?: break
-                    updates[nextUpdate.id] = nextUpdate
+                    updates[nextUpdate.first] = nextUpdate.second
                 }
                 _uiState.update { state -> state.replaceDescriptions(updates) }
             }
         }
     }
 
-    private fun HomeUiState.replaceDescriptions(updates: Map<String, Anime>): HomeUiState {
+    private fun HomeUiState.replaceDescriptions(updates: Map<String, String>): HomeUiState {
         val updatedFeatured = featuredAnime.replaceDescriptions(updates)
         val updatedTrending = trending.replaceDescriptions(updates)
         val updatedRecent = recentlyUpdated.replaceDescriptions(updates)
@@ -450,13 +451,12 @@ class HomeViewModel(
     private suspend fun prepareHomeFeed(state: HomeUiState): HomeUiState {
         val eagerItems = state.trending.take(EAGER_DESCRIPTION_COUNT)
         val enrichedEagerItems = repository.enrichDescriptions(eagerItems)
-        val enrichedTrending = enrichedEagerItems + state.trending.drop(EAGER_DESCRIPTION_COUNT)
         val descriptions = enrichedEagerItems
             .mapNotNull { anime -> anime.description?.takeIf(String::isNotBlank)?.let { anime.id to it } }
             .toMap()
         return state.copy(
             featuredAnime = state.featuredAnime.withDescriptions(descriptions),
-            trending = enrichedTrending,
+            trending = state.trending.withDescriptions(descriptions),
         )
     }
 
@@ -468,15 +468,18 @@ class HomeViewModel(
         }
     }
 
-    private fun SearchUiState.replaceDescriptions(updates: Map<String, Anime>): SearchUiState = when (this) {
+    private fun SearchUiState.replaceDescriptions(updates: Map<String, String>): SearchUiState = when (this) {
         is SearchUiState.Content -> copy(items = items.replaceDescriptions(updates))
         else -> this
     }
 
-    private fun List<Anime>.replaceDescriptions(updates: Map<String, Anime>): List<Anime> {
+    private fun List<Anime>.replaceDescriptions(updates: Map<String, String>): List<Anime> {
         var changed = false
         val updatedItems = map { anime ->
-            updates[anime.id]?.also { changed = true } ?: anime
+            updates[anime.id]?.let { description ->
+                changed = true
+                anime.copy(description = description)
+            } ?: anime
         }
         return if (changed) updatedItems else this
     }

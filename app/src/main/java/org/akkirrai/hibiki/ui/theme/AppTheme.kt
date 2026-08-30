@@ -1,7 +1,6 @@
 package org.akkirrai.hibiki.ui.theme
 
 import android.os.Build
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
@@ -11,7 +10,6 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.graphics.Color
-import com.materialkolor.ktx.animateColorScheme
 import org.akkirrai.hibiki.app.settings.ThemeMode
 
 private val DarkColorScheme = darkColorScheme()
@@ -54,10 +52,7 @@ fun HibikiTheme(
     }
 
     MaterialTheme(
-        colorScheme = animateColorScheme(
-            colorScheme = colorScheme,
-            animationSpec = { tween(durationMillis = 500) },
-        ),
+        colorScheme = colorScheme,
         typography = Typography,
         content = content
     )

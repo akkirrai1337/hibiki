@@ -2,8 +2,11 @@ package org.akkirrai.hibiki.feature.home
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.ContentTransform
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
@@ -119,6 +122,8 @@ import org.akkirrai.hibiki.core.design.component.search.AppSearchTopBar
 import org.akkirrai.hibiki.core.design.component.AppTonalSurface
 import org.akkirrai.hibiki.core.design.component.AppTopScrim
 import org.akkirrai.hibiki.core.design.component.anime.AnimeTitleText
+import org.akkirrai.hibiki.core.design.component.anime.animeDetailsSharedCardModifier
+import org.akkirrai.hibiki.core.design.component.anime.animeDetailsSharedPosterModifier
 import org.akkirrai.hibiki.core.design.component.anime.AnimePosterCardItem
 import org.akkirrai.hibiki.core.design.component.anime.AnimeSourceBadge
 import org.akkirrai.hibiki.core.design.component.anime.PosterImage
@@ -131,16 +136,24 @@ import org.akkirrai.hibiki.core.design.component.anime.rememberLibraryStatusByAn
 import org.akkirrai.hibiki.core.log.PerfLogger
 import org.akkirrai.hibiki.core.model.Anime
 import org.akkirrai.hibiki.core.model.SearchUiState
+import org.akkirrai.hibiki.core.source.AnimeSourceRegistry
 import org.akkirrai.hibiki.core.model.buildCardMeta
 import org.akkirrai.hibiki.app.settings.LocalAppPreferencesState
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@OptIn(
+    ExperimentalMaterial3Api::class,
+    ExperimentalLayoutApi::class,
+    ExperimentalSharedTransitionApi::class,
+)
 @Composable
 fun HomeScreen(
     viewModel: HomeViewModel = viewModel(factory = HomeViewModel.Factory(LocalContext.current)),
     onAnimeClick: (Anime) -> Unit,
+    onOpenSources: () -> Unit = {},
     isActive: Boolean = true,
     bottomContentPadding: Dp = 96.dp,
+    sharedTransitionScope: SharedTransitionScope? = null,
+    animatedVisibilityScope: AnimatedVisibilityScope? = null,
     modifier: Modifier = Modifier
 ) {
     val state by viewModel.uiState.collectAsState()
@@ -160,8 +173,15 @@ fun HomeScreen(
     val searchEmptyTitle = stringResource(R.string.home_search_empty_title)
     val searchEmptyMessage = stringResource(R.string.home_search_empty_message)
     val pullToRefreshState = rememberPullToRefreshState()
+    val sharedCardModifier: @Composable (Anime) -> Modifier = { anime ->
+        animeDetailsSharedCardModifier(anime.id, sharedTransitionScope, animatedVisibilityScope)
+    }
+    val sharedPosterModifier: @Composable (Anime) -> Modifier = { anime ->
+        animeDetailsSharedPosterModifier(anime.id, sharedTransitionScope, animatedVisibilityScope)
+    }
     val libraryStatusByAnimeId = rememberLibraryStatusByAnimeId()
     val selectedSourceId = LocalAppPreferencesState.current.animeSource
+    val noSourcesInstalled = AnimeSourceRegistry.sources.isEmpty()
     // A plain remember() here would lose scroll position across configuration changes and
     // whenever this composable is disposed and recomposed (e.g. switching to another bottom-nav
     // tab and back) -- rememberSaveable keeps it, while still resetting to the top when the
@@ -193,97 +213,107 @@ fun HomeScreen(
         }
     }
 
-    if (state.isLoading && !hasContent && !isSearchActive) {
-        HomeLoadingState(modifier = modifier)
-        return
-    }
-
-    if (errorMessage != null && !hasContent && !isSearchActive) {
-        HomeErrorState(
-            message = errorMessage,
-            onRetry = viewModel::load,
-            modifier = modifier
-        )
-        return
-    }
-
     Box(modifier = modifier.fillMaxSize()) {
-        AnimatedContent(
-            targetState = isSearchActive,
-            transitionSpec = { homeSearchContentTransition(targetState) },
-            label = "HomeSearchContent",
-        ) { searchActive ->
-            if (searchActive) {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(
-                        start = UiDimens.ScreenPadding,
-                        top = HOME_CONTENT_TOP_PADDING,
-                        end = UiDimens.ScreenPadding,
-                        bottom = bottomContentPadding
+        // Loading/error render as content inside the same Box (instead of an early return) so
+        // the search bar overlay below stays visible even before the feed has loaded or while
+        // offline -- matching CatalogScreen, where search never disappears under those states.
+        when {
+            state.isLoading && !hasContent && !isSearchActive -> {
+                HomeLoadingState(modifier = Modifier.fillMaxSize())
+            }
+
+            errorMessage != null && !hasContent && !isSearchActive -> {
+                HomeErrorState(
+                    message = errorMessage,
+                    actionLabel = stringResource(
+                        if (noSourcesInstalled) R.string.action_open_sources else R.string.search_retry,
                     ),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    searchStateVerticalListContent(
-                        state = state.searchResult,
-                        onAnimeClick = onAnimeClick,
-                        metaText = { anime -> buildHomeMeta(anime, announcementLabel, movieLabel) },
-                        onLoadMore = viewModel::loadMoreSearchResults,
-                        loadMoreLabel = searchLoadMoreLabel,
-                        resultsCountLabel = { count ->
-                            pluralStringResource(R.plurals.search_results_count, count, count)
-                        },
-                        emptyTitle = searchEmptyTitle,
-                        emptyMessage = searchEmptyMessage,
-                        emptyIcon = Icons.Outlined.SearchOff,
-                        posterFooterContent = { anime ->
-                            libraryStatusByAnimeId[anime.id]?.let { category ->
-                                LibraryStatusPosterFooter(category)
-                            }
-                        },
-                        onItemVisible = viewModel::enrichDescription,
-                    )
-                }
-            } else {
-                PullToRefreshBox(
-                    isRefreshing = state.isLoading,
-                    onRefresh = viewModel::refresh,
-                    state = pullToRefreshState,
+                    onActionClick = if (noSourcesInstalled) onOpenSources else viewModel::load,
                     modifier = Modifier.fillMaxSize(),
-                    indicator = {
-                        PullToRefreshDefaults.Indicator(
-                            state = pullToRefreshState,
-                            isRefreshing = state.isLoading,
-                            modifier = Modifier
-                                .align(Alignment.TopCenter)
-                                .padding(top = HOME_PULL_REFRESH_INDICATOR_TOP_OFFSET),
-                        )
-                    },
-                ) {
+                )
+            }
+
+            else -> AnimatedContent(
+                targetState = isSearchActive,
+                transitionSpec = { homeSearchContentTransition(targetState) },
+                label = "HomeSearchContent",
+            ) { searchActive ->
+                if (searchActive) {
                     LazyColumn(
-                        state = homeListState,
+                        modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(
-                            start = 0.dp,
+                            start = UiDimens.ScreenPadding,
                             top = HOME_CONTENT_TOP_PADDING,
-                            end = 0.dp,
+                            end = UiDimens.ScreenPadding,
                             bottom = bottomContentPadding
                         ),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
-                        homeFeedContent(
-                            featuredAnime = featuredAnime,
-                            continueAnime = continueAnime,
-                            trending = state.trending,
-                            isTrendingLoadingMore = state.isTrendingLoadingMore,
-                            isActive = isActive,
+                        searchStateVerticalListContent(
+                            state = state.searchResult,
                             onAnimeClick = onAnimeClick,
                             metaText = { anime -> buildHomeMeta(anime, announcementLabel, movieLabel) },
+                            onLoadMore = viewModel::loadMoreSearchResults,
+                            loadMoreLabel = searchLoadMoreLabel,
+                            resultsCountLabel = { count ->
+                                pluralStringResource(R.plurals.search_results_count, count, count)
+                            },
+                            emptyTitle = searchEmptyTitle,
+                            emptyMessage = searchEmptyMessage,
+                            emptyIcon = Icons.Outlined.SearchOff,
                             posterFooterContent = { anime ->
                                 libraryStatusByAnimeId[anime.id]?.let { category ->
                                     LibraryStatusPosterFooter(category)
                                 }
                             },
+                            sharedCardModifier = sharedCardModifier,
+                            sharedPosterModifier = sharedPosterModifier,
+                            onItemVisible = viewModel::enrichDescription,
                         )
+                    }
+                } else {
+                    PullToRefreshBox(
+                        isRefreshing = state.isLoading,
+                        onRefresh = viewModel::refresh,
+                        state = pullToRefreshState,
+                        modifier = Modifier.fillMaxSize(),
+                        indicator = {
+                            PullToRefreshDefaults.Indicator(
+                                state = pullToRefreshState,
+                                isRefreshing = state.isLoading,
+                                modifier = Modifier
+                                    .align(Alignment.TopCenter)
+                                    .padding(top = HOME_PULL_REFRESH_INDICATOR_TOP_OFFSET),
+                            )
+                        },
+                    ) {
+                        LazyColumn(
+                            state = homeListState,
+                            contentPadding = PaddingValues(
+                                start = 0.dp,
+                                top = HOME_CONTENT_TOP_PADDING,
+                                end = 0.dp,
+                                bottom = bottomContentPadding
+                            ),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            homeFeedContent(
+                                featuredAnime = featuredAnime,
+                                continueAnime = continueAnime,
+                                trending = state.trending,
+                                isTrendingLoadingMore = state.isTrendingLoadingMore,
+                                isActive = isActive,
+                                onAnimeClick = onAnimeClick,
+                                metaText = { anime -> buildHomeMeta(anime, announcementLabel, movieLabel) },
+                                posterFooterContent = { anime ->
+                                    libraryStatusByAnimeId[anime.id]?.let { category ->
+                                        LibraryStatusPosterFooter(category)
+                                    }
+                                },
+                                sharedCardModifier = sharedCardModifier,
+                                sharedPosterModifier = sharedPosterModifier,
+                            )
+                        }
                     }
                 }
             }
@@ -332,6 +362,8 @@ private fun LazyListScope.homeFeedContent(
     onAnimeClick: (Anime) -> Unit,
     metaText: @Composable (Anime) -> String,
     posterFooterContent: @Composable (Anime) -> Unit,
+    sharedCardModifier: @Composable (Anime) -> Modifier,
+    sharedPosterModifier: @Composable (Anime) -> Modifier,
 ) {
     item {
         if (featuredAnime.isNotEmpty()) {
@@ -355,6 +387,8 @@ private fun LazyListScope.homeFeedContent(
         onAnimeClick = onAnimeClick,
         modifier = Modifier.padding(horizontal = UiDimens.ScreenPadding),
         posterFooterContent = posterFooterContent,
+        sharedCardModifier = sharedCardModifier,
+        sharedPosterModifier = sharedPosterModifier,
     )
     if (isTrendingLoadingMore) {
         item {
@@ -400,7 +434,8 @@ private fun HomeLoadingState(
 @Composable
 private fun HomeErrorState(
     message: String,
-    onRetry: () -> Unit,
+    actionLabel: String,
+    onActionClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     AppMessageState(
@@ -409,23 +444,10 @@ private fun HomeErrorState(
         modifier = modifier
             .fillMaxSize()
             .padding(UiDimens.ScreenPadding),
-        actionLabel = stringResource(R.string.search_retry),
-        onActionClick = onRetry,
-        iconSlot = {
-            Box(
-                modifier = Modifier
-                    .size(72.dp)
-                    .clip(RoundedCornerShape(22.dp))
-                    .background(MaterialTheme.colorScheme.errorContainer),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Outlined.WarningAmber,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onErrorContainer
-                )
-            }
-        }
+        actionLabel = actionLabel,
+        onActionClick = onActionClick,
+        icon = Icons.Outlined.WarningAmber,
+        iconTint = MaterialTheme.colorScheme.error,
     )
 }
 

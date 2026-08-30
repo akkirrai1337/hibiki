@@ -4,7 +4,7 @@ import androidx.compose.ui.unit.dp
 
 object UiDimens {
     val ScreenPadding = 12.dp
-    val SearchBarTopPadding = 14.dp
+    val SearchBarTopPadding = 6.dp
     val SearchBarHeight = 56.dp
     val SectionSpacing = 20.dp
     val ItemSpacing = 12.dp

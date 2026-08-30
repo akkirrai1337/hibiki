@@ -56,9 +56,12 @@ fun VerticalAnimeListItem(
     metaContent: (@Composable () -> Unit)? = null,
     supportingContent: (@Composable () -> Unit)? = null,
     posterFooterContent: (@Composable () -> Unit)? = null,
+    sharedCardModifier: Modifier = Modifier,
+    sharedPosterModifier: Modifier = Modifier,
 ) {
     Row(
         modifier = modifier
+            .then(sharedCardModifier)
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
             .clickable(onClick = onClick)
@@ -68,6 +71,7 @@ fun VerticalAnimeListItem(
     ) {
         Box(
             modifier = Modifier
+                .then(sharedPosterModifier)
                 .width(posterWidth)
                 .aspectRatio(2f / 3f)
                 .clip(RoundedCornerShape(12.dp))
@@ -206,6 +210,8 @@ fun LazyListScope.searchStateVerticalListContent(
     loadMoreModifier: Modifier = Modifier,
     posterFooterContent: (@Composable (Anime) -> Unit)? = null,
     onItemVisible: ((Anime) -> Unit)? = null,
+    sharedCardModifier: @Composable (Anime) -> Modifier = { Modifier },
+    sharedPosterModifier: @Composable (Anime) -> Modifier = { Modifier },
 ) {
     when (state) {
         SearchUiState.Idle -> if (idleTitle != null && idleMessage != null && idleIcon != null) {
@@ -262,6 +268,8 @@ fun LazyListScope.searchStateVerticalListContent(
                     onClick = { onAnimeClick(anime) },
                     modifier = Modifier.fillMaxWidth(),
                     posterFooterContent = posterFooterContent?.let { footer -> { footer(anime) } },
+                    sharedCardModifier = sharedCardModifier(anime),
+                    sharedPosterModifier = sharedPosterModifier(anime),
                 )
             }
             if (state.canLoadMore || state.isLoadingMore || state.loadMoreError != null) {
@@ -288,6 +296,8 @@ fun LazyListScope.verticalAnimeListContent(
     modifier: Modifier = Modifier,
     posterFooterContent: (@Composable (Anime) -> Unit)? = null,
     onItemVisible: ((Anime) -> Unit)? = null,
+    sharedCardModifier: @Composable (Anime) -> Modifier = { Modifier },
+    sharedPosterModifier: @Composable (Anime) -> Modifier = { Modifier },
 ) {
     items(items, key = Anime::id) { anime ->
         LaunchedEffect(anime.id) {
@@ -299,6 +309,8 @@ fun LazyListScope.verticalAnimeListContent(
             onClick = { onAnimeClick(anime) },
             modifier = modifier.fillMaxWidth(),
             posterFooterContent = posterFooterContent?.let { footer -> { footer(anime) } },
+            sharedCardModifier = sharedCardModifier(anime),
+            sharedPosterModifier = sharedPosterModifier(anime),
         )
     }
 }

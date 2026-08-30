@@ -16,9 +16,12 @@ import android.os.Build
 import android.os.SystemClock
 import android.view.LayoutInflater
 import android.view.TextureView
+import android.view.View
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
 import android.view.WindowManager
 import android.view.animation.DecelerateInterpolator
+import android.webkit.WebView
+import android.webkit.WebViewClient
 import androidx.annotation.StringRes
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.AnimatedContent
@@ -63,10 +66,18 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.PlaylistPlay
 import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowLeft
 import androidx.compose.material.icons.outlined.Check
+import androidx.compose.material.icons.outlined.HighQuality
+import androidx.compose.material.icons.filled.FastForward
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.LockOpen
+import androidx.compose.material.icons.outlined.PlayCircle
+import androidx.compose.material.icons.outlined.RecordVoiceOver
 import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material.icons.outlined.SkipNext
+import androidx.compose.material.icons.outlined.Speed
+import androidx.compose.material.icons.outlined.VideoSettings
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -75,8 +86,12 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableFloatState
+import androidx.compose.runtime.MutableLongState
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
@@ -89,6 +104,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Shadow
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.graphicsLayer
@@ -98,6 +115,7 @@ import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.zIndex
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
@@ -111,13 +129,14 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
-import androidx.core.net.toUri
 import androidx.core.content.ContextCompat
+import androidx.core.net.toUri
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.core.view.doOnLayout
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.media3.common.MediaItem
@@ -133,12 +152,14 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.dash.DashMediaSource
 import androidx.media3.exoplayer.hls.HlsMediaSource
 import androidx.media3.exoplayer.source.MediaSource
+import androidx.media3.exoplayer.source.MergingMediaSource
 import androidx.media3.exoplayer.source.ProgressiveMediaSource
 import androidx.media3.session.MediaSession
 import androidx.media3.ui.PlayerView
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.launch
@@ -146,9 +167,9 @@ import java.net.URI
 import kotlin.math.max
 import kotlin.math.min
 import org.akkirrai.hibiki.R
-import org.akkirrai.hibiki.core.download.OfflineMediaCache
 import org.akkirrai.hibiki.core.discord.DiscordPlaybackPresence
 import org.akkirrai.hibiki.core.discord.DiscordRpcManager
+import org.akkirrai.hibiki.core.download.OfflineMediaCache
 import org.akkirrai.hibiki.app.settings.LocalAppPreferences
 import org.akkirrai.hibiki.app.settings.LocalAppPreferencesState
 import org.akkirrai.hibiki.app.settings.VideoScaleMode
@@ -164,6 +185,7 @@ import org.akkirrai.hibiki.core.model.WatchEpisode
 import org.akkirrai.hibiki.core.model.WatchSource
 import org.akkirrai.hibiki.core.source.ResumeFrameRepository
 import org.akkirrai.hibiki.core.source.OfflineTitleMetadataRepository
+import org.akkirrai.hibiki.core.source.watchTitleIdFromSourceId
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.offset
 
@@ -203,46 +225,49 @@ fun PlayerScreen(
     var settingsDestination by remember { mutableStateOf(PlayerSettingsDestination.Root) }
     var controlsInteractionTick by remember { mutableIntStateOf(0) }
     var unlockButtonInteractionTick by remember { mutableIntStateOf(0) }
-    var isPlaying by remember { mutableStateOf(true) }
-    var isBuffering by remember { mutableStateOf(false) }
+    val isPlayingState = remember { mutableStateOf(true) }
+    var isPlaying by isPlayingState
+    val isBufferingState = remember { mutableStateOf(false) }
+    var isBuffering by isBufferingState
     var playbackSpeed by remember { mutableFloatStateOf(preferencesState.playbackSpeed) }
-    var durationMs by remember { mutableLongStateOf(0L) }
-    var positionMs by remember { mutableLongStateOf(0L) }
-    var bufferedPositionMs by remember { mutableLongStateOf(0L) }
-    var sliderPositionMs by remember { mutableLongStateOf(0L) }
-    var pendingSeekMs by remember { mutableLongStateOf(0L) }
-    var lifecycleResumePositionMs by remember { mutableLongStateOf(0L) }
-    var resumePlaybackAfterLifecyclePause by remember { mutableStateOf(false) }
-    var isEnteringPictureInPicture by remember { mutableStateOf(false) }
-    var isPictureInPictureActive by remember { mutableStateOf(false) }
-    var isAudioOnly by remember { mutableStateOf(false) }
+    val durationMsState = remember { mutableLongStateOf(0L) }
+    var durationMs by durationMsState
+    val positionMsState = remember { mutableLongStateOf(0L) }
+    var positionMs by positionMsState
+    val bufferedPositionMsState = remember { mutableLongStateOf(0L) }
+    var bufferedPositionMs by bufferedPositionMsState
+    val sliderPositionMsState = remember { mutableLongStateOf(0L) }
+    var sliderPositionMs by sliderPositionMsState
+    val pendingSeekMsState = remember { mutableLongStateOf(0L) }
+    var pendingSeekMs by pendingSeekMsState
+    val isEnteringPictureInPictureState = remember { mutableStateOf(false) }
+    var isEnteringPictureInPicture by isEnteringPictureInPictureState
+    val isPictureInPictureActiveState = remember { mutableStateOf(false) }
+    var isPictureInPictureActive by isPictureInPictureActiveState
+    val isAudioOnlyState = remember { mutableStateOf(false) }
+    var isAudioOnly by isAudioOnlyState
     val videoScaleMode = preferencesState.videoScaleMode
-    var videoAspectRatio by remember { mutableFloatStateOf(DEFAULT_VIDEO_ASPECT_RATIO) }
+    val videoAspectRatioState = remember { mutableFloatStateOf(DEFAULT_VIDEO_ASPECT_RATIO) }
+    var videoAspectRatio by videoAspectRatioState
     var isSeeking by remember { mutableStateOf(false) }
-    var isClosing by remember { mutableStateOf(false) }
+    val isClosingState = remember { mutableStateOf(false) }
+    var isClosing by isClosingState
     var attachedPlayerView by remember { mutableStateOf<PlayerView?>(null) }
-    var restoreWindowUi by remember { mutableStateOf<(() -> Unit)?>(null) }
+    val restoreWindowUiState = remember { mutableStateOf<(() -> Unit)?>(null) }
+    var restoreWindowUi by restoreWindowUiState
     val autoSkipSegments = preferencesState.autoSkipSegments
     val autoPlayNextEpisode = preferencesState.autoPlayNextEpisode
     LaunchedEffect(preferencesState.playbackSpeed) {
         playbackSpeed = preferencesState.playbackSpeed
     }
-    var handledEndedEpisodeId by remember { mutableStateOf<String?>(null) }
+    val handledEndedEpisodeIdState = remember { mutableStateOf<String?>(null) }
+    var handledEndedEpisodeId by handledEndedEpisodeIdState
     var skipCountdownSeconds by remember { mutableIntStateOf(SKIP_SEGMENT_COUNTDOWN_SECONDS) }
     var hiddenSkipSegmentKey by remember { mutableStateOf<String?>(null) }
-    var lastDoubleTapAtMs by remember { mutableLongStateOf(0L) }
-    var lastDoubleTapDirection by remember { mutableIntStateOf(0) }
-    var accumulatedDoubleTapSteps by remember { mutableIntStateOf(0) }
-    var accumulatedDoubleTapBasePositionMs by remember { mutableLongStateOf(0L) }
-    var pendingDoubleTapSeekJob by remember { mutableStateOf<Job?>(null) }
-    var doubleTapSeekOverlayVisible by remember { mutableStateOf(false) }
-    var doubleTapSeekOverlayDeltaMs by remember { mutableLongStateOf(0L) }
     var holdSpeedOverlayVisible by remember { mutableStateOf(false) }
     val watchedSeconds = remember(state.currentSourceId, state.currentEpisodeId) { mutableSetOf<Long>() }
-    var lastTrackedPlaybackPositionMs by remember(state.currentSourceId, state.currentEpisodeId) { mutableLongStateOf(-1L) }
-    val seekOverlayActive = isSeeking ||
-        holdSpeedOverlayVisible ||
-        (doubleTapSeekOverlayVisible && accumulatedDoubleTapSteps > 0)
+    val lastTrackedPlaybackPositionMsState = remember(state.currentSourceId, state.currentEpisodeId) { mutableLongStateOf(-1L) }
+    var lastTrackedPlaybackPositionMs by lastTrackedPlaybackPositionMsState
     val coroutineScope = rememberCoroutineScope()
     val resumeFrameRepository = remember(context) { ResumeFrameRepository(context) }
     val offlineTitleMetadataRepository = remember(context) { OfflineTitleMetadataRepository(context) }
@@ -318,21 +343,10 @@ fun PlayerScreen(
 
     fun saveCurrentVideoFrame() {
         val frame = captureCurrentVideoFrame() ?: return
-        val titleId = state.currentSourceId.substringBefore(':')
+        val titleId = watchTitleIdFromSourceId(state.currentSourceId)
         coroutineScope.launch(Dispatchers.IO) {
             resumeFrameRepository.saveFrame(titleId, frame)
         }
-    }
-
-    fun resetAccumulatedDoubleTapSeek() {
-        pendingDoubleTapSeekJob?.cancel()
-        pendingDoubleTapSeekJob = null
-        lastDoubleTapAtMs = 0L
-        lastDoubleTapDirection = 0
-        accumulatedDoubleTapSteps = 0
-        accumulatedDoubleTapBasePositionMs = 0L
-        doubleTapSeekOverlayVisible = false
-        doubleTapSeekOverlayDeltaMs = 0L
     }
 
     fun currentPlaybackPositionMs(): Long {
@@ -344,59 +358,22 @@ fun PlayerScreen(
         }
     }
 
-    fun commitAccumulatedDoubleTapSeek() {
-        val direction = lastDoubleTapDirection
-        val steps = accumulatedDoubleTapSteps
-        if (direction == 0 || steps <= 0) return
-
-        val deltaMs = SEEK_INCREMENT_MS * steps
-        val safeDurationMs = exoPlayer.duration.takeIf { it > 0 } ?: durationMs
-        val targetPositionMs = if (direction < 0) {
-            (accumulatedDoubleTapBasePositionMs - deltaMs).coerceAtLeast(0L)
-        } else if (safeDurationMs > 0L) {
-            (accumulatedDoubleTapBasePositionMs + deltaMs).coerceAtMost(safeDurationMs)
-        } else {
-            accumulatedDoubleTapBasePositionMs + deltaMs
-        }
-
-        exoPlayer.seekTo(targetPositionMs)
-        positionMs = targetPositionMs
-        sliderPositionMs = targetPositionMs
-        lastDoubleTapAtMs = 0L
-        lastDoubleTapDirection = 0
-        accumulatedDoubleTapSteps = 0
-        accumulatedDoubleTapBasePositionMs = 0L
-        pendingDoubleTapSeekJob = null
-        doubleTapSeekOverlayVisible = false
-    }
-
-    fun scheduleAccumulatedDoubleTapSeek(direction: Int, eventTimeMs: Long) {
-        val isAccumulating =
-            direction == lastDoubleTapDirection &&
-                accumulatedDoubleTapSteps > 0 &&
-                eventTimeMs - lastDoubleTapAtMs <= DOUBLE_TAP_ACCUMULATION_WINDOW_MS
-        val nextSteps = if (isAccumulating) accumulatedDoubleTapSteps + 1 else 1
-        val basePositionMs = if (isAccumulating) {
-            accumulatedDoubleTapBasePositionMs
-        } else {
-            currentPlaybackPositionMs()
-        }
-
-        pendingDoubleTapSeekJob?.cancel()
-        lastDoubleTapAtMs = eventTimeMs
-        lastDoubleTapDirection = direction
-        accumulatedDoubleTapSteps = nextSteps
-        accumulatedDoubleTapBasePositionMs = basePositionMs
-        doubleTapSeekOverlayVisible = true
-        doubleTapSeekOverlayDeltaMs = SEEK_INCREMENT_MS * nextSteps * direction
-        pendingDoubleTapSeekJob = coroutineScope.launch {
-            delay(DOUBLE_TAP_ACCUMULATION_WINDOW_MS)
-            commitAccumulatedDoubleTapSeek()
-        }
+    val doubleTapSeek = remember(exoPlayer) {
+        PlayerDoubleTapSeekController(
+            exoPlayer = exoPlayer,
+            coroutineScope = coroutineScope,
+            seekIncrementMs = SEEK_INCREMENT_MS,
+            currentPlaybackPositionMs = { currentPlaybackPositionMs() },
+            currentDurationMs = { durationMs },
+            onSeekCommitted = { targetPositionMs ->
+                positionMs = targetPositionMs
+                sliderPositionMs = targetPositionMs
+            },
+        )
     }
 
     fun skipToSegmentEnd(segment: PlaybackSegment) {
-        resetAccumulatedDoubleTapSeek()
+        doubleTapSeek.reset()
         keepControlsVisible()
         exoPlayer.seekTo(segment.endMs)
         positionMs = segment.endMs
@@ -408,7 +385,7 @@ fun PlayerScreen(
         action: (resumePositionMs: Long) -> Unit,
     ) {
         keepControlsVisible()
-        resetAccumulatedDoubleTapSeek()
+        doubleTapSeek.reset()
         val resumePositionMs = if (preservePosition) currentPlaybackPositionMs() else 0L
         exoPlayer.pause()
         saveCurrentPlaybackProgress()
@@ -417,115 +394,26 @@ fun PlayerScreen(
         action(resumePositionMs)
     }
 
-    fun pictureInPictureParams(): PictureInPictureParams {
-        val actions = buildList {
-            add(
-                createPictureInPictureAction(
-                    context = context,
-                    action = PICTURE_IN_PICTURE_ACTION_TOGGLE_AUDIO_ONLY,
-                    requestCode = PICTURE_IN_PICTURE_AUDIO_ONLY_REQUEST_CODE,
-                    iconResId = R.drawable.ic_player_headphones_24,
-                    titleResId = if (isAudioOnly) {
-                        R.string.watch_player_show_video
-                    } else {
-                        R.string.watch_player_audio_only
-                    },
-                )
-            )
-            add(
-                createPictureInPictureAction(
-                    context = context,
-                    action = PICTURE_IN_PICTURE_ACTION_TOGGLE_PLAYBACK,
-                    requestCode = PICTURE_IN_PICTURE_PLAYBACK_REQUEST_CODE,
-                    iconResId = if (isPlaying) {
-                        R.drawable.ic_player_media_pause_24
-                    } else {
-                        R.drawable.ic_player_media_play_arrow_24
-                    },
-                    titleResId = if (isPlaying) {
-                        R.string.watch_player_pause
-                    } else {
-                        R.string.watch_player_play
-                    },
-                )
-            )
-            if (hasPreviousEpisode) {
-                add(
-                    createPictureInPictureAction(
-                        context = context,
-                        action = PICTURE_IN_PICTURE_ACTION_PREVIOUS_EPISODE,
-                        requestCode = PICTURE_IN_PICTURE_PREVIOUS_EPISODE_REQUEST_CODE,
-                        iconResId = R.drawable.ic_player_media_skip_previous_24,
-                        titleResId = R.string.watch_player_previous_episode,
-                    )
-                )
-            }
-            if (hasNextEpisode) {
-                add(
-                    createPictureInPictureAction(
-                        context = context,
-                        action = PICTURE_IN_PICTURE_ACTION_NEXT_EPISODE,
-                        requestCode = PICTURE_IN_PICTURE_NEXT_EPISODE_REQUEST_CODE,
-                        iconResId = R.drawable.ic_player_media_skip_next_24,
-                        titleResId = R.string.watch_player_next_episode,
-                    )
-                )
-            }
-        }
-        return PictureInPictureParams.Builder().setActions(actions).build()
-    }
-
-    DisposableEffect(context, state.currentEpisodeId, hasNextEpisode) {
-        val receiver = object : BroadcastReceiver() {
-            override fun onReceive(receiverContext: Context, intent: Intent) {
-                when (intent.action) {
-                    PICTURE_IN_PICTURE_ACTION_TOGGLE_AUDIO_ONLY -> {
-                        exoPlayer.play()
-                        isAudioOnly = true
-                        isPictureInPictureActive = false
-                        discordRpcManager.setBackgroundAudioActive(true)
-                        activity?.moveTaskToBack(true)
-                    }
-
-                    PICTURE_IN_PICTURE_ACTION_TOGGLE_PLAYBACK -> {
-                        if (exoPlayer.isPlaying) exoPlayer.pause() else exoPlayer.play()
-                    }
-
-                    PICTURE_IN_PICTURE_ACTION_PREVIOUS_EPISODE -> {
-                        if (hasPreviousEpisode) runPlaybackSwitch { viewModel.playPreviousEpisode() }
-                    }
-
-                    PICTURE_IN_PICTURE_ACTION_NEXT_EPISODE -> {
-                        if (hasNextEpisode) runPlaybackSwitch { viewModel.playNextEpisode() }
-                    }
-                }
-            }
-        }
-        ContextCompat.registerReceiver(
-            context,
-            receiver,
-            IntentFilter().apply {
-                addAction(PICTURE_IN_PICTURE_ACTION_TOGGLE_AUDIO_ONLY)
-                addAction(PICTURE_IN_PICTURE_ACTION_TOGGLE_PLAYBACK)
-                addAction(PICTURE_IN_PICTURE_ACTION_PREVIOUS_EPISODE)
-                addAction(PICTURE_IN_PICTURE_ACTION_NEXT_EPISODE)
-            },
-            ContextCompat.RECEIVER_NOT_EXPORTED,
-        )
-        onDispose { context.unregisterReceiver(receiver) }
-    }
-
-    LaunchedEffect(state.currentEpisodeId, hasPreviousEpisode, hasNextEpisode, isPlaying) {
-        if (isPictureInPictureActive) {
-            activity?.setPictureInPictureParams(pictureInPictureParams())
-        }
-    }
+    PlayerPictureInPictureEffects(
+        context = context,
+        activity = activity,
+        exoPlayer = exoPlayer,
+        discordRpcManager = discordRpcManager,
+        currentEpisodeId = state.currentEpisodeId,
+        hasPreviousEpisode = hasPreviousEpisode,
+        hasNextEpisode = hasNextEpisode,
+        isPlaying = isPlaying,
+        isAudioOnly = isAudioOnlyState,
+        isPictureInPictureActive = isPictureInPictureActiveState,
+        onPreviousEpisode = { runPlaybackSwitch { viewModel.playPreviousEpisode() } },
+        onNextEpisode = { runPlaybackSwitch { viewModel.playNextEpisode() } },
+    )
 
     val handleBackClick = remember(exoPlayer, onBackClick, state.currentSourceId) {
         {
             if (isClosing) return@remember
             isClosing = true
-            resetAccumulatedDoubleTapSeek()
+            doubleTapSeek.reset()
             controlsVisible = false
             playlistVisible = false
             settingsVisible = false
@@ -536,7 +424,7 @@ fun PlayerScreen(
             )
             exoPlayer.playWhenReady = false
             val frame = captureCurrentVideoFrame()
-            val titleId = state.currentSourceId.substringBefore(':')
+            val titleId = watchTitleIdFromSourceId(state.currentSourceId)
             coroutineScope.launch {
                 if (frame != null) {
                     withContext(Dispatchers.IO) {
@@ -555,232 +443,58 @@ fun PlayerScreen(
 
     BackHandler(onBack = handleBackClick)
 
-    DisposableEffect(exoPlayer) {
-        val listener = object : Player.Listener {
-            override fun onVideoSizeChanged(videoSize: VideoSize) {
-                if (videoSize.width > 0 && videoSize.height > 0) {
-                    videoAspectRatio = videoSize.width.toFloat() * videoSize.pixelWidthHeightRatio / videoSize.height
-                }
-            }
+    PlayerPlaybackListenerEffect(
+        exoPlayer = exoPlayer,
+        mediaSession = mediaSession,
+        viewModel = viewModel,
+        state = { state },
+        autoPlayNextEpisode = autoPlayNextEpisode,
+        videoAspectRatio = videoAspectRatioState,
+        isPlaying = isPlayingState,
+        isBuffering = isBufferingState,
+        durationMs = durationMsState,
+        pendingSeekMs = pendingSeekMsState,
+        positionMs = positionMsState,
+        sliderPositionMs = sliderPositionMsState,
+        handledEndedEpisodeId = handledEndedEpisodeIdState,
+        watchedSecondsSnapshot = { watchedSecondsSnapshot() },
+        onDisposed = { doubleTapSeek.cancelPending() },
+    )
 
-            override fun onIsPlayingChanged(playing: Boolean) {
-                isPlaying = playing
-            }
+    PlayerLifecycleEffect(
+        lifecycleOwner = lifecycleOwner,
+        exoPlayer = exoPlayer,
+        isClosing = isClosingState,
+        isEnteringPictureInPicture = isEnteringPictureInPictureState,
+        isPictureInPictureActive = isPictureInPictureActiveState,
+        isAudioOnly = isAudioOnlyState,
+        positionMs = positionMsState,
+        sliderPositionMs = sliderPositionMsState,
+        currentPlaybackPositionMs = { currentPlaybackPositionMs() },
+        saveCurrentPlaybackProgress = { saveCurrentPlaybackProgress() },
+        saveCurrentVideoFrame = { saveCurrentVideoFrame() },
+    )
 
-            override fun onPlaybackStateChanged(playbackState: Int) {
-                isBuffering = playbackState == Player.STATE_BUFFERING
-                durationMs = exoPlayer.duration.takeIf { it > 0 } ?: 0L
-                if (playbackState == Player.STATE_READY && pendingSeekMs > 0L) {
-                    exoPlayer.seekTo(pendingSeekMs)
-                    positionMs = pendingSeekMs
-                    sliderPositionMs = pendingSeekMs
-                    pendingSeekMs = 0L
-                    viewModel.consumePendingSeek()
-                }
-                if (playbackState == Player.STATE_ENDED && autoPlayNextEpisode) {
-                    val currentEpisodeId = state.currentEpisodeId
-                    val currentIndex = state.episodes.indexOfFirst { it.id == currentEpisodeId }
-                    val hasNextEpisode = currentIndex != -1 && currentIndex < state.episodes.lastIndex
-                    if (hasNextEpisode && handledEndedEpisodeId != currentEpisodeId) {
-                        handledEndedEpisodeId = currentEpisodeId
-                        viewModel.savePlaybackProgress(
-                            positionMs = exoPlayer.duration.takeIf { it > 0 } ?: exoPlayer.currentPosition.coerceAtLeast(0L),
-                            durationMs = exoPlayer.duration.takeIf { it > 0 } ?: 0L,
-                            watchedSeconds = watchedSecondsSnapshot(),
-                        )
-                        viewModel.playNextEpisode()
-                    }
-                }
-            }
+    PlayerDiscordPipAudioStateEffect(
+        discordRpcManager = discordRpcManager,
+        isEnteringPictureInPicture = isEnteringPictureInPicture,
+        isPictureInPictureActive = isPictureInPictureActive,
+        isAudioOnly = isAudioOnly,
+    )
 
-            override fun onPlayerError(error: PlaybackException) {
-                AppLogger.e(
-                    PLAYBACK_LOG_TAG,
-                    buildString {
-                        append("[player.error] sourceId=")
-                        append(state.currentSourceId)
-                        append(" episodeId=")
-                        append(state.currentEpisodeId)
-                        append(" type=")
-                        append(state.playback?.streamType)
-                        append(" stream=")
-                        append(state.playback?.streamUrl.shortUrl())
-                        append(" code=")
-                        append(error.errorCodeName)
-                        append(" message=")
-                        append(error.message)
-                    },
-                    error
-                )
-                viewModel.recoverFromPlaybackError(state.playback?.streamUrl)
-            }
-        }
-        exoPlayer.addListener(listener)
-        onDispose {
-            pendingDoubleTapSeekJob?.cancel()
-            pendingDoubleTapSeekJob = null
-            viewModel.savePlaybackProgress(
-                positionMs = exoPlayer.currentPosition.coerceAtLeast(0L),
-                durationMs = exoPlayer.duration.takeIf { it > 0 } ?: 0L,
-                watchedSeconds = watchedSecondsSnapshot(),
-            )
-            exoPlayer.removeListener(listener)
-            mediaSession.release()
-            exoPlayer.release()
-        }
-    }
+    PlayerImmersiveModeEffect(
+        activity = activity,
+        view = view,
+        restoreWindowUi = restoreWindowUiState,
+    )
 
-    DisposableEffect(lifecycleOwner, exoPlayer) {
-        val observer = LifecycleEventObserver { _, event ->
-            when (event) {
-                Lifecycle.Event.ON_PAUSE -> {
-                    saveCurrentPlaybackProgress()
-                    if (!isClosing) saveCurrentVideoFrame()
-                    if (isEnteringPictureInPicture || isPictureInPictureActive || isAudioOnly) {
-                        return@LifecycleEventObserver
-                    }
-                    lifecycleResumePositionMs = currentPlaybackPositionMs()
-                    resumePlaybackAfterLifecyclePause = exoPlayer.isPlaying
-                    exoPlayer.pause()
-                }
-
-                Lifecycle.Event.ON_STOP -> saveCurrentPlaybackProgress()
-
-                Lifecycle.Event.ON_RESUME -> {
-                    isEnteringPictureInPicture = false
-                    isPictureInPictureActive = false
-                    isAudioOnly = false
-                    val resumePositionMs = lifecycleResumePositionMs
-                    if (resumePositionMs > 0L) {
-                        exoPlayer.seekTo(resumePositionMs)
-                        positionMs = resumePositionMs
-                        sliderPositionMs = resumePositionMs
-                        lifecycleResumePositionMs = 0L
-                    }
-                    if (resumePlaybackAfterLifecyclePause) {
-                        exoPlayer.play()
-                    }
-                    resumePlaybackAfterLifecyclePause = false
-                }
-
-                else -> Unit
-            }
-        }
-        lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose {
-            lifecycleOwner.lifecycle.removeObserver(observer)
-        }
-    }
-
-    LaunchedEffect(
-        discordRpcManager,
-        isEnteringPictureInPicture,
-        isPictureInPictureActive,
-        isAudioOnly,
-    ) {
-        discordRpcManager.setPictureInPictureActive(
-            isEnteringPictureInPicture || isPictureInPictureActive,
-        )
-        discordRpcManager.setBackgroundAudioActive(isAudioOnly)
-    }
-
-    DisposableEffect(discordRpcManager) {
-        onDispose {
-            discordRpcManager.setPictureInPictureActive(false)
-            discordRpcManager.setBackgroundAudioActive(false)
-        }
-    }
-
-    DisposableEffect(activity, view) {
-        if (activity == null) {
-            onDispose {}
-        } else {
-            val controller = WindowInsetsControllerCompat(activity.window, activity.window.decorView)
-            val previousOrientation = activity.requestedOrientation
-            val previousBehavior = controller.systemBarsBehavior
-            val previousCutoutMode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                activity.window.attributes.layoutInDisplayCutoutMode
-            } else {
-                null
-            }
-
-            fun applyPlayerWindowMode() {
-                controller.systemBarsBehavior =
-                    WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-                controller.hide(WindowInsetsCompat.Type.systemBars())
-                activity.window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-                activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                    activity.window.attributes = activity.window.attributes.apply {
-                        layoutInDisplayCutoutMode =
-                            WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
-                    }
-                }
-            }
-
-            applyPlayerWindowMode()
-
-            var restored = false
-            restoreWindowUi = restore@{
-                if (restored) {
-                    return@restore
-                }
-                restored = true
-                controller.show(WindowInsetsCompat.Type.systemBars())
-                controller.systemBarsBehavior = previousBehavior
-                activity.window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-                activity.requestedOrientation = previousOrientation
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && previousCutoutMode != null) {
-                    activity.window.attributes = activity.window.attributes.apply {
-                        layoutInDisplayCutoutMode = previousCutoutMode
-                    }
-                }
-            }
-
-            view.post {
-                if (!restored) {
-                    applyPlayerWindowMode()
-                }
-            }
-
-            onDispose {
-                restoreWindowUi?.invoke()
-                restoreWindowUi = null
-            }
-        }
-    }
-
-    LaunchedEffect(state.playback) {
-        val playback = state.playback
-        if (playback == null) {
-            exoPlayer.pause()
-            exoPlayer.stop()
-            exoPlayer.clearMediaItems()
-            return@LaunchedEffect
-        }
-        AppLogger.d(
-            PLAYBACK_LOG_TAG,
-            buildString {
-                append("[player.prepare] sourceId=")
-                append(state.currentSourceId)
-                append(" episodeId=")
-                append(state.currentEpisodeId)
-                append(" type=")
-                append(playback.streamType)
-                append(" streamHost=")
-                append(playback.streamUrl.safeHost())
-                append(" headerNames=")
-                append(playback.headers.safeHeaderNames())
-            },
-        )
-        keepControlsVisible()
-        exoPlayer.stop()
-        exoPlayer.clearMediaItems()
-        exoPlayer.setMediaSource(playback.toMediaSource(context))
-        applyPlaybackSpeed(playbackSpeed)
-        exoPlayer.prepare()
-        exoPlayer.playWhenReady = true
-    }
+    PlayerMediaPreparationEffect(
+        exoPlayer = exoPlayer,
+        context = context,
+        state = state,
+        playbackSpeed = playbackSpeed,
+        keepControlsVisible = { keepControlsVisible() },
+    )
 
     LaunchedEffect(state.pendingSeekMs, state.currentEpisodeId, state.currentSourceId) {
         pendingSeekMs = state.pendingSeekMs.coerceAtLeast(0L)
@@ -791,89 +505,39 @@ fun PlayerScreen(
         applyPlaybackSpeed(playbackSpeed)
     }
 
-    LaunchedEffect(exoPlayer, isSeeking) {
-        while (true) {
-            durationMs = exoPlayer.duration.takeIf { it > 0 } ?: 0L
-            bufferedPositionMs = exoPlayer.bufferedPosition.takeIf { it > 0 } ?: 0L
-            if (!isSeeking) {
-                positionMs = exoPlayer.currentPosition.coerceAtLeast(0L)
-                sliderPositionMs = positionMs
-            }
-            delay(250)
-        }
-    }
+    PlayerPlaybackPositionPollingEffect(
+        exoPlayer = exoPlayer,
+        isSeeking = isSeeking,
+        durationMs = durationMsState,
+        bufferedPositionMs = bufferedPositionMsState,
+        positionMs = positionMsState,
+        sliderPositionMs = sliderPositionMsState,
+    )
 
-    LaunchedEffect(exoPlayer, state.currentSourceId, state.currentEpisodeId) {
-        lastTrackedPlaybackPositionMs = -1L
-        while (true) {
-            val currentPositionMs = exoPlayer.currentPosition.coerceAtLeast(0L)
-            val currentDurationMs = exoPlayer.duration.takeIf { it > 0 } ?: 0L
-            val trackingAllowed = exoPlayer.isPlaying &&
-                currentDurationMs > 0L &&
-                !isSeeking
+    PlayerWatchedSecondsTrackingEffect(
+        exoPlayer = exoPlayer,
+        currentSourceId = state.currentSourceId,
+        currentEpisodeId = state.currentEpisodeId,
+        isSeeking = isSeeking,
+        lastTrackedPlaybackPositionMs = lastTrackedPlaybackPositionMsState,
+        watchedSeconds = watchedSeconds,
+    )
 
-            if (trackingAllowed) {
-                val previousPositionMs = lastTrackedPlaybackPositionMs
-                if (previousPositionMs >= 0L) {
-                    val deltaMs = currentPositionMs - previousPositionMs
-                    if (deltaMs in 1L..WATCHED_SECONDS_TRACKING_MAX_DELTA_MS) {
-                        val startSecond = previousPositionMs / 1_000L
-                        val endSecond = currentPositionMs / 1_000L
-                        for (second in startSecond..endSecond) {
-                            if (second * 1_000L < currentDurationMs) {
-                                watchedSeconds += second
-                            }
-                        }
-                    }
-                }
-                lastTrackedPlaybackPositionMs = currentPositionMs
-            } else {
-                lastTrackedPlaybackPositionMs = -1L
-            }
-            delay(1_000L)
-        }
-    }
+    PlayerProgressPersistenceEffect(
+        exoPlayer = exoPlayer,
+        currentSourceId = state.currentSourceId,
+        currentEpisodeId = state.currentEpisodeId,
+        onSaveProgress = { saveCurrentPlaybackProgress() },
+    )
 
-    LaunchedEffect(exoPlayer, state.currentSourceId, state.currentEpisodeId) {
-        while (true) {
-            delay(PLAYBACK_PROGRESS_SAVE_INTERVAL_MS)
-            if (exoPlayer.isPlaying) {
-                saveCurrentPlaybackProgress()
-            }
-        }
-    }
-
-    LaunchedEffect(
-        state.playback,
-        state.currentSourceId,
-        state.currentEpisodeId,
-        state.currentEpisodeNumber,
-        isPlaying,
-    ) {
-        val playback = state.playback ?: return@LaunchedEffect
-        val titleId = state.currentSourceId.substringBefore(':')
-        val coverUrl = withContext(Dispatchers.IO) {
-            offlineTitleMetadataRepository.get(titleId)?.let { metadata ->
-                metadata.posterUrl ?: metadata.posterFallbackUrl
-            }
-        }
-        while (true) {
-            discordRpcManager.showPlayback(
-                DiscordPlaybackPresence(
-                    titleId = titleId,
-                    animeTitle = state.animeTitle.ifBlank { playback.animeTitle },
-                    voiceover = playback.sourceTitle,
-                    episodeNumber = state.currentEpisodeNumber,
-                    positionMs = positionMs,
-                    durationMs = durationMs,
-                    isPlaying = isPlaying,
-                    coverUrl = coverUrl,
-                ),
-            )
-            if (!isPlaying) return@LaunchedEffect
-            delay(DISCORD_RPC_PLAYBACK_UPDATE_INTERVAL_MS)
-        }
-    }
+    PlayerDiscordPlaybackPresenceEffect(
+        discordRpcManager = discordRpcManager,
+        offlineTitleMetadataRepository = offlineTitleMetadataRepository,
+        state = state,
+        positionMs = positionMs,
+        durationMs = durationMs,
+        isPlaying = isPlaying,
+    )
 
     AutoHideVisibilityEffect(
         enabled = !controlsLocked,
@@ -940,6 +604,7 @@ fun PlayerScreen(
                 awaitEachGesture {
                     val firstDown = awaitFirstDown(requireUnconsumed = true)
                     var upPosition = firstDown.position
+                    var upEventTimeMs = firstDown.uptimeMillis
                     var holdSpeedActive = false
                     var holdSpeedEligible = !controlsLocked
                     val holdSpeedDeadlineMs = firstDown.uptimeMillis + viewConfiguration.longPressTimeoutMillis
@@ -962,6 +627,7 @@ fun PlayerScreen(
                         val change = event.changes.firstOrNull { it.id == firstDown.id } ?: break
                         if (!change.pressed) {
                             upPosition = change.position
+                            upEventTimeMs = change.uptimeMillis
                             break
                         }
                         val totalDragX = change.position.x - firstDown.position.x
@@ -975,6 +641,22 @@ fun PlayerScreen(
                     if (holdSpeedActive) {
                         holdSpeedOverlayVisible = false
                         applyPlaybackSpeed(playbackSpeed)
+                        return@awaitEachGesture
+                    }
+
+                    if (doubleTapSeek.accumulatedSteps > 0) {
+                        val tapOffset = upPosition
+                        if (isInGestureArea(tapOffset.y, size.height)) {
+                            if (controlsLocked) {
+                                keepUnlockButtonVisible()
+                            } else if (controlsVisible) {
+                                keepControlsVisible()
+                            }
+                            doubleTapSeek.schedule(
+                                direction = if (tapOffset.x < size.width / 2f) -1 else 1,
+                                eventTimeMs = upEventTimeMs,
+                            )
+                        }
                         return@awaitEachGesture
                     }
 
@@ -1001,12 +683,11 @@ fun PlayerScreen(
                         } else if (controlsVisible) {
                             keepControlsVisible()
                         }
-                        scheduleAccumulatedDoubleTapSeek(
+                        doubleTapSeek.schedule(
                             direction = if (tapOffset.x < size.width / 2f) -1 else 1,
                             eventTimeMs = secondUp.uptimeMillis,
                         )
                     } else {
-                        if (accumulatedDoubleTapSteps > 0) return@awaitEachGesture
                         if (controlsLocked) {
                             unlockButtonVisible = !unlockButtonVisible
                             if (unlockButtonVisible) {
@@ -1024,64 +705,115 @@ fun PlayerScreen(
                 }
             }
     ) {
-        if (!isClosing) AndroidView(
-            factory = { viewContext ->
-                (LayoutInflater.from(viewContext)
-                    .inflate(R.layout.view_media3_player, null, false) as PlayerView)
-                    .apply {
-                    layoutParams = android.view.ViewGroup.LayoutParams(MATCH_PARENT, MATCH_PARENT)
-                    useController = false
-                    setShowBuffering(PlayerView.SHOW_BUFFERING_NEVER)
-                    player = exoPlayer
-                    applyVideoScale(videoScaleMode, videoAspectRatio)
-                    attachedPlayerView = this
-                }
-            },
-            update = { playerView ->
-                attachedPlayerView = playerView
-                playerView.player = if (isAudioOnly) null else exoPlayer
-                playerView.applyVideoScale(videoScaleMode, videoAspectRatio)
-            },
-            modifier = Modifier.fillMaxSize()
-        )
+        if (!isClosing) {
+            val browserPlayback = state.playback?.takeIf { it.streamType == PlaybackStreamType.BROWSER }
+            if (browserPlayback != null) {
+                BrowserPlaybackSurface(browserPlayback, onInteraction = ::keepControlsVisible)
+            } else AndroidView(
+                factory = { viewContext ->
+                    (LayoutInflater.from(viewContext)
+                        .inflate(R.layout.view_media3_player, null, false) as PlayerView)
+                        .apply {
+                            layoutParams = android.view.ViewGroup.LayoutParams(MATCH_PARENT, MATCH_PARENT)
+                            useController = false
+                            setShowBuffering(PlayerView.SHOW_BUFFERING_NEVER)
+                            player = exoPlayer
+                            applyVideoScale(videoScaleMode, videoAspectRatio)
+                            attachedPlayerView = this
+                        }
+                },
+                update = { playerView ->
+                    attachedPlayerView = playerView
+                    playerView.player = if (isAudioOnly) null else exoPlayer
+                    playerView.applyVideoScale(videoScaleMode, videoAspectRatio)
+                },
+                modifier = Modifier.fillMaxSize()
+            )
+        }
 
         AnimatedVisibility(
             visible = holdSpeedOverlayVisible,
-            modifier = Modifier.align(Alignment.Center),
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .padding(top = 28.dp)
+                .zIndex(1f),
             enter = fadeIn(animationSpec = tween(140)) + scaleIn(initialScale = 0.92f, animationSpec = tween(140)),
             exit = fadeOut(animationSpec = tween(160)) + scaleOut(targetScale = 0.96f, animationSpec = tween(160)),
         ) {
             Surface(
-                shape = RoundedCornerShape(18.dp),
-                color = Color.Black.copy(alpha = 0.62f),
+                shape = RoundedCornerShape(16.dp),
+                color = Color.Black.copy(alpha = 0.72f),
             ) {
-                Text(
-                    text = "2×",
-                    modifier = Modifier.padding(horizontal = 26.dp, vertical = 14.dp),
-                    color = Color.White,
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.SemiBold,
-                )
+                Row(
+                    modifier = Modifier.padding(start = 12.dp, end = 10.dp, top = 7.dp, bottom = 7.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = "2×",
+                        color = Color.White,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Medium,
+                    )
+                    Icon(
+                        imageVector = Icons.Filled.FastForward,
+                        contentDescription = null,
+                        modifier = Modifier
+                            .padding(start = 3.dp)
+                            .size(19.dp),
+                        tint = Color.White,
+                    )
+                }
             }
         }
 
         AnimatedVisibility(
-            visible = doubleTapSeekOverlayVisible && doubleTapSeekOverlayDeltaMs != 0L,
-            modifier = Modifier.align(Alignment.Center),
-            enter = fadeIn(animationSpec = tween(140)) + scaleIn(initialScale = 0.92f, animationSpec = tween(140)),
-            exit = fadeOut(animationSpec = tween(160)) + scaleOut(targetScale = 0.96f, animationSpec = tween(160)),
-        ) {
-            Surface(
-                shape = RoundedCornerShape(18.dp),
-                color = Color.Black.copy(alpha = 0.62f)
-            ) {
-                Text(
-                    text = buildSeekDeltaLabel(doubleTapSeekOverlayDeltaMs),
-                    modifier = Modifier.padding(horizontal = 22.dp, vertical = 14.dp),
-                    color = Color.White,
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.SemiBold,
+            visible = doubleTapSeek.overlayVisible && doubleTapSeek.overlayDeltaMs != 0L,
+            modifier = Modifier
+                .align(
+                    if (doubleTapSeek.overlayDeltaMs < 0L) Alignment.CenterStart
+                    else Alignment.CenterEnd,
                 )
+                .padding(horizontal = 56.dp),
+            enter = fadeIn(animationSpec = tween(180)),
+            exit = fadeOut(animationSpec = tween(180)),
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                if (doubleTapSeek.overlayDeltaMs < 0L) {
+                    AnimatedSeekOverlayArrow(
+                        direction = -1,
+                        pulse = doubleTapSeek.arrowPulse,
+                    )
+                }
+                AnimatedContent(
+                    targetState = doubleTapSeek.overlayDeltaMs,
+                    transitionSpec = {
+                        fadeIn(animationSpec = tween(100)) togetherWith
+                            fadeOut(animationSpec = tween(100)) using
+                            SizeTransform(clip = false) { _, _ -> tween(durationMillis = 0) }
+                    },
+                    label = "DoubleTapSeekLabel",
+                ) { deltaMs ->
+                    Text(
+                        text = buildSeekDeltaLabel(deltaMs),
+                        color = Color.White,
+                        style = MaterialTheme.typography.headlineMedium.copy(
+                            shadow = Shadow(
+                                color = Color.Black.copy(alpha = 0.7f),
+                                offset = Offset(2f, 2f),
+                                blurRadius = 10f,
+                            ),
+                        ),
+                        fontWeight = FontWeight.Bold,
+                    )
+                }
+                if (doubleTapSeek.overlayDeltaMs > 0L) {
+                    AnimatedSeekOverlayArrow(
+                        direction = 1,
+                        pulse = doubleTapSeek.arrowPulse,
+                    )
+                }
             }
         }
 
@@ -1122,6 +854,7 @@ fun PlayerScreen(
                 PlayerTopOverlay(
                     title = state.animeTitle,
                     subtitle = currentEpisodeSubtitle(state),
+                    titleVisible = !holdSpeedOverlayVisible,
                     onBackClick = handleBackClick,
                     onPlaylistClick = {
                         keepControlsVisible()
@@ -1132,7 +865,12 @@ fun PlayerScreen(
                 )
 
                 AnimatedVisibility(
-                    visible = !seekOverlayActive && !state.isLoading && !isBuffering,
+                    visible =
+                        !isSeeking &&
+                            !(doubleTapSeek.overlayVisible && doubleTapSeek.accumulatedSteps > 0) &&
+                            !state.isLoading &&
+                            !isBuffering &&
+                            state.errorMessage == null,
                     modifier = Modifier.align(Alignment.Center),
                     enter = fadeIn(animationSpec = tween(120)),
                     exit = fadeOut(animationSpec = tween(90)),
@@ -1165,7 +903,7 @@ fun PlayerScreen(
                     },
                     onSliderValueChangeFinished = {
                         keepControlsVisible()
-                        resetAccumulatedDoubleTapSeek()
+                        doubleTapSeek.reset()
                         exoPlayer.seekTo(sliderPositionMs)
                         positionMs = sliderPositionMs
                         isSeeking = false
@@ -1188,7 +926,15 @@ fun PlayerScreen(
                         discordRpcManager.setPictureInPictureActive(true)
                         controlsVisible = false
                         val entered = runCatching {
-                            activity?.enterPictureInPictureMode(pictureInPictureParams()) ?: false
+                            activity?.enterPictureInPictureMode(
+                                buildPictureInPictureParams(
+                                    context = context,
+                                    isAudioOnly = isAudioOnly,
+                                    isPlaying = isPlaying,
+                                    hasPreviousEpisode = hasPreviousEpisode,
+                                    hasNextEpisode = hasNextEpisode,
+                                )
+                            ) ?: false
                         }.getOrDefault(false)
                         isPictureInPictureActive = entered
                         if (!entered) {
@@ -1230,26 +976,14 @@ fun PlayerScreen(
         if (state.isLoading || isBuffering) {
             Box(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.34f)),
+                    .fillMaxSize(),
                 contentAlignment = Alignment.Center
             ) {
-                Box(
-                    modifier = Modifier.size(PLAYER_CENTER_PRIMARY_BUTTON_SIZE),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .matchParentSize()
-                            .clip(CircleShape)
-                            .background(Color.Black.copy(alpha = 0.58f)),
-                    )
-                    CircularProgressIndicator(
-                        modifier = Modifier.matchParentSize(),
-                        color = Color.White,
-                        strokeWidth = 4.dp,
-                    )
-                }
+                CircularProgressIndicator(
+                    modifier = Modifier.size(40.dp),
+                    color = Color.White,
+                    strokeWidth = 3.dp,
+                )
             }
         }
 
@@ -1663,6 +1397,7 @@ private fun PlayerSkipSegmentButton(
 private fun PlayerTopOverlay(
     title: String,
     subtitle: String,
+    titleVisible: Boolean,
     onBackClick: () -> Unit,
     onPlaylistClick: () -> Unit,
     playlistEnabled: Boolean,
@@ -1698,29 +1433,34 @@ private fun PlayerTopOverlay(
             }
         }
 
-        Column(
-            modifier = Modifier
-                .align(Alignment.TopCenter)
-                .padding(horizontal = 92.dp, vertical = 10.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(4.dp)
+        AnimatedVisibility(
+            visible = titleVisible,
+            modifier = Modifier.align(Alignment.TopCenter),
+            enter = fadeIn(animationSpec = tween(140)),
+            exit = fadeOut(animationSpec = tween(140)),
         ) {
-            Text(
-                text = title.preventTrailingOrphanWrap(),
-                style = MaterialTheme.typography.titleMedium,
-                color = Color.White,
-                fontWeight = FontWeight.SemiBold,
-                textAlign = TextAlign.Center,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis
-            )
-            Text(
-                text = subtitle,
-                style = MaterialTheme.typography.bodyMedium,
-                color = Color.White.copy(alpha = 0.72f),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
+            Column(
+                modifier = Modifier.padding(horizontal = 92.dp, vertical = 10.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Text(
+                    text = title.preventTrailingOrphanWrap(),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = Color.White,
+                    fontWeight = FontWeight.SemiBold,
+                    textAlign = TextAlign.Center,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Color.White.copy(alpha = 0.72f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
         }
     }
 }
@@ -1824,6 +1564,7 @@ private fun PlayerSettingsSheet(
                 if (targetDestination != PlayerSettingsDestination.Root) {
                     PlayerSettingsHeader(
                         title = stringResource(targetDestination.titleResId),
+                        icon = targetDestination.icon,
                         showBack = true,
                         onBack = onBack,
                     )
@@ -1856,6 +1597,7 @@ private fun PlayerSettingsSheet(
 @Composable
 private fun PlayerSettingsHeader(
     title: String,
+    icon: ImageVector,
     showBack: Boolean,
     onBack: () -> Unit,
 ) {
@@ -1873,6 +1615,12 @@ private fun PlayerSettingsHeader(
         } else {
             SpacerBox(8.dp)
         }
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            modifier = Modifier.size(24.dp),
+            tint = Color.White.copy(alpha = 0.72f),
+        )
         Text(
             text = title,
             modifier = Modifier.weight(1f),
@@ -1889,6 +1637,7 @@ private fun PlayerSettingsHeader(
 private fun PlayerSettingsEntry(
     title: String,
     value: String,
+    icon: ImageVector,
     onClick: () -> Unit,
 ) {
     Surface(
@@ -1906,6 +1655,12 @@ private fun PlayerSettingsEntry(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                modifier = Modifier.size(24.dp),
+                tint = Color.White.copy(alpha = 0.72f),
+            )
             Text(
                 text = title,
                 modifier = Modifier.weight(1f),
@@ -2011,6 +1766,7 @@ private data class PlayerSettingsEntryItem(
     val id: String,
     val title: String,
     val value: String,
+    val icon: ImageVector,
     val onClick: () -> Unit,
 )
 
@@ -2036,6 +1792,7 @@ private fun playerSettingsRootEntries(
                 id = PlayerSettingsDestination.Voiceover.name,
                 title = stringResource(R.string.watch_player_settings_voiceover),
                 value = voiceoverValues.firstSelectedLabelOrDefault(),
+                icon = Icons.Outlined.RecordVoiceOver,
                 onClick = { onNavigate(PlayerSettingsDestination.Voiceover) },
             )
         )
@@ -2046,6 +1803,7 @@ private fun playerSettingsRootEntries(
                 id = PlayerSettingsDestination.Quality.name,
                 title = stringResource(R.string.watch_player_settings_quality),
                 value = qualityValues.firstSelectedLabelOrDefault(),
+                icon = Icons.Outlined.HighQuality,
                 onClick = { onNavigate(PlayerSettingsDestination.Quality) },
             )
         )
@@ -2055,6 +1813,7 @@ private fun playerSettingsRootEntries(
             id = PlayerSettingsDestination.Speed.name,
             title = stringResource(R.string.watch_player_settings_speed),
             value = speedValues.firstSelectedLabelOrDefault(defaultLabel = "1x"),
+            icon = Icons.Outlined.Speed,
             onClick = { onNavigate(PlayerSettingsDestination.Speed) },
         )
     )
@@ -2066,6 +1825,7 @@ private fun playerSettingsRootEntries(
                 if (autoSkipSegments) R.string.watch_player_settings_on
                 else R.string.watch_player_settings_off,
             ),
+            icon = Icons.Outlined.SkipNext,
             onClick = { onAutoSkipSegmentsChange(!autoSkipSegments) },
         )
     )
@@ -2077,6 +1837,7 @@ private fun playerSettingsRootEntries(
                 if (autoPlayNextEpisode) R.string.watch_player_settings_on
                 else R.string.watch_player_settings_off,
             ),
+            icon = Icons.Outlined.PlayCircle,
             onClick = { onAutoPlayNextEpisodeChange(!autoPlayNextEpisode) },
         )
     )
@@ -2086,6 +1847,7 @@ private fun playerSettingsRootEntries(
                 id = PlayerSettingsDestination.Player.name,
                 title = stringResource(R.string.watch_player_settings_player),
                 value = playerValues.firstSelectedLabelOrDefault(),
+                icon = Icons.Outlined.VideoSettings,
                 onClick = { onNavigate(PlayerSettingsDestination.Player) },
             )
         )
@@ -2102,7 +1864,12 @@ private fun androidx.compose.foundation.lazy.LazyListScope.playerSettingsItems(
 ) {
     when (destination) {
         PlayerSettingsDestination.Root -> items(rootEntries, key = PlayerSettingsEntryItem::id) { entry ->
-            PlayerSettingsEntry(title = entry.title, value = entry.value, onClick = entry.onClick)
+            PlayerSettingsEntry(
+                title = entry.title,
+                value = entry.value,
+                icon = entry.icon,
+                onClick = entry.onClick,
+            )
         }
         PlayerSettingsDestination.Speed -> playerSettingsChoices(speedValues)
         PlayerSettingsDestination.Voiceover -> playerSettingsChoices(voiceoverValues)
@@ -2119,12 +1886,15 @@ private fun androidx.compose.foundation.lazy.LazyListScope.playerSettingsChoices
     }
 }
 
-private enum class PlayerSettingsDestination(@param:StringRes val titleResId: Int) {
-    Root(R.string.watch_player_settings_root),
-    Speed(R.string.watch_player_settings_speed),
-    Voiceover(R.string.watch_player_settings_voiceover),
-    Player(R.string.watch_player_settings_player),
-    Quality(R.string.watch_player_settings_quality),
+private enum class PlayerSettingsDestination(
+    @param:StringRes val titleResId: Int,
+    val icon: ImageVector,
+) {
+    Root(R.string.watch_player_settings_root, Icons.Outlined.Settings),
+    Speed(R.string.watch_player_settings_speed, Icons.Outlined.Speed),
+    Voiceover(R.string.watch_player_settings_voiceover, Icons.Outlined.RecordVoiceOver),
+    Player(R.string.watch_player_settings_player, Icons.Outlined.VideoSettings),
+    Quality(R.string.watch_player_settings_quality, Icons.Outlined.HighQuality),
 }
 
 @Composable
@@ -2579,31 +2349,6 @@ private fun EpisodeSheetRow(
     }
 }
 
-private fun PlaybackStream.toMediaSource(context: Context): MediaSource {
-    val dataSourceFactory = OfflineMediaCache.buildPlaybackDataSourceFactory(
-        context = context,
-        headers = headers,
-    )
-    val mediaItem = MediaItem.Builder()
-        .setUri(streamUrl.toUri())
-        .setMimeType(
-            when (streamType) {
-                PlaybackStreamType.HLS -> MimeTypes.APPLICATION_M3U8
-                PlaybackStreamType.MP4 -> MimeTypes.VIDEO_MP4
-                PlaybackStreamType.DASH -> MimeTypes.APPLICATION_MPD
-            }
-        )
-        .build()
-
-    return when (streamType) {
-        PlaybackStreamType.HLS -> HlsMediaSource.Factory(dataSourceFactory)
-            .setAllowChunklessPreparation(true)
-            .createMediaSource(mediaItem)
-        PlaybackStreamType.DASH -> DashMediaSource.Factory(dataSourceFactory).createMediaSource(mediaItem)
-        PlaybackStreamType.MP4 -> ProgressiveMediaSource.Factory(dataSourceFactory).createMediaSource(mediaItem)
-    }
-}
-
 @Composable
 private fun buildEpisodeTitle(episode: WatchEpisode): String {
     val number = if (episode.number % 1.0 == 0.0) {
@@ -2665,53 +2410,14 @@ private fun buildSkipSegmentKey(
     segment: PlaybackSegment,
 ): String = "$episodeId:${segment.type}:${segment.startMs}:${segment.endMs}"
 
-private fun createPictureInPictureAction(
-    context: Context,
-    action: String,
-    requestCode: Int,
-    iconResId: Int,
-    @StringRes titleResId: Int,
-): RemoteAction {
-    val title = context.getString(titleResId)
-    val pendingIntent = PendingIntent.getBroadcast(
-        context,
-        requestCode,
-        Intent(action).setPackage(context.packageName),
-        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
-    )
-    return RemoteAction(
-        Icon.createWithResource(context, iconResId),
-        title,
-        title,
-        pendingIntent,
-    )
-}
-
 private const val SEEK_INCREMENT_MS = 10_000L
 private const val DOUBLE_TAP_TIMEOUT_MS = 260L
-private const val DOUBLE_TAP_ACCUMULATION_WINDOW_MS = 700L
 private const val MIN_BUFFER_MS = 30_000
 private const val MAX_BUFFER_MS = 60_000
 private const val BUFFER_FOR_PLAYBACK_MS = 1_500
 private const val BUFFER_FOR_PLAYBACK_AFTER_REBUFFER_MS = 3_000
-private const val PLAYBACK_LOG_TAG = "HibikiPlayback"
-private const val WATCHED_SECONDS_TRACKING_MAX_DELTA_MS = 2_500L
-private const val PLAYBACK_PROGRESS_SAVE_INTERVAL_MS = 30_000L
-private const val DISCORD_RPC_PLAYBACK_UPDATE_INTERVAL_MS = 30_000L
 private const val PLAYER_CONTROLS_AUTO_HIDE_DELAY_MS = 2_500L
 private const val SKIP_SEGMENT_COUNTDOWN_SECONDS = 10
-private const val PICTURE_IN_PICTURE_ACTION_TOGGLE_AUDIO_ONLY =
-    "org.akkirrai.hibiki.action.TOGGLE_AUDIO_ONLY"
-private const val PICTURE_IN_PICTURE_ACTION_TOGGLE_PLAYBACK =
-    "org.akkirrai.hibiki.action.TOGGLE_PLAYBACK"
-private const val PICTURE_IN_PICTURE_ACTION_PREVIOUS_EPISODE =
-    "org.akkirrai.hibiki.action.PREVIOUS_EPISODE"
-private const val PICTURE_IN_PICTURE_ACTION_NEXT_EPISODE =
-    "org.akkirrai.hibiki.action.NEXT_EPISODE"
-private const val PICTURE_IN_PICTURE_AUDIO_ONLY_REQUEST_CODE = 1001
-private const val PICTURE_IN_PICTURE_PLAYBACK_REQUEST_CODE = 1002
-private const val PICTURE_IN_PICTURE_PREVIOUS_EPISODE_REQUEST_CODE = 1003
-private const val PICTURE_IN_PICTURE_NEXT_EPISODE_REQUEST_CODE = 1004
 private val PLAYER_SHEET_COLOR = Color(0xFF121212)
 private val PLAYER_SETTINGS_SHEET_MAX_WIDTH = 460.dp
 private val PLAYER_SETTINGS_PANEL_MAX_HEIGHT = 300.dp
@@ -2735,10 +2441,521 @@ private val PLAYER_TIMELINE_THUMB_SIZE = 8.dp
 private val PLAYER_TIMELINE_THUMB_RADIUS = 4.dp
 private val PLAYBACK_SPEEDS = listOf(0.75f, 1f, 1.25f, 1.5f, 2f)
 
-private fun String?.shortUrl(): String {
-    if (this.isNullOrBlank()) return "null"
-    return substringBefore('?').substringAfterLast('/')
+@Composable
+private fun AnimatedSeekOverlayArrow(
+    direction: Int,
+    pulse: Int,
+) {
+    AnimatedContent(
+        targetState = pulse,
+        modifier = Modifier.zIndex(-1f),
+        transitionSpec = {
+            (fadeIn(animationSpec = tween(90)) +
+                slideInHorizontally(
+                    initialOffsetX = { width -> -direction * width / 2 },
+                    animationSpec = tween(180),
+                )) togetherWith
+                (fadeOut(animationSpec = tween(220)) +
+                    slideOutHorizontally(
+                        targetOffsetX = { width -> direction * width / 2 },
+                        animationSpec = tween(220),
+                    )) using SizeTransform(clip = false) { _, _ -> tween(durationMillis = 0) }
+        },
+        label = "DoubleTapSeekArrow",
+    ) {
+        SeekOverlayArrow(
+            imageVector = if (direction < 0) {
+                Icons.AutoMirrored.Outlined.KeyboardArrowLeft
+            } else {
+                Icons.AutoMirrored.Outlined.KeyboardArrowRight
+            },
+        )
+    }
 }
+
+@Composable
+private fun SeekOverlayArrow(imageVector: ImageVector) {
+    Box(contentAlignment = Alignment.Center) {
+        Icon(
+            imageVector = imageVector,
+            contentDescription = null,
+            modifier = Modifier
+                .size(28.dp)
+                .offset(x = 1.dp, y = 1.dp),
+            tint = Color.Black.copy(alpha = 0.7f),
+        )
+        Icon(
+            imageVector = imageVector,
+            contentDescription = null,
+            modifier = Modifier.size(28.dp),
+            tint = Color.White,
+        )
+    }
+}
+
+private fun buildSeekDeltaLabel(deltaMs: Long): String {
+    val sign = if (deltaMs >= 0L) "+" else "-"
+    return sign + (kotlin.math.abs(deltaMs) / 1_000L)
+}
+
+private const val PLAYBACK_LOG_TAG = "HibikiPlayback"
+private const val DISCORD_RPC_PLAYBACK_UPDATE_INTERVAL_MS = 30_000L
+private const val DOUBLE_TAP_ACCUMULATION_WINDOW_MS = 700L
+private const val WATCHED_SECONDS_TRACKING_MAX_DELTA_MS = 2_500L
+private const val PLAYBACK_PROGRESS_SAVE_INTERVAL_MS = 30_000L
+private const val PICTURE_IN_PICTURE_ACTION_TOGGLE_AUDIO_ONLY =
+    "org.akkirrai.hibiki.action.TOGGLE_AUDIO_ONLY"
+private const val PICTURE_IN_PICTURE_ACTION_TOGGLE_PLAYBACK =
+    "org.akkirrai.hibiki.action.TOGGLE_PLAYBACK"
+private const val PICTURE_IN_PICTURE_ACTION_PREVIOUS_EPISODE =
+    "org.akkirrai.hibiki.action.PREVIOUS_EPISODE"
+private const val PICTURE_IN_PICTURE_ACTION_NEXT_EPISODE =
+    "org.akkirrai.hibiki.action.NEXT_EPISODE"
+private const val PICTURE_IN_PICTURE_AUDIO_ONLY_REQUEST_CODE = 1001
+private const val PICTURE_IN_PICTURE_PLAYBACK_REQUEST_CODE = 1002
+private const val PICTURE_IN_PICTURE_PREVIOUS_EPISODE_REQUEST_CODE = 1003
+private const val PICTURE_IN_PICTURE_NEXT_EPISODE_REQUEST_CODE = 1004
+
+@Composable
+private fun PlayerDiscordPipAudioStateEffect(
+    discordRpcManager: DiscordRpcManager,
+    isEnteringPictureInPicture: Boolean,
+    isPictureInPictureActive: Boolean,
+    isAudioOnly: Boolean,
+) {
+    LaunchedEffect(
+        discordRpcManager,
+        isEnteringPictureInPicture,
+        isPictureInPictureActive,
+        isAudioOnly,
+    ) {
+        discordRpcManager.setPictureInPictureActive(
+            isEnteringPictureInPicture || isPictureInPictureActive,
+        )
+        discordRpcManager.setBackgroundAudioActive(isAudioOnly)
+    }
+
+    DisposableEffect(discordRpcManager) {
+        onDispose {
+            discordRpcManager.setPictureInPictureActive(false)
+            discordRpcManager.setBackgroundAudioActive(false)
+        }
+    }
+}
+
+@Composable
+private fun PlayerDiscordPlaybackPresenceEffect(
+    discordRpcManager: DiscordRpcManager,
+    offlineTitleMetadataRepository: OfflineTitleMetadataRepository,
+    state: PlayerUiState,
+    positionMs: Long,
+    durationMs: Long,
+    isPlaying: Boolean,
+) {
+    LaunchedEffect(
+        state.playback,
+        state.currentSourceId,
+        state.currentEpisodeId,
+        state.currentEpisodeNumber,
+        isPlaying,
+    ) {
+        val playback = state.playback ?: return@LaunchedEffect
+        val titleId = watchTitleIdFromSourceId(state.currentSourceId)
+        val coverUrl = withContext(Dispatchers.IO) {
+            offlineTitleMetadataRepository.get(titleId)?.let { metadata ->
+                metadata.posterUrl ?: metadata.posterFallbackUrl
+            }
+        }
+        while (true) {
+            discordRpcManager.showPlayback(
+                DiscordPlaybackPresence(
+                    titleId = titleId,
+                    animeTitle = state.animeTitle.ifBlank { playback.animeTitle },
+                    voiceover = playback.sourceTitle,
+                    episodeNumber = state.currentEpisodeNumber,
+                    positionMs = positionMs,
+                    durationMs = durationMs,
+                    isPlaying = isPlaying,
+                    coverUrl = coverUrl,
+                ),
+            )
+            if (!isPlaying) return@LaunchedEffect
+            delay(DISCORD_RPC_PLAYBACK_UPDATE_INTERVAL_MS)
+        }
+    }
+}
+
+/**
+ * Accumulates consecutive double-tap seek gestures (e.g. tap-tap-tap to seek +30s) and commits
+ * the accumulated seek to the player after [DOUBLE_TAP_ACCUMULATION_WINDOW_MS] of inactivity.
+ */
+private class PlayerDoubleTapSeekController(
+    private val exoPlayer: ExoPlayer,
+    private val coroutineScope: CoroutineScope,
+    private val seekIncrementMs: Long,
+    private val currentPlaybackPositionMs: () -> Long,
+    private val currentDurationMs: () -> Long,
+    private val onSeekCommitted: (targetPositionMs: Long) -> Unit,
+) {
+    private var lastDoubleTapAtMs by mutableLongStateOf(0L)
+    private var lastDoubleTapDirection by mutableIntStateOf(0)
+    private var accumulatedBasePositionMs by mutableLongStateOf(0L)
+    private var pendingSeekJob: Job? = null
+
+    var accumulatedSteps by mutableIntStateOf(0)
+        private set
+    var overlayVisible by mutableStateOf(false)
+        private set
+    var overlayDeltaMs by mutableLongStateOf(0L)
+        private set
+    var arrowPulse by mutableIntStateOf(0)
+        private set
+
+    fun reset() {
+        pendingSeekJob?.cancel()
+        pendingSeekJob = null
+        lastDoubleTapAtMs = 0L
+        lastDoubleTapDirection = 0
+        accumulatedSteps = 0
+        accumulatedBasePositionMs = 0L
+        overlayVisible = false
+        overlayDeltaMs = 0L
+    }
+
+    fun cancelPending() {
+        pendingSeekJob?.cancel()
+        pendingSeekJob = null
+    }
+
+    fun schedule(direction: Int, eventTimeMs: Long) {
+        val isAccumulating =
+            direction == lastDoubleTapDirection &&
+                accumulatedSteps > 0 &&
+                eventTimeMs - lastDoubleTapAtMs <= DOUBLE_TAP_ACCUMULATION_WINDOW_MS
+        val nextSteps = if (isAccumulating) accumulatedSteps + 1 else 1
+        val basePositionMs = if (isAccumulating) {
+            accumulatedBasePositionMs
+        } else {
+            currentPlaybackPositionMs()
+        }
+        val safeDurationMs = exoPlayer.duration.takeIf { it > 0 } ?: currentDurationMs()
+        val requestedDeltaMs = seekIncrementMs * nextSteps * direction
+        val targetPositionMs = when {
+            direction < 0 -> (basePositionMs + requestedDeltaMs).coerceAtLeast(0L)
+            safeDurationMs > 0L -> (basePositionMs + requestedDeltaMs).coerceAtMost(safeDurationMs)
+            else -> basePositionMs + requestedDeltaMs
+        }
+        val effectiveDeltaMs = targetPositionMs - basePositionMs
+
+        // Do not acknowledge a double tap when the player cannot move any further.
+        if (effectiveDeltaMs == 0L) return
+
+        pendingSeekJob?.cancel()
+        lastDoubleTapAtMs = eventTimeMs
+        lastDoubleTapDirection = direction
+        accumulatedSteps = nextSteps
+        accumulatedBasePositionMs = basePositionMs
+        overlayVisible = true
+        overlayDeltaMs = effectiveDeltaMs
+        arrowPulse += 1
+        pendingSeekJob = coroutineScope.launch {
+            delay(DOUBLE_TAP_ACCUMULATION_WINDOW_MS)
+            commit()
+        }
+    }
+
+    private fun commit() {
+        val direction = lastDoubleTapDirection
+        val steps = accumulatedSteps
+        if (direction == 0 || steps <= 0) return
+
+        val deltaMs = seekIncrementMs * steps
+        val safeDurationMs = exoPlayer.duration.takeIf { it > 0 } ?: currentDurationMs()
+        val targetPositionMs = if (direction < 0) {
+            (accumulatedBasePositionMs - deltaMs).coerceAtLeast(0L)
+        } else if (safeDurationMs > 0L) {
+            (accumulatedBasePositionMs + deltaMs).coerceAtMost(safeDurationMs)
+        } else {
+            accumulatedBasePositionMs + deltaMs
+        }
+
+        exoPlayer.seekTo(targetPositionMs)
+        onSeekCommitted(targetPositionMs)
+        lastDoubleTapAtMs = 0L
+        lastDoubleTapDirection = 0
+        accumulatedSteps = 0
+        accumulatedBasePositionMs = 0L
+        pendingSeekJob = null
+        overlayVisible = false
+    }
+}
+
+@Composable
+private fun PlayerImmersiveModeEffect(
+    activity: Activity?,
+    view: View,
+    restoreWindowUi: MutableState<(() -> Unit)?>,
+) {
+    DisposableEffect(activity, view) {
+        if (activity == null) {
+            onDispose {}
+        } else {
+            val controller = WindowInsetsControllerCompat(activity.window, activity.window.decorView)
+            val previousOrientation = activity.requestedOrientation
+            val previousBehavior = controller.systemBarsBehavior
+            val previousCutoutMode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                activity.window.attributes.layoutInDisplayCutoutMode
+            } else {
+                null
+            }
+
+            fun applyPlayerWindowMode() {
+                controller.systemBarsBehavior =
+                    WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+                controller.hide(WindowInsetsCompat.Type.systemBars())
+                activity.window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+                activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                    activity.window.attributes = activity.window.attributes.apply {
+                        layoutInDisplayCutoutMode =
+                            WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
+                    }
+                }
+            }
+
+            applyPlayerWindowMode()
+
+            var restored = false
+            restoreWindowUi.value = restore@{
+                if (restored) {
+                    return@restore
+                }
+                restored = true
+                controller.show(WindowInsetsCompat.Type.systemBars())
+                controller.systemBarsBehavior = previousBehavior
+                activity.window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+                activity.requestedOrientation = previousOrientation
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && previousCutoutMode != null) {
+                    activity.window.attributes = activity.window.attributes.apply {
+                        layoutInDisplayCutoutMode = previousCutoutMode
+                    }
+                }
+            }
+
+            view.post {
+                if (!restored) {
+                    applyPlayerWindowMode()
+                }
+            }
+
+            onDispose {
+                restoreWindowUi.value?.invoke()
+                restoreWindowUi.value = null
+            }
+        }
+    }
+}
+
+@Composable
+private fun PlayerLifecycleEffect(
+    lifecycleOwner: LifecycleOwner,
+    exoPlayer: ExoPlayer,
+    isClosing: MutableState<Boolean>,
+    isEnteringPictureInPicture: MutableState<Boolean>,
+    isPictureInPictureActive: MutableState<Boolean>,
+    isAudioOnly: MutableState<Boolean>,
+    positionMs: MutableLongState,
+    sliderPositionMs: MutableLongState,
+    currentPlaybackPositionMs: () -> Long,
+    saveCurrentPlaybackProgress: () -> Unit,
+    saveCurrentVideoFrame: () -> Unit,
+) {
+    var lifecycleResumePositionMs by remember { mutableLongStateOf(0L) }
+    var resumePlaybackAfterLifecyclePause by remember { mutableStateOf(false) }
+
+    DisposableEffect(lifecycleOwner, exoPlayer) {
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_PAUSE -> {
+                    saveCurrentPlaybackProgress()
+                    if (!isClosing.value) saveCurrentVideoFrame()
+                    if (isEnteringPictureInPicture.value || isPictureInPictureActive.value || isAudioOnly.value) {
+                        return@LifecycleEventObserver
+                    }
+                    lifecycleResumePositionMs = currentPlaybackPositionMs()
+                    resumePlaybackAfterLifecyclePause = exoPlayer.isPlaying
+                    exoPlayer.pause()
+                }
+
+                Lifecycle.Event.ON_STOP -> saveCurrentPlaybackProgress()
+
+                Lifecycle.Event.ON_RESUME -> {
+                    isEnteringPictureInPicture.value = false
+                    isPictureInPictureActive.value = false
+                    isAudioOnly.value = false
+                    val resumePositionMs = lifecycleResumePositionMs
+                    if (resumePositionMs > 0L) {
+                        exoPlayer.seekTo(resumePositionMs)
+                        positionMs.longValue = resumePositionMs
+                        sliderPositionMs.longValue = resumePositionMs
+                        lifecycleResumePositionMs = 0L
+                    }
+                    if (resumePlaybackAfterLifecyclePause) {
+                        exoPlayer.play()
+                    }
+                    resumePlaybackAfterLifecyclePause = false
+                }
+
+                else -> Unit
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+}
+
+@Composable
+private fun PlayerMediaPreparationEffect(
+    exoPlayer: ExoPlayer,
+    context: Context,
+    state: PlayerUiState,
+    playbackSpeed: Float,
+    keepControlsVisible: () -> Unit,
+) {
+    LaunchedEffect(state.playback) {
+        val playback = state.playback
+        if (playback == null) {
+            exoPlayer.pause()
+            exoPlayer.stop()
+            exoPlayer.clearMediaItems()
+            return@LaunchedEffect
+        }
+        AppLogger.d(
+            PLAYBACK_LOG_TAG,
+            buildString {
+                append("[player.prepare] sourceId=")
+                append(state.currentSourceId)
+                append(" episodeId=")
+                append(state.currentEpisodeId)
+                append(" type=")
+                append(playback.streamType)
+                append(" streamHost=")
+                append(playback.streamUrl.safeHost())
+                append(" headerNames=")
+                append(playback.headers.safeHeaderNames())
+                append(" audioHost=")
+                append(playback.audioStreamUrl.safeHost())
+            },
+        )
+        if (playback.streamType == PlaybackStreamType.BROWSER) {
+            exoPlayer.pause()
+            exoPlayer.stop()
+            exoPlayer.clearMediaItems()
+            keepControlsVisible()
+            return@LaunchedEffect
+        }
+        keepControlsVisible()
+        exoPlayer.stop()
+        exoPlayer.clearMediaItems()
+        exoPlayer.setMediaSource(playback.toMediaSource(context))
+        exoPlayer.playbackParameters = PlaybackParameters(playbackSpeed)
+        exoPlayer.prepare()
+        exoPlayer.playWhenReady = true
+    }
+}
+
+private fun PlaybackStream.toMediaSource(context: Context): MediaSource {
+    val dataSourceFactory = OfflineMediaCache.buildPlaybackDataSourceFactory(
+        context = context,
+        headers = headers,
+    )
+    val mediaItem = MediaItem.Builder()
+        .setUri(streamUrl.toUri())
+        .setMimeType(
+            when (streamType) {
+                PlaybackStreamType.HLS -> MimeTypes.APPLICATION_M3U8
+                PlaybackStreamType.MP4 -> MimeTypes.VIDEO_MP4
+                PlaybackStreamType.DASH -> MimeTypes.APPLICATION_MPD
+                PlaybackStreamType.BROWSER -> error("Browser playback does not have a Media3 source")
+            }
+        )
+        .build()
+
+    val videoSource = when (streamType) {
+        PlaybackStreamType.HLS -> HlsMediaSource.Factory(dataSourceFactory)
+            .setAllowChunklessPreparation(true)
+            .createMediaSource(mediaItem)
+        PlaybackStreamType.DASH -> DashMediaSource.Factory(dataSourceFactory).createMediaSource(mediaItem)
+        PlaybackStreamType.MP4 -> ProgressiveMediaSource.Factory(dataSourceFactory).createMediaSource(mediaItem)
+        PlaybackStreamType.BROWSER -> error("Browser playback does not have a Media3 source")
+    }
+    val audioUrl = audioStreamUrl ?: return videoSource
+    val audioSource = HlsMediaSource.Factory(
+        OfflineMediaCache.buildPlaybackDataSourceFactory(context, audioHeaders.ifEmpty { headers }),
+    ).setAllowChunklessPreparation(true).createMediaSource(
+        MediaItem.Builder().setUri(audioUrl.toUri()).setMimeType(MimeTypes.APPLICATION_M3U8).build(),
+    )
+    return MergingMediaSource(videoSource, audioSource)
+}
+
+/** Generic visible WebView adapter for extensions that need browser session playback. */
+@Composable
+private fun BrowserPlaybackSurface(playback: PlaybackStream, onInteraction: () -> Unit) {
+    key(playback.streamUrl, playback.browserScript) {
+        AndroidView(
+            factory = { viewContext ->
+                WebView(viewContext).apply {
+                    settings.javaScriptEnabled = true
+                settings.domStorageEnabled = true
+                settings.mediaPlaybackRequiresUserGesture = false
+                settings.allowFileAccess = false
+                setBackgroundColor(android.graphics.Color.BLACK)
+                setOnTouchListener { _, event ->
+                    if (event.action == android.view.MotionEvent.ACTION_UP) onInteraction()
+                    false
+                }
+                webViewClient = object : WebViewClient() {
+                    override fun onPageFinished(view: WebView, url: String) {
+                        playback.browserScript?.takeIf(String::isNotBlank)?.let { script ->
+                                view.evaluateJavascript("$script\n$BROWSER_PAGE_LAYOUT_SCRIPT\n$BROWSER_AUDIO_UNMUTE_SCRIPT", null)
+                            }
+                        }
+                    }
+                    loadUrl(playback.streamUrl, playback.headers)
+                }
+            },
+            onRelease = { it.destroy() },
+            modifier = Modifier.fillMaxSize(),
+        )
+    }
+}
+
+private const val BROWSER_PAGE_LAYOUT_SCRIPT = """
+;(function(){
+  var style=document.createElement('style');
+  style.textContent='html,body{margin:0!important;padding:0!important;width:100%!important;height:100%!important;background:#000!important;overflow:hidden!important}video,iframe{position:fixed!important;inset:0!important;width:100%!important;height:100%!important;border:0!important;background:#000!important;object-fit:contain!important}';
+  (document.head||document.documentElement).appendChild(style);
+})();
+"""
+
+private const val BROWSER_AUDIO_UNMUTE_SCRIPT = """
+;(function(){
+  var attempts=0;
+  var unmute=function(){
+    document.querySelectorAll('video').forEach(function(video){
+      video.muted=false;
+      video.volume=1;
+      var play=video.play();
+      if(play) play.catch(function(){});
+    });
+    if(++attempts>=20) clearInterval(timer);
+  };
+  unmute();
+  var timer=setInterval(unmute,250);
+})();
+"""
 
 private fun String?.safeHost(): String {
     if (this.isNullOrBlank()) return "unknown"
@@ -2756,7 +2973,339 @@ private fun Map<String, String>.safeHeaderNames(): String {
         .joinToString(prefix = "[", postfix = "]")
 }
 
-private fun buildSeekDeltaLabel(deltaMs: Long): String {
-    val sign = if (deltaMs >= 0L) "+" else "-"
-    return sign + formatDuration(kotlin.math.abs(deltaMs))
+private fun buildPictureInPictureParams(
+    context: Context,
+    isAudioOnly: Boolean,
+    isPlaying: Boolean,
+    hasPreviousEpisode: Boolean,
+    hasNextEpisode: Boolean,
+): PictureInPictureParams {
+    val actions = buildList {
+        add(
+            createPictureInPictureAction(
+                context = context,
+                action = PICTURE_IN_PICTURE_ACTION_TOGGLE_AUDIO_ONLY,
+                requestCode = PICTURE_IN_PICTURE_AUDIO_ONLY_REQUEST_CODE,
+                iconResId = R.drawable.ic_player_headphones_24,
+                titleResId = if (isAudioOnly) {
+                    R.string.watch_player_show_video
+                } else {
+                    R.string.watch_player_audio_only
+                },
+            )
+        )
+        add(
+            createPictureInPictureAction(
+                context = context,
+                action = PICTURE_IN_PICTURE_ACTION_TOGGLE_PLAYBACK,
+                requestCode = PICTURE_IN_PICTURE_PLAYBACK_REQUEST_CODE,
+                iconResId = if (isPlaying) {
+                    R.drawable.ic_player_media_pause_24
+                } else {
+                    R.drawable.ic_player_media_play_arrow_24
+                },
+                titleResId = if (isPlaying) {
+                    R.string.watch_player_pause
+                } else {
+                    R.string.watch_player_play
+                },
+            )
+        )
+        if (hasPreviousEpisode) {
+            add(
+                createPictureInPictureAction(
+                    context = context,
+                    action = PICTURE_IN_PICTURE_ACTION_PREVIOUS_EPISODE,
+                    requestCode = PICTURE_IN_PICTURE_PREVIOUS_EPISODE_REQUEST_CODE,
+                    iconResId = R.drawable.ic_player_media_skip_previous_24,
+                    titleResId = R.string.watch_player_previous_episode,
+                )
+            )
+        }
+        if (hasNextEpisode) {
+            add(
+                createPictureInPictureAction(
+                    context = context,
+                    action = PICTURE_IN_PICTURE_ACTION_NEXT_EPISODE,
+                    requestCode = PICTURE_IN_PICTURE_NEXT_EPISODE_REQUEST_CODE,
+                    iconResId = R.drawable.ic_player_media_skip_next_24,
+                    titleResId = R.string.watch_player_next_episode,
+                )
+            )
+        }
+    }
+    return PictureInPictureParams.Builder().setActions(actions).build()
+}
+
+@Composable
+private fun PlayerPictureInPictureEffects(
+    context: Context,
+    activity: Activity?,
+    exoPlayer: ExoPlayer,
+    discordRpcManager: DiscordRpcManager,
+    currentEpisodeId: String,
+    hasPreviousEpisode: Boolean,
+    hasNextEpisode: Boolean,
+    isPlaying: Boolean,
+    isAudioOnly: MutableState<Boolean>,
+    isPictureInPictureActive: MutableState<Boolean>,
+    onPreviousEpisode: () -> Unit,
+    onNextEpisode: () -> Unit,
+) {
+    DisposableEffect(context, currentEpisodeId, hasNextEpisode) {
+        val receiver = object : BroadcastReceiver() {
+            override fun onReceive(receiverContext: Context, intent: Intent) {
+                when (intent.action) {
+                    PICTURE_IN_PICTURE_ACTION_TOGGLE_AUDIO_ONLY -> {
+                        exoPlayer.play()
+                        isAudioOnly.value = true
+                        isPictureInPictureActive.value = false
+                        discordRpcManager.setBackgroundAudioActive(true)
+                        activity?.moveTaskToBack(true)
+                    }
+
+                    PICTURE_IN_PICTURE_ACTION_TOGGLE_PLAYBACK -> {
+                        if (exoPlayer.isPlaying) exoPlayer.pause() else exoPlayer.play()
+                    }
+
+                    PICTURE_IN_PICTURE_ACTION_PREVIOUS_EPISODE -> {
+                        if (hasPreviousEpisode) onPreviousEpisode()
+                    }
+
+                    PICTURE_IN_PICTURE_ACTION_NEXT_EPISODE -> {
+                        if (hasNextEpisode) onNextEpisode()
+                    }
+                }
+            }
+        }
+        ContextCompat.registerReceiver(
+            context,
+            receiver,
+            IntentFilter().apply {
+                addAction(PICTURE_IN_PICTURE_ACTION_TOGGLE_AUDIO_ONLY)
+                addAction(PICTURE_IN_PICTURE_ACTION_TOGGLE_PLAYBACK)
+                addAction(PICTURE_IN_PICTURE_ACTION_PREVIOUS_EPISODE)
+                addAction(PICTURE_IN_PICTURE_ACTION_NEXT_EPISODE)
+            },
+            ContextCompat.RECEIVER_NOT_EXPORTED,
+        )
+        onDispose { context.unregisterReceiver(receiver) }
+    }
+
+    LaunchedEffect(currentEpisodeId, hasPreviousEpisode, hasNextEpisode, isPlaying) {
+        if (isPictureInPictureActive.value) {
+            activity?.setPictureInPictureParams(
+                buildPictureInPictureParams(
+                    context = context,
+                    isAudioOnly = isAudioOnly.value,
+                    isPlaying = isPlaying,
+                    hasPreviousEpisode = hasPreviousEpisode,
+                    hasNextEpisode = hasNextEpisode,
+                )
+            )
+        }
+    }
+}
+
+private fun createPictureInPictureAction(
+    context: Context,
+    action: String,
+    requestCode: Int,
+    iconResId: Int,
+    @StringRes titleResId: Int,
+): RemoteAction {
+    val title = context.getString(titleResId)
+    val pendingIntent = PendingIntent.getBroadcast(
+        context,
+        requestCode,
+        Intent(action).setPackage(context.packageName),
+        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+    )
+    return RemoteAction(
+        Icon.createWithResource(context, iconResId),
+        title,
+        title,
+        pendingIntent,
+    )
+}
+
+@Composable
+private fun PlayerPlaybackListenerEffect(
+    exoPlayer: ExoPlayer,
+    mediaSession: MediaSession,
+    viewModel: PlayerViewModel,
+    state: () -> PlayerUiState,
+    autoPlayNextEpisode: Boolean,
+    videoAspectRatio: MutableFloatState,
+    isPlaying: MutableState<Boolean>,
+    isBuffering: MutableState<Boolean>,
+    durationMs: MutableLongState,
+    pendingSeekMs: MutableLongState,
+    positionMs: MutableLongState,
+    sliderPositionMs: MutableLongState,
+    handledEndedEpisodeId: MutableState<String?>,
+    watchedSecondsSnapshot: () -> List<Long>,
+    onDisposed: () -> Unit,
+) {
+    DisposableEffect(exoPlayer) {
+        val listener = object : Player.Listener {
+            override fun onVideoSizeChanged(videoSize: VideoSize) {
+                if (videoSize.width > 0 && videoSize.height > 0) {
+                    videoAspectRatio.floatValue =
+                        videoSize.width.toFloat() * videoSize.pixelWidthHeightRatio / videoSize.height
+                }
+            }
+
+            override fun onIsPlayingChanged(playing: Boolean) {
+                isPlaying.value = playing
+            }
+
+            override fun onPlaybackStateChanged(playbackState: Int) {
+                isBuffering.value = playbackState == Player.STATE_BUFFERING
+                durationMs.longValue = exoPlayer.duration.takeIf { it > 0 } ?: 0L
+                if (playbackState == Player.STATE_READY && pendingSeekMs.longValue > 0L) {
+                    exoPlayer.seekTo(pendingSeekMs.longValue)
+                    positionMs.longValue = pendingSeekMs.longValue
+                    sliderPositionMs.longValue = pendingSeekMs.longValue
+                    pendingSeekMs.longValue = 0L
+                    viewModel.consumePendingSeek()
+                }
+                if (playbackState == Player.STATE_ENDED && autoPlayNextEpisode) {
+                    val currentState = state()
+                    val currentEpisodeId = currentState.currentEpisodeId
+                    val currentIndex = currentState.episodes.indexOfFirst { it.id == currentEpisodeId }
+                    val hasNextEpisode = currentIndex != -1 && currentIndex < currentState.episodes.lastIndex
+                    if (hasNextEpisode && handledEndedEpisodeId.value != currentEpisodeId) {
+                        handledEndedEpisodeId.value = currentEpisodeId
+                        viewModel.savePlaybackProgress(
+                            positionMs = exoPlayer.duration.takeIf { it > 0 } ?: exoPlayer.currentPosition.coerceAtLeast(0L),
+                            durationMs = exoPlayer.duration.takeIf { it > 0 } ?: 0L,
+                            watchedSeconds = watchedSecondsSnapshot(),
+                        )
+                        viewModel.playNextEpisode()
+                    }
+                }
+            }
+
+            override fun onPlayerError(error: PlaybackException) {
+                val currentState = state()
+                AppLogger.e(
+                    PLAYBACK_LOG_TAG,
+                    buildString {
+                        append("[player.error] sourceId=")
+                        append(currentState.currentSourceId)
+                        append(" episodeId=")
+                        append(currentState.currentEpisodeId)
+                        append(" type=")
+                        append(currentState.playback?.streamType)
+                        append(" stream=")
+                        append(currentState.playback?.streamUrl.shortUrl())
+                        append(" code=")
+                        append(error.errorCodeName)
+                        append(" message=")
+                        append(error.message)
+                    },
+                    error
+                )
+                viewModel.recoverFromPlaybackError(currentState.playback?.streamUrl)
+            }
+        }
+        exoPlayer.addListener(listener)
+        onDispose {
+            onDisposed()
+            viewModel.savePlaybackProgress(
+                positionMs = exoPlayer.currentPosition.coerceAtLeast(0L),
+                durationMs = exoPlayer.duration.takeIf { it > 0 } ?: 0L,
+                watchedSeconds = watchedSecondsSnapshot(),
+            )
+            exoPlayer.removeListener(listener)
+            mediaSession.release()
+            exoPlayer.release()
+        }
+    }
+}
+
+private fun String?.shortUrl(): String {
+    if (this.isNullOrBlank()) return "null"
+    return substringBefore('?').substringAfterLast('/')
+}
+
+@Composable
+private fun PlayerPlaybackPositionPollingEffect(
+    exoPlayer: ExoPlayer,
+    isSeeking: Boolean,
+    durationMs: MutableLongState,
+    bufferedPositionMs: MutableLongState,
+    positionMs: MutableLongState,
+    sliderPositionMs: MutableLongState,
+) {
+    LaunchedEffect(exoPlayer, isSeeking) {
+        while (true) {
+            durationMs.longValue = exoPlayer.duration.takeIf { it > 0 } ?: 0L
+            bufferedPositionMs.longValue = exoPlayer.bufferedPosition.takeIf { it > 0 } ?: 0L
+            if (!isSeeking) {
+                positionMs.longValue = exoPlayer.currentPosition.coerceAtLeast(0L)
+                sliderPositionMs.longValue = positionMs.longValue
+            }
+            delay(250)
+        }
+    }
+}
+
+@Composable
+private fun PlayerWatchedSecondsTrackingEffect(
+    exoPlayer: ExoPlayer,
+    currentSourceId: String,
+    currentEpisodeId: String,
+    isSeeking: Boolean,
+    lastTrackedPlaybackPositionMs: MutableLongState,
+    watchedSeconds: MutableSet<Long>,
+) {
+    LaunchedEffect(exoPlayer, currentSourceId, currentEpisodeId) {
+        lastTrackedPlaybackPositionMs.longValue = -1L
+        while (true) {
+            val currentPositionMs = exoPlayer.currentPosition.coerceAtLeast(0L)
+            val currentDurationMs = exoPlayer.duration.takeIf { it > 0 } ?: 0L
+            val trackingAllowed = exoPlayer.isPlaying &&
+                currentDurationMs > 0L &&
+                !isSeeking
+
+            if (trackingAllowed) {
+                val previousPositionMs = lastTrackedPlaybackPositionMs.longValue
+                if (previousPositionMs >= 0L) {
+                    val deltaMs = currentPositionMs - previousPositionMs
+                    if (deltaMs in 1L..WATCHED_SECONDS_TRACKING_MAX_DELTA_MS) {
+                        val startSecond = previousPositionMs / 1_000L
+                        val endSecond = currentPositionMs / 1_000L
+                        for (second in startSecond..endSecond) {
+                            if (second * 1_000L < currentDurationMs) {
+                                watchedSeconds += second
+                            }
+                        }
+                    }
+                }
+                lastTrackedPlaybackPositionMs.longValue = currentPositionMs
+            } else {
+                lastTrackedPlaybackPositionMs.longValue = -1L
+            }
+            delay(1_000L)
+        }
+    }
+}
+
+@Composable
+private fun PlayerProgressPersistenceEffect(
+    exoPlayer: ExoPlayer,
+    currentSourceId: String,
+    currentEpisodeId: String,
+    onSaveProgress: () -> Unit,
+) {
+    LaunchedEffect(exoPlayer, currentSourceId, currentEpisodeId) {
+        while (true) {
+            delay(PLAYBACK_PROGRESS_SAVE_INTERVAL_MS)
+            if (exoPlayer.isPlaying) {
+                onSaveProgress()
+            }
+        }
+    }
 }

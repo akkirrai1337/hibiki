@@ -24,12 +24,12 @@ fun AppFilterBottomSheet(
         onDismissRequest = onDismissRequest,
         sheetState = sheetState,
         modifier = modifier.fillMaxHeight(),
-        containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surfaceContainerHighest,
+        containerColor = androidx.compose.material3.MaterialTheme.colorScheme.background,
         scrimColor = Color.Black.copy(alpha = 0.56f),
     ) {
         content(
             Modifier
-                .background(androidx.compose.material3.MaterialTheme.colorScheme.surfaceContainerLow)
+                .background(androidx.compose.material3.MaterialTheme.colorScheme.background)
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState()),
         )

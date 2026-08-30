@@ -197,14 +197,6 @@ class LibraryViewModel(
         _uiState.update { it.copy(searchQuery = "") }
     }
 
-    fun applySearchFilters(filters: LibrarySearchFilters) {
-        _uiState.update { it.copy(searchFilters = filters) }
-    }
-
-    fun resetSearchFilters() {
-        _uiState.update { it.copy(searchFilters = LibrarySearchFilters()) }
-    }
-
     private fun preferredCategory(
         entries: List<LibraryEntry>,
         current: LibraryCategory,
@@ -245,7 +237,6 @@ data class LibraryUiState(
     val selectedCategory: LibraryCategory = LibraryCategory.Watching,
     val isRefreshing: Boolean = false,
     val searchQuery: String = "",
-    val searchFilters: LibrarySearchFilters = LibrarySearchFilters(),
 ) {
     val orderedCategories: List<LibraryCategory>
         get() = orderedLibraryCategories(entries)
@@ -255,7 +246,6 @@ data class LibraryUiState(
             val normalizedQuery = searchQuery.trim()
             return entries.filter { entry ->
                 entry.category == selectedCategory &&
-                    searchFilters.matches(entry) &&
                     (
                         normalizedQuery.isBlank() ||
                             entry.anime.title.contains(normalizedQuery, ignoreCase = true) ||
@@ -267,64 +257,6 @@ data class LibraryUiState(
     val categoryCounts: Map<LibraryCategory, Int>
         get() = entries.groupingBy { it.category }.eachCount()
 
-    val filterCatalog: LibraryFilterCatalog
-        get() {
-            val categoryEntries = entries.filter { it.category == selectedCategory }
-            return LibraryFilterCatalog(
-                // Type and status are small, closed vocabularies (TV/OVA/ONA/Movie,
-                // ongoing/announced/released) every source's data can be mapped into reliably.
-                // Genre is deliberately not offered here: it's an open, source-specific
-                // vocabulary (different sources translate or scope genres differently), and with
-                // a library mixing entries from several sources there's no way to reconcile those
-                // into one consistent set of options without a hand-maintained mapping that will
-                // never keep up with sources that don't exist yet.
-                typeOptions = categoryEntries.mapNotNull { it.anime.extractLibraryType() }.distinct().sorted(),
-                statusOptions = AnimeStatusCategory.entries.filter { category ->
-                    categoryEntries.any { classifyAnimeStatus(it.anime.status) == category }
-                },
-                yearOptions = categoryEntries.mapNotNull { it.anime.extractLibraryYear() }.distinct().sortedDescending(),
-            )
-        }
-}
-
-data class LibrarySearchFilters(
-    val type: String? = null,
-    val status: AnimeStatusCategory? = null,
-    val year: Int? = null,
-) {
-    fun matches(entry: LibraryEntry): Boolean {
-        val anime = entry.anime
-        val typeMatches = type == null || anime.extractLibraryType() == type
-        val statusMatches = status == null || classifyAnimeStatus(anime.status) == status
-        val yearMatches = year == null || anime.extractLibraryYear() == year
-        return typeMatches && statusMatches && yearMatches
-    }
-
-    fun hasActiveFilters(): Boolean {
-        return type != null || status != null || year != null
-    }
-}
-
-data class LibraryFilterCatalog(
-    val typeOptions: List<String> = emptyList(),
-    val statusOptions: List<AnimeStatusCategory> = emptyList(),
-    val yearOptions: List<Int> = emptyList(),
-)
-
-private fun org.akkirrai.hibiki.core.model.Anime.extractLibraryType(): String? {
-    return subtitle
-        .split(Regex("\\s*[•·|]\\s*"))
-        .map(String::trim)
-        .firstOrNull { value ->
-            value.isNotBlank() && value.any(Char::isLetter) && value.none(Char::isDigit)
-        }
-}
-
-private fun org.akkirrai.hibiki.core.model.Anime.extractLibraryYear(): Int? {
-    return subtitle
-        .split(Regex("\\s*[•·|]\\s*"))
-        .map(String::trim)
-        .firstNotNullOfOrNull(String::toIntOrNull)
 }
 
 private fun orderedLibraryCategories(entries: List<LibraryEntry>): List<LibraryCategory> {

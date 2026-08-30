@@ -3,26 +3,29 @@ package org.akkirrai.hibiki.feature.player
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.PlayCircleOutline
 import androidx.compose.material.icons.outlined.SubtitlesOff
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -39,8 +42,10 @@ import org.akkirrai.hibiki.core.model.WatchSource
 @Composable
 fun WatchSourcesScreen(
     animeId: String,
+    animeTitle: String,
     onBackClick: () -> Unit,
     onSourceClick: (WatchSource) -> Unit,
+    onAutoSelectSingleSource: (WatchSource) -> Unit = onSourceClick,
     modifier: Modifier = Modifier,
     viewModel: WatchSourcesViewModel = viewModel(
         factory = WatchSourcesViewModel.Factory(
@@ -53,6 +58,14 @@ fun WatchSourcesScreen(
     val lifecycleOwner = LocalLifecycleOwner.current
     val navigationLockedState = rememberWatchNavigationLockState(lifecycleOwner)
     val navigationLocked = navigationLockedState.value
+    val singleSource = state.allItems.singleOrNull()
+
+    LaunchedEffect(singleSource, state.isLoading, navigationLocked) {
+        if (singleSource != null && !state.isLoading && !navigationLocked) {
+            navigationLockedState.value = true
+            onAutoSelectSingleSource(singleSource)
+        }
+    }
 
     WatchScreenScaffold(
         onBackClick = {
@@ -61,8 +74,9 @@ fun WatchSourcesScreen(
             onBackClick()
         },
         navigationLocked = navigationLocked,
+        title = animeTitle,
         modifier = modifier,
-    ) {
+    ) { contentPadding ->
         when {
             state.errorMessage != null -> {
                 WatchEmptyState(
@@ -91,15 +105,14 @@ fun WatchSourcesScreen(
             else -> {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(
-                        top = 68.dp,
-                        bottom = 12.dp,
-                    ),
+                    contentPadding = contentPadding,
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
-                    items(state.items, key = WatchSource::sourceId) { source ->
+                    itemsIndexed(state.items, key = { _, source -> source.sourceId }) { index, source ->
                         WatchSourceRow(
                             source = source,
                             enabled = !navigationLocked,
+                            shape = watchSourceRowShape(index, state.items.size),
                             onClick = {
                                 if (navigationLocked) return@WatchSourceRow
                                 navigationLockedState.value = true
@@ -139,33 +152,45 @@ fun WatchSourcesScreen(
 private fun WatchSourceRow(
     source: WatchSource,
     enabled: Boolean,
+    shape: RoundedCornerShape,
     onClick: () -> Unit,
 ) {
-    Row(
+    Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(enabled = enabled, onClick = onClick)
-            .padding(horizontal = UiDimens.ScreenPadding, vertical = 16.dp),
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
-        verticalAlignment = Alignment.CenterVertically
+            .clickable(enabled = enabled, onClick = onClick),
+        color = MaterialTheme.colorScheme.surfaceContainer,
+        shape = shape,
     ) {
-        Text(
-            text = source.title,
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurface,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            fontWeight = FontWeight.Medium
-        )
-        source.episodeCount?.let { count ->
+        Row(
+            modifier = Modifier.padding(horizontal = UiDimens.ScreenPadding, vertical = 15.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
             Text(
-                text = "· $count ${stringResource(R.string.watch_episodes_short)}",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.58f),
-                maxLines = 1
+                text = source.title,
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                fontWeight = FontWeight.Medium,
             )
+            source.episodeCount?.let { count ->
+                Text(
+                    text = "· $count ${stringResource(R.string.watch_episodes_short)}",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                )
+            }
         }
     }
-    HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
+}
+
+private fun watchSourceRowShape(index: Int, count: Int): RoundedCornerShape = when {
+    count == 1 -> RoundedCornerShape(24.dp)
+    index == 0 -> RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp, bottomStart = 8.dp, bottomEnd = 8.dp)
+    index == count - 1 -> RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp, bottomStart = 24.dp, bottomEnd = 24.dp)
+    else -> RoundedCornerShape(8.dp)
 }
 

@@ -6,6 +6,7 @@ import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandIn
 import androidx.compose.animation.expandVertically
@@ -15,6 +16,7 @@ import androidx.compose.animation.shrinkOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -23,6 +25,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -31,6 +34,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.Undo
 import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Delete
@@ -57,11 +61,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.AnnotatedString
@@ -82,6 +90,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlin.math.roundToInt
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.app.di.hibikiDependencies
 import org.akkirrai.hibiki.core.design.UiDimens
@@ -116,6 +125,8 @@ private val EpisodeProgressBarHeight = 3.dp
 private val EpisodeResumeCardCornerRadius = 20.dp
 private val EpisodeResumePlayTileSize = 46.dp
 private val EpisodeResumePlayTileCornerRadius = 15.dp
+private val EpisodeSectionDividerHeight = 3.dp
+private val EpisodeSwipeRevealWidth = 76.dp
 
 @Composable
 fun EpisodesScreen(
@@ -147,7 +158,6 @@ fun EpisodesScreen(
     val navigationLockedState = rememberWatchNavigationLockState(lifecycleOwner)
     val navigationLocked = navigationLockedState.value
     var downloadStates by remember(sourceId) { mutableStateOf<Map<String, OfflineEpisodeDownloadState>>(emptyMap()) }
-    var downloadControlsVisible by remember(sourceId, downloadMode) { mutableStateOf(downloadMode) }
     val coroutineScope = rememberCoroutineScope()
 
     // Cached from whatever Details visit populated it (offlineTitleMetadataRepository is also
@@ -158,6 +168,25 @@ fun EpisodesScreen(
     val nextEpisodeEta = rememberNextEpisodeEta(cachedAnime?.nextEpisodeAt)
         ?.takeIf { cachedAnime != null && isOngoingStatus(cachedAnime.status) }
     val episodeItems = (state.result as? EpisodesUiState.Content)?.items.orEmpty()
+    val watchedCount = remember(savedProgress, episodeItems) {
+        episodeItems.count { episode ->
+            resolveEpisodeStatus(savedProgress.firstOrNull { it.episodeId == episode.id }) ==
+                EpisodeProgressStatus.Watched
+        }
+    }
+    val sourceSubtitle = sourceTitle.takeIf { cachedAnime != null && it.isNotBlank() }?.let { source ->
+        if (episodeItems.isEmpty()) {
+            source
+        } else {
+            stringResource(
+                R.string.watch_source_progress_subtitle,
+                source,
+                watchedCount,
+                episodeItems.size,
+                stringResource(R.string.watch_status_watched),
+            )
+        }
+    }
     val nextEpisodeNumber = remember(episodeItems) {
         (episodeItems.maxOfOrNull { it.number }?.toInt() ?: 0) + 1
     }
@@ -216,27 +245,10 @@ fun EpisodesScreen(
             onBackClick()
         },
         navigationLocked = navigationLocked,
+        title = cachedAnime?.title ?: sourceTitle,
+        subtitle = sourceSubtitle,
         modifier = modifier,
-    ) {
-        AppFilledIconButton(
-            onClick = { downloadControlsVisible = !downloadControlsVisible },
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .statusBarsPadding()
-                .padding(end = UiDimens.ScreenPadding, top = 8.dp)
-                .zIndex(1f),
-            style = if (downloadControlsVisible) {
-                AppFilledIconButtonStyle.PrimaryContainer
-            } else {
-                AppFilledIconButtonStyle.Surface
-            },
-        ) {
-            Icon(
-                imageVector = Icons.Outlined.Download,
-                contentDescription = stringResource(R.string.watch_download),
-            )
-        }
-
+    ) { contentPadding ->
         when (val result = state.result) {
             EpisodesUiState.Loading -> {
                 AppCenteredLoading(modifier = Modifier.fillMaxSize())
@@ -278,12 +290,6 @@ fun EpisodesScreen(
                             ?: result.items.firstOrNull { it.number == progress.episodeNumber }
                     }
                 }
-                val watchedCount = remember(savedProgress, result.items) {
-                    result.items.count { episode ->
-                        resolveEpisodeStatus(savedProgress.firstOrNull { it.episodeId == episode.id }) ==
-                            EpisodeProgressStatus.Watched
-                    }
-                }
                 var visibleCount by remember(result.items.size, result.items.firstOrNull()?.id) {
                     mutableIntStateOf(EPISODES_PAGE_SIZE.coerceAtMost(result.items.size))
                 }
@@ -293,18 +299,11 @@ fun EpisodesScreen(
 
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(
-                        start = UiDimens.ScreenPadding,
-                        end = UiDimens.ScreenPadding,
-                        top = 68.dp,
-                        bottom = 12.dp,
-                    ),
+                    contentPadding = contentPadding,
                     verticalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
                     item(key = "episodes_header") {
                         EpisodesListHeader(
-                            watchedCount = watchedCount,
-                            totalCount = result.items.size,
                             resumeEpisode = resumeEpisode,
                             resumeProgress = resumeProgress,
                             onResumeClick = resumeEpisode?.let { episode ->
@@ -312,6 +311,28 @@ fun EpisodesScreen(
                                     if (!navigationLocked) {
                                         navigationLockedState.value = true
                                         onEpisodeClick(episode)
+                                    }
+                                }
+                            },
+                            onResumeMarkWatched = resumeEpisode?.let { episode ->
+                                resumeProgress?.let { progress ->
+                                    {
+                                        coroutineScope.launch {
+                                            savedProgress = withContext(Dispatchers.IO) {
+                                                watchStateRepository.saveEpisodeProgress(
+                                                    titleId = titleId,
+                                                    episodeId = episode.id,
+                                                    episodeNumber = episode.number,
+                                                    sourceId = progress.sourceId,
+                                                    voiceoverId = progress.voiceoverId,
+                                                    sourceTitle = progress.sourceTitle,
+                                                    quality = progress.quality,
+                                                    positionMs = progress.durationMs,
+                                                    durationMs = progress.durationMs,
+                                                )
+                                                watchStateRepository.getEpisodeProgress(titleId)
+                                            }
+                                        }
                                     }
                                 }
                             },
@@ -324,13 +345,36 @@ fun EpisodesScreen(
                             progress = progress,
                             status = resolveEpisodeStatus(progress),
                             downloadState = downloadStates[episode.id] ?: OfflineEpisodeDownloadState.NotDownloaded,
-                            showDownloadControls = downloadControlsVisible,
+                            showDownloadControls = true,
                             enabled = !navigationLocked,
                             shape = itemShape,
                             onClick = {
                                 if (navigationLocked) return@EpisodeRow
                                 navigationLockedState.value = true
                                 onEpisodeClick(episode)
+                            },
+                            onWatchStatusToggle = {
+                                coroutineScope.launch {
+                                    savedProgress = withContext(Dispatchers.IO) {
+                                        if (resolveEpisodeStatus(progress) == EpisodeProgressStatus.Watched) {
+                                            watchStateRepository.clearEpisodeProgress(titleId, episode.id)
+                                        } else {
+                                            val durationMs = progress?.durationMs?.takeIf { it > 0L } ?: 1L
+                                            watchStateRepository.saveEpisodeProgress(
+                                                titleId = titleId,
+                                                episodeId = episode.id,
+                                                episodeNumber = episode.number,
+                                                sourceId = progress?.sourceId ?: sourceId,
+                                                voiceoverId = progress?.voiceoverId ?: sourceId,
+                                                sourceTitle = progress?.sourceTitle ?: sourceTitle,
+                                                quality = progress?.quality,
+                                                positionMs = durationMs,
+                                                durationMs = durationMs,
+                                            )
+                                        }
+                                        watchStateRepository.getEpisodeProgress(titleId)
+                                    }
+                                }
                             },
                             onDownloadClick = {
                                 downloadStates = downloadStates + (episode.id to OfflineEpisodeDownloadState.Queued)
@@ -390,14 +434,23 @@ fun EpisodesScreen(
 
 @Composable
 private fun EpisodesListHeader(
-    watchedCount: Int,
-    totalCount: Int,
     resumeEpisode: WatchEpisode?,
     resumeProgress: EpisodeWatchProgress?,
     onResumeClick: (() -> Unit)?,
+    onResumeMarkWatched: (() -> Unit)?,
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
-        if (resumeEpisode != null && resumeProgress != null && resumeProgress.durationMs > 0L && onResumeClick != null) {
+    val isVisible = resumeEpisode != null &&
+        resumeProgress != null &&
+        resumeProgress.durationMs > 0L &&
+        onResumeClick != null &&
+        onResumeMarkWatched != null
+    AnimatedVisibility(
+        visible = isVisible,
+        enter = fadeIn(tween(180)) + expandVertically(tween(220)),
+        exit = fadeOut(tween(140)) + shrinkVertically(tween(220)),
+    ) {
+        if (resumeEpisode != null && resumeProgress != null && onResumeClick != null && onResumeMarkWatched != null) {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             EpisodeResumeCard(
                 title = stringResource(
                     R.string.watch_continue_episode,
@@ -406,24 +459,16 @@ private fun EpisodesListHeader(
                 position = "${formatDuration(resumeProgress.positionMs)} / ${formatDuration(resumeProgress.durationMs)}",
                 progressFraction = resumeProgress.positionMs.toFloat() / resumeProgress.durationMs.toFloat(),
                 onClick = onResumeClick,
+                onMarkWatched = onResumeMarkWatched,
+            )
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(EpisodeSectionDividerHeight)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.surfaceContainerHighest),
             )
         }
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                text = stringResource(R.string.watch_episodes_section_title),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-            Text(
-                text = "$watchedCount / $totalCount · ${stringResource(R.string.watch_status_watched)}",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
         }
     }
 }
@@ -434,15 +479,69 @@ private fun EpisodeResumeCard(
     position: String,
     progressFraction: Float,
     onClick: () -> Unit,
+    onMarkWatched: () -> Unit,
 ) {
     val shape = RoundedCornerShape(EpisodeResumeCardCornerRadius)
-    Surface(
-        onClick = onClick,
-        modifier = Modifier.fillMaxWidth(),
-        shape = shape,
-        color = MaterialTheme.colorScheme.secondaryContainer,
+    val swipeOffset = remember(title) { Animatable(0f) }
+    val swipeScope = rememberCoroutineScope()
+    val hapticFeedback = LocalHapticFeedback.current
+    val revealWidthPx = with(LocalDensity.current) { EpisodeSwipeRevealWidth.toPx() }
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(shape),
     ) {
-        Box {
+        Surface(
+            modifier = Modifier.matchParentSize(),
+            color = MaterialTheme.colorScheme.primaryContainer,
+            shape = shape,
+        ) {
+            Box(
+                modifier = Modifier.padding(end = 24.dp),
+                contentAlignment = Alignment.CenterEnd,
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.Check,
+                    contentDescription = stringResource(R.string.watch_mark_watched),
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                )
+            }
+        }
+        Surface(
+            modifier = Modifier
+                .offset { androidx.compose.ui.unit.IntOffset(swipeOffset.value.roundToInt(), 0) }
+                .pointerInput(Unit) {
+                    detectHorizontalDragGestures(
+                        onHorizontalDrag = { change, dragAmount ->
+                            if (dragAmount < 0f || swipeOffset.value < 0f) {
+                                change.consume()
+                                swipeScope.launch {
+                                    swipeOffset.snapTo((swipeOffset.value + dragAmount).coerceIn(-revealWidthPx, 0f))
+                                }
+                            }
+                        },
+                        onDragEnd = {
+                            val shouldMarkWatched = swipeOffset.value <= -revealWidthPx * 0.55f
+                            swipeScope.launch {
+                                if (shouldMarkWatched) {
+                                    hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    delay(110)
+                                    onMarkWatched()
+                                }
+                                swipeOffset.animateTo(0f, animationSpec = tween(180))
+                            }
+                        },
+                        onDragCancel = {
+                            swipeScope.launch { swipeOffset.animateTo(0f, animationSpec = tween(180)) }
+                        },
+                    )
+                }
+                .clickable(onClick = onClick),
+            shape = shape,
+            color = MaterialTheme.colorScheme.secondaryContainer,
+        ) {
+            Box {
             Row(
                 modifier = Modifier.padding(14.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -496,6 +595,7 @@ private fun EpisodeResumeCard(
             )
         }
     }
+}
 }
 
 /**
@@ -603,6 +703,7 @@ private fun EpisodeRow(
     enabled: Boolean,
     shape: RoundedCornerShape,
     onClick: () -> Unit,
+    onWatchStatusToggle: () -> Unit,
     onDownloadClick: () -> Unit,
     onPauseClick: () -> Unit,
     onResumeClick: () -> Unit,
@@ -623,20 +724,78 @@ private fun EpisodeRow(
     }
     val subtitle = buildEpisodeSubtitle(visibleDownloadState)
     val showDownloadAction = showDownloadControls || downloadState == OfflineEpisodeDownloadState.Completed
+    val swipeOffset = remember(episode.id) { Animatable(0f) }
+    val swipeScope = rememberCoroutineScope()
+    val hapticFeedback = LocalHapticFeedback.current
+    val revealWidthPx = with(LocalDensity.current) { EpisodeSwipeRevealWidth.toPx() }
+    val swipeActionMarksWatched = status != EpisodeProgressStatus.Watched
 
-    Surface(
+    Box(
         // clip must precede clickable -- Surface clips its own background/content to `shape`, but
         // a caller-supplied .clickable() on this outer modifier draws its ripple against the full
         // rectangular layout bounds unless it's clipped first, so the press highlight bled past
         // the row's rounded corners (visible on the first/last row of a grouped list).
         modifier = Modifier
             .fillMaxWidth()
-            .clip(shape)
-            .clickable(enabled = enabled, onClick = onClick),
-        color = rowColor,
-        shape = shape,
+            .clip(shape),
     ) {
-        Box {
+        Surface(
+            modifier = Modifier.matchParentSize(),
+            color = MaterialTheme.colorScheme.primaryContainer,
+            shape = shape,
+        ) {
+            Box(
+                modifier = Modifier.padding(end = 24.dp),
+                contentAlignment = Alignment.CenterEnd,
+            ) {
+                Icon(
+                    imageVector = if (swipeActionMarksWatched) {
+                        Icons.Rounded.Check
+                    } else {
+                        Icons.AutoMirrored.Outlined.Undo
+                    },
+                    contentDescription = stringResource(
+                        if (swipeActionMarksWatched) R.string.watch_mark_watched else R.string.watch_unmark_watched,
+                    ),
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                )
+            }
+        }
+        Surface(
+            modifier = Modifier
+                .offset { androidx.compose.ui.unit.IntOffset(swipeOffset.value.roundToInt(), 0) }
+                .pointerInput(enabled, status) {
+                    if (!enabled) return@pointerInput
+                    detectHorizontalDragGestures(
+                        onHorizontalDrag = { change, dragAmount ->
+                            if (dragAmount < 0f || swipeOffset.value < 0f) {
+                                change.consume()
+                                swipeScope.launch {
+                                    swipeOffset.snapTo((swipeOffset.value + dragAmount).coerceIn(-revealWidthPx, 0f))
+                                }
+                            }
+                        },
+                        onDragEnd = {
+                            val shouldToggle = swipeOffset.value <= -revealWidthPx * 0.55f
+                            swipeScope.launch {
+                                if (shouldToggle) {
+                                    hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    delay(110)
+                                    onWatchStatusToggle()
+                                }
+                                swipeOffset.animateTo(0f, animationSpec = tween(180))
+                            }
+                        },
+                        onDragCancel = {
+                            swipeScope.launch { swipeOffset.animateTo(0f, animationSpec = tween(180)) }
+                        },
+                    )
+                }
+                .clickable(enabled = enabled, onClick = onClick),
+            color = rowColor,
+            shape = shape,
+        ) {
+            Box {
             Row(
                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -704,6 +863,7 @@ private fun EpisodeRow(
             }
         }
     }
+}
 }
 
 @Composable

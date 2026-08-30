@@ -1,10 +1,29 @@
 package org.akkirrai.hibiki.feature.details
 
+import android.app.Activity
 import android.content.Context
+import android.content.ContextWrapper
+import android.os.Build
 import android.graphics.drawable.Drawable
 import androidx.activity.compose.BackHandler
+import androidx.activity.ExperimentalActivityApi
+import androidx.activity.compose.PredictiveBackHandler
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedContentTransitionScope
+import androidx.compose.animation.AnimatedVisibilityScope
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.ContentTransform
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionScope
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.graphics.res.animatedVectorResource
 import androidx.compose.animation.graphics.res.rememberAnimatedVectorPainter
@@ -37,7 +56,6 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -59,6 +77,7 @@ import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -86,6 +105,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -125,6 +145,7 @@ import org.akkirrai.hibiki.core.design.component.AppBackButton
 import org.akkirrai.hibiki.core.design.component.AppModalBottomSheet
 import org.akkirrai.hibiki.core.design.component.AppTonalSurface
 import org.akkirrai.hibiki.core.design.component.anime.AnimeTitleText
+import org.akkirrai.hibiki.core.design.component.anime.AnimeDetailsTransition
 import org.akkirrai.hibiki.core.design.component.anime.PosterImage
 import org.akkirrai.hibiki.core.model.Anime
 import org.akkirrai.hibiki.core.model.AnimeRating
@@ -134,6 +155,7 @@ import org.akkirrai.hibiki.core.model.TitleWatchState
 import org.akkirrai.hibiki.core.model.WatchSource
 import org.akkirrai.hibiki.core.model.WatchSourceSelection
 import org.akkirrai.hibiki.core.source.AnimeSearchRepository
+import org.akkirrai.hibiki.core.source.AnimeSourceDescriptor
 import org.akkirrai.hibiki.core.source.AnimeSourceRegistry
 import org.akkirrai.hibiki.app.settings.LocalAppPreferencesState
 import org.akkirrai.hibiki.core.source.LibraryCategory
@@ -148,23 +170,52 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.flow.collect
 import com.materialkolor.PaletteStyle
 import com.materialkolor.rememberDynamicColorScheme
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(
+    ExperimentalActivityApi::class,
+    ExperimentalMaterial3Api::class,
+    ExperimentalSharedTransitionApi::class,
+)
 @Composable
 fun DetailsScreen(
     anime: Anime,
     onBackClick: () -> Unit,
     onRelatedAnimeClick: (Anime) -> Unit,
     onOpenSources: (Anime) -> Unit,
+    onOpenSingleSource: (Anime, WatchSource) -> Unit,
     onResumePlayback: (TitleWatchState) -> Unit,
     contentPadding: PaddingValues = PaddingValues(),
+    sharedTransitionScope: SharedTransitionScope? = null,
+    animatedVisibilityScope: AnimatedVisibilityScope? = null,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
+    val activity = remember(context) { context.detailsActivityOrNull() }
+    DisposableEffect(activity) {
+        val window = activity?.window ?: return@DisposableEffect onDispose { }
+        val previousStatusBarColor = window.statusBarColor
+        val previousContrastEnforced = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            window.isStatusBarContrastEnforced
+        } else {
+            false
+        }
+        window.statusBarColor = android.graphics.Color.TRANSPARENT
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            window.isStatusBarContrastEnforced = false
+        }
+        onDispose {
+            window.statusBarColor = previousStatusBarColor
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                window.isStatusBarContrastEnforced = previousContrastEnforced
+            }
+        }
+    }
     val preferences = LocalAppPreferencesState.current
     val selectedAnimeSource = preferences.animeSource
     val dependencies = remember(context) { context.applicationContext.hibikiDependencies() }
@@ -173,12 +224,24 @@ fun DetailsScreen(
     val screenScope = rememberCoroutineScope()
     val detailsStateKey = remember(anime.id, selectedAnimeSource) { "${selectedAnimeSource.value}:${anime.id}" }
     val savedScreenState = remember(detailsStateKey) { detailsScreenStateCache[detailsStateKey] }
+    // A shared transition can only land correctly while the hero is visible. Restoring a title
+    // lower in its scroll position would otherwise animate the poster to the hero's default,
+    // off-screen location before the saved position takes effect.
+    val canUseHeroSharedTransition = savedScreenState?.let { saved ->
+        saved.firstVisibleItemIndex == 0 && saved.firstVisibleItemScrollOffset == 0
+    } ?: true
     val searchRepository = remember(dependencies) { dependencies.animeSearchRepository() }
     val libraryRepository = remember(dependencies) { dependencies.libraryRepository() }
     val offlineTitleMetadataRepository = remember(dependencies) { dependencies.offlineTitleMetadataRepository() }
     val watchStateRepository = remember(dependencies) { dependencies.watchStateRepository() }
     val resumeFrameRepository = remember(dependencies) { dependencies.resumeFrameRepository() }
+    val animeWatchRepository = remember(dependencies) { dependencies.animeWatchRepository() }
+    DisposableEffect(animeWatchRepository) {
+        onDispose { animeWatchRepository.close() }
+    }
+    var isResolvingWatchSources by remember(anime.id) { mutableStateOf(false) }
     var currentAnime by remember(detailsStateKey) { mutableStateOf(savedScreenState?.anime ?: anime) }
+    var isDetailsLoading by remember(detailsStateKey) { mutableStateOf(savedScreenState == null) }
     var titleSeedColor by remember(detailsStateKey) {
         mutableStateOf(
             titleSeedColorCache[detailsStateKey]
@@ -204,6 +267,14 @@ fun DetailsScreen(
     val currentAnimeState by rememberUpdatedState(currentAnime)
     val screenTransitionSettledState by rememberUpdatedState(isScreenTransitionSettled)
 
+    // Navigation Compose starts seeking the shared transition during a predictive-back gesture.
+    // When that gesture is cancelled, the shared page and poster snap back separately. Keep the
+    // details page visually stable until Android confirms the gesture, then run the usual return.
+    PredictiveBackHandler {
+        it.collect()
+        onBackClick()
+    }
+
     suspend fun refreshWatchStateSnapshot() {
         val snapshot = withContext(Dispatchers.IO) {
             DetailsWatchSnapshot(
@@ -215,6 +286,32 @@ fun DetailsScreen(
         libraryCategory = snapshot.libraryCategory
         resumeState = snapshot.resumeState
         resumeFrame = snapshot.resumeFrame
+    }
+
+    // Resolves the voiceover list here, before navigating anywhere, so a single-voiceover title
+    // goes straight to episodes in one screen transition instead of flashing the sources screen
+    // (with its own spinner) just to immediately bounce off it again.
+    fun openWatchSources() {
+        if (isResolvingWatchSources) return
+        isResolvingWatchSources = true
+        screenScope.launch {
+            val sources = try {
+                withContext(Dispatchers.IO) {
+                    animeWatchRepository.loadSources(animeId = currentAnimeState.id) {}
+                }
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Exception) {
+                null
+            }
+            isResolvingWatchSources = false
+            val singleSource = sources?.singleOrNull()
+            if (singleSource != null) {
+                onOpenSingleSource(currentAnimeState, singleSource)
+            } else {
+                onOpenSources(currentAnimeState)
+            }
+        }
     }
 
     DisposableEffect(searchRepository) {
@@ -234,18 +331,26 @@ fun DetailsScreen(
     }
 
     LaunchedEffect(anime.id, selectedAnimeSource) {
-        withContext(Dispatchers.IO) {
-            offlineTitleMetadataRepository.get(anime.id)
-        }?.let { cachedAnime ->
-            currentAnime = cachedAnime
-        }
-        runCatching { searchRepository.getDetails(anime.id, currentAnime) }
-            .onSuccess {
-                currentAnime = it
+        try {
+            withContext(Dispatchers.IO) {
+                offlineTitleMetadataRepository.get(anime.id)
+            }?.let { cachedAnime ->
+                currentAnime = cachedAnime
+            }
+            runCatching {
                 withContext(Dispatchers.IO) {
-                    offlineTitleMetadataRepository.save(it)
+                    searchRepository.getDetails(anime.id, currentAnime)
                 }
             }
+                .onSuccess {
+                    currentAnime = it
+                    withContext(Dispatchers.IO) {
+                        offlineTitleMetadataRepository.save(it)
+                    }
+                }
+        } finally {
+            isDetailsLoading = false
+        }
     }
 
     LaunchedEffect(anime.id) {
@@ -305,7 +410,8 @@ fun DetailsScreen(
         buildDescription(currentAnime)
     }
     val sourceDescriptor = remember(currentAnime.id, selectedAnimeSource) {
-        AnimeSourceRegistry.descriptorForTitle(currentAnime.id, selectedAnimeSource)
+        AnimeSourceRegistry.descriptorForTitleOrNull(currentAnime.id, selectedAnimeSource)
+            ?: AnimeSourceDescriptor.unavailable(selectedAnimeSource)
     }
     val nextEpisodeEta = rememberNextEpisodeEta(currentAnime.nextEpisodeAt)
         ?.takeIf { isOngoingStatus(heroInfo.status) }
@@ -350,6 +456,51 @@ fun DetailsScreen(
     } else {
         titleColorScheme
     }
+    val sharedPageModifier = if (
+        canUseHeroSharedTransition &&
+        sharedTransitionScope != null &&
+        animatedVisibilityScope != null
+    ) {
+        with(sharedTransitionScope) {
+            Modifier.sharedBounds(
+                sharedContentState = rememberSharedContentState(
+                    AnimeDetailsTransition.cardKey(anime.id),
+                ),
+                animatedVisibilityScope = animatedVisibilityScope,
+                enter = fadeIn(tween(500)),
+                exit = fadeOut(tween(500)),
+                resizeMode = SharedTransitionScope.ResizeMode.RemeasureToBounds,
+            )
+        }
+    } else {
+        Modifier
+    }
+    val sharedPosterModifier = if (
+        canUseHeroSharedTransition &&
+        sharedTransitionScope != null &&
+        animatedVisibilityScope != null
+    ) {
+        with(sharedTransitionScope) {
+            Modifier.sharedBounds(
+                sharedContentState = rememberSharedContentState(
+                    AnimeDetailsTransition.posterKey(anime.id),
+                ),
+                animatedVisibilityScope = animatedVisibilityScope,
+                resizeMode = SharedTransitionScope.ResizeMode.RemeasureToBounds,
+            )
+        }
+    } else {
+        Modifier
+    }
+    val sharedTextModifier = if (
+        canUseHeroSharedTransition &&
+        sharedTransitionScope != null &&
+        animatedVisibilityScope != null
+    ) {
+        with(sharedTransitionScope) { Modifier.skipToLookaheadSize() }
+    } else {
+        Modifier
+    }
     // Applied directly, no cross-fade -- the seed color is normally already known (cached from a
     // previous visit, or sampled from the poster the instant it finishes decoding below), so
     // animating it in read as a slow, late color wash instead of the title's own look appearing
@@ -357,6 +508,7 @@ fun DetailsScreen(
     MaterialTheme(colorScheme = detailsColorScheme) {
         Surface(
             modifier = modifier
+                .then(sharedPageModifier)
                 .fillMaxSize(),
             color = MaterialTheme.colorScheme.background,
             contentColor = MaterialTheme.colorScheme.onBackground,
@@ -374,9 +526,11 @@ fun DetailsScreen(
                     anime = uiModel.anime,
                     heroInfo = uiModel.hero,
                     description = uiModel.description,
+                    isDetailsLoading = isDetailsLoading,
                     nextEpisodeEta = nextEpisodeEta,
                     nextEpisodeNumber = nextEpisodeNumber,
                     canWatch = canWatch,
+                    isResolvingWatchSources = isResolvingWatchSources,
                     libraryCategory = libraryCategory,
                     resumeState = resumeState,
                     resumeFrame = resumeFrame,
@@ -387,7 +541,7 @@ fun DetailsScreen(
                     onLibraryClick = {
                         isLibrarySheetOpen = true
                     },
-                    onPrimaryClick = { onOpenSources(currentAnime) },
+                    onPrimaryClick = { openWatchSources() },
                     onResumeClick = onResumePlayback,
                     onTrailerClick = {
                         currentAnime.trailer?.playbackUrl?.let(uriHandler::openUri)
@@ -405,6 +559,8 @@ fun DetailsScreen(
                             }
                         }
                     },
+                    sharedPosterModifier = sharedPosterModifier,
+                    sharedTextModifier = sharedTextModifier,
                 )
             }
 
@@ -412,34 +568,37 @@ fun DetailsScreen(
                 DetailContentCard(
                     anime = uiModel.anime,
                     heroInfo = uiModel.hero,
-                    modifier = Modifier,
+                    isLoading = isDetailsLoading,
                 )
             }
 
-            if (uiModel.anime.genres.isNotEmpty()) {
-                item {
-                    GenresSection(genres = uiModel.anime.genres)
-                }
-            }
-
-            itemsIndexed(
-                items = uiModel.sections,
-                key = { _, section -> section.key }
-            ) { _, section ->
-                when (section) {
-                    is RelatedSection -> {
-                        RelatedAnimeList(
-                            items = section.items,
-                            title = stringResource(R.string.details_related),
-                            onAnimeClick = onRelatedAnimeClick,
-                        )
-                    }
-                    is SimilarSection -> {
-                        RelatedAnimeList(
-                            items = section.items,
-                            title = stringResource(R.string.details_similar),
-                            onAnimeClick = onRelatedAnimeClick,
-                        )
+            item {
+                Column {
+                    if (isDetailsLoading) {
+                        GenresSection(genres = emptyList(), isLoading = true)
+                        RelatedTitlesSkeleton()
+                    } else {
+                        if (uiModel.anime.genres.isNotEmpty()) {
+                            GenresSection(genres = uiModel.anime.genres)
+                        }
+                        uiModel.sections.forEach { section ->
+                            when (section) {
+                                is RelatedSection -> {
+                                    RelatedAnimeList(
+                                        items = section.items,
+                                        title = stringResource(R.string.details_related),
+                                        onAnimeClick = onRelatedAnimeClick,
+                                    )
+                                }
+                                is SimilarSection -> {
+                                    RelatedAnimeList(
+                                        items = section.items,
+                                        title = stringResource(R.string.details_similar),
+                                        onAnimeClick = onRelatedAnimeClick,
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -523,9 +682,11 @@ private fun DetailHeroSection(
     anime: Anime,
     heroInfo: HeroInfo,
     description: String,
+    isDetailsLoading: Boolean,
     nextEpisodeEta: String?,
     nextEpisodeNumber: Int?,
     canWatch: Boolean,
+    isResolvingWatchSources: Boolean,
     libraryCategory: LibraryCategory?,
     resumeState: TitleWatchState?,
     resumeFrame: File?,
@@ -538,6 +699,8 @@ private fun DetailHeroSection(
     onResumeClick: (TitleWatchState) -> Unit,
     onTrailerClick: () -> Unit,
     onPosterLoaded: ((Drawable) -> Unit)? = null,
+    sharedPosterModifier: Modifier = Modifier,
+    sharedTextModifier: Modifier = Modifier,
 ) {
     val isUserLibraryCategorySelected = libraryCategory != null && libraryCategory != LibraryCategory.Saved
     val isAtTop by remember(listState) {
@@ -599,6 +762,7 @@ private fun DetailHeroSection(
                 anime = anime,
                 height = posterExpandedHeight - posterHeightOffset,
                 onPosterClick = onPosterClick,
+                sharedPosterModifier = sharedPosterModifier,
                 modifier = Modifier
                     .align(Alignment.TopStart)
                     .offset(y = posterTop + posterHeightOffset)
@@ -607,11 +771,15 @@ private fun DetailHeroSection(
             DetailHeroTextContent(
                 anime = anime,
                 description = description,
+                isDetailsLoading = isDetailsLoading,
                 nextEpisodeEta = nextEpisodeEta,
                 nextEpisodeNumber = nextEpisodeNumber,
                 isTitleDetailsSheetOpen = isTitleDetailsSheetOpen,
                 onTitleClick = onTitleClick,
                 modifier = Modifier
+                    // Keep text measured at its final width while the surrounding shared card
+                    // grows. Otherwise the description reflows several times during entry.
+                    .then(sharedTextModifier)
                     .align(Alignment.TopStart)
                     .fillMaxWidth()
                     .offset(y = detailsTop)
@@ -626,6 +794,7 @@ private fun DetailHeroSection(
         DetailHeroActions(
             isInLibrary = isUserLibraryCategorySelected,
             canWatch = canWatch,
+            isResolvingWatchSources = isResolvingWatchSources,
             onLibraryClick = onLibraryClick,
             onPrimaryClick = onPrimaryClick,
         )
@@ -637,6 +806,7 @@ private fun DetailHeroSection(
 private fun DetailHeroTextContent(
     anime: Anime,
     description: String,
+    isDetailsLoading: Boolean,
     nextEpisodeEta: String?,
     nextEpisodeNumber: Int?,
     isTitleDetailsSheetOpen: Boolean,
@@ -675,15 +845,23 @@ private fun DetailHeroTextContent(
                     modifier = Modifier.padding(top = 2.dp),
                 )
             }
-            if (description.isNotBlank()) {
-                NestedScrollableContent(modifier = Modifier.weight(1f)) { contentModifier ->
-                    Text(
-                        text = description,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.74f),
-                        modifier = contentModifier,
-                        overflow = TextOverflow.Ellipsis,
-                    )
+            AnimatedContent(
+                targetState = isDetailsLoading,
+                transitionSpec = { detailsLoadingContentTransition() },
+                label = "detailsDescription",
+            ) { loading ->
+                if (loading) {
+                    DetailDescriptionSkeleton()
+                } else if (description.isNotBlank()) {
+                    NestedScrollableContent(modifier = Modifier.weight(1f)) { contentModifier ->
+                        Text(
+                            text = description,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.74f),
+                            modifier = contentModifier,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
                 }
             }
         }
@@ -702,10 +880,16 @@ private fun DetailHeroTextContent(
     }
 }
 
+private fun AnimatedContentTransitionScope<Boolean>.detailsLoadingContentTransition(): ContentTransform {
+    return fadeIn(animationSpec = tween(durationMillis = 180, delayMillis = 60)) togetherWith
+        fadeOut(animationSpec = tween(durationMillis = 100))
+}
+
 @Composable
 private fun DetailHeroActions(
     isInLibrary: Boolean,
     canWatch: Boolean,
+    isResolvingWatchSources: Boolean,
     onLibraryClick: () -> Unit,
     onPrimaryClick: () -> Unit,
 ) {
@@ -741,7 +925,7 @@ private fun DetailHeroActions(
         }
         OutlinedButton(
             onClick = onPrimaryClick,
-            enabled = canWatch,
+            enabled = canWatch && !isResolvingWatchSources,
             modifier = Modifier
                 .weight(1f)
                 .height(56.dp),
@@ -750,18 +934,26 @@ private fun DetailHeroActions(
             colors = ButtonDefaults.outlinedButtonColors(
                 contentColor = MaterialTheme.colorScheme.onSurface,
                 containerColor = Color.Transparent,
+                disabledContentColor = MaterialTheme.colorScheme.onSurface,
             ),
         ) {
-            Icon(
-                imageVector = Icons.Filled.PlayArrow,
-                contentDescription = null,
-                modifier = Modifier.size(20.dp),
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(
-                text = stringResource(R.string.details_watch),
-                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Medium),
-            )
+            if (isResolvingWatchSources) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(20.dp),
+                    strokeWidth = 2.dp,
+                )
+            } else {
+                Icon(
+                    imageVector = Icons.Filled.PlayArrow,
+                    contentDescription = null,
+                    modifier = Modifier.size(20.dp),
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = stringResource(R.string.details_watch),
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Medium),
+                )
+            }
         }
     }
 }
@@ -852,21 +1044,47 @@ private fun DetailHeroMedia(
     onPosterLoaded: ((Drawable) -> Unit)? = null,
 ) {
     val trailer = anime.trailer?.takeIf { it.playbackUrl != null }
+    val imageUrl = trailer?.thumbnailUrl ?: anime.posterUrl
+    val fallbackUrl = anime.posterUrl ?: anime.posterFallbackUrl
+    val hasBannerImage = !imageUrl.isNullOrBlank() || !fallbackUrl.isNullOrBlank()
+    var isBannerLoaded by remember(imageUrl, fallbackUrl) { mutableStateOf(!hasBannerImage) }
     Box(
         modifier = modifier
+            .clipToBounds()
             .background(MaterialTheme.colorScheme.surfaceContainer),
         contentAlignment = Alignment.Center,
     ) {
         NetworkImage(
-            imageUrl = trailer?.thumbnailUrl ?: anime.posterUrl,
-            fallbackUrl = anime.posterUrl ?: anime.posterFallbackUrl,
+            imageUrl = imageUrl,
+            fallbackUrl = fallbackUrl,
             contentDescription = null,
             // Only sample the poster for the title's accent color, not a trailer thumbnail --
             // trailer stills are usually screenshots with a different color character, and the
             // network-based fallback below always samples the poster, so this keeps both paths
             // agreeing on the same color.
-            onImageLoaded = if (trailer == null) onPosterLoaded else null,
+            modifier = Modifier
+                .fillMaxSize()
+                .graphicsLayer {
+                    // Some trailer thumbnails include a thin black matte around their edge.
+                    // Scale only the trailer artwork within the clipped banner to remove it.
+                    if (trailer != null) {
+                        scaleX = 1.025f
+                        scaleY = 1.025f
+                    }
+                },
+            onImageLoaded = { drawable ->
+                isBannerLoaded = true
+                if (trailer == null) onPosterLoaded?.invoke(drawable)
+            },
         )
+
+        AnimatedVisibility(
+            visible = !isBannerLoaded,
+            enter = fadeIn(animationSpec = tween(120)),
+            exit = fadeOut(animationSpec = tween(180)),
+        ) {
+            DetailsSkeletonBlock(modifier = Modifier.fillMaxSize())
+        }
 
         if (resumeState != null && resumeFrame != null) {
             ResumeFrameImage(
@@ -1027,6 +1245,7 @@ private fun Long?.isNullOrZero(): Boolean = this == null || this == 0L
 private fun DetailContentCard(
     anime: Anime,
     heroInfo: HeroInfo,
+    isLoading: Boolean,
     modifier: Modifier = Modifier,
 ) {
     val sourceMaterial = localizedSourceMaterial(anime.sourceMaterial)
@@ -1040,67 +1259,202 @@ private fun DetailContentCard(
             text = stringResource(R.string.details_information),
             modifier = Modifier.padding(horizontal = DETAIL_INFORMATION_HORIZONTAL_PADDING),
         )
-        LazyRow(
-            modifier = Modifier.fillMaxWidth(),
-            contentPadding = PaddingValues(horizontal = DETAIL_INFORMATION_HORIZONTAL_PADDING),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            item {
-                DetailInfoPill(
-                    label = stringResource(R.string.details_status),
-                    value = heroInfo.status.ifBlank { stringResource(R.string.search_filters_not_selected) },
-                    icon = Icons.Outlined.Check,
-                    accent = MaterialTheme.colorScheme.tertiary,
-                )
-            }
-            item {
-                DetailInfoPill(
-                    label = stringResource(R.string.details_episodes_released),
-                    value = heroInfo.episodes.ifBlank { stringResource(R.string.search_filters_not_selected) },
-                    icon = Icons.Outlined.FormatListNumbered,
-                    accent = MaterialTheme.colorScheme.primary,
-                )
-            }
-            item {
-                DetailInfoPill(
-                    label = stringResource(R.string.details_type),
-                    value = heroInfo.type,
-                    icon = Icons.Outlined.BookmarkBorder,
-                    accent = MaterialTheme.colorScheme.secondary,
-                )
-            }
-            heroInfo.releaseDate.takeIf(String::isNotBlank)?.let { releaseDate ->
-                item {
-                    DetailInfoPill(
-                        label = stringResource(R.string.details_release_date),
-                        value = releaseDate,
-                        icon = Icons.Filled.DateRange,
-                        accent = MaterialTheme.colorScheme.primary,
-                    )
-                }
-            }
-            sourceMaterial?.let { source ->
-                item {
-                    DetailInfoPill(
-                        label = stringResource(R.string.details_source_material),
-                        value = source,
-                        icon = Icons.AutoMirrored.Filled.MenuBook,
-                        accent = MaterialTheme.colorScheme.tertiary,
-                    )
-                }
-            }
-            heroInfo.studio.takeIf(String::isNotBlank)?.let { studio ->
-                item {
-                    DetailInfoPill(
-                        label = stringResource(R.string.details_studio),
-                        value = studio,
-                        icon = Icons.Filled.Business,
-                        accent = Color(0xFFFF9800),
-                    )
+        AnimatedContent(
+            targetState = isLoading,
+            transitionSpec = { detailsLoadingContentTransition() },
+            label = "detailsInformationValues",
+        ) { loading ->
+            if (loading) {
+                DetailInfoPillsSkeletonRow()
+            } else {
+                LazyRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    contentPadding = PaddingValues(horizontal = DETAIL_INFORMATION_HORIZONTAL_PADDING),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    item {
+                        DetailInfoPill(
+                            label = stringResource(R.string.details_status),
+                            value = heroInfo.status.ifBlank { stringResource(R.string.search_filters_not_selected) },
+                            icon = Icons.Outlined.Check,
+                            accent = MaterialTheme.colorScheme.tertiary,
+                        )
+                    }
+                    item {
+                        DetailInfoPill(
+                            label = stringResource(R.string.details_episodes_released),
+                            value = heroInfo.episodes.ifBlank { stringResource(R.string.search_filters_not_selected) },
+                            icon = Icons.Outlined.FormatListNumbered,
+                            accent = MaterialTheme.colorScheme.primary,
+                        )
+                    }
+                    item {
+                        DetailInfoPill(
+                            label = stringResource(R.string.details_type),
+                            value = heroInfo.type,
+                            icon = Icons.Outlined.BookmarkBorder,
+                            accent = MaterialTheme.colorScheme.secondary,
+                        )
+                    }
+                    heroInfo.releaseDate.takeIf(String::isNotBlank)?.let { releaseDate ->
+                        item {
+                            DetailInfoPill(
+                                label = stringResource(R.string.details_release_date),
+                                value = releaseDate,
+                                icon = Icons.Filled.DateRange,
+                                accent = MaterialTheme.colorScheme.primary,
+                            )
+                        }
+                    }
+                    sourceMaterial?.let { source ->
+                        item {
+                            DetailInfoPill(
+                                label = stringResource(R.string.details_source_material),
+                                value = source,
+                                icon = Icons.AutoMirrored.Filled.MenuBook,
+                                accent = MaterialTheme.colorScheme.tertiary,
+                            )
+                        }
+                    }
+                    heroInfo.studio.takeIf(String::isNotBlank)?.let { studio ->
+                        item {
+                            DetailInfoPill(
+                                label = stringResource(R.string.details_studio),
+                                value = studio,
+                                icon = Icons.Filled.Business,
+                                accent = Color(0xFFFF9800),
+                            )
+                        }
+                    }
                 }
             }
         }
     }
+}
+
+@Composable
+private fun DetailInfoPillsSkeletonRow() {
+    LazyRow(
+        modifier = Modifier.fillMaxWidth(),
+        contentPadding = PaddingValues(horizontal = DETAIL_INFORMATION_HORIZONTAL_PADDING),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        item { DetailInfoPillSkeleton(width = 132.dp) }
+        item { DetailInfoPillSkeleton(width = 148.dp) }
+        item { DetailInfoPillSkeleton(width = 116.dp) }
+    }
+}
+
+@Composable
+private fun DetailInfoPillSkeleton(width: Dp) {
+    Surface(
+        modifier = Modifier
+            .width(width)
+            .height(56.dp),
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surfaceContainer,
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            DetailsSkeletonBlock(
+                modifier = Modifier
+                    .size(36.dp)
+                    .clip(CircleShape),
+            )
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                DetailsSkeletonBlock(
+                    modifier = Modifier
+                        .width(52.dp)
+                        .height(9.dp),
+                )
+                DetailsSkeletonBlock(
+                    modifier = Modifier
+                        .width(72.dp)
+                        .height(12.dp),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun DetailDescriptionSkeleton() {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 10.dp),
+        verticalArrangement = Arrangement.spacedBy(7.dp),
+    ) {
+        DetailsSkeletonBlock(modifier = Modifier.fillMaxWidth().height(12.dp))
+        DetailsSkeletonBlock(modifier = Modifier.fillMaxWidth(0.88f).height(12.dp))
+        DetailsSkeletonBlock(modifier = Modifier.fillMaxWidth(0.66f).height(12.dp))
+    }
+}
+
+@Composable
+private fun GenrePillsSkeletonRow() {
+    Row(
+        modifier = Modifier.padding(horizontal = DETAIL_CONTENT_START_PADDING),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        DetailsSkeletonBlock(modifier = Modifier.width(82.dp).height(32.dp).clip(CircleShape))
+        DetailsSkeletonBlock(modifier = Modifier.width(106.dp).height(32.dp).clip(CircleShape))
+        DetailsSkeletonBlock(modifier = Modifier.width(74.dp).height(32.dp).clip(CircleShape))
+    }
+}
+
+@Composable
+private fun RelatedTitlesSkeleton() {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Spacer(modifier = Modifier.height(32.dp))
+        DetailSectionTitle(
+            text = stringResource(R.string.details_related),
+            modifier = Modifier.padding(horizontal = DETAIL_CONTENT_START_PADDING),
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(220.dp)
+                .padding(horizontal = DETAIL_CONTENT_START_PADDING),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            repeat(3) {
+                Column(modifier = Modifier.width(100.dp)) {
+                    DetailsSkeletonBlock(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(140.dp)
+                            .clip(RoundedCornerShape(12.dp)),
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    DetailsSkeletonBlock(modifier = Modifier.fillMaxWidth().height(12.dp))
+                    Spacer(modifier = Modifier.height(6.dp))
+                    DetailsSkeletonBlock(modifier = Modifier.fillMaxWidth(0.68f).height(10.dp))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun DetailsSkeletonBlock(modifier: Modifier = Modifier) {
+    val transition = rememberInfiniteTransition(label = "detailsSkeleton")
+    val alpha by transition.animateFloat(
+        initialValue = 0.34f,
+        targetValue = 0.62f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 900),
+            repeatMode = RepeatMode.Reverse,
+        ),
+        label = "detailsSkeletonAlpha",
+    )
+    Box(
+        modifier = modifier.background(MaterialTheme.colorScheme.onSurface.copy(alpha = alpha * 0.14f)),
+    )
 }
 
 @Composable
@@ -1232,10 +1586,12 @@ private fun PosterHeroInline(
     anime: Anime,
     height: Dp,
     onPosterClick: () -> Unit,
+    sharedPosterModifier: Modifier,
     modifier: Modifier = Modifier,
 ) {
     Card(
         modifier = modifier
+            .then(sharedPosterModifier)
             .width(140.dp)
             .height(height)
             .clickable(onClick = onPosterClick),
@@ -1487,6 +1843,7 @@ private fun HeroOverlayBackButton(
 @Composable
 private fun GenresSection(
     genres: List<String>,
+    isLoading: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
@@ -1496,26 +1853,36 @@ private fun GenresSection(
             modifier = Modifier.padding(horizontal = DETAIL_CONTENT_START_PADDING),
         )
         Spacer(modifier = Modifier.height(16.dp))
-        LazyRow(
-            contentPadding = PaddingValues(horizontal = DETAIL_CONTENT_START_PADDING),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            items(genres.distinct(), key = { it }) { genre ->
-                Surface(
-                    modifier = Modifier.height(32.dp),
-                    shape = CircleShape,
-                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.1f)),
+        AnimatedContent(
+            targetState = isLoading,
+            transitionSpec = { detailsLoadingContentTransition() },
+            label = "detailsGenresValues",
+        ) { loading ->
+            if (loading) {
+                GenrePillsSkeletonRow()
+            } else {
+                LazyRow(
+                    contentPadding = PaddingValues(horizontal = DETAIL_CONTENT_START_PADDING),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    Box(
-                        modifier = Modifier.padding(horizontal = 16.dp),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Text(
-                            text = genre,
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurface,
-                        )
+                    items(genres.distinct(), key = { it }) { genre ->
+                        Surface(
+                            modifier = Modifier.height(32.dp),
+                            shape = CircleShape,
+                            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.1f)),
+                        ) {
+                            Box(
+                                modifier = Modifier.padding(horizontal = 16.dp),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Text(
+                                    text = genre,
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -2078,6 +2445,12 @@ private val DETAIL_CONTENT_START_PADDING = 24.dp
 private val DETAIL_INFORMATION_HORIZONTAL_PADDING = 12.dp
 private val DETAIL_SECTION_VISUAL_ALIGNMENT_OFFSET = 3.dp
 private val DETAIL_SECTION_START_PADDING = DETAIL_CONTENT_START_PADDING + DETAIL_SECTION_VISUAL_ALIGNMENT_OFFSET
+
+private tailrec fun Context.detailsActivityOrNull(): Activity? = when (this) {
+    is Activity -> this
+    is ContextWrapper -> baseContext.detailsActivityOrNull()
+    else -> null
+}
 
 @Composable
 private fun NetworkImage(

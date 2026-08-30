@@ -167,26 +167,90 @@ fun <T> AppThreeStateChipFilter(
     text: @Composable (T) -> String,
     optionIcon: @Composable ((T) -> ImageVector?)? = null,
     maxCollapsedItems: Int? = null,
+    maxCollapsedGroups: Int? = null,
     allowExclusion: Boolean = true,
+    optionSortKey: ((T) -> String)? = null,
+    groupByFirstLetter: Boolean = false,
 ) {
     var showAllOptions by rememberSaveable(title) { mutableStateOf(false) }
     AppCollapsibleFilterSection(title = title, onLongClick = { onChange(emptySet(), emptySet()) }) {
         Column(modifier = Modifier.padding(top = 16.dp)) {
-            val includedOptions = options.filter { id(it) in included }
             val effectiveExcluded = excluded.takeIf { allowExclusion }.orEmpty()
-            val excludedOptions = options.filter { id(it) in effectiveExcluded }
-            val allOptions = options.filterNot { id(it) in included || id(it) in effectiveExcluded }
-            val visibleAllOptions = if (maxCollapsedItems != null && !showAllOptions) allOptions.take(maxCollapsedItems) else allOptions
-            AppChipFilterFlowRow(includedOptions, Color(0xFF80DF87), Icons.Rounded.AddCircleOutline, stringResource(R.string.search_filters_include), { option ->
-                val optionId = id(option)
-                if (allowExclusion) onChange(included - optionId, effectiveExcluded + optionId)
-                else onChange(included - optionId, emptySet())
-            }, text, optionIcon, Modifier.padding(bottom = 8.dp))
-            if (allowExclusion) {
-                AppChipFilterFlowRow(excludedOptions, Color(0xFFFF9999), Icons.Rounded.Block, stringResource(R.string.search_filters_exclude), { onChange(included, effectiveExcluded - id(it)) }, text, optionIcon, Modifier.padding(bottom = 8.dp))
+            val sortedOptions = optionSortKey?.let { sortKey ->
+                options.sortedBy { sortKey(it).lowercase() }
+            } ?: options
+            val selectedIds = included + effectiveExcluded
+            val visibleOptions = if (maxCollapsedItems != null && !showAllOptions) {
+                (sortedOptions.take(maxCollapsedItems) + sortedOptions.filter { id(it) in selectedIds })
+                    .distinctBy(id)
+            } else {
+                sortedOptions
             }
-            AppChipFilterFlowRow(visibleAllOptions, MaterialTheme.colorScheme.tertiary, Icons.Rounded.RadioButtonChecked, stringResource(R.string.search_filters_all), { onChange(included + id(it), effectiveExcluded) }, text, optionIcon)
-            if (maxCollapsedItems != null && allOptions.size > maxCollapsedItems) {
+            AnimatedContent(targetState = visibleOptions, label = "filter_options") { displayedOptions ->
+                if (groupByFirstLetter) {
+                    val groups = displayedOptions
+                    .groupBy { option ->
+                        optionSortKey?.invoke(option)
+                            ?.trim()
+                            ?.firstOrNull()
+                            ?.uppercase()
+                            ?.takeIf(String::isNotBlank)
+                            ?: "#"
+                    }
+                    .toList()
+                    .sortedBy { (letter, _) -> letter }
+                val selectedGroupKeys = groups
+                    .filter { (_, options) -> options.any { id(it) in selectedIds } }
+                    .map { (letter, _) -> letter }
+                val visibleGroupKeys = if (maxCollapsedGroups != null && !showAllOptions) {
+                    (groups.take(maxCollapsedGroups).map { (letter, _) -> letter } + selectedGroupKeys).toSet()
+                } else {
+                    groups.map { (letter, _) -> letter }.toSet()
+                }
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        groups
+                            .filter { (letter, _) -> letter in visibleGroupKeys }
+                            .forEach { (letter, groupOptions) ->
+                                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    Text(
+                                        text = letter,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 12.sp,
+                                    )
+                                    AppThreeStateFilterFlowRow(
+                                        options = groupOptions,
+                                        included = included,
+                                        excluded = effectiveExcluded,
+                                        id = id,
+                                        text = text,
+                                        optionIcon = optionIcon,
+                                        allowExclusion = allowExclusion,
+                                        onChange = onChange,
+                                    )
+                                }
+                            }
+                    }
+                } else {
+                    AppThreeStateFilterFlowRow(
+                        options = displayedOptions,
+                        included = included,
+                        excluded = effectiveExcluded,
+                        id = id,
+                        text = text,
+                        optionIcon = optionIcon,
+                        allowExclusion = allowExclusion,
+                        onChange = onChange,
+                    )
+                }
+            }
+            val groupCount = if (groupByFirstLetter) {
+                sortedOptions.map { optionSortKey?.invoke(it)?.trim()?.firstOrNull()?.uppercase() ?: "#" }.distinct().size
+            } else 0
+            if (
+                (maxCollapsedItems != null && sortedOptions.size > maxCollapsedItems) ||
+                    (maxCollapsedGroups != null && groupCount > maxCollapsedGroups)
+            ) {
                 IconButton(onClick = { showAllOptions = !showAllOptions }, modifier = Modifier.align(Alignment.CenterHorizontally).size(28.dp)) {
                     Icon(if (showAllOptions) Icons.Rounded.KeyboardArrowUp else Icons.Rounded.KeyboardArrowDown, null, Modifier.size(18.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.62f))
                 }
@@ -197,15 +261,41 @@ fun <T> AppThreeStateChipFilter(
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun <T> AppChipFilterFlowRow(options: List<T>, color: Color, icon: ImageVector, title: String, onClick: (T) -> Unit, text: @Composable (T) -> String, optionIcon: @Composable ((T) -> ImageVector?)?, modifier: Modifier = Modifier) {
-    AnimatedContent(targetState = options, label = "filter_chips") { current ->
-        if (current.isNotEmpty()) Column {
-            Row(modifier = Modifier.padding(bottom = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                Icon(icon, null, Modifier.size(11.dp), tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f))
-                Text(title, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f), fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+private fun <T> AppThreeStateFilterFlowRow(
+    options: List<T>,
+    included: Set<String>,
+    excluded: Set<String>,
+    id: (T) -> String,
+    text: @Composable (T) -> String,
+    optionIcon: @Composable ((T) -> ImageVector?)?,
+    allowExclusion: Boolean,
+    onChange: (Set<String>, Set<String>) -> Unit,
+) {
+    FlowRow(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        options.forEach { option ->
+            val optionId = id(option)
+            val includedOption = optionId in included
+            val excludedOption = allowExclusion && optionId in excluded
+            val color = when {
+                includedOption -> Color(0xFF80DF87)
+                excludedOption -> Color(0xFFFF9999)
+                else -> MaterialTheme.colorScheme.tertiary
             }
-            FlowRow(modifier = modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                current.forEach { option -> AppFilterChip(color, optionIcon?.invoke(option), text(option)) { onClick(option) } }
+            val prefix = when {
+                includedOption -> "+ "
+                excludedOption -> "− "
+                else -> ""
+            }
+            AppFilterChip(color, optionIcon?.invoke(option), prefix + text(option)) {
+                when {
+                    includedOption -> onChange(included - optionId, if (allowExclusion) excluded + optionId else emptySet())
+                    excludedOption -> onChange(included, excluded - optionId)
+                    else -> onChange(included + optionId, excluded - optionId)
+                }
             }
         }
     }

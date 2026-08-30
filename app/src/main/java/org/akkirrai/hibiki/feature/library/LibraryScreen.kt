@@ -1,13 +1,14 @@
 package org.akkirrai.hibiki.feature.library
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.animation.AnimatedVisibilityScope
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
@@ -19,17 +20,14 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.outlined.BookmarkBorder
-import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.Download
@@ -38,10 +36,7 @@ import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.Pause
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -51,22 +46,19 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
@@ -78,15 +70,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.app.settings.LocalAppLanguage
 import org.akkirrai.hibiki.core.design.icon
 import org.akkirrai.hibiki.core.design.UiDimens
 import org.akkirrai.hibiki.core.design.component.AppMessageState
-import org.akkirrai.hibiki.core.design.component.filter.AppFilterBottomSheet
-import org.akkirrai.hibiki.core.design.component.filter.AppConnectedToggleFilter
-import org.akkirrai.hibiki.core.design.component.filter.appFilterOptionText
 import org.akkirrai.hibiki.core.design.component.AppTonalSurface
 import org.akkirrai.hibiki.core.design.component.search.AppSearchTopBar
 import org.akkirrai.hibiki.core.design.component.anime.AnimeTitleText
@@ -95,27 +83,30 @@ import org.akkirrai.hibiki.core.design.component.anime.PosterImage
 import org.akkirrai.hibiki.core.design.component.SectionHeader
 import org.akkirrai.hibiki.core.design.component.anime.VerticalAnimeListItem
 import org.akkirrai.hibiki.core.design.component.anime.LibraryStatusPosterFooter
+import org.akkirrai.hibiki.core.design.component.anime.animeDetailsSharedCardModifier
+import org.akkirrai.hibiki.core.design.component.anime.animeDetailsSharedPosterModifier
 import org.akkirrai.hibiki.core.log.PerfLogger
 import org.akkirrai.hibiki.core.model.Anime
-import org.akkirrai.hibiki.core.model.AnimeStatusCategory
 import org.akkirrai.hibiki.core.model.buildLibraryMeta
 import org.akkirrai.hibiki.core.source.LibraryCategory
 import org.akkirrai.hibiki.core.source.LibraryEntry
 
-@OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun LibraryScreen(
     onAnimeClick: (Anime) -> Unit,
     isActive: Boolean,
     modifier: Modifier = Modifier,
     bottomContentPadding: Dp = UiDimens.ScreenPadding,
+    sharedTransitionScope: SharedTransitionScope? = null,
+    animatedVisibilityScope: AnimatedVisibilityScope? = null,
     viewModel: LibraryViewModel = viewModel(factory = LibraryViewModel.Factory(LocalContext.current)),
 ) {
-    val state by viewModel.uiState.collectAsState()
+    val uiState = viewModel.uiState.collectAsState()
+    val state = uiState.value
     val languageMode = LocalAppLanguage.current
-    val allVisibleEntries = state.visibleEntries
-    var isFilterDialogVisible by remember { mutableStateOf(false) }
-    var visibleCount by rememberSaveable(state.selectedCategory, state.searchQuery, state.searchFilters) {
+    val allVisibleEntries by remember { derivedStateOf { uiState.value.visibleEntries } }
+    var visibleCount by rememberSaveable(state.selectedCategory, state.searchQuery) {
         mutableIntStateOf(LIBRARY_PAGE_SIZE)
     }
     val visibleEntries = allVisibleEntries.take(visibleCount)
@@ -157,7 +148,7 @@ fun LibraryScreen(
                     query = state.searchQuery,
                     onQueryChange = viewModel::onSearchQueryChange,
                     onClear = viewModel::clearSearch,
-                    onFilterClick = { isFilterDialogVisible = true },
+                    showFilter = false,
                     modifier = Modifier.padding(
                         top = UiDimens.SearchBarTopPadding,
                         start = UiDimens.ScreenPadding,
@@ -214,7 +205,17 @@ fun LibraryScreen(
                 LibraryAnimeCard(
                     entry = entry,
                     modifier = Modifier.padding(horizontal = UiDimens.ScreenPadding),
-                    onClick = { onAnimeClick(entry.anime) }
+                    onClick = { onAnimeClick(entry.anime) },
+                    sharedCardModifier = animeDetailsSharedCardModifier(
+                        entry.anime.id,
+                        sharedTransitionScope,
+                        animatedVisibilityScope,
+                    ),
+                    sharedPosterModifier = animeDetailsSharedPosterModifier(
+                        entry.anime.id,
+                        sharedTransitionScope,
+                        animatedVisibilityScope,
+                    ),
                 )
             }
             if (hasMoreEntries) {
@@ -230,17 +231,6 @@ fun LibraryScreen(
         }
     }
 
-    if (isFilterDialogVisible) {
-        LibrarySearchFiltersSheet(
-            catalog = state.filterCatalog,
-            currentFilters = state.searchFilters,
-            onDismiss = { isFilterDialogVisible = false },
-            onApply = { filters ->
-                viewModel.applySearchFilters(filters)
-                isFilterDialogVisible = false
-            },
-        )
-    }
 }
 
 private const val LIBRARY_DEFERRED_SYNC_DELAY_MS = 420L
@@ -331,125 +321,13 @@ private fun LibraryCategoryChips(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun LibrarySearchFiltersSheet(
-    catalog: LibraryFilterCatalog,
-    currentFilters: LibrarySearchFilters,
-    onDismiss: () -> Unit,
-    onApply: (LibrarySearchFilters) -> Unit,
-) {
-    var pendingFilters by remember(currentFilters) { mutableStateOf(currentFilters) }
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)
-    val scope = rememberCoroutineScope()
-
-    AppFilterBottomSheet(
-        sheetState = sheetState,
-        onDismissRequest = onDismiss,
-    ) { sheetContentModifier ->
-        Column(
-            modifier = sheetContentModifier
-                .background(
-                    Brush.verticalGradient(
-                        0f to MaterialTheme.colorScheme.surfaceContainerHighest,
-                        1f to MaterialTheme.colorScheme.background,
-                    )
-                )
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp)
-                .padding(bottom = 24.dp),
-        ) {
-            AppConnectedToggleFilter(
-                title = stringResource(R.string.search_filters_type),
-                entries = catalog.typeOptions,
-                selected = pendingFilters.type,
-                onSelected = { pendingFilters = pendingFilters.copy(type = it) },
-                icon = { ImageVector.vectorResource(libraryTypeIcon(it)) },
-                text = { appFilterOptionText(it).uppercase() },
-            )
-
-            AppConnectedToggleFilter(
-                title = stringResource(R.string.search_filters_status),
-                entries = catalog.statusOptions,
-                selected = pendingFilters.status,
-                onSelected = { pendingFilters = pendingFilters.copy(status = it) },
-                icon = { ImageVector.vectorResource(libraryStatusIcon(it)) },
-                text = { libraryStatusLabel(it) },
-            )
-
-            if (catalog.yearOptions.isNotEmpty()) {
-                AppConnectedToggleFilter(
-                    title = stringResource(R.string.search_filters_year),
-                    entries = catalog.yearOptions,
-                    selected = pendingFilters.year,
-                    onSelected = { pendingFilters = pendingFilters.copy(year = it) },
-                    icon = { Icons.Outlined.CalendarMonth },
-                    text = { it.toString() },
-                )
-            }
-
-            FlowRow(
-                modifier = Modifier
-                    .padding(top = 8.dp)
-                    .align(Alignment.CenterHorizontally),
-                horizontalArrangement = Arrangement.Center,
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                Button(
-                    onClick = { pendingFilters = LibrarySearchFilters() },
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.errorContainer,
-                        contentColor = MaterialTheme.colorScheme.onErrorContainer,
-                    ),
-                ) {
-                    Icon(ImageVector.vectorResource(R.drawable.animite_reset), null, Modifier.size(24.dp))
-                    Spacer(modifier = Modifier.size(8.dp))
-                    Text(stringResource(R.string.search_filters_reset), fontWeight = FontWeight.SemiBold)
-                }
-                Spacer(modifier = Modifier.size(16.dp))
-                Button(
-                    onClick = {
-                        scope.launch {
-                            sheetState.hide()
-                            onApply(pendingFilters)
-                        }
-                    },
-                ) {
-                    Icon(ImageVector.vectorResource(R.drawable.animite_done), null, Modifier.size(24.dp))
-                    Spacer(modifier = Modifier.size(8.dp))
-                    Text(stringResource(R.string.search_filters_apply), fontWeight = FontWeight.SemiBold)
-                }
-            }
-        }
-    }
-}
-
-private fun libraryTypeIcon(type: String): Int = when (type.trim().lowercase()) {
-    "tv" -> R.drawable.animite_tv
-    "ona" -> R.drawable.animite_ona
-    "ova" -> R.drawable.animite_ova
-    "movie", "film" -> R.drawable.animite_movie
-    else -> R.drawable.animite_tv
-}
-
-private fun libraryStatusIcon(status: AnimeStatusCategory): Int = when (status) {
-    AnimeStatusCategory.Ongoing -> R.drawable.animite_releasing
-    AnimeStatusCategory.Announced -> R.drawable.animite_not_yet_released
-    AnimeStatusCategory.Released -> R.drawable.animite_finished
-}
-
-@Composable
-private fun libraryStatusLabel(status: AnimeStatusCategory): String = when (status) {
-    AnimeStatusCategory.Ongoing -> stringResource(R.string.library_filter_status_ongoing)
-    AnimeStatusCategory.Announced -> stringResource(R.string.library_filter_status_announced)
-    AnimeStatusCategory.Released -> stringResource(R.string.library_filter_status_released)
-}
-
 @Composable
 private fun LibraryAnimeCard(
     entry: LibraryEntry,
     modifier: Modifier = Modifier,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    sharedCardModifier: Modifier = Modifier,
+    sharedPosterModifier: Modifier = Modifier,
 ) {
     val anime = entry.anime
     val meta = anime.buildLibraryMeta()
@@ -476,6 +354,8 @@ private fun LibraryAnimeCard(
                 AnimeSourceBadge(titleId = anime.id)
             }
         },
+        sharedCardModifier = sharedCardModifier,
+        sharedPosterModifier = sharedPosterModifier,
     )
 }
 

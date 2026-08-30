@@ -13,7 +13,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -37,7 +39,19 @@ fun RecentUpdatesScreen(
     onAnimeClick: (Anime) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val state by viewModel.uiState.collectAsState()
+    val uiState = viewModel.uiState.collectAsState()
+    val state = uiState.value
+    // Home's uiState is shared with HomeScreen (search, trending, featured...); scope this
+    // screen's list to just what it renders so unrelated fields there don't force a re-diff here.
+    val listUiState by remember {
+        derivedStateOf {
+            val current = uiState.value
+            RecentUpdatesListUiState(
+                recentlyUpdated = current.recentlyUpdated,
+                isRecentUpdatesLoadingMore = current.isRecentUpdatesLoadingMore,
+            )
+        }
+    }
     val libraryStatusByAnimeId = rememberLibraryStatusByAnimeId()
     val listState = rememberLazyListState()
     LaunchedEffect(Unit) {
@@ -78,7 +92,7 @@ fun RecentUpdatesScreen(
                 verticalArrangement = Arrangement.spacedBy(2.dp),
             ) {
                 verticalAnimeListContent(
-                    items = state.recentlyUpdated,
+                    items = listUiState.recentlyUpdated,
                     metaText = { anime ->
                         anime.buildCardMeta(
                             announcementLabel = stringResource(R.string.anime_meta_announcement),
@@ -93,7 +107,7 @@ fun RecentUpdatesScreen(
                         }
                     },
                 )
-                if (state.isRecentUpdatesLoadingMore) {
+                if (listUiState.isRecentUpdatesLoadingMore) {
                     item(key = "recent_updates_loading_more") {
                         Box(
                             modifier = Modifier
@@ -117,3 +131,8 @@ fun RecentUpdatesScreen(
 }
 
 private const val RECENT_UPDATES_PREFETCH_DISTANCE = 4
+
+private data class RecentUpdatesListUiState(
+    val recentlyUpdated: List<Anime>,
+    val isRecentUpdatesLoadingMore: Boolean,
+)
