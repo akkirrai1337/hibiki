@@ -1,5 +1,6 @@
 package org.akkirrai.beakokit.api
 
+import kotlinx.serialization.Serializable
 import org.akkirrai.beakokit.model.AnimeTitle
 import org.akkirrai.beakokit.model.Episode
 import org.akkirrai.beakokit.model.PlayerLink
@@ -7,6 +8,7 @@ import org.akkirrai.beakokit.model.StreamValidationResult
 import org.akkirrai.beakokit.model.VideoStream
 
 /** A source-owned voiceover or release group available for watching a title. */
+@Serializable
 data class PlaybackGroup(
     val id: String,
     val title: String,

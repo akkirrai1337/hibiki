@@ -1,0 +1,242 @@
+package org.akkirrai.beakokit.extension
+
+import io.ktor.client.request.forms.FormDataContent
+import io.ktor.client.request.header
+import io.ktor.client.request.request
+import io.ktor.client.request.setBody
+import io.ktor.client.statement.bodyAsText
+import io.ktor.http.HttpMethod
+import io.ktor.http.Parameters
+import kotlinx.coroutines.runBlocking
+import kotlinx.serialization.json.Json
+import org.akkirrai.beakokit.api.ChallengeSessionRequest
+import org.akkirrai.beakokit.api.SourceErrorKind
+import org.akkirrai.beakokit.api.SourceException
+import org.akkirrai.beakokit.api.context.SourceContext
+import org.akkirrai.beakokit.api.context.SourceLogLevel
+import org.jsoup.Jsoup
+import org.jsoup.nodes.Document
+import org.mozilla.javascript.Context
+import org.mozilla.javascript.Function
+import org.mozilla.javascript.NativeJSON
+import org.mozilla.javascript.NativeObject
+import org.mozilla.javascript.Scriptable
+import org.mozilla.javascript.ScriptableObject
+import java.net.URI
+
+/**
+ * Runs one scripted extension's JS payload inside a sandboxed Rhino interpreter.
+ *
+ * Rhino must stay in interpreted mode ([Context.setOptimizationLevel] `-1`) because its default
+ * compiled mode generates JVM bytecode at runtime via a custom class loader, which Android's ART
+ * does not support. Every call is serialized through [lock] because a single [Scriptable] scope is
+ * not safe for concurrent use from multiple threads.
+ *
+ * The only globals a payload can reach are the ones explicitly installed below - the reflection
+ * doors Rhino normally exposes (`Packages`, `java`, `JavaImporter`, ...) are removed from scope, so
+ * a script can only touch the network (via [fetch]) and HTML parsing (via the curated [Jsoup]
+ * binding), the same trust boundary as today's compiled-in Kotlin scrapers.
+ */
+class RhinoExtensionRuntime(
+    @PublishedApi internal val extensionId: String,
+    payload: String,
+    private val sourceContext: SourceContext,
+) {
+    private val lock = Any()
+
+    @PublishedApi
+    internal val json = Json { ignoreUnknownKeys = true; explicitNulls = false }
+    private val scope: ScriptableObject
+
+    init {
+        val cx = Context.enter()
+        try {
+            cx.optimizationLevel = -1
+            cx.languageVersion = Context.VERSION_ES6
+            val newScope = cx.initStandardObjects()
+            hardenScope(newScope)
+            installGlobals(cx, newScope)
+            cx.evaluateString(newScope, payload, "$extensionId.js", 1, null)
+            scope = newScope
+        } finally {
+            Context.exit()
+        }
+    }
+
+    /** Calls `Provider.<functionName>(args)` and decodes its JSON-serialized return value as [T]. */
+    inline fun <reified T> call(functionName: String, vararg args: Any?): T {
+        val jsonText = callRaw(functionName, args)
+        return try {
+            json.decodeFromString(jsonText)
+        } catch (error: Exception) {
+            throw SourceException(
+                "Extension '$extensionId' returned an unexpected shape from $functionName",
+                cause = error,
+                kind = SourceErrorKind.PARSE,
+            )
+        }
+    }
+
+    fun callRaw(functionName: String, args: Array<out Any?>): String = synchronized(lock) {
+        val cx = Context.enter()
+        try {
+            cx.optimizationLevel = -1
+            val provider = ScriptableObject.getProperty(scope, "Provider") as? Scriptable
+                ?: throw SourceException(
+                    "Extension '$extensionId' does not define a Provider object",
+                    kind = SourceErrorKind.PARSE,
+                )
+            val fn = ScriptableObject.getProperty(provider, functionName) as? Function
+                ?: throw SourceException(
+                    "Extension '$extensionId' Provider.$functionName is not a function",
+                    kind = SourceErrorKind.PARSE,
+                )
+            val jsArgs = args.map { Context.javaToJS(it, scope) }.toTypedArray()
+            val result = fn.call(cx, scope, provider, jsArgs)
+            Context.toString(NativeJSON.stringify(cx, scope, result, null, null))
+        } catch (error: SourceException) {
+            throw error
+        } catch (error: Exception) {
+            throw SourceException(
+                "Extension '$extensionId' threw while running $functionName: ${error.message ?: error}",
+                cause = error,
+                kind = SourceErrorKind.PARSE,
+            )
+        } finally {
+            Context.exit()
+        }
+    }
+
+    private fun hardenScope(scope: ScriptableObject) {
+        listOf("Packages", "java", "JavaAdapter", "JavaImporter", "Continuation", "Java").forEach { name ->
+            if (ScriptableObject.hasProperty(scope, name)) {
+                ScriptableObject.deleteProperty(scope, name)
+            }
+        }
+    }
+
+    private fun installGlobals(cx: Context, scope: ScriptableObject) {
+        ScriptableObject.putProperty(scope, "Jsoup", Context.javaToJS(JsoupBinding(), scope))
+        ScriptableObject.putProperty(scope, "console", Context.javaToJS(ConsoleBinding(sourceContext), scope))
+        val fetchFunction = FetchFunction(sourceContext, scope)
+        ScriptableObject.putProperty(scope, "fetch", fetchFunction)
+        ScriptableObject.putProperty(scope, "challenge", ChallengeFunction(sourceContext, scope))
+        ScriptableObject.putProperty(
+            scope,
+            "preferredLanguage",
+            sourceContext.preferredLanguages.firstOrNull()?.tag ?: "en",
+        )
+    }
+
+    /** Curated HTML-parsing surface; only this instance (not the Jsoup class itself) is reachable from JS. */
+    class JsoupBinding {
+        fun parse(html: String): Document = Jsoup.parse(html)
+
+        fun parse(html: String, baseUri: String): Document = Jsoup.parse(html, baseUri)
+
+        fun parseBodyFragment(html: String): Document = Jsoup.parseBodyFragment(html)
+
+        fun parseBodyFragment(html: String, baseUri: String): Document = Jsoup.parseBodyFragment(html, baseUri)
+
+        fun resolve(baseUrl: String, relative: String): String =
+            runCatching { URI(baseUrl).resolve(relative).toString() }.getOrDefault(relative)
+    }
+
+    class ConsoleBinding(private val sourceContext: SourceContext) {
+        fun log(message: Any?) = sourceContext.logger.log(SourceLogLevel.DEBUG, "$message", null)
+        fun warn(message: Any?) = sourceContext.logger.log(SourceLogLevel.WARNING, "$message", null)
+        fun error(message: Any?) = sourceContext.logger.log(SourceLogLevel.ERROR, "$message", null)
+    }
+
+    /**
+     * A synchronous `fetch(url, options)` backed by [SourceContext.httpClient]. Synchronous because
+     * Rhino has no native Promise/async-await support; this is safe since every extension call
+     * already runs on a background dispatcher (see [ScriptedAnimeSource]).
+     */
+    private class FetchFunction(
+        private val sourceContext: SourceContext,
+        private val scope: Scriptable,
+    ) : org.mozilla.javascript.BaseFunction() {
+        override fun call(
+            cx: Context,
+            scope: Scriptable,
+            thisObj: Scriptable,
+            args: Array<out Any?>,
+        ): Any {
+            val url = Context.toString(args.getOrNull(0))
+            val options = args.getOrNull(1) as? NativeObject
+            val method = (options?.get("method", options) as? String)?.uppercase() ?: "GET"
+            val headers = (options?.get("headers", options) as? NativeObject)?.entries
+                ?.associate { (key, value) -> key.toString() to Context.toString(value) }
+                .orEmpty()
+            val form = (options?.get("form", options) as? NativeObject)?.entries
+                ?.associate { (key, value) -> key.toString() to Context.toString(value) }
+            val body = options?.get("body", options) as? String
+
+            val (status, responseBody, responseHeaders) = runBlocking {
+                val response = sourceContext.httpClient.request(url) {
+                    this.method = HttpMethod.parse(method)
+                    headers.forEach { (key, value) -> header(key, value) }
+                    when {
+                        form != null -> setBody(FormDataContent(Parameters.build { form.forEach { (k, v) -> append(k, v) } }))
+                        body != null -> setBody(body)
+                    }
+                }
+                Triple(
+                    response.status.value,
+                    response.bodyAsText(),
+                    response.headers.names().associateWith { name -> response.headers[name].orEmpty() },
+                )
+            }
+
+            val result = cx.newObject(this.scope)
+            ScriptableObject.putProperty(result, "status", status)
+            ScriptableObject.putProperty(result, "ok", status in 200..299)
+            ScriptableObject.putProperty(result, "body", responseBody)
+            val headersObject = cx.newObject(this.scope)
+            responseHeaders.forEach { (name, value) -> ScriptableObject.putProperty(headersObject, name.lowercase(), value) }
+            ScriptableObject.putProperty(result, "headers", headersObject)
+            return result
+        }
+    }
+
+    /**
+     * Exposes [org.akkirrai.beakokit.api.ChallengeSessionProvider] to JS for sources (like
+     * AnimePahe) that sit behind an interactive browser challenge (e.g. Cloudflare). Mirrors
+     * [org.akkirrai.beakokit.http.ChallengeRequestExecutor]'s contract exactly, just callable from
+     * script instead of baked into a Kotlin HTTP client: the script decides when a response looks
+     * challenged and calls this to get cookies/UA to retry with.
+     */
+    private class ChallengeFunction(
+        private val sourceContext: SourceContext,
+        private val scope: Scriptable,
+    ) : org.mozilla.javascript.BaseFunction() {
+        override fun call(
+            cx: Context,
+            scope: Scriptable,
+            thisObj: Scriptable,
+            args: Array<out Any?>,
+        ): Any {
+            val url = Context.toString(args.getOrNull(0))
+            val cookieNames = (args.getOrNull(1) as? org.mozilla.javascript.NativeArray)
+                ?.map { Context.toString(it) }
+                ?.toSet()
+                ?: emptySet()
+            val forceRefresh = args.getOrNull(2)?.let { Context.toBoolean(it) } ?: false
+
+            val session = runBlocking {
+                sourceContext.challengeSessionProvider.acquire(
+                    ChallengeSessionRequest(url = url, requiredCookieNames = cookieNames, forceRefresh = forceRefresh),
+                )
+            }
+
+            val result = cx.newObject(this.scope)
+            val cookiesObject = cx.newObject(this.scope)
+            session.cookies.forEach { (name, value) -> ScriptableObject.putProperty(cookiesObject, name, value) }
+            ScriptableObject.putProperty(result, "cookies", cookiesObject)
+            ScriptableObject.putProperty(result, "cookieHeader", session.cookieHeader)
+            ScriptableObject.putProperty(result, "userAgent", session.userAgent)
+            return result
+        }
+    }
+}

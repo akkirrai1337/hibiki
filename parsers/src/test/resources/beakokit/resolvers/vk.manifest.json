@@ -1,0 +1,7 @@
+{
+    "id": "vk",
+    "name": "VK player resolver",
+    "version": "1.0.0",
+    "type": "player-resolver",
+    "hosts": ["vk.com", "vkvideo.ru"]
+}

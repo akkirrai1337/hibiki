@@ -1,0 +1,7 @@
+{
+    "current_page": 1,
+    "pages": [{"number": 1, "from": "01", "to": "01", "eps": [1]}],
+    "result": [
+        {"slug": "ep1abc", "title": "Pilot", "duration_ms": 1420000, "episode_number": 1, "episode_string": "1"}
+    ]
+}

@@ -1,0 +1,14 @@
+{
+    "slug": "test-show",
+    "title": "Test Show",
+    "title_en": "Test Show EN",
+    "title_original": "テストショー",
+    "synopsis": "A fixture synopsis for KickAssAnime.",
+    "genres": ["Action", "Comedy"],
+    "status": "currently_airing",
+    "poster": {"formats": ["jpeg", "webp"], "sm": "test-show-sm", "hq": "test-show-hq"},
+    "year": 2026,
+    "type": "tv",
+    "rating": "PG-13",
+    "locales": ["en-US"]
+}

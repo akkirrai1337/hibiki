@@ -1,5 +1,8 @@
 package org.akkirrai.beakokit.model
 
+import kotlinx.serialization.Serializable
+
+@Serializable
 data class AnimeTitle(
     val id: String,
     val russianName: String?,
@@ -68,6 +71,7 @@ enum class AnimeReleaseStatus {
     }
 }
 
+@Serializable
 data class AnimeTrailerTitle(
     val id: String,
     val site: String,
@@ -75,6 +79,7 @@ data class AnimeTrailerTitle(
     val sourceUrl: String? = null,
 )
 
+@Serializable
 data class AnimeSearchRequest(
     val query: String = "",
     val limit: Int = 20,
@@ -88,6 +93,7 @@ data class AnimeSearchRequest(
     val yearTo: Int? = null,
 )
 
+@Serializable
 enum class AnimeSearchFilter {
     TYPE,
     STATUS,
@@ -96,11 +102,13 @@ enum class AnimeSearchFilter {
     YEAR_RANGE,
 }
 
+@Serializable
 enum class CatalogFeature {
     LATEST_RELEASES,
     SCHEDULE,
 }
 
+@Serializable
 data class CatalogCapabilities(
     val supportedSorts: Set<AnimeSearchSort>,
     val supportedFilters: Set<AnimeSearchFilter>,
@@ -138,6 +146,7 @@ data class CatalogCapabilities(
     }
 }
 
+@Serializable
 data class AnimeSearchFilterCatalog(
     val sortOptions: List<SearchFilterOption> = emptyList(),
     val typeOptions: List<SearchFilterOption> = emptyList(),
@@ -152,11 +161,13 @@ typealias MetadataSourceFeature = CatalogFeature
 @Deprecated("Use CatalogCapabilities", ReplaceWith("CatalogCapabilities"))
 typealias MetadataSourceCapabilities = CatalogCapabilities
 
+@Serializable
 data class SearchFilterOption(
     val id: String,
     val title: String,
 )
 
+@Serializable
 enum class AnimeSearchSort {
     RELEVANCE,
     RATING,
@@ -167,18 +178,21 @@ enum class AnimeSearchSort {
     COMMENTS,
 }
 
+@Serializable
 data class TitleRating(
     val source: String,
     val value: Double,
     val votes: Int? = null,
 )
 
+@Serializable
 data class CharacterTitle(
     val id: String,
     val title: String,
     val posterUrl: String? = null,
 )
 
+@Serializable
 data class RelatedAnimeTitle(
     val id: String,
     val title: String,
@@ -200,18 +214,21 @@ data class ProviderMatch(
     val episodeCount: Int?,
 )
 
+@Serializable
 data class Episode(
     val id: String,
     val number: Double,
     val title: String?,
 )
 
+@Serializable
 enum class PlayerType {
     DIRECT_HLS,
     DIRECT_MP4,
     EMBED,
 }
 
+@Serializable
 data class PlayerLink(
     val url: String,
     val type: PlayerType,
@@ -223,26 +240,33 @@ data class PlayerLink(
     val videoId: Long? = null,
 )
 
+@Serializable
 enum class StreamType {
     HLS,
     MP4,
     DASH,
 }
 
+@Serializable
 data class VideoStream(
     val url: String,
     val type: StreamType,
     val quality: String?,
     val headers: Map<String, String> = emptyMap(),
     val segments: List<VideoSegment> = emptyList(),
+    /** Optional separately muxed audio rendition for the video stream. */
+    val audioUrl: String? = null,
+    val audioHeaders: Map<String, String> = emptyMap(),
 )
 
+@Serializable
 data class VideoSegment(
     val type: VideoSegmentType,
     val startMs: Long,
     val endMs: Long,
 )
 
+@Serializable
 enum class VideoSegmentType {
     OPENING,
     ENDING,

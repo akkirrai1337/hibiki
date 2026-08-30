@@ -1,0 +1,64 @@
+{
+    "result": [
+        {
+            "slug": "test-show",
+            "title": "Test Show",
+            "title_en": "Test Show EN",
+            "synopsis": "A fixture synopsis for KickAssAnime.",
+            "genres": ["Action", "Comedy"],
+            "status": "currently_airing",
+            "poster": {"formats": ["jpeg", "webp"], "sm": "test-show-sm", "hq": "test-show-hq"},
+            "year": 2026,
+            "type": "tv",
+            "rating": "PG-13"
+        },
+        {
+            "slug": "second-show",
+            "title": "Second Show",
+            "title_en": "Second Show EN",
+            "synopsis": "Another fixture synopsis.",
+            "genres": ["Drama"],
+            "status": "finished_airing",
+            "poster": {"formats": ["jpeg", "webp"], "sm": "second-show-sm", "hq": "second-show-hq"},
+            "year": 2025,
+            "type": "tv",
+            "rating": "PG"
+        },
+        {
+            "slug": "third-show",
+            "title": "Third Show",
+            "title_en": "Third Show EN",
+            "synopsis": "A third fixture synopsis.",
+            "genres": ["Fantasy"],
+            "status": "currently_airing",
+            "poster": {"formats": ["jpeg", "webp"], "sm": "third-show-sm", "hq": "third-show-hq"},
+            "year": 2024,
+            "type": "movie",
+            "rating": "PG"
+        },
+        {
+            "slug": "fourth-show",
+            "title": "Fourth Show",
+            "title_en": "Fourth Show EN",
+            "synopsis": "A fourth fixture synopsis.",
+            "genres": ["Horror"],
+            "status": "finished_airing",
+            "poster": {"formats": ["jpeg", "webp"], "sm": "fourth-show-sm", "hq": "fourth-show-hq"},
+            "year": 2023,
+            "type": "tv",
+            "rating": "R"
+        },
+        {
+            "slug": "fifth-show",
+            "title": "Fifth Show",
+            "title_en": "Fifth Show EN",
+            "synopsis": "A fifth fixture synopsis.",
+            "genres": ["Sci-Fi"],
+            "status": "currently_airing",
+            "poster": {"formats": ["jpeg", "webp"], "sm": "fifth-show-sm", "hq": "fifth-show-hq"},
+            "year": 2022,
+            "type": "tv",
+            "rating": "PG"
+        }
+    ]
+}

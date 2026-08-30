@@ -1,0 +1,40 @@
+package org.akkirrai.beakokit.api.contract
+
+import org.akkirrai.beakokit.api.AnimeSource
+import org.akkirrai.beakokit.api.LatestSource
+import org.akkirrai.beakokit.api.PlaybackSource
+import org.akkirrai.beakokit.api.SourceCapability
+import org.akkirrai.beakokit.model.CatalogFeature
+
+class SourceContractException(
+    val violations: List<String>,
+) : IllegalStateException(violations.joinToString(prefix = "Invalid source contract: ", separator = "; "))
+
+/** Runtime-safe validation shared by Hibiki and the BeakoKit TestKit. */
+object SourceContractValidator {
+    fun violations(source: AnimeSource): List<String> = buildList {
+        if (source.name != source.info.name) {
+            add("source.name must match SourceInfo.name")
+        }
+
+        val declaresPlayback = SourceCapability.PLAYBACK in source.info.capabilities
+        if (declaresPlayback != (source is PlaybackSource)) {
+            add("PLAYBACK must match implementation of PlaybackSource")
+        }
+
+        val declaresLatest = SourceCapability.LATEST_RELEASES in source.info.capabilities
+        if (declaresLatest != (source is LatestSource)) {
+            add("LATEST_RELEASES must match implementation of LatestSource")
+        }
+
+        val catalogDeclaresLatest = CatalogFeature.LATEST_RELEASES in source.catalogCapabilities.features
+        if (declaresLatest != catalogDeclaresLatest) {
+            add("LATEST_RELEASES must match catalog capabilities")
+        }
+    }
+
+    fun requireValid(source: AnimeSource) {
+        val violations = violations(source)
+        if (violations.isNotEmpty()) throw SourceContractException(violations)
+    }
+}

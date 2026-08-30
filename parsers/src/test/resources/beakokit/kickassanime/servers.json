@@ -1,0 +1,6 @@
+{
+    "servers": [
+        {"name": "VidStreaming", "shortName": "Vid", "src": "https://player.test/embed/abc123"},
+        {"name": "BirdStream", "shortName": "Bird", "src": "https://player.test/embed/dash456"}
+    ]
+}

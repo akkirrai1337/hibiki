@@ -12,8 +12,8 @@ import org.akkirrai.beakokit.api.HealthCheckSource
 import org.akkirrai.beakokit.api.LatestSource
 import org.akkirrai.beakokit.api.PlaybackGroup
 import org.akkirrai.beakokit.api.PlaybackSource
-import org.akkirrai.beakokit.api.SourceContractValidator
 import org.akkirrai.beakokit.api.SourceId
+import org.akkirrai.beakokit.api.contract.SourceContractValidator
 import org.akkirrai.beakokit.playback.PlaybackResolver
 import org.akkirrai.beakokit.playback.ResolvedPlaybackStream
 import kotlin.reflect.KClass

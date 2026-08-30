@@ -3,6 +3,7 @@ package org.akkirrai.beakokit.testkit
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.respond
+import io.ktor.client.engine.mock.toByteArray
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.http.Headers
 import io.ktor.http.ContentType
@@ -10,12 +11,12 @@ import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpMethod
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.Url
-import io.ktor.http.headersOf
 import io.ktor.serialization.kotlinx.json.json
-import org.akkirrai.beakokit.api.DefaultSourceContext
-import org.akkirrai.beakokit.api.MapSourceConfig
-import org.akkirrai.beakokit.api.SourceContext
+import org.akkirrai.beakokit.api.ChallengeSessionProvider
 import org.akkirrai.beakokit.api.SourceLanguage
+import org.akkirrai.beakokit.api.context.DefaultSourceContext
+import org.akkirrai.beakokit.api.context.MapSourceConfig
+import org.akkirrai.beakokit.api.context.SourceContext
 import java.util.Collections
 
 data class FixtureRoute(
@@ -25,6 +26,8 @@ data class FixtureRoute(
     val status: HttpStatusCode = HttpStatusCode.OK,
     val query: Map<String, String> = emptyMap(),
     val contentType: ContentType = ContentType.Application.Json,
+    /** Extra response headers beyond Content-Type - e.g. Set-Cookie for a cookie-forwarding test. */
+    val extraHeaders: Map<String, String> = emptyMap(),
 ) {
     init {
         require(path.startsWith('/')) { "Fixture route path must start with '/': $path" }
@@ -43,6 +46,7 @@ data class FixtureRoute(
             status: HttpStatusCode = HttpStatusCode.OK,
             query: Map<String, String> = emptyMap(),
             contentType: ContentType = ContentType.Application.Json,
+            extraHeaders: Map<String, String> = emptyMap(),
         ): FixtureRoute = FixtureRoute(
             path = path,
             body = FixtureResources.read(resource),
@@ -50,6 +54,7 @@ data class FixtureRoute(
             status = status,
             query = query,
             contentType = contentType,
+            extraHeaders = extraHeaders,
         )
     }
 }
@@ -61,6 +66,7 @@ data class FixtureRequest(
     val method: HttpMethod,
     val url: Url,
     val headers: Headers,
+    val body: String = "",
 )
 
 /**
@@ -74,6 +80,7 @@ class SourceFixtureHost(
     preferredLanguages: List<SourceLanguage> = listOf(SourceLanguage.ENGLISH),
     values: Map<String, String> = emptyMap(),
     secrets: Map<String, String> = emptyMap(),
+    challengeSessionProvider: ChallengeSessionProvider = ChallengeSessionProvider.UNSUPPORTED,
 ) : AutoCloseable {
     private val fixtureRoutes = routes.toList()
     private val recordedRequests = Collections.synchronizedList(mutableListOf<FixtureRequest>())
@@ -86,6 +93,7 @@ class SourceFixtureHost(
             method = requestData.method,
             url = requestData.url,
             headers = requestData.headers,
+            body = requestData.body.toByteArray().decodeToString(),
         )
         recordedRequests += request
         val route = fixtureRoutes.firstOrNull { it.matches(request) }
@@ -93,7 +101,10 @@ class SourceFixtureHost(
         respond(
             content = route.body,
             status = route.status,
-            headers = headersOf(HttpHeaders.ContentType, route.contentType.toString()),
+            headers = Headers.build {
+                append(HttpHeaders.ContentType, route.contentType.toString())
+                route.extraHeaders.forEach { (name, value) -> append(name, value) }
+            },
         )
     }) {
         install(ContentNegotiation) { json() }
@@ -103,6 +114,7 @@ class SourceFixtureHost(
         httpClient = httpClient,
         preferredLanguages = preferredLanguages,
         config = MapSourceConfig(values = values, secrets = secrets),
+        challengeSessionProvider = challengeSessionProvider,
     )
 
     override fun close() {
@@ -114,12 +126,19 @@ object FixtureResources {
     fun read(path: String): String {
         val normalizedPath = path.trim().removePrefix("/")
         require(normalizedPath.isNotBlank()) { "Fixture resource path must not be blank" }
-        val classLoaders = listOfNotNull(
-            Thread.currentThread().contextClassLoader,
-            FixtureResources::class.java.classLoader,
-        ).distinct()
-        val stream = classLoaders.firstNotNullOfOrNull { it.getResourceAsStream(normalizedPath) }
+        val stream = openStream(normalizedPath)
             ?: error("Fixture resource not found: $normalizedPath")
         return stream.bufferedReader(Charsets.UTF_8).use { it.readText() }
     }
+
+    fun exists(path: String): Boolean {
+        val normalizedPath = path.trim().removePrefix("/")
+        if (normalizedPath.isBlank()) return false
+        return openStream(normalizedPath)?.use { true } ?: false
+    }
+
+    private fun openStream(normalizedPath: String) = listOfNotNull(
+        Thread.currentThread().contextClassLoader,
+        FixtureResources::class.java.classLoader,
+    ).distinct().firstNotNullOfOrNull { it.getResourceAsStream(normalizedPath) }
 }
