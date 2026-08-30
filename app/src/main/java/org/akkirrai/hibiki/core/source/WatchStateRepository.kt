@@ -222,6 +222,15 @@ class WatchStateRepository(context: Context) {
         )
     }
 
+    fun clearEpisodeProgress(
+        titleId: String,
+        episodeId: String,
+    ) {
+        prefs.edit()
+            .removeLegacyProgressEntries(titleId, episodeId)
+            .apply()
+    }
+
     private fun parseProgress(
         titleId: String,
         episodeId: String,

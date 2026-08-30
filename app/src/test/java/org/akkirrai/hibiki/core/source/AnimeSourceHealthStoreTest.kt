@@ -1,9 +1,9 @@
 package org.akkirrai.hibiki.core.source
 
 import kotlinx.coroutines.runBlocking
-import org.akkirrai.beakokit.api.SourceAvailability
 import org.akkirrai.beakokit.api.SourceId
-import org.akkirrai.beakokit.api.track
+import org.akkirrai.beakokit.api.health.SourceAvailability
+import org.akkirrai.beakokit.api.health.track
 import org.junit.Assert.assertEquals
 import org.junit.Test
 

@@ -7,4 +7,9 @@
         <!-- AnimeVost's playlist currently returns direct streams from this HTTP-only CDN. -->
         <domain includeSubdomains="true">video.animetop.info</domain>
     </domain-config>
+    <!-- WebViewStreamRelay's loopback server: ExoPlayer talks to it in plaintext since traffic
+         never leaves the device, and it re-fetches everything through a real WebView anyway. -->
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="false">127.0.0.1</domain>
+    </domain-config>
 </network-security-config>

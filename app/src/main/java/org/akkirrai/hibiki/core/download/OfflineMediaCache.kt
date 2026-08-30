@@ -2,6 +2,7 @@ package org.akkirrai.hibiki.core.download
 
 import android.content.Context
 import android.content.SharedPreferences
+import android.webkit.CookieManager
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.database.StandaloneDatabaseProvider
 import androidx.media3.datasource.DataSource
@@ -164,7 +165,10 @@ object OfflineMediaCache {
             .setReadTimeoutMs(PLAYER_READ_TIMEOUT_MS)
             .setUserAgent(PLAYER_HTTP_USER_AGENT)
             .setDefaultRequestProperties(requestHeaders)
-        return DefaultDataSource.Factory(context.applicationContext, httpFactory)
+        return DefaultDataSource.Factory(
+            context.applicationContext,
+            BrowserSessionCookieDataSourceFactory(httpFactory),
+        )
     }
 
     fun buildPlaybackRequestHeaders(headers: Map<String, String>): Map<String, String> {
@@ -211,6 +215,34 @@ private class HeaderInjectingHttpDataSourceFactory(
     override fun setDefaultRequestProperties(defaultRequestProperties: MutableMap<String, String>): HttpDataSource.Factory {
         delegateFactory.setDefaultRequestProperties(defaultRequestProperties)
         return this
+    }
+}
+
+/**
+ * HLS loads the master playlist and every media segment as individual ExoPlayer requests. Keep
+ * them in the same cookie session which the resolver's temporary WebView established instead of
+ * using only a stale cookie snapshot captured for the first URL.
+ */
+private class BrowserSessionCookieDataSourceFactory(
+    private val delegateFactory: HttpDataSource.Factory,
+) : HttpDataSource.Factory {
+    override fun createDataSource(): HttpDataSource = BrowserSessionCookieDataSource(delegateFactory.createDataSource())
+
+    override fun setDefaultRequestProperties(defaultRequestProperties: MutableMap<String, String>): HttpDataSource.Factory {
+        delegateFactory.setDefaultRequestProperties(defaultRequestProperties)
+        return this
+    }
+}
+
+private class BrowserSessionCookieDataSource(
+    private val delegate: HttpDataSource,
+) : HttpDataSource by delegate {
+    override fun open(dataSpec: DataSpec): Long {
+        val cookies = CookieManager.getInstance().getCookie(dataSpec.uri.toString())
+        if (!cookies.isNullOrBlank()) {
+            delegate.setRequestProperty("Cookie", cookies)
+        }
+        return delegate.open(dataSpec)
     }
 }
 

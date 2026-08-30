@@ -22,6 +22,8 @@ import org.akkirrai.beakokit.playback.extractor.KodikExtractor
 import org.akkirrai.beakokit.playback.extractor.SibnetExtractor
 import org.akkirrai.beakokit.playback.extractor.VkExtractor
 import org.akkirrai.beakokit.playback.PlaybackResolver
+import org.akkirrai.beakokit.extension.BrowserScriptResolver
+import org.akkirrai.beakokit.extension.BrowserPlaybackMode
 import org.akkirrai.beakokit.playback.validation.HttpStreamValidator
 import org.akkirrai.beakokit.model.Episode
 import org.akkirrai.beakokit.model.AnimeTitle
@@ -78,25 +80,24 @@ class AnimeWatchRepository(
     private val appContext = context?.applicationContext
     private val appPreferences = appContext?.let(::AppPreferences)
     private val sourceManager = appContext?.let { AnimeSourceRuntimeManager(it, client) }
-    private val extractors = listOfNotNull<StreamExtractor>(
-        DirectHlsExtractor(),
-        DirectMp4Extractor(),
-        AniBoomExtractor(client),
-        KodikExtractor(client),
-        AksorExtractor(client),
-        appContext?.let(::AllohaWebViewExtractor),
-        appContext?.let(::AnimePaheWebViewExtractor),
-        SibnetExtractor(client),
-        CvhExtractor(client),
-        VkExtractor(client),
-    )
     private val validator = HttpStreamValidator(client)
-    private val playbackResolver = PlaybackResolver(extractors, validator)
+    @Volatile
+    private var extractorsGeneration = -1
+    @Volatile
+    private var activeExtractors: List<StreamExtractor> = emptyList()
+    @Volatile
+    private var activeBrowserResolvers: List<BrowserScriptResolver> = emptyList()
     private val loadMutex = Mutex()
 
     fun getCachedSources(animeId: String): WatchSourcesCacheSnapshot? {
         val canonicalId = extractTitleId(animeId)
-        val cached = cachedSources[languageCacheKey(canonicalId)] ?: return null
+        // languageCacheKey resolves the title's source runtime just to build the key - with no
+        // source installed (or none matching this title) that throws SourceException; since this
+        // is a synchronous best-effort cache peek called eagerly from ViewModel init (not inside a
+        // suspend block a ViewModel could catch around), treat "can't resolve a source" as "cache
+        // miss" rather than letting it crash composition.
+        val cacheKey = runCatching { languageCacheKey(canonicalId) }.getOrNull() ?: return null
+        val cached = cachedSources[cacheKey] ?: return null
         return WatchSourcesCacheSnapshot(sources = cached.sources)
     }
 
@@ -206,7 +207,7 @@ class AnimeWatchRepository(
             throw SourceException(appString(R.string.watch_error_no_players))
         }
 
-        val resolved = playbackResolver.resolve(
+        val resolved = PlaybackResolver(currentExtractors(), validator).resolve(
             links = links,
             excludedStreamUrls = excludedStreamUrls,
             preferredQuality = preferredQuality,
@@ -231,6 +232,8 @@ class AnimeWatchRepository(
                 resolved.availableQualityLabels + (resolved.validation.quality ?: resolved.stream.quality ?: resolved.link.quality)
             ).mapNotNull { it?.trim()?.takeIf(String::isNotBlank) }.distinct(),
             headers = resolved.stream.headers.ifEmpty { resolved.link.headers },
+            audioStreamUrl = resolved.stream.audioUrl,
+            audioHeaders = resolved.stream.audioHeaders,
             segments = selectPlaybackSegments(
                 apiSegments = resolved.link.segments,
                 extractedSegments = resolved.stream.segments,
@@ -520,7 +523,40 @@ class AnimeWatchRepository(
     }
 
     private fun isSupportedLink(link: PlayerLink): Boolean =
-        extractors.any { extractor -> extractor.supports(link) }
+        currentExtractors().any { extractor -> extractor.supports(link) }
+
+    /**
+     * Resolver extensions can be installed while this repository is already alive.  Do not keep
+     * the old list forever: otherwise a freshly installed source can return EMBED links which
+     * are filtered out before its newly installed resolver ever gets a chance to handle them.
+     */
+    @Synchronized
+    private fun currentExtractors(): List<StreamExtractor> {
+        val generation = AnimeSourceRegistry.extensionGeneration
+        if (extractorsGeneration == generation && activeExtractors.isNotEmpty()) return activeExtractors
+
+        val downloadedResolvers = appContext
+            ?.let { AnimeSourceRegistry.createPlayerResolvers(it, client) }
+            .orEmpty()
+        activeBrowserResolvers = downloadedResolvers.filterIsInstance<BrowserScriptResolver>()
+        activeExtractors = buildList {
+            add(DirectHlsExtractor())
+            add(DirectMp4Extractor())
+            // Downloaded resolver extensions win over compatibility implementations below.
+            addAll(downloadedResolvers)
+            add(AniBoomExtractor(client))
+            add(KodikExtractor(client))
+            add(AksorExtractor(client))
+            appContext?.let {
+                add(BrowserPlayerWebViewExtractor(it, activeBrowserResolvers, client))
+            }
+            add(SibnetExtractor(client))
+            add(CvhExtractor(client))
+            add(VkExtractor(client))
+        }
+        extractorsGeneration = generation
+        return activeExtractors
+    }
 
     private fun ensureInternetConnection() {
         val context = appContext ?: return
@@ -535,6 +571,37 @@ class AnimeWatchRepository(
             StreamType.MP4 -> PlaybackStreamType.MP4
             StreamType.DASH -> PlaybackStreamType.DASH
         }
+    }
+
+    private suspend fun browserPagePlayback(
+        links: List<PlayerLink>,
+        payload: SourcePayload,
+        episode: Episode,
+    ): PlaybackStream? {
+        // Refresh installed resolver extensions before deciding. The resolver, not this
+        // repository, carries the provider-specific host and browser action.
+        currentExtractors()
+        val match = links.firstNotNullOfOrNull { link ->
+            activeBrowserResolvers
+                .firstOrNull { it.browserPlaybackMode == BrowserPlaybackMode.PAGE && it.supportsBrowser(link) }
+                ?.let { resolver -> link to resolver }
+        } ?: return null
+        val (link, resolver) = match
+        AppLogger.d(TAG, "browser-page playback: player=${link.playerName.orEmpty()}, host=${link.url.safeHost()}")
+        return PlaybackStream(
+            animeTitle = payload.title.displayName,
+            sourceTitle = payload.source.title,
+            episodeTitle = episode.title?.takeIf(String::isNotBlank)
+                ?: appString(R.string.watch_episode_fallback_title, episode.number.formatEpisodeNumber()),
+            streamUrl = link.url,
+            streamType = PlaybackStreamType.BROWSER,
+            qualityLabel = link.quality,
+            availableQualityLabels = listOfNotNull(link.quality?.trim()?.takeIf(String::isNotBlank)),
+            headers = link.headers,
+            browserScript = resolver.browserScript(link),
+            segments = link.segments.map { it.toPlaybackSegment() },
+            videoId = link.videoId,
+        )
     }
 
 
@@ -589,8 +656,12 @@ class AnimeWatchRepository(
     private companion object {
         const val TAG = "AnimeWatchRepository"
         const val STREAM_CACHE_TTL_MS = 10 * 60_000L
-        const val AUTO_RESOLVE_TIMEOUT_MS = 8_000L
-        const val PREFERRED_RESOLVE_TIMEOUT_MS = 12_000L
+        // BROWSER-resolved players can fall back to WebViewStreamRelay when a CDN blocks a plain
+        // HTTP client, which adds real WebView round-trips (JS fetch + base64 bridge) to both
+        // resolution and validation - both budgets were tuned before that path existed and are too
+        // tight for it, silently timing the whole attempt out with no error surfaced to the user.
+        const val AUTO_RESOLVE_TIMEOUT_MS = 15_000L
+        const val PREFERRED_RESOLVE_TIMEOUT_MS = 20_000L
     }
 }
 

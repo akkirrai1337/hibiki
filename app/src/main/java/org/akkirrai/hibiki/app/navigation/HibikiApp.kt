@@ -3,6 +3,10 @@ package org.akkirrai.hibiki.app.navigation
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.AnimatedContentScope
+import androidx.compose.animation.SharedTransitionLayout
+import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -69,6 +73,7 @@ import org.akkirrai.hibiki.feature.settings.SettingsScreen
 import org.akkirrai.hibiki.feature.sources.SourceExtensionsScreen
 import org.akkirrai.hibiki.app.settings.LocalAppLanguage
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun HibikiApp(
     onCheckForUpdates: () -> Unit = {},
@@ -107,21 +112,26 @@ fun HibikiApp(
         modifier = Modifier.fillMaxSize(),
         color = MaterialTheme.colorScheme.surface,
     ) {
-        HibikiNavHost(
-            modifier = Modifier.fillMaxSize(),
-            navController = navController,
-            topLevelBottomContentPadding = topLevelBottomContentPadding,
-            isTopLevelDestination = isTopLevelDestination,
-            currentTopLevel = currentTopLevel,
-            onCheckForUpdates = onCheckForUpdates,
-            onConfigureNotifications = onConfigureNotifications,
-        )
+        SharedTransitionLayout {
+            HibikiNavHost(
+                modifier = Modifier.fillMaxSize(),
+                navController = navController,
+                sharedTransitionScope = this@SharedTransitionLayout,
+                topLevelBottomContentPadding = topLevelBottomContentPadding,
+                isTopLevelDestination = isTopLevelDestination,
+                currentTopLevel = currentTopLevel,
+                onCheckForUpdates = onCheckForUpdates,
+                onConfigureNotifications = onConfigureNotifications,
+            )
+        }
     }
 }
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 private fun HibikiNavHost(
     navController: androidx.navigation.NavHostController,
+    sharedTransitionScope: SharedTransitionScope,
     modifier: Modifier = Modifier,
     topLevelBottomContentPadding: Dp = BottomBarHeight + BottomBarContentExtraPadding,
     isTopLevelDestination: Boolean = false,
@@ -140,9 +150,11 @@ private fun HibikiNavHost(
 
     val screenModifier = baseScreenModifier.statusBarsPadding()
 
+    val startDestination = TopLevelDestination.Home.route
+
     NavHost(
         navController = navController,
-        startDestination = TopLevelDestination.Home.route,
+        startDestination = startDestination,
         enterTransition = { appScreenEnterTransition() },
         exitTransition = { appScreenExitTransition() },
         popEnterTransition = { appScreenPopEnterTransition() },
@@ -173,8 +185,18 @@ private fun HibikiNavHost(
                             navController.navigate(AnimeNavType.createDetailsRoute(anime))
                         }
                     },
+                    onOpenSources = {
+                        navController.runIfCurrent(backStackEntry) {
+                            navController.navigateTopLevelDestination(
+                                TopLevelDestination.Home,
+                                TopLevelDestination.Sources,
+                            )
+                        }
+                    },
                     isActive = isTopLevelDestination && currentTopLevel == TopLevelDestination.Home,
                     bottomContentPadding = topLevelBottomContentPadding,
+                    sharedTransitionScope = sharedTransitionScope,
+                    animatedVisibilityScope = this,
                     modifier = topLevelScreenModifier,
                 )
             }
@@ -216,7 +238,17 @@ private fun HibikiNavHost(
                             navController.navigate(AnimeNavType.createDetailsRoute(anime))
                         }
                     },
+                    onOpenSources = {
+                        navController.runIfCurrent(backStackEntry) {
+                            navController.navigateTopLevelDestination(
+                                TopLevelDestination.Catalog,
+                                TopLevelDestination.Sources,
+                            )
+                        }
+                    },
                     bottomContentPadding = topLevelBottomContentPadding,
+                    sharedTransitionScope = sharedTransitionScope,
+                    animatedVisibilityScope = this,
                     modifier = topLevelScreenModifier,
                 )
             }
@@ -239,6 +271,8 @@ private fun HibikiNavHost(
                     },
                     isActive = isTopLevelDestination && currentTopLevel == TopLevelDestination.Library,
                     bottomContentPadding = topLevelBottomContentPadding,
+                    sharedTransitionScope = sharedTransitionScope,
+                    animatedVisibilityScope = this,
                     modifier = topLevelScreenModifier,
                 )
             }
@@ -269,6 +303,9 @@ private fun HibikiNavHost(
             DestinationScreenContainer {
                 SettingsScreen(
                     modifier = screenModifier,
+                    onBackClick = {
+                        navController.runIfCurrent(backStackEntry) { navController.navigateUp() }
+                    },
                     onCheckForUpdates = {
                         navController.runIfCurrent(backStackEntry, onCheckForUpdates)
                     },
@@ -361,6 +398,9 @@ private fun HibikiNavHost(
             popEnterTransition = { appScreenPopEnterTransition() },
             popExitTransition = { appScreenPopExitTransition() }
         ) { backStackEntry ->
+            val context = LocalContext.current
+            val dependencies = remember(context) { context.applicationContext.hibikiDependencies() }
+            val watchStateRepository = remember(dependencies) { dependencies.watchStateRepository() }
             DestinationScreenContainer {
                 DetailsScreen(
                     anime = animeFromArguments(backStackEntry.arguments),
@@ -377,6 +417,20 @@ private fun HibikiNavHost(
                             navController.navigateSingleTopTo(AnimeNavType.createWatchSourcesRoute(anime))
                         }
                     },
+                    onOpenSingleSource = { anime, source ->
+                        navController.runIfCurrent(backStackEntry) {
+                            watchStateRepository.saveSelectedSource(
+                                titleId = anime.id,
+                                sourceId = source.sourceId,
+                                sourceTitle = source.title,
+                                quality = source.qualityLabel,
+                                autoSelect = false,
+                            )
+                            navController.navigateSingleTopTo(
+                                AnimeNavType.createEpisodesRoute(source)
+                            )
+                        }
+                    },
                     onResumePlayback = { progress ->
                         navController.runIfCurrent(backStackEntry) {
                             navController.navigateSingleTopTo(
@@ -388,6 +442,8 @@ private fun HibikiNavHost(
                             )
                         }
                     },
+                    sharedTransitionScope = sharedTransitionScope,
+                    animatedVisibilityScope = this,
                     modifier = baseScreenModifier,
                 )
             }
@@ -415,10 +471,12 @@ private fun HibikiNavHost(
             val watchStateRepository = remember(dependencies) { dependencies.watchStateRepository() }
             val routeArgs = backStackEntry.arguments
             val animeId = routeArgs.stringArg(AnimeNavType.ID_ARG)
+            val animeTitle = routeArgs.stringArg(AnimeNavType.TITLE_ARG)
             val downloadMode = routeArgs.booleanArg(AnimeNavType.DOWNLOAD_MODE_ARG)
             DestinationScreenContainer {
                 WatchSourcesScreen(
                     animeId = animeId,
+                    animeTitle = animeTitle,
                     onBackClick = {
                         navController.runIfCurrent(backStackEntry) { navController.navigateUp() }
                     },
@@ -434,6 +492,23 @@ private fun HibikiNavHost(
                             navController.navigateSingleTopTo(
                                 AnimeNavType.createEpisodesRoute(source, downloadMode = downloadMode)
                             )
+                        }
+                    },
+                    onAutoSelectSingleSource = { source ->
+                        navController.runIfCurrent(backStackEntry) {
+                            watchStateRepository.saveSelectedSource(
+                                titleId = animeId,
+                                sourceId = source.sourceId,
+                                sourceTitle = source.title,
+                                quality = source.qualityLabel,
+                                autoSelect = false,
+                            )
+                            navController.navigate(
+                                AnimeNavType.createEpisodesRoute(source, downloadMode = downloadMode)
+                            ) {
+                                popUpTo(backStackEntry.destination.id) { inclusive = true }
+                                launchSingleTop = true
+                            }
                         }
                     },
                     modifier = screenModifier
@@ -698,7 +773,7 @@ private inline fun NavHostController.runIfCurrent(
 
 private fun NavGraphBuilder.topLevelComposable(
     route: String,
-    content: @Composable (NavBackStackEntry) -> Unit,
+    content: @Composable AnimatedContentScope.(NavBackStackEntry) -> Unit,
 ) {
     composable(
         route = route,

@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import org.akkirrai.beakokit.api.SourceId
+import org.akkirrai.hibiki.core.source.extension.ExtensionMarketplaceClient
 
 enum class ThemeMode {
     SYSTEM,
@@ -51,6 +52,7 @@ data class AppPreferencesState(
     val videoScaleMode: VideoScaleMode = VideoScaleMode.FIT,
     val discordRpcEnabled: Boolean = false,
     val discordRpcExcludedTitleIds: Set<String> = emptySet(),
+    val sourceRepositoryUrls: List<String> = listOf(ExtensionMarketplaceClient.DEFAULT_INDEX_URL),
 )
 
 class AppPreferences(context: Context) {
@@ -71,7 +73,8 @@ class AppPreferences(context: Context) {
             KEY_PLAYBACK_SPEED,
             KEY_VIDEO_SCALE_MODE,
             KEY_DISCORD_RPC_ENABLED,
-            KEY_DISCORD_RPC_EXCLUDED_TITLE_IDS -> {
+            KEY_DISCORD_RPC_EXCLUDED_TITLE_IDS,
+            KEY_SOURCE_REPOSITORY_URLS -> {
                 _state.value = readState(prefs)
             }
         }
@@ -106,13 +109,11 @@ class AppPreferences(context: Context) {
         _animeSourceChanges.tryEmit(source)
     }
 
-    fun completeOnboarding(source: SourceId) {
+    fun completeOnboarding() {
         prefs.edit()
-            .putString(KEY_ANIME_SOURCE, source.value)
             .putBoolean(KEY_ONBOARDING_COMPLETED, true)
             .apply()
         _state.value = readState(prefs)
-        _animeSourceChanges.tryEmit(source)
     }
 
     fun setNotificationPermissionState(state: NotificationPermissionState) {
@@ -152,6 +153,22 @@ class AppPreferences(context: Context) {
         prefs.edit().putStringSet(KEY_DISCORD_RPC_EXCLUDED_TITLE_IDS, excludedIds).apply()
     }
 
+    fun addSourceRepository(url: String) {
+        val normalized = url.trim().takeIf(String::isNotBlank) ?: return
+        val urls = readSourceRepositoryUrls(prefs)
+        if (normalized in urls) return
+        prefs.edit().putString(KEY_SOURCE_REPOSITORY_URLS, (urls + normalized).joinToString("\n")).apply()
+    }
+
+    /** The built-in repository can't be removed - it's the only one guaranteed to always work,
+     * so a user who removes every repository would otherwise be left with a broken, empty
+     * marketplace and no obvious way back in short of reinstalling the app. */
+    fun removeSourceRepository(url: String) {
+        if (url == ExtensionMarketplaceClient.DEFAULT_INDEX_URL) return
+        val urls = readSourceRepositoryUrls(prefs) - url
+        prefs.edit().putString(KEY_SOURCE_REPOSITORY_URLS, urls.joinToString("\n")).apply()
+    }
+
     fun close() {
         prefs.unregisterOnSharedPreferenceChangeListener(preferenceListener)
     }
@@ -169,6 +186,7 @@ class AppPreferences(context: Context) {
         const val KEY_VIDEO_SCALE_MODE = "video_scale_mode"
         const val KEY_DISCORD_RPC_ENABLED = "discord_rpc_enabled"
         const val KEY_DISCORD_RPC_EXCLUDED_TITLE_IDS = "discord_rpc_excluded_title_ids"
+        const val KEY_SOURCE_REPOSITORY_URLS = "source_repository_urls"
         private const val KEY_THEME_MODE = "theme_mode"
         private const val KEY_USE_SYSTEM_COLOR_SCHEME = "use_system_color_scheme"
         private const val KEY_USE_AMOLED_THEME = "use_amoled_theme"
@@ -189,6 +207,20 @@ class AppPreferences(context: Context) {
             return readState(
                 context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
             )
+        }
+
+        fun readCatalogSort(context: Context, source: SourceId): String? {
+            return context
+                .getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                .getString(catalogSortKey(source), null)
+        }
+
+        fun saveCatalogSort(context: Context, source: SourceId, sort: String) {
+            context
+                .getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                .edit()
+                .putString(catalogSortKey(source), sort)
+                .apply()
         }
 
         private fun readState(prefs: SharedPreferences): AppPreferencesState {
@@ -223,7 +255,17 @@ class AppPreferences(context: Context) {
                     .getStringSet(KEY_DISCORD_RPC_EXCLUDED_TITLE_IDS, emptySet())
                     .orEmpty()
                     .toSet(),
+                sourceRepositoryUrls = readSourceRepositoryUrls(prefs),
             )
+        }
+
+        private fun readSourceRepositoryUrls(prefs: SharedPreferences): List<String> {
+            if (!prefs.contains(KEY_SOURCE_REPOSITORY_URLS)) return listOf(ExtensionMarketplaceClient.DEFAULT_INDEX_URL)
+            return prefs.getString(KEY_SOURCE_REPOSITORY_URLS, "")
+                .orEmpty()
+                .split("\n")
+                .map(String::trim)
+                .filter(String::isNotBlank)
         }
 
         private fun normalizePlaybackSpeed(speed: Float): Float {
@@ -232,5 +274,7 @@ class AppPreferences(context: Context) {
                 else -> 1f
             }
         }
+
+        private fun catalogSortKey(source: SourceId): String = "catalog_sort_${source.value}"
     }
 }

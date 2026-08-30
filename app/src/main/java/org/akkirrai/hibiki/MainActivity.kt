@@ -163,8 +163,6 @@ class MainActivity : ComponentActivity() {
                             )
                         } else {
                             FirstLaunchOnboarding(
-                                initialSource = preferences.animeSource
-                                    .takeIf { preferences.hasExplicitAnimeSource },
                                 notificationPermissionState = preferences.notificationPermissionState,
                                 onRequestNotificationPermission = ::requestNotificationPermission,
                                 onComplete = appPreferences::completeOnboarding,

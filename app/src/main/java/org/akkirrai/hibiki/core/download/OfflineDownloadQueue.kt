@@ -689,6 +689,7 @@ object OfflineDownloadQueue {
             PlaybackStreamType.HLS -> MimeTypes.APPLICATION_M3U8
             PlaybackStreamType.MP4 -> MimeTypes.VIDEO_MP4
             PlaybackStreamType.DASH -> MimeTypes.APPLICATION_MPD
+            PlaybackStreamType.BROWSER -> error("Browser-session streams cannot be downloaded")
         }
     }
 

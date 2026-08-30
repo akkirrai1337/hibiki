@@ -1,70 +1,66 @@
 package org.akkirrai.hibiki.core.source
 
-import org.akkirrai.hibiki.R
-import org.akkirrai.beakokit.api.SourceId
 import org.akkirrai.beakokit.api.SourceCapability
-import org.akkirrai.beakokit.api.SourceLanguage
-import org.akkirrai.beakokit.source.animego.AnimeGoSource
-import org.akkirrai.beakokit.source.aniliberty.AniLibertySource
-import org.akkirrai.beakokit.source.yummy.YummyAnimeSource
-import org.akkirrai.beakokit.source.animepahe.AnimePaheSource
-import org.akkirrai.beakokit.source.animevost.AnimeVostSource
+import org.akkirrai.beakokit.api.SourceId
+import org.akkirrai.beakokit.extension.ScriptExtensionManifest
+import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.nio.file.Files
 
 class AnimeSourceRegistryTest {
-    @Test
-    fun `registered sources have unique ids and supported language`() {
-        val sources = AnimeSourceRegistry.sources
+    private val manifest = ScriptExtensionManifest(
+        id = "test-source",
+        name = "Test Source",
+        version = "1.0.0",
+        lang = "en",
+        payload = "var Provider = { search: function() { return []; }, latest: function() { return []; }, getById: function() { throw new Error('n/a'); }, getPlaybackGroups: function() { return []; }, getPlayerLinks: function() { return []; }, getSettings: function() { return {}; } };",
+        capabilities = setOf(SourceCapability.PLAYBACK, SourceCapability.LATEST_RELEASES),
+    )
 
+    @Test
+    fun `no sources are registered until extensions are installed`() {
+        val extensionsDir = Files.createTempDirectory("hibiki-registry-empty").toFile()
+
+        AnimeSourceRegistry.initialize(extensionsDir)
+
+        assertTrue(AnimeSourceRegistry.sources.isEmpty())
+        assertTrue(AnimeSourceRegistry.catalog.sources.isEmpty())
+        assertTrue(AnimeSourceRegistry.invalidScriptExtensions().isEmpty())
+    }
+
+    @Test
+    fun `installing a script extension registers it and uninstalling removes it`() {
+        val extensionsDir = Files.createTempDirectory("hibiki-registry-install").toFile()
+        AnimeSourceRegistry.initialize(extensionsDir)
+
+        AnimeSourceRegistry.installScriptExtension(Json.encodeToString(ScriptExtensionManifest.serializer(), manifest))
+
+        val descriptor = AnimeSourceRegistry.descriptor(SourceId("test-source"))
+        assertEquals("Test Source", descriptor.name)
+        assertTrue(descriptor.supportsPlayback)
         assertEquals(
-            setOf(SourceId("yummy-anime"), SourceId("ani-liberty"), SourceId("animego"), SourceId("animepahe"), SourceId("animevost")),
-            sources.map { it.id }.toSet(),
+            setOf(SourceCapability.LATEST_RELEASES, SourceCapability.PLAYBACK),
+            AnimeSourceRegistry.sources.single().info.capabilities,
         )
-        assertEquals(sources.size, sources.map { it.id }.distinct().size)
-        assertEquals(sources.map { it.info }, AnimeSourceRegistry.catalog.sources)
-        assertEquals(
-            setOf(SourceLanguage.RUSSIAN, SourceLanguage.ENGLISH),
-            sources.map { it.language }.toSet(),
-        )
-        assertTrue(sources.all { it.supportsPlayback })
-        assertEquals(
-            AniLibertySource.INFO,
-            AnimeSourceRegistry.descriptor(SourceId("ani-liberty")).info,
-        )
-        assertEquals(
-            YummyAnimeSource.INFO,
-            AnimeSourceRegistry.descriptor(SourceId("yummy-anime")).info,
-        )
-        assertEquals(
-            setOf(SourceLanguage.RUSSIAN),
-            YummyAnimeSource.INFO.languages,
-        )
-        assertEquals(
-            AnimeGoSource.INFO,
-            AnimeSourceRegistry.descriptor(SourceId("animego")).info,
-        )
-        assertEquals(
-            AnimePaheSource.INFO,
-            AnimeSourceRegistry.descriptor(SourceId("animepahe")).info,
-        )
-        assertEquals(
-            AnimeVostSource.INFO,
-            AnimeSourceRegistry.descriptor(SourceId("animevost")).info,
-        )
-        assertEquals(
-            R.drawable.source_animego,
-            AnimeSourceRegistry.descriptor(SourceId("animego")).iconRes,
-        )
-        assertEquals(
-            R.drawable.source_animepahe,
-            AnimeSourceRegistry.descriptor(SourceId("animepahe")).iconRes,
-        )
-        assertEquals(
-            setOf(SourceCapability.RELATED_TITLES, SourceCapability.SIMILAR_TITLES),
-            AnimeSourceRegistry.descriptor(SourceId("yummy-anime")).contentFeatures,
-        )
-        assertTrue(AnimeSourceRegistry.descriptor(SourceId("ani-liberty")).contentFeatures.isEmpty())
+        assertTrue(AnimeSourceRegistry.catalog.sources.any { it.id == SourceId("test-source") })
+        assertEquals(mapOf("test-source" to "1.0.0"), AnimeSourceRegistry.installedScriptExtensionVersions())
+
+        AnimeSourceRegistry.uninstallScriptExtension(SourceId("test-source"))
+
+        assertTrue(AnimeSourceRegistry.sources.isEmpty())
+        assertTrue(AnimeSourceRegistry.descriptorOrNull(SourceId("test-source")) == null)
+    }
+
+    @Test
+    fun `an invalid manifest file is surfaced instead of crashing`() {
+        val extensionsDir = Files.createTempDirectory("hibiki-registry-invalid").toFile()
+        java.io.File(extensionsDir, "broken.json").writeText("{ not json")
+
+        AnimeSourceRegistry.initialize(extensionsDir)
+
+        assertTrue(AnimeSourceRegistry.sources.isEmpty())
+        assertEquals(1, AnimeSourceRegistry.invalidScriptExtensions().size)
     }
 }

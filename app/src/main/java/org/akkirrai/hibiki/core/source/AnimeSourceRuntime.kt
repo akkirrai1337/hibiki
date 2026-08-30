@@ -8,7 +8,7 @@ import org.akkirrai.beakokit.api.PlaybackGroup
 import org.akkirrai.beakokit.api.PlaybackSource
 import org.akkirrai.beakokit.api.LatestSource
 import org.akkirrai.beakokit.api.SourceId
-import org.akkirrai.beakokit.api.SourceHealthReporter
+import org.akkirrai.beakokit.api.health.SourceHealthReporter
 import org.akkirrai.beakokit.model.AnimeSearchFilterCatalog
 import org.akkirrai.beakokit.model.AnimeSearchRequest
 import org.akkirrai.beakokit.model.AnimeTitle
@@ -86,7 +86,7 @@ class AnimeSourceRuntimeManager(
     private val sourceHealthReporter: SourceHealthReporter = HibikiSourceHealth.store.reporter,
 ) {
     private val appContext = context.applicationContext
-    private val runtimes = ConcurrentHashMap<SourceId, AnimeSourceRuntime>()
+    private val runtimes = ConcurrentHashMap<SourceId, CachedRuntime>()
 
     val selectedId: SourceId
         get() = AppPreferences.readState(appContext).animeSource
@@ -98,9 +98,21 @@ class AnimeSourceRuntimeManager(
             // Unscoped identifiers were persisted by versions which only supported YummyAnime.
             ?: runtime(AppPreferences.DEFAULT_ANIME_SOURCE_ID)
 
-    fun runtime(sourceId: SourceId): AnimeSourceRuntime = runtimes.getOrPut(sourceId) {
-        AnimeSourceRegistry.createRuntime(appContext, client, sourceId, sourceHealthReporter)
+    // This manager instance (owned by a repository, which in turn outlives a lot of screen
+    // navigation) can hold a runtime compiled from a script extension's JS payload well past the
+    // point that payload gets overwritten on disk by an update - reusing it as-is would keep
+    // running the old code until this manager itself is garbage-collected. Comparing against
+    // AnimeSourceRegistry's generation counter (bumped on every install/uninstall) means an
+    // update takes effect on the very next call instead of requiring an app restart.
+    fun runtime(sourceId: SourceId): AnimeSourceRuntime {
+        val generation = AnimeSourceRegistry.extensionGeneration
+        runtimes[sourceId]?.let { cached -> if (cached.generation == generation) return cached.runtime }
+        val fresh = AnimeSourceRegistry.createRuntime(appContext, client, sourceId, sourceHealthReporter)
+        runtimes[sourceId] = CachedRuntime(fresh, generation)
+        return fresh
     }
+
+    private data class CachedRuntime(val runtime: AnimeSourceRuntime, val generation: Int)
 }
 
 private fun AnimeSearchFilterCatalog.sanitized(preferEnglish: Boolean): AnimeSearchFilterCatalog = copy(

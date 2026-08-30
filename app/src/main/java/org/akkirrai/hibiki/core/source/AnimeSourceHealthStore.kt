@@ -1,13 +1,13 @@
 package org.akkirrai.hibiki.core.source
 
 import kotlinx.coroutines.flow.StateFlow
-import org.akkirrai.beakokit.api.InMemorySourceHealthReporter
-import org.akkirrai.beakokit.api.SourceHealth
-import org.akkirrai.beakokit.api.SourceHealthReporter
 import org.akkirrai.beakokit.api.SourceId
-import org.akkirrai.beakokit.api.SourceExecutionPolicy
-import org.akkirrai.beakokit.api.ResilientSourceExecutionPolicy
-import org.akkirrai.beakokit.api.CachingSourceExecutionPolicy
+import org.akkirrai.beakokit.api.cache.CachingSourceExecutionPolicy
+import org.akkirrai.beakokit.api.execution.ResilientSourceExecutionPolicy
+import org.akkirrai.beakokit.api.execution.SourceExecutionPolicy
+import org.akkirrai.beakokit.api.health.InMemorySourceHealthReporter
+import org.akkirrai.beakokit.api.health.SourceHealth
+import org.akkirrai.beakokit.api.health.SourceHealthReporter
 
 /** Application-owned, shared state for health reported by every built-in source runtime. */
 class AnimeSourceHealthStore(

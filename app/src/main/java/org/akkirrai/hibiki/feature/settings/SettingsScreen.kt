@@ -23,6 +23,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.outlined.Contrast
 import androidx.compose.material.icons.outlined.ChevronRight
@@ -34,6 +35,7 @@ import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material.icons.outlined.SkipNext
 import androidx.compose.material.icons.outlined.Update
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Button
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -97,6 +99,7 @@ fun SettingsScreen(
     bottomContentPadding: Dp = 24.dp,
     onCheckForUpdates: () -> Unit = {},
     onConfigureNotifications: () -> Unit = {},
+    onBackClick: () -> Unit = {},
 ) {
     val context = LocalContext.current
     val uriHandler = LocalUriHandler.current
@@ -125,16 +128,18 @@ fun SettingsScreen(
         PerfLogger.mark("SettingsScreen composed")
     }
 
-    LazyColumn(
-        modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(
-            start = 18.dp,
-            top = 24.dp,
-            end = 18.dp,
-            bottom = bottomContentPadding,
-        ),
-        verticalArrangement = Arrangement.spacedBy(28.dp),
-    ) {
+    Box(modifier = modifier.fillMaxSize()) {
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(
+                start = 18.dp,
+                top = 84.dp,
+                end = 18.dp,
+                bottom = bottomContentPadding,
+            ),
+            verticalArrangement = Arrangement.spacedBy(28.dp),
+        ) {
+
         item(key = "appearance") {
             SettingsSection(title = stringResource(R.string.settings_appearance)) {
                 SettingsItems(count = 3) { index, shape ->
@@ -287,6 +292,41 @@ fun SettingsScreen(
                 SettingsAboutItem(
                     versionName = versionName,
                     onGitHubClick = { uriHandler.openUri(HIBIKI_GITHUB_URL) },
+                )
+            }
+        }
+        }
+
+        Box(
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .fillMaxWidth()
+                .background(MaterialTheme.colorScheme.background)
+                .height(56.dp),
+        ) {
+            Row(
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .fillMaxWidth()
+                    .padding(start = 18.dp)
+                    .height(48.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                IconButton(onClick = onBackClick) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onBackground,
+                    )
+                }
+                Text(
+                    text = stringResource(R.string.settings_title),
+                    color = MaterialTheme.colorScheme.onBackground,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(start = 8.dp),
                 )
             }
         }

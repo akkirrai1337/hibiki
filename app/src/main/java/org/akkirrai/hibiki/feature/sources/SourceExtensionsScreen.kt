@@ -2,8 +2,10 @@ package org.akkirrai.hibiki.feature.sources
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -13,34 +15,42 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.Label
+import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.ContentCopy
+import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.FilterList
+import androidx.compose.material.icons.outlined.Public
 import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -49,20 +59,30 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import android.content.Intent
+import android.net.Uri
 import coil.compose.AsyncImage
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import org.akkirrai.beakokit.api.SourceId
@@ -70,20 +90,18 @@ import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.app.settings.LocalAppPreferences
 import org.akkirrai.hibiki.app.settings.LocalAppPreferencesState
 import org.akkirrai.hibiki.core.design.UiDimens
-import org.akkirrai.hibiki.core.design.component.AppTonalSurface
-import org.akkirrai.hibiki.core.source.AnimeSourceDescriptor
+import org.akkirrai.hibiki.core.design.component.search.AppSearchTopBar
+import org.akkirrai.hibiki.core.network.AndroidHttpClientFactory
 import org.akkirrai.hibiki.core.source.AnimeSourceRegistry
+import org.akkirrai.hibiki.core.source.extension.ExtensionMarketplaceClient
+import org.akkirrai.hibiki.core.source.extension.ExtensionMarketplaceException
+import org.akkirrai.hibiki.core.source.extension.MarketplaceExtension
+import org.akkirrai.hibiki.core.source.extension.isExtensionVersionNewer
 
 /**
- * Sources tab: browsing/installing extensions from a repository isn't built yet, so this only
- * lists the sources actually available today -- the ones compiled into the app -- and lets you
- * pick which one is active, the same job the old Settings > Anime source picker did. The Sources
- * (repository) tab shows where installable sources will come from once that exists.
- *
- * The toolbar/search/filter/refresh chrome and the per-source "Manage" info screen match the
- * original Mihon-style design visually, even though refresh has nothing to fetch and the info
- * screen has nothing to uninstall/update -- there's no fake destructive/network action behind
- * them, just the real "select this source" action and a read-only detail view.
+ * Sources tab: the "Extensions" page browses `hibiki-sources`' marketplace index over the
+ * network and installs extensions via [AnimeSourceRegistry.installScriptExtension] - no
+ * APK/PackageManager step involved. The "Sources" page only presents the repository itself.
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -96,15 +114,82 @@ fun SourceExtensionsScreen(
     var searchOpen by rememberSaveable { mutableStateOf(false) }
     var languageFilterOpen by remember { mutableStateOf(false) }
     var selectedLanguages by remember { mutableStateOf(emptySet<String>()) }
-    var infoScreenSourceId by rememberSaveable { mutableStateOf<String?>(null) }
+    var addRepositoryDialogOpen by remember { mutableStateOf(false) }
+    var repositoryRefreshSignal by remember { mutableStateOf(0) }
+    val marketplaceHttpClient = remember { AndroidHttpClientFactory.create() }
+    DisposableEffect(marketplaceHttpClient) { onDispose { marketplaceHttpClient.close() } }
+    val marketplaceClient = remember(marketplaceHttpClient) { ExtensionMarketplaceClient(marketplaceHttpClient) }
+    var repoStates by remember { mutableStateOf<Map<String, RepoFetchResult>>(emptyMap()) }
+    var installingExtensionIds by remember { mutableStateOf(emptySet<String>()) }
+    var extensionInstallErrors by remember { mutableStateOf(emptyMap<String, String>()) }
 
     val preferences = LocalAppPreferences.current
+    val sourceRepositoryUrls = LocalAppPreferencesState.current.sourceRepositoryUrls
     val selectedSource = LocalAppPreferencesState.current.animeSource
     val haptic = LocalHapticFeedback.current
 
     val pagerState = rememberPagerState(initialPage = 0) { 2 }
     val tabScope = rememberCoroutineScope()
-    val extensionsTabSelected = pagerState.currentPage == 0
+
+    val mergedExtensions = remember(sourceRepositoryUrls, repoStates) {
+        sourceRepositoryUrls
+            .mapNotNull { url -> (repoStates[url] as? RepoFetchResult.Loaded)?.extensions }
+            .flatten()
+            .distinctBy(MarketplaceExtension::id)
+    }
+    val sourceExtensions = mergedExtensions.filter { it.type == "source" }
+    val extensionLanguages = mergedExtensions.map(MarketplaceExtension::lang).distinct().sorted()
+
+    // Extensions tab still consumes the flat Loading/Error/Loaded shape it always has - derived
+    // here from the per-repository results so SourceRepositoryList/MarketplaceExtensionRow don't
+    // need to know repositories are plural.
+    val repositoryLoadState: RepositoryLoadState = when {
+        sourceRepositoryUrls.any { repoStates[it] is RepoFetchResult.Loaded } ->
+            RepositoryLoadState.Loaded(sourceExtensions)
+        sourceRepositoryUrls.isNotEmpty() && sourceRepositoryUrls.all { repoStates[it] is RepoFetchResult.Error } ->
+            RepositoryLoadState.Error(
+                sourceRepositoryUrls.mapNotNull { (repoStates[it] as? RepoFetchResult.Error)?.message }
+                    .distinct()
+                    .joinToString("; "),
+            )
+        else -> RepositoryLoadState.Loading
+    }
+
+    suspend fun loadRepositories(urls: List<String>) {
+        if (urls.isEmpty()) {
+            repoStates = emptyMap()
+            return
+        }
+        repoStates = urls.associateWith { RepoFetchResult.Loading }
+        val results = coroutineScope {
+            urls.map { url ->
+                async {
+                    url to try {
+                        RepoFetchResult.Loaded(ExtensionMarketplaceClient(marketplaceHttpClient, url).fetchIndex().extensions)
+                    } catch (error: ExtensionMarketplaceException) {
+                        RepoFetchResult.Error(error.message ?: error.toString())
+                    }
+                }
+            }.awaitAll()
+        }
+        repoStates = results.toMap()
+    }
+
+    LaunchedEffect(repositoryRefreshSignal, sourceRepositoryUrls) { loadRepositories(sourceRepositoryUrls) }
+
+    // This screen's composable stays alive across bottom-nav tab switches (the NavHost restores
+    // rather than recreates it, so its `remember`ed state survives) - without this, the
+    // marketplace index fetched once on first visit would keep showing whatever versions were
+    // current back then for the rest of the process' life, no matter how many times the user
+    // navigates away and back into Sources looking for an update.
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) repositoryRefreshSignal++
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
 
     LaunchedEffect(selectedTab) {
         if (pagerState.currentPage != selectedTab) {
@@ -120,28 +205,13 @@ fun SourceExtensionsScreen(
         query = ""
         searchOpen = false
     }
-
-    val infoSourceId = infoScreenSourceId
-    if (infoSourceId != null) {
-        val source = AnimeSourceRegistry.sources.firstOrNull { it.id.value == infoSourceId }
-        if (source != null) {
-            SourceInfoScreen(
-                source = source,
-                isSelected = source.id == selectedSource,
-                onBack = { infoScreenSourceId = null },
-                onSelect = {
-                    preferences.setAnimeSource(source.id)
-                    haptic.performHapticFeedback(HapticFeedbackType.SegmentTick)
-                },
-            )
-        }
-        return
-    }
+    val thirdPartyRepositoriesDisabledMessage = stringResource(R.string.source_extensions_repositories_add_disabled)
 
     Column(modifier = modifier.fillMaxSize()) {
         SourceExtensionsToolbar(
             searchOpen = searchOpen,
-            showFilter = extensionsTabSelected,
+            showFilter = pagerState.currentPage == 0,
+            filterCount = selectedLanguages.size,
             query = query,
             onQueryChange = { query = it },
             onOpenSearch = { searchOpen = true },
@@ -150,7 +220,11 @@ fun SourceExtensionsScreen(
                 searchOpen = false
             },
             onFilterClick = { languageFilterOpen = true },
-            onRefresh = {},
+            showAddRepository = pagerState.currentPage == 1,
+            onAddRepository = { addRepositoryDialogOpen = true },
+            onRefresh = {
+                repositoryRefreshSignal++
+            },
         )
         PrimaryTabRow(
             selectedTabIndex = pagerState.currentPage,
@@ -184,30 +258,80 @@ fun SourceExtensionsScreen(
             modifier = Modifier.weight(1f),
         ) { page ->
             if (page == 0) {
-                val visibleSources = AnimeSourceRegistry.sources.filter { source ->
-                    val matchesQuery = query.isBlank() || source.name.contains(query, ignoreCase = true)
-                    val matchesLanguage = selectedLanguages.isEmpty() || source.language.tag in selectedLanguages
-                    matchesQuery && matchesLanguage
-                }
-                BuiltInSourcesList(
-                    sources = visibleSources,
-                    selectedSource = selectedSource,
+                SourceRepositoryList(
                     bottomContentPadding = bottomContentPadding,
-                    onSourceSelected = { source ->
-                        preferences.setAnimeSource(source.id)
+                    query = query,
+                    state = repositoryLoadState,
+                    selectedLanguages = selectedLanguages,
+                    selectedSource = selectedSource,
+                    installingIds = installingExtensionIds,
+                    installErrors = extensionInstallErrors,
+                    onRetry = { tabScope.launch { loadRepositories(sourceRepositoryUrls) } },
+                    onInstall = { extension ->
+                        installingExtensionIds = installingExtensionIds + extension.id
+                        extensionInstallErrors = extensionInstallErrors - extension.id
+                        // Installing doesn't select a source on its own -- if this is the first
+                        // source the user has ever installed, select it automatically so Home and
+                        // Catalog (both already listening for AppPreferences.animeSourceChanges)
+                        // load right away instead of sitting on their earlier no-source error.
+                        val hadNoSources = AnimeSourceRegistry.sources.isEmpty()
+                        tabScope.launch {
+                            try {
+                                extension.resolverDependencies.forEach { resolverId ->
+                                    val resolver = mergedExtensions.firstOrNull {
+                                        it.id == resolverId && it.type == "player-resolver"
+                                    } ?: error("Required resolver '$resolverId' is not present in this repository")
+                                    AnimeSourceRegistry.installPlayerResolverExtension(
+                                        marketplaceClient.fetchPlayerResolverManifest(resolver),
+                                    )
+                                }
+                                AnimeSourceRegistry.installScriptExtension(marketplaceClient.fetchManifest(extension))
+                                if (hadNoSources) {
+                                    preferences.setAnimeSource(SourceId(extension.id))
+                                }
+                            } catch (error: Exception) {
+                                extensionInstallErrors = extensionInstallErrors +
+                                    (extension.id to (error.message ?: error.toString()))
+                            } finally {
+                                installingExtensionIds = installingExtensionIds - extension.id
+                            }
+                        }
+                    },
+                    onSelect = { sourceId ->
+                        preferences.setAnimeSource(SourceId(sourceId))
                         haptic.performHapticFeedback(HapticFeedbackType.SegmentTick)
                     },
-                    onManageClick = { source -> infoScreenSourceId = source.id.value },
+                    onUninstall = { sourceId -> AnimeSourceRegistry.uninstallScriptExtension(SourceId(sourceId)) },
                 )
             } else {
-                SourceRepositoryPlaceholder(bottomContentPadding = bottomContentPadding)
+                RepositoriesList(
+                    urls = sourceRepositoryUrls,
+                    repoStates = repoStates,
+                    bottomContentPadding = bottomContentPadding,
+                    onRemove = { url -> preferences.removeSourceRepository(url) },
+                )
             }
         }
     }
 
+    if (addRepositoryDialogOpen) {
+        AddRepositoryDialog(
+            onAdd = { url ->
+                preferences.addSourceRepository(url)
+                addRepositoryDialogOpen = false
+            },
+            onDismiss = { addRepositoryDialogOpen = false },
+            // Third-party repositories aren't supported yet (no sandboxing/trust story for
+            // arbitrary scripted-extension payloads from an untrusted feed) - the dialog stays
+            // reachable so the "+" button isn't dead, but every attempt is rejected up front
+            // instead of actually validating/adding anything.
+            validate = { thirdPartyRepositoriesDisabledMessage },
+        )
+    }
+
     if (languageFilterOpen) {
         SourceLanguageFilterDialog(
-            languages = AnimeSourceRegistry.sources.map { it.language.tag }.distinct(),
+            languages = extensionLanguages,
             selectedLanguages = selectedLanguages,
             onLanguageToggle = { language ->
                 selectedLanguages = if (language in selectedLanguages) {
@@ -225,11 +349,14 @@ fun SourceExtensionsScreen(
 private fun SourceExtensionsToolbar(
     searchOpen: Boolean,
     showFilter: Boolean,
+    filterCount: Int,
     query: String,
     onQueryChange: (String) -> Unit,
     onOpenSearch: () -> Unit,
     onCloseSearch: () -> Unit,
     onFilterClick: () -> Unit,
+    showAddRepository: Boolean,
+    onAddRepository: () -> Unit,
     onRefresh: () -> Unit,
 ) {
     Row(
@@ -247,15 +374,13 @@ private fun SourceExtensionsToolbar(
                     tint = MaterialTheme.colorScheme.onBackground,
                 )
             }
-            BasicTextField(
-                value = query,
-                onValueChange = onQueryChange,
-                modifier = Modifier.weight(1f).padding(horizontal = 8.dp),
-                singleLine = true,
-                textStyle = MaterialTheme.typography.titleMedium.copy(
-                    color = MaterialTheme.colorScheme.onBackground,
-                ),
-                cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+            AppSearchTopBar(
+                query = query,
+                onQueryChange = onQueryChange,
+                onClear = { onQueryChange("") },
+                showFilter = false,
+                placeholderResId = R.string.onboarding_source_search,
+                modifier = Modifier.weight(1f),
             )
         } else {
             Text(
@@ -275,9 +400,42 @@ private fun SourceExtensionsToolbar(
         }
         if (showFilter) {
             IconButton(onClick = onFilterClick) {
+                Box(
+                    modifier = Modifier.size(28.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.FilterList,
+                        contentDescription = stringResource(R.string.source_extensions_filter_languages),
+                        tint = MaterialTheme.colorScheme.onBackground,
+                    )
+                    if (filterCount > 0) {
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .height(17.dp)
+                                .widthIn(min = 17.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.primary)
+                                .padding(horizontal = 3.dp),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Text(
+                                text = if (filterCount > 9) "9+" else filterCount.toString(),
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onPrimary,
+                            )
+                        }
+                    }
+                }
+            }
+        }
+        if (showAddRepository) {
+            IconButton(onClick = onAddRepository) {
                 Icon(
-                    imageVector = Icons.Outlined.FilterList,
-                    contentDescription = stringResource(R.string.source_extensions_filter_languages),
+                    imageVector = Icons.Outlined.Add,
+                    contentDescription = stringResource(R.string.source_extensions_repositories_add),
                     tint = MaterialTheme.colorScheme.onBackground,
                 )
             }
@@ -289,208 +447,6 @@ private fun SourceExtensionsToolbar(
                 tint = MaterialTheme.colorScheme.onBackground,
             )
         }
-    }
-}
-
-@Composable
-private fun BuiltInSourcesList(
-    sources: List<AnimeSourceDescriptor>,
-    selectedSource: SourceId,
-    bottomContentPadding: Dp,
-    onSourceSelected: (AnimeSourceDescriptor) -> Unit,
-    onManageClick: (AnimeSourceDescriptor) -> Unit,
-) {
-    if (sources.isEmpty()) {
-        Column(
-            modifier = Modifier.fillMaxSize(),
-            verticalArrangement = Arrangement.Center,
-        ) {
-            Text(
-                text = stringResource(R.string.source_extensions_empty),
-                modifier = Modifier.fillMaxWidth(),
-                textAlign = TextAlign.Center,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        return
-    }
-    LazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(
-            start = 12.dp,
-            end = 12.dp,
-            top = 8.dp,
-            bottom = bottomContentPadding + 16.dp,
-        ),
-    ) {
-        items(sources, key = { it.id.value }) { source ->
-            BuiltInSourceRow(
-                source = source,
-                selected = source.id == selectedSource,
-                onClick = { onSourceSelected(source) },
-                onManageClick = { onManageClick(source) },
-            )
-        }
-    }
-}
-
-@Composable
-private fun BuiltInSourceRow(
-    source: AnimeSourceDescriptor,
-    selected: Boolean,
-    onClick: () -> Unit,
-    onManageClick: () -> Unit,
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(horizontal = 12.dp, vertical = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        AsyncImage(
-            model = source.iconUrl,
-            placeholder = painterResource(source.iconRes),
-            error = painterResource(source.iconRes),
-            contentDescription = null,
-            modifier = Modifier.size(44.dp).clip(CircleShape),
-        )
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = source.name,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Medium,
-                color = MaterialTheme.colorScheme.onSurface,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            Text(
-                text = source.language.tag.uppercase(),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        if (selected) {
-            Icon(
-                imageVector = Icons.Outlined.Check,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(22.dp),
-            )
-        }
-        FilledTonalButton(onClick = onManageClick) {
-            Text(stringResource(R.string.source_extensions_manage))
-        }
-    }
-}
-
-@Composable
-private fun SourceInfoScreen(
-    source: AnimeSourceDescriptor,
-    isSelected: Boolean,
-    onBack: () -> Unit,
-    onSelect: () -> Unit,
-) {
-    Column(modifier = Modifier.fillMaxSize()) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            IconButton(onClick = onBack) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
-                    contentDescription = stringResource(R.string.cd_back),
-                    tint = MaterialTheme.colorScheme.onBackground,
-                )
-            }
-            Text(
-                text = stringResource(R.string.source_extensions_package_info),
-                style = MaterialTheme.typography.titleLarge,
-                color = MaterialTheme.colorScheme.onBackground,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f),
-            )
-        }
-        Column(
-            modifier = Modifier
-                .weight(1f)
-                .verticalScroll(rememberScrollState())
-                .padding(bottom = 16.dp),
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp)
-                    .padding(top = 16.dp, bottom = 8.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                AsyncImage(
-                    model = source.iconUrl,
-                    placeholder = painterResource(source.iconRes),
-                    error = painterResource(source.iconRes),
-                    contentDescription = null,
-                    modifier = Modifier.size(112.dp).clip(CircleShape),
-                )
-                Text(
-                    text = source.name,
-                    style = MaterialTheme.typography.headlineSmall,
-                    color = MaterialTheme.colorScheme.onBackground,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.padding(top = 12.dp),
-                )
-                Text(
-                    text = source.id.value,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 24.dp, vertical = 8.dp),
-                horizontalArrangement = Arrangement.Center,
-            ) {
-                SourcePackageInfoValue(
-                    value = source.language.tag.uppercase(),
-                    label = stringResource(R.string.source_extensions_language),
-                )
-            }
-            Row(
-                modifier = Modifier.padding(horizontal = 16.dp).padding(top = 8.dp),
-            ) {
-                Button(
-                    onClick = onSelect,
-                    enabled = !isSelected,
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Text(
-                        stringResource(
-                            if (isSelected) R.string.source_extensions_selected else R.string.source_extensions_select,
-                        ),
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun SourcePackageInfoValue(value: String, label: String) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(
-            text = value,
-            textAlign = TextAlign.Center,
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onBackground,
-        )
-        Text(
-            label,
-            textAlign = TextAlign.Center,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
-        )
     }
 }
 
@@ -513,15 +469,25 @@ private fun SourceLanguageFilterDialog(
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 languages.forEach { language ->
+                    val presentation = sourceLanguagePresentation(language)
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clickable { onLanguageToggle(language) }
                             .padding(vertical = 8.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Text(language.uppercase(), style = MaterialTheme.typography.titleMedium)
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = presentation.nativeName,
+                                style = MaterialTheme.typography.titleMedium,
+                            )
+                            Text(
+                                text = presentation.englishName,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
                         Switch(
                             checked = language in selectedLanguages,
                             onCheckedChange = { onLanguageToggle(language) },
@@ -538,34 +504,136 @@ private fun SourceLanguageFilterDialog(
     )
 }
 
+private data class SourceLanguagePresentation(
+    val nativeName: String,
+    val englishName: String,
+)
+
+private fun sourceLanguagePresentation(language: String): SourceLanguagePresentation = when (language.lowercase()) {
+    "ru", "russian" -> SourceLanguagePresentation("русский", "Russian")
+    "uk", "ukrainian" -> SourceLanguagePresentation("Українська", "Ukrainian")
+    "en", "english" -> SourceLanguagePresentation("English", "English")
+    "pt", "portuguese" -> SourceLanguagePresentation("Português", "Portuguese")
+    "tr", "turkish" -> SourceLanguagePresentation("Türkçe", "Turkish")
+    "th", "thai" -> SourceLanguagePresentation("ไทย", "Thai")
+    else -> SourceLanguagePresentation(language.uppercase(), language.uppercase())
+}
+
+private sealed interface RepositoryLoadState {
+    data object Loading : RepositoryLoadState
+    data class Error(val message: String) : RepositoryLoadState
+    data class Loaded(val extensions: List<MarketplaceExtension>) : RepositoryLoadState
+}
+
+/** One connected repository's own fetch outcome - kept separate per URL so one broken repository
+ * doesn't blank out extensions from the others in the merged [RepositoryLoadState] Extensions
+ * tab consumes. */
+private sealed interface RepoFetchResult {
+    data object Loading : RepoFetchResult
+    data class Error(val message: String) : RepoFetchResult
+    data class Loaded(val extensions: List<MarketplaceExtension>) : RepoFetchResult
+}
+
 @Composable
-private fun SourceRepositoryPlaceholder(bottomContentPadding: Dp) {
+private fun SourceRepositoryList(
+    bottomContentPadding: Dp,
+    query: String,
+    state: RepositoryLoadState,
+    selectedLanguages: Set<String>,
+    selectedSource: SourceId,
+    installingIds: Set<String>,
+    installErrors: Map<String, String>,
+    onRetry: () -> Unit,
+    onInstall: (MarketplaceExtension) -> Unit,
+    onSelect: (String) -> Unit,
+    onUninstall: (String) -> Unit,
+) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 20.dp)
-            .padding(top = 8.dp, bottom = bottomContentPadding + 16.dp),
+            .padding(top = 8.dp, bottom = bottomContentPadding),
     ) {
-        AppTonalSurface(modifier = Modifier.fillMaxWidth()) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalAlignment = Alignment.CenterVertically,
+        when (state) {
+            is RepositoryLoadState.Loading -> SourceRepositoryMessage(stringResource(R.string.source_extensions_repository_loading))
+            is RepositoryLoadState.Error -> SourceRepositoryMessage(
+                message = stringResource(R.string.source_extensions_repository_error),
+                detail = state.message,
+                onRetry = onRetry,
+            )
+            is RepositoryLoadState.Loaded -> {
+                val installedVersions = AnimeSourceRegistry.installedScriptExtensionVersions()
+                val installedResolverVersions = AnimeSourceRegistry.installedPlayerResolverVersions()
+                val visibleExtensions = state.extensions.filter { extension ->
+                    val matchesQuery = query.isBlank() ||
+                        extension.name.contains(query, ignoreCase = true) ||
+                        extension.id.contains(query, ignoreCase = true)
+                    val matchesLanguage = selectedLanguages.isEmpty() || extension.lang in selectedLanguages
+                    extension.type == "source" && matchesQuery && matchesLanguage
+                }
+                if (visibleExtensions.isEmpty()) {
+                    SourceRepositoryMessage(stringResource(R.string.source_extensions_repository_empty))
+                } else {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 16.dp),
+                    ) {
+                        items(visibleExtensions, key = MarketplaceExtension::id) { extension ->
+                            // A resolver dependency can be fixed and re-published without its
+                            // owning source's own version changing at all - without this, that fix
+                            // would never reach anyone already past the initial install (see
+                            // MarketplaceExtensionRow's onInstall, which is what actually refetches
+                            // resolverDependencies, but only runs when the user taps an update).
+                            val resolverUpdateAvailable = extension.resolverDependencies.any { resolverId ->
+                                val installed = installedResolverVersions[resolverId] ?: return@any false
+                                val available = state.extensions.firstOrNull { it.id == resolverId && it.type == "player-resolver" }
+                                available != null && isExtensionVersionNewer(available.version, installed)
+                            }
+                            MarketplaceExtensionRow(
+                                extension = extension,
+                                installedVersion = installedVersions[extension.id],
+                                resolverUpdateAvailable = resolverUpdateAvailable,
+                                installing = extension.id in installingIds,
+                                errorMessage = installErrors[extension.id],
+                                selected = installedVersions.containsKey(extension.id) &&
+                                    extension.id == selectedSource.value,
+                                onInstall = { onInstall(extension) },
+                                onSelect = { onSelect(extension.id) },
+                                onUninstall = { onUninstall(extension.id) },
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun RepositoriesList(
+    urls: List<String>,
+    repoStates: Map<String, RepoFetchResult>,
+    bottomContentPadding: Dp,
+    onRemove: (String) -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(top = 8.dp, bottom = bottomContentPadding),
+    ) {
+        if (urls.isEmpty()) {
+            SourceRepositoryMessage(stringResource(R.string.source_extensions_repositories_empty))
+        } else {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
             ) {
-                Icon(imageVector = Icons.AutoMirrored.Outlined.Label, contentDescription = null)
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = SOURCE_REPOSITORY_DISPLAY_NAME,
-                        style = MaterialTheme.typography.titleMedium,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                    Text(
-                        text = stringResource(R.string.source_extensions_repository_coming_soon),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                items(urls, key = { it }) { url ->
+                    RepositoryCard(
+                        url = url,
+                        state = repoStates[url],
+                        removable = url != ExtensionMarketplaceClient.DEFAULT_INDEX_URL,
+                        onRemove = { onRemove(url) },
+                        modifier = Modifier.padding(vertical = 4.dp),
                     )
                 }
             }
@@ -573,4 +641,296 @@ private fun SourceRepositoryPlaceholder(bottomContentPadding: Dp) {
     }
 }
 
-private const val SOURCE_REPOSITORY_DISPLAY_NAME = "akkirrai1337/hibiki-sources"
+@Composable
+private fun RepositoryCard(
+    url: String,
+    state: RepoFetchResult?,
+    removable: Boolean,
+    onRemove: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val context = LocalContext.current
+    val clipboardManager = LocalClipboardManager.current
+    ElevatedCard(modifier = modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(imageVector = Icons.AutoMirrored.Outlined.Label, contentDescription = null)
+            Column(modifier = Modifier.padding(start = 16.dp).weight(1f)) {
+                Text(
+                    text = repositoryDisplayName(url),
+                    style = MaterialTheme.typography.titleMedium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(
+                    text = when (state) {
+                        is RepoFetchResult.Loaded ->
+                            stringResource(R.string.source_extensions_repositories_extension_count, state.extensions.size)
+                        is RepoFetchResult.Error -> state.message
+                        RepoFetchResult.Loading, null -> stringResource(R.string.source_extensions_repository_loading)
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (state is RepoFetchResult.Error) {
+                        MaterialTheme.colorScheme.error
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    },
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.End,
+        ) {
+            IconButton(onClick = { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) }) {
+                Icon(imageVector = Icons.Outlined.Public, contentDescription = null)
+            }
+            IconButton(onClick = { clipboardManager.setText(AnnotatedString(url)) }) {
+                Icon(imageVector = Icons.Outlined.ContentCopy, contentDescription = null)
+            }
+            if (removable) {
+                IconButton(onClick = onRemove) {
+                    Icon(
+                        imageVector = Icons.Outlined.Delete,
+                        contentDescription = stringResource(R.string.source_extensions_repositories_remove),
+                    )
+                }
+            }
+        }
+    }
+}
+
+/** Best-effort "owner/repo" label from a repository index URL - e.g. the built-in
+ * raw.githubusercontent.com/akkirrai1337/hibiki-sources/main/repository/index.json reads as
+ * "akkirrai1337/hibiki-sources". Falls back to the raw URL for anything hosted elsewhere. */
+private fun repositoryDisplayName(url: String): String {
+    val match = Regex("""^https?://raw\.githubusercontent\.com/([^/]+)/([^/]+)/""").find(url)
+    return match?.let { "${it.groupValues[1]}/${it.groupValues[2]}" } ?: url
+}
+
+@Composable
+private fun AddRepositoryDialog(
+    onAdd: (String) -> Unit,
+    onDismiss: () -> Unit,
+    validate: suspend (String) -> String?,
+) {
+    var url by remember { mutableStateOf("") }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
+    var validating by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.source_extensions_repositories_add)) },
+        text = {
+            Column {
+                OutlinedTextField(
+                    value = url,
+                    onValueChange = { url = it; errorMessage = null },
+                    placeholder = { Text(stringResource(R.string.source_extensions_repositories_add_hint)) },
+                    singleLine = true,
+                    enabled = !validating,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                if (errorMessage != null) {
+                    Text(
+                        text = errorMessage.orEmpty(),
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.padding(top = 4.dp),
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                enabled = !validating && url.isNotBlank(),
+                onClick = {
+                    val trimmed = url.trim()
+                    validating = true
+                    scope.launch {
+                        val error = validate(trimmed)
+                        validating = false
+                        if (error == null) onAdd(trimmed) else errorMessage = error
+                    }
+                },
+            ) {
+                Text(stringResource(R.string.action_save))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss, enabled = !validating) {
+                Text(stringResource(R.string.action_cancel))
+            }
+        },
+    )
+}
+
+@Composable
+private fun SourceRepositoryMessage(
+    message: String,
+    detail: String? = null,
+    onRetry: (() -> Unit)? = null,
+) {
+    Column(
+        modifier = Modifier.fillMaxSize().padding(horizontal = 24.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text(
+            text = message,
+            textAlign = TextAlign.Center,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        if (detail != null) {
+            Text(
+                text = detail,
+                textAlign = TextAlign.Center,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 4.dp),
+            )
+        }
+        if (onRetry != null) {
+            TextButton(onClick = onRetry, modifier = Modifier.padding(top = 8.dp)) {
+                Text(stringResource(R.string.source_extensions_repository_retry))
+            }
+        }
+    }
+}
+
+@Composable
+private fun MarketplaceExtensionRow(
+    extension: MarketplaceExtension,
+    installedVersion: String?,
+    resolverUpdateAvailable: Boolean,
+    installing: Boolean,
+    errorMessage: String?,
+    selected: Boolean,
+    onInstall: () -> Unit,
+    onSelect: () -> Unit,
+    onUninstall: () -> Unit,
+) {
+    // A resolver fix can ship without the source's own manifest version changing at all, so the
+    // source-version comparison alone would never surface it - reinstalling the source is also what
+    // refetches its resolverDependencies (see onInstall below), so an available resolver update is
+    // just as much a reason to show "update" here as the source's own version being behind.
+    val upToDate = installedVersion != null &&
+        !isExtensionVersionNewer(extension.version, installedVersion) &&
+        !resolverUpdateAvailable
+    val versionLabel = when {
+        // The source's own version can be identical on both sides when only its resolver moved -
+        // "1.0.9 → 1.0.9" would just confuse the user, so name what's actually changing instead.
+        installedVersion != null && !upToDate && extension.version == installedVersion ->
+            "$installedVersion (${stringResource(R.string.source_extensions_resolver_update)})"
+        installedVersion != null && !upToDate -> "$installedVersion → ${extension.version}"
+        installedVersion != null -> installedVersion
+        else -> extension.version
+    }
+    Column(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(
+                    enabled = installedVersion != null && !installing,
+                    onClick = onSelect,
+                ),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            AsyncImage(
+                model = extension.iconUrl,
+                placeholder = painterResource(R.drawable.animite_media_type_anime),
+                error = painterResource(R.drawable.animite_media_type_anime),
+                contentDescription = null,
+                modifier = Modifier.size(52.dp).clip(CircleShape),
+            )
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = extension.name,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(
+                    text = "${extension.lang.uppercase()} · $versionLabel",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (installedVersion != null && !upToDate) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    },
+                )
+            }
+            if (selected) {
+                Icon(
+                    imageVector = Icons.Outlined.Check,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(22.dp),
+                )
+            }
+            if (installedVersion == null) {
+                Button(onClick = onInstall, enabled = !installing) {
+                    Text(stringResource(R.string.source_extensions_install))
+                }
+            } else {
+                ExtensionManageButton(
+                    enabled = !installing,
+                    updateAvailable = !upToDate,
+                    onUpdate = onInstall,
+                    onUninstall = onUninstall,
+                )
+            }
+        }
+        if (errorMessage != null) {
+            Text(
+                text = errorMessage,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error,
+                modifier = Modifier.padding(start = 64.dp, top = 4.dp),
+            )
+        }
+    }
+}
+
+@Composable
+private fun ExtensionManageButton(
+    enabled: Boolean,
+    updateAvailable: Boolean,
+    onUpdate: () -> Unit,
+    onUninstall: () -> Unit,
+) {
+    var menuExpanded by remember { mutableStateOf(false) }
+    Box {
+        Button(onClick = { menuExpanded = true }, enabled = enabled) {
+            Text(stringResource(R.string.source_extensions_manage))
+        }
+        DropdownMenu(
+            expanded = menuExpanded,
+            onDismissRequest = { menuExpanded = false },
+        ) {
+            if (updateAvailable) {
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.source_extensions_update)) },
+                    onClick = {
+                        menuExpanded = false
+                        onUpdate()
+                    },
+                )
+            }
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.source_extensions_uninstall)) },
+                onClick = {
+                    menuExpanded = false
+                    onUninstall()
+                },
+            )
+        }
+    }
+}

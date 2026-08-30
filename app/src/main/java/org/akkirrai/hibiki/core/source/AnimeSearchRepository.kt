@@ -30,19 +30,22 @@ class AnimeSearchRepository(
     private val client: HttpClient = AndroidHttpClientFactory.create(),
 ) {
     private val searchCache = ConcurrentHashMap<String, CachedSearchResults>()
-    private val detailsCache = ConcurrentHashMap<String, CachedAnime>()
     private val appContext = context?.applicationContext
     private val appPreferences = appContext?.let(::AppPreferences)
     private val sourceManager = appContext?.let { AnimeSourceRuntimeManager(it, client) }
     private val titleMatcher = TitleMatcher()
-    private val detailsMutexes = ConcurrentHashMap<String, Mutex>()
     private val detailsRequestSlots = Semaphore(MAX_CONCURRENT_DETAILS_REQUESTS)
 
     suspend fun search(query: String): List<Anime> {
         return search(query = query, limit = SEARCH_PAGE_SIZE, offset = 0)
     }
 
-    suspend fun search(request: AnimeSearchRequest): List<Anime> {
+    /**
+     * [allowEmptyQuery] distinguishes a deliberate "browse everything" request (Catalog, with no
+     * query and no filters) from the search bar's idle state (nothing typed, nothing filtered -
+     * home/search screens rely on getting `emptyList()` back there rather than a full listing).
+     */
+    suspend fun search(request: AnimeSearchRequest, allowEmptyQuery: Boolean = false): List<Anime> {
         val normalizedQuery = request.query.trim()
         val hasFilters = request.typeAliases.isNotEmpty() ||
             request.statusAliases.isNotEmpty() ||
@@ -51,7 +54,7 @@ class AnimeSearchRepository(
             request.yearFrom != null ||
             request.yearTo != null ||
             request.sort != AnimeSearchSort.RELEVANCE
-        if (normalizedQuery.isBlank() && !hasFilters) return emptyList()
+        if (normalizedQuery.isBlank() && !hasFilters && !allowEmptyQuery) return emptyList()
 
         val normalizedRequest = request.copy(query = normalizedQuery)
         val cacheKey = searchCacheKey(normalizedRequest)
@@ -134,7 +137,7 @@ class AnimeSearchRepository(
     }
 
     fun close() {
-        clearCaches()
+        searchCache.clear()
         client.close()
     }
 
@@ -424,5 +427,13 @@ class AnimeSearchRepository(
         const val MAX_CONCURRENT_DETAILS_REQUESTS = 3
         const val DETAILS_CACHE_VERSION = 1
         const val LEGACY_ID_MATCH_CONFIDENCE = 0.72
+
+        /**
+         * Detail screens use short-lived repository instances, but a title's fully resolved
+         * metadata is valid across those instances. Keeping it here prevents a second network
+         * request when the user returns to a recently opened title.
+         */
+        val detailsCache = ConcurrentHashMap<String, CachedAnime>()
+        val detailsMutexes = ConcurrentHashMap<String, Mutex>()
     }
 }

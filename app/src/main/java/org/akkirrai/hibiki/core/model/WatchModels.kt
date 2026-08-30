@@ -23,6 +23,10 @@ data class PlaybackStream(
     val qualityLabel: String? = null,
     val availableQualityLabels: List<String> = emptyList(),
     val headers: Map<String, String> = emptyMap(),
+    val audioStreamUrl: String? = null,
+    val audioHeaders: Map<String, String> = emptyMap(),
+    /** A site-controlled browser playback page requested by a resolver extension. */
+    val browserScript: String? = null,
     val segments: List<PlaybackSegment> = emptyList(),
     val videoId: Long? = null,
 )
@@ -53,6 +57,7 @@ enum class PlaybackStreamType {
     HLS,
     MP4,
     DASH,
+    BROWSER,
 }
 
 data class TitleWatchState(
