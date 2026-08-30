@@ -667,7 +667,10 @@ private fun RepositoryCard(
                 Text(
                     text = when (state) {
                         is RepoFetchResult.Loaded ->
-                            stringResource(R.string.source_extensions_repositories_extension_count, state.extensions.size)
+                            stringResource(
+                                R.string.source_extensions_repositories_extension_count,
+                                state.extensions.count { it.type == "source" },
+                            )
                         is RepoFetchResult.Error -> state.message
                         RepoFetchResult.Loading, null -> stringResource(R.string.source_extensions_repository_loading)
                     },
