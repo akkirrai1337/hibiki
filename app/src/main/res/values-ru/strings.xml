@@ -394,6 +394,7 @@
     <string name="source_extensions_manage">Управление</string>
     <string name="source_extensions_update">Обновить</string>
     <string name="source_extensions_resolver_update">доступно обновление плеера</string>
+    <string name="source_extensions_nsfw_badge">18+</string>
     <string name="source_extensions_uninstall">Удалить</string>
     <string name="source_extensions_empty">Ничего не найдено по запросу</string>
     <string name="source_extensions_install">Установить</string>

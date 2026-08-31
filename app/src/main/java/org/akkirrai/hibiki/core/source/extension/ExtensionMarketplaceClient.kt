@@ -23,6 +23,7 @@ data class MarketplaceExtension(
     val lang: String,
     val capabilities: List<String> = emptyList(),
     val resolverDependencies: List<String> = emptyList(),
+    val isNsfw: Boolean = false,
     val type: String = "source",
     val manifestUrl: String,
 )

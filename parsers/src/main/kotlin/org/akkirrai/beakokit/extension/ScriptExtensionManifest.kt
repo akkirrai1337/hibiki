@@ -27,6 +27,8 @@ data class ScriptExtensionManifest(
     /** Inline JS source implementing the `Provider` object. */
     val payload: String = "",
     val capabilities: Set<SourceCapability> = emptySet(),
+    /** Host-declared, not content the script can claim for itself - drives the 18+ badge in the UI. */
+    val isNsfw: Boolean = false,
     /** Hosts this extension's playback links are allowed to return over cleartext HTTP. */
     val cleartextPlaybackHosts: Set<String> = emptySet(),
     /**

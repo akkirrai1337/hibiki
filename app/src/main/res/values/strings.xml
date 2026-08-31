@@ -400,6 +400,7 @@
     <string name="source_extensions_manage">Manage</string>
     <string name="source_extensions_update">Update</string>
     <string name="source_extensions_resolver_update">player update available</string>
+    <string name="source_extensions_nsfw_badge">18+</string>
     <string name="source_extensions_uninstall">Uninstall</string>
     <string name="source_extensions_empty">No sources match your search</string>
     <string name="source_extensions_install">Install</string>
