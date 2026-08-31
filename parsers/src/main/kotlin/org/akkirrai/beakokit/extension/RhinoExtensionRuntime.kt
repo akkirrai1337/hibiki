@@ -146,6 +146,7 @@ class RhinoExtensionRuntime(
         ScriptableObject.putProperty(scope, "Base64", Context.javaToJS(Base64Binding(), scope))
         ScriptableObject.putProperty(scope, "Url", Context.javaToJS(UrlBinding(), scope))
         ScriptableObject.putProperty(scope, "AnimeTitle", AnimeTitleFunction(scope))
+        ScriptableObject.putProperty(scope, "collectPaginated", PaginationCollectFunction(scope))
         ScriptableObject.putProperty(scope, "console", Context.javaToJS(ConsoleBinding(sourceContext), scope))
         val fetchFunction = FetchFunction(sourceContext, scope)
         ScriptableObject.putProperty(scope, "fetch", fetchFunction)
@@ -309,6 +310,52 @@ class RhinoExtensionRuntime(
                 }
             }
             return result
+        }
+    }
+
+    /**
+     * Walks a paginated catalog listing until `wanted` results are collected, a page comes back
+     * empty, a page is shorter than `pageSize` (the last page), or `fetchPage` itself throws - many
+     * WP-theme/KuAnime-engine hosts error instead of returning an empty listing past their real
+     * last page, so that's treated the same as "nothing more to collect", not a fatal error.
+     * Dedupes by each result's `id` field. Replaces the byte-identical `collectResults(fetchPage,
+     * wanted)` previously hand-copied into anichi.js and donghuastream.js.
+     */
+    private class PaginationCollectFunction(private val scope: Scriptable) : org.mozilla.javascript.BaseFunction() {
+        override fun call(
+            cx: Context,
+            scope: Scriptable,
+            thisObj: Scriptable,
+            args: Array<out Any?>,
+        ): Any {
+            val fetchPage = args.getOrNull(0) as? Function
+                ?: throw IllegalArgumentException("collectPaginated requires a fetchPage(page) function as its first argument")
+            val wanted = Context.toNumber(args.getOrNull(1)).toInt()
+            val pageSize = Context.toNumber(args.getOrNull(2)).toInt()
+
+            val results = mutableListOf<Any?>()
+            val seen = HashSet<String>()
+            var page = 1
+            while (results.size < wanted && page <= 50) {
+                val items = try {
+                    fetchPage.call(cx, this.scope, thisObj, arrayOf(page)) as? Scriptable
+                } catch (error: Exception) {
+                    null
+                } ?: break
+
+                val length = Context.toNumber(ScriptableObject.getProperty(items, "length")).toInt()
+                if (length == 0) break
+                for (i in 0 until length) {
+                    val item = ScriptableObject.getProperty(items, i) as? Scriptable ?: continue
+                    val id = ScriptableObject.getProperty(item, "id")
+                    if (!seen.add(Context.toString(id))) continue
+                    results.add(item)
+                }
+                if (length < pageSize) break
+                page += 1
+            }
+
+            return cx.newArray(this.scope, results.toTypedArray())
         }
     }
 

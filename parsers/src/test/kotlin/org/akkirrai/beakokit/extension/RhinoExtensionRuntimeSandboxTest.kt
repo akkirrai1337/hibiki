@@ -59,4 +59,58 @@ class RhinoExtensionRuntimeSandboxTest {
         )
         assertEquals("\"hello\"", runtime.callRaw("search", arrayOf()))
     }
+
+    @Test
+    fun `collectPaginated stops on a short page and dedupes by id`() {
+        val runtime = RhinoExtensionRuntime(
+            extensionId = "sandbox-test",
+            payload = """
+                var pages = {
+                    1: [{ id: "a" }, { id: "b" }],
+                    2: [{ id: "b" }, { id: "c" }],
+                };
+                function fetchPage(page) { return pages[page] || []; }
+                var Provider = {
+                    search: function() { return collectPaginated(fetchPage, 10, 2); }
+                };
+            """.trimIndent(),
+            sourceContext = context(),
+        )
+        assertEquals("""[{"id":"a"},{"id":"b"},{"id":"c"}]""", runtime.callRaw("search", arrayOf()))
+    }
+
+    @Test
+    fun `collectPaginated stops when a page throws`() {
+        val runtime = RhinoExtensionRuntime(
+            extensionId = "sandbox-test",
+            payload = """
+                function fetchPage(page) {
+                    if (page === 1) return [{ id: "a" }, { id: "b" }];
+                    throw new Error("HTTP 404");
+                }
+                var Provider = {
+                    search: function() { return collectPaginated(fetchPage, 10, 2); }
+                };
+            """.trimIndent(),
+            sourceContext = context(),
+        )
+        assertEquals("""[{"id":"a"},{"id":"b"}]""", runtime.callRaw("search", arrayOf()))
+    }
+
+    @Test
+    fun `collectPaginated stops on an empty page and respects the wanted cap`() {
+        val runtime = RhinoExtensionRuntime(
+            extensionId = "sandbox-test",
+            payload = """
+                function fetchPage(page) { return [{ id: "item" + page }, { id: "item" + page + "b" }]; }
+                var Provider = {
+                    search: function() { return collectPaginated(fetchPage, 3, 2); },
+                    latest: function() { return collectPaginated(function () { return []; }, 10, 2); },
+                };
+            """.trimIndent(),
+            sourceContext = context(),
+        )
+        assertEquals("""[{"id":"item1"},{"id":"item1b"},{"id":"item2"},{"id":"item2b"}]""", runtime.callRaw("search", arrayOf()))
+        assertEquals("[]", runtime.callRaw("latest", arrayOf()))
+    }
 }
