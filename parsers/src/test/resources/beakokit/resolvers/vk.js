@@ -24,23 +24,6 @@ function mergeHeaders(base, extra) {
     return result;
 }
 
-function normalizeUrl(url) {
-    if (url.indexOf("//") === 0) return "https:" + url;
-    if (url.indexOf("://") >= 0) return url;
-    return "https://" + url;
-}
-
-function hostOf(url) {
-    var match = /^https?:\/\/([^/?#]+)/.exec(url);
-    return match !== null ? match[1] : null;
-}
-
-function pathOf(url) {
-    var withoutScheme = url.replace(/^https?:\/\/[^/?#]+/, "");
-    var path = withoutScheme.split("?")[0].split("#")[0];
-    return path.length > 0 ? path : "/";
-}
-
 function decodeQueryValue(value) {
     try { return decodeURIComponent(value.replace(/\+/g, " ")); } catch (e) { return value; }
 }
@@ -71,9 +54,9 @@ function buildVideoExtUrl(rawVideoId) {
 }
 
 function resolveEmbedUrl(rawUrl) {
-    var url = normalizeUrl(rawUrl);
-    var host = (hostOf(url) || "").toLowerCase();
-    var path = pathOf(url);
+    var url = Url.normalize(rawUrl);
+    var host = (Url.host(url) || "").toLowerCase();
+    var path = Url.path(url);
 
     if (endsWith(host, "yummyani.me") && path.toLowerCase().indexOf("iframevk.html") >= 0) {
         var idParam = (queryParam(url, "id") || "").trim().replace(/^video/, "");

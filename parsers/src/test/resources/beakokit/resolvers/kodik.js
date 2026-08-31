@@ -6,58 +6,11 @@
 
 function S(value) { return value === null || value === undefined ? null : String(value); }
 
-var BASE64_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 var REQUIRED_URL_PARAM_KEYS = ["d", "d_sign", "pd", "pd_sign", "ref", "ref_sign"];
-
-function base64Decode(input) {
-    var cleaned = input.replace(/[^A-Za-z0-9+/]/g, "");
-    var output = "";
-    for (var i = 0; i < cleaned.length; i += 4) {
-        var c0 = BASE64_ALPHABET.indexOf(cleaned.charAt(i));
-        var c1 = BASE64_ALPHABET.indexOf(cleaned.charAt(i + 1));
-        var c2 = i + 2 < cleaned.length ? BASE64_ALPHABET.indexOf(cleaned.charAt(i + 2)) : -1;
-        var c3 = i + 3 < cleaned.length ? BASE64_ALPHABET.indexOf(cleaned.charAt(i + 3)) : -1;
-        output += String.fromCharCode(((c0 << 2) | (c1 >> 4)) & 0xFF);
-        if (c2 >= 0) output += String.fromCharCode((((c1 & 0xF) << 4) | (c2 >> 2)) & 0xFF);
-        if (c3 >= 0) output += String.fromCharCode((((c2 & 0x3) << 6) | c3) & 0xFF);
-    }
-    return output;
-}
-
-function shiftLetter(ch) {
-    var code = ch.charCodeAt(0);
-    var isUpper = code >= 65 && code <= 90;
-    var isLower = code >= 97 && code <= 122;
-    if (!isUpper && !isLower) return ch;
-    var base = isUpper ? 65 : 97;
-    return String.fromCharCode(((code - base + 18) % 26) + base);
-}
-
-// Kodik obfuscates "src" fields by shifting every letter 18 places within its case before
-// base64-encoding - this undoes that (shift back, then decode), same as the compiled-in extractor.
-function decodeShiftedBase64(raw) {
-    if (raw.indexOf("//") >= 0) return raw;
-    var shifted = "";
-    for (var i = 0; i < raw.length; i++) shifted += shiftLetter(raw.charAt(i));
-    var padded = shifted;
-    while (padded.length % 4 !== 0) padded += "=";
-    return base64Decode(padded);
-}
 
 function decodeUrlParamIfNeeded(value) {
     if (value.indexOf("%") < 0 && value.indexOf("+") < 0) return value;
     try { return decodeURIComponent(value.replace(/\+/g, " ")); } catch (e) { return value; }
-}
-
-function originOf(url) {
-    var match = /^(https?:\/\/[^/]+)/.exec(url);
-    return match !== null ? match[1] : url;
-}
-
-function normalizeUrl(url) {
-    if (url.indexOf("//") === 0) return "https:" + url;
-    if (url.indexOf("://") >= 0) return url;
-    return "https://" + url;
 }
 
 function mergeHeaders(base, extra) {
@@ -115,7 +68,7 @@ function resolveEndpointUrl(html, pageUrl, pageOrigin, headers) {
     var match;
     while ((match = atobRegex.exec(script)) !== null) {
         var decoded;
-        try { decoded = base64Decode(match[1]); } catch (e2) { continue; }
+        try { decoded = Base64.decode(match[1]); } catch (e2) { continue; }
         if (decoded.charAt(0) === "/" && decoded.charAt(1) !== "/" && decoded.length <= 12) {
             return pageOrigin + decoded;
         }
@@ -211,8 +164,8 @@ function formEncode(params) {
 var Provider = {
     resolve: function (linkJson) {
         var link = JSON.parse(linkJson);
-        var pageUrl = normalizeUrl(link.url);
-        var pageOrigin = originOf(pageUrl);
+        var pageUrl = Url.normalize(link.url);
+        var pageOrigin = Url.origin(pageUrl);
         var pageHeaders = link.headers || {};
 
         var pageResponse = fetch(pageUrl, {
@@ -273,7 +226,7 @@ var Provider = {
             for (var idx = 0; idx < items.length; idx++) {
                 var item = items[idx];
                 if (!item.src) continue;
-                var source = decodeShiftedBase64(item.src);
+                var source = Url.decodeShifted(item.src);
                 var url = repairManifestQuality(source, numericQuality);
                 var qualityLabel = numericQuality + "p";
                 var key = qualityLabel + "|" + url;

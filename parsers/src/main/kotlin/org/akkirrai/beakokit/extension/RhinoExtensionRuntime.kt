@@ -14,6 +14,14 @@ import org.akkirrai.beakokit.api.SourceErrorKind
 import org.akkirrai.beakokit.api.SourceException
 import org.akkirrai.beakokit.api.context.SourceContext
 import org.akkirrai.beakokit.api.context.SourceLogLevel
+import org.akkirrai.beakokit.http.decodeShiftedBase64
+import org.akkirrai.beakokit.http.hostOf
+import org.akkirrai.beakokit.http.isAbsoluteUrl
+import org.akkirrai.beakokit.http.normalizeUrl
+import org.akkirrai.beakokit.http.originOf
+import org.akkirrai.beakokit.http.pathOf
+import org.akkirrai.beakokit.http.resolveUrl
+import org.akkirrai.beakokit.http.schemeOf
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
 import org.mozilla.javascript.Context
@@ -136,6 +144,7 @@ class RhinoExtensionRuntime(
     private fun installGlobals(cx: Context, scope: ScriptableObject) {
         ScriptableObject.putProperty(scope, "Jsoup", Context.javaToJS(JsoupBinding(), scope))
         ScriptableObject.putProperty(scope, "Base64", Context.javaToJS(Base64Binding(), scope))
+        ScriptableObject.putProperty(scope, "Url", Context.javaToJS(UrlBinding(), scope))
         ScriptableObject.putProperty(scope, "console", Context.javaToJS(ConsoleBinding(sourceContext), scope))
         val fetchFunction = FetchFunction(sourceContext, scope)
         ScriptableObject.putProperty(scope, "fetch", fetchFunction)
@@ -185,6 +194,24 @@ class RhinoExtensionRuntime(
             val bytes = ByteArray(value.length) { (value[it].code and 0xFF).toByte() }
             return java.util.Base64.getEncoder().encodeToString(bytes)
         }
+    }
+
+    /**
+     * URL parsing/normalization as a host global, backed by the same [org.akkirrai.beakokit.http]
+     * functions the compiled-in scrapers use - extensions were each hand-rolling their own
+     * `normalizeUrl`/`originOf` regex (yummy-anime.js, kodik.js, sibnet.js, vk.js), slightly
+     * differently, instead of reusing this already-tested logic. `decodeShifted` similarly replaces
+     * Kodik's own `shiftLetter`/`decodeShiftedBase64` pair with the existing Kotlin implementation.
+     */
+    class UrlBinding {
+        fun normalize(url: String): String = normalizeUrl(url)
+        fun resolve(base: String, reference: String): String = resolveUrl(base, reference)
+        fun origin(url: String): String = originOf(url)
+        fun scheme(url: String): String = schemeOf(url)
+        fun host(url: String): String? = hostOf(url)
+        fun path(url: String): String = pathOf(url)
+        fun isAbsolute(url: String): Boolean = isAbsoluteUrl(url)
+        fun decodeShifted(raw: String): String = decodeShiftedBase64(raw)
     }
 
     class ConsoleBinding(private val sourceContext: SourceContext) {
