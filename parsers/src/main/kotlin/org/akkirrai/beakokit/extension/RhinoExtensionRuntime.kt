@@ -22,6 +22,7 @@ import org.mozilla.javascript.NativeJSON
 import org.mozilla.javascript.NativeObject
 import org.mozilla.javascript.Scriptable
 import org.mozilla.javascript.ScriptableObject
+import org.mozilla.javascript.WrapFactory
 import java.net.URI
 
 /**
@@ -53,6 +54,7 @@ class RhinoExtensionRuntime(
         try {
             cx.optimizationLevel = -1
             cx.languageVersion = Context.VERSION_ES6
+            cx.wrapFactory = StringPassthroughWrapFactory
             val newScope = cx.initStandardObjects()
             hardenScope(newScope)
             installGlobals(cx, newScope)
@@ -81,6 +83,7 @@ class RhinoExtensionRuntime(
         val cx = Context.enter()
         try {
             cx.optimizationLevel = -1
+            cx.wrapFactory = StringPassthroughWrapFactory
             val provider = ScriptableObject.getProperty(scope, "Provider") as? Scriptable
                 ?: throw SourceException(
                     "Extension '$extensionId' does not define a Provider object",
@@ -105,6 +108,21 @@ class RhinoExtensionRuntime(
         } finally {
             Context.exit()
         }
+    }
+
+    /**
+     * Fixes the "Rhino Java-string boxing" gotcha at its root instead of leaning on every payload
+     * remembering to call an `S(x)`/`String(x)` helper: a Java method returning `java.lang.String`
+     * (every Jsoup `.text()`/`.attr()`/`.absUrl()` call) is otherwise handed to JS as a wrapped
+     * `NativeJavaObject`, not a native string primitive, so `===`, `.charAt()`, and regexes on it
+     * misbehave until coerced. Passing the raw Java String straight through here makes Rhino treat
+     * it as a native JS string automatically, the same way it already does for numbers/booleans -
+     * existing `String(x)` calls in extension payloads remain harmless no-ops on an already-native
+     * value, so this doesn't require touching any existing `.js` payload.
+     */
+    private object StringPassthroughWrapFactory : WrapFactory() {
+        override fun wrap(cx: Context?, scope: Scriptable?, obj: Any?, staticType: Class<*>?): Any? =
+            if (obj is String) obj else super.wrap(cx, scope, obj, staticType)
     }
 
     private fun hardenScope(scope: ScriptableObject) {
