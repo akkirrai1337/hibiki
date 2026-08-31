@@ -25,6 +25,10 @@ internal fun animeDetailsSharedCardModifier(
             sharedContentState = rememberSharedContentState(AnimeDetailsTransition.cardKey(animeId)),
             animatedVisibilityScope = animatedVisibilityScope,
             resizeMode = SharedTransitionScope.ResizeMode.RemeasureToBounds,
+            // The app bottom bar is a sibling of the navigation host. Rendering this card in the
+            // shared-transition overlay bypasses that sibling's z-order, making the card slide
+            // across the bottom bar while opening details.
+            renderInOverlayDuringTransition = false,
         )
     }
 } else {
@@ -43,6 +47,7 @@ internal fun animeDetailsSharedPosterModifier(
             sharedContentState = rememberSharedContentState(AnimeDetailsTransition.posterKey(animeId)),
             animatedVisibilityScope = animatedVisibilityScope,
             resizeMode = SharedTransitionScope.ResizeMode.RemeasureToBounds,
+            renderInOverlayDuringTransition = false,
         )
     }
 } else {

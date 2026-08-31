@@ -470,6 +470,7 @@ fun DetailsScreen(
                 enter = fadeIn(tween(500)),
                 exit = fadeOut(tween(500)),
                 resizeMode = SharedTransitionScope.ResizeMode.RemeasureToBounds,
+                renderInOverlayDuringTransition = false,
             )
         }
     } else {
@@ -487,6 +488,7 @@ fun DetailsScreen(
                 ),
                 animatedVisibilityScope = animatedVisibilityScope,
                 resizeMode = SharedTransitionScope.ResizeMode.RemeasureToBounds,
+                renderInOverlayDuringTransition = false,
             )
         }
     } else {
