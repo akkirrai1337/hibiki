@@ -61,6 +61,26 @@ class RhinoExtensionRuntimeSandboxTest {
     }
 
     @Test
+    fun `Gzip inflate round-trips through Base64 decode`() {
+        val payload = "hello gzip world"
+        val gzipped = java.io.ByteArrayOutputStream().also { out ->
+            java.util.zip.GZIPOutputStream(out).use { it.write(payload.toByteArray(Charsets.UTF_8)) }
+        }.toByteArray()
+        val base64 = java.util.Base64.getEncoder().encodeToString(gzipped)
+
+        val runtime = RhinoExtensionRuntime(
+            extensionId = "sandbox-test",
+            payload = """
+                var Provider = {
+                    search: function() { return Gzip.inflate(Base64.decode("$base64")); }
+                };
+            """.trimIndent(),
+            sourceContext = context(),
+        )
+        assertEquals("\"$payload\"", runtime.callRaw("search", arrayOf()))
+    }
+
+    @Test
     fun `collectPaginated stops on a short page and dedupes by id`() {
         val runtime = RhinoExtensionRuntime(
             extensionId = "sandbox-test",

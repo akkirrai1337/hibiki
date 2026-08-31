@@ -144,6 +144,7 @@ class RhinoExtensionRuntime(
     private fun installGlobals(cx: Context, scope: ScriptableObject) {
         ScriptableObject.putProperty(scope, "Jsoup", Context.javaToJS(JsoupBinding(), scope))
         ScriptableObject.putProperty(scope, "Base64", Context.javaToJS(Base64Binding(), scope))
+        ScriptableObject.putProperty(scope, "Gzip", Context.javaToJS(GzipBinding(), scope))
         ScriptableObject.putProperty(scope, "Url", Context.javaToJS(UrlBinding(), scope))
         ScriptableObject.putProperty(scope, "AnimeTitle", AnimeTitleFunction(scope))
         ScriptableObject.putProperty(scope, "collectPaginated", PaginationCollectFunction(scope))
@@ -195,6 +196,20 @@ class RhinoExtensionRuntime(
         fun encode(value: String): String {
             val bytes = ByteArray(value.length) { (value[it].code and 0xFF).toByte() }
             return java.util.Base64.getEncoder().encodeToString(bytes)
+        }
+    }
+
+    /**
+     * Gzip inflate as a host global, following the same "one byte per char code" convention as
+     * [Base64Binding] so the two compose directly (a source can base64-decode then gzip-inflate
+     * without any re-encoding step in between). Rhino has no native gunzip; JVM/Android already
+     * ships [java.util.zip.GZIPInputStream], so this needs no extra dependency.
+     */
+    class GzipBinding {
+        fun inflate(value: String): String {
+            val bytes = ByteArray(value.length) { (value[it].code and 0xFF).toByte() }
+            val inflated = java.util.zip.GZIPInputStream(bytes.inputStream()).use { it.readBytes() }
+            return inflated.toString(Charsets.UTF_8)
         }
     }
 
