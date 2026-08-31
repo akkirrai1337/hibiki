@@ -28,6 +28,7 @@ import org.akkirrai.beakokit.model.AnimeSearchFilterCatalog
 import org.akkirrai.hibiki.app.settings.AppPreferences
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.core.log.AppLogger
+import org.akkirrai.hibiki.core.network.AndroidBrowserFetchProvider
 import org.akkirrai.hibiki.core.network.AndroidChallengeSessionProvider
 import java.io.File
 import java.util.concurrent.atomic.AtomicInteger
@@ -274,6 +275,7 @@ object AnimeSourceRegistry {
             }
         },
         challengeSessionProvider = AndroidChallengeSessionProvider(context),
+        browserFetchProvider = AndroidBrowserFetchProvider(context),
         sourceHealthReporter = sourceHealthReporter,
         sourceExecutionPolicy = sourceExecutionPolicy,
     )

@@ -2,11 +2,10 @@ package org.akkirrai.beakokit.extension
 
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
-import io.ktor.client.engine.mock.respond
-import io.ktor.http.HttpHeaders
-import io.ktor.http.HttpStatusCode
-import io.ktor.http.headersOf
 import kotlinx.coroutines.runBlocking
+import org.akkirrai.beakokit.api.BrowserFetchProvider
+import org.akkirrai.beakokit.api.BrowserFetchRequest
+import org.akkirrai.beakokit.api.BrowserFetchResponse
 import org.akkirrai.beakokit.api.SourceLanguage
 import org.akkirrai.beakokit.api.context.DefaultSourceContext
 import org.akkirrai.beakokit.model.PlayerType
@@ -19,35 +18,42 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 /**
- * Proves the Rhino-scripted Miruro extension against a real captured `/api/secure/pipe` response
- * for `info/178789` (Mushoku Tensei III) - the body is genuinely "x-obfuscated: 2" (base64url ->
- * XOR with Miruro's own plaintext-shipped key -> gzip), so this exercises the actual decode path,
- * not a synthetic stand-in for it.
+ * Proves the Rhino-scripted Miruro extension against real captured `/api/secure/pipe` responses
+ * (obfuscated: base64url -> XOR with Miruro's own plaintext-shipped key -> gzip), exercising the
+ * actual decode path rather than a synthetic stand-in for it. miruro.js resolves every pipe call
+ * through the host's `browserFetch()` global (not plain `fetch()`) - a real device's own IP still
+ * gets a genuine Cloudflare 403 on a plain fetch, since the WAF binds its pass to the exact client
+ * fingerprint (TLS/JA3), not just a cookie - so these tests stub [BrowserFetchProvider] instead of
+ * mocking an HTTP client.
  *
  * The extension payload (`miruro.js`) is a gitignored local-only fixture - this test skips itself
  * when it's absent instead of failing.
  */
 class ScriptedMiruroSourceTest {
+    private fun stubBrowserFetch(pathToBody: Map<String, File>): BrowserFetchProvider = BrowserFetchProvider { request ->
+        val e = java.net.URI(request.targetUrl).query.orEmpty().removePrefix("e=")
+        val standard = e.replace('-', '+').replace('_', '/')
+        val padded = standard + "=".repeat((4 - standard.length % 4) % 4)
+        val envelope = String(Base64.getDecoder().decode(padded), Charsets.UTF_8)
+        val body = pathToBody.entries.firstOrNull { (path, _) -> envelope.contains("\"path\":\"$path") }?.value
+            ?: error("Unexpected pipe path in envelope: $envelope")
+        BrowserFetchResponse(status = 200, body = body.readText().trim(), headers = mapOf("x-obfuscated" to "2"))
+    }
+
+    private fun noNetworkContext(browserFetchProvider: BrowserFetchProvider) = DefaultSourceContext(
+        httpClient = HttpClient(MockEngine { error("This test performs no direct HTTP I/O; miruro.js must use browserFetch()") }),
+        preferredLanguages = listOf(SourceLanguage.ENGLISH),
+        browserFetchProvider = browserFetchProvider,
+    )
+
     @Test
     fun `getById decodes a real captured obfuscated pipe response`() = runBlocking {
         assumeTrue(ScriptedExtensionFixtures.isAvailable("miruro"), "miruro.js fixture is not present locally")
 
         val bodyFile = File("src/test/resources/beakokit/miruro/info-178789-obfuscated.txt")
         assumeTrue(bodyFile.exists(), "captured obfuscated fixture body is not present locally")
-        val obfuscatedBody = bodyFile.readText().trim()
 
-        val mockEngine = MockEngine { request ->
-            assertTrue(request.url.encodedPath == "/api/secure/pipe", "unexpected path: ${request.url.encodedPath}")
-            respond(
-                content = obfuscatedBody,
-                status = HttpStatusCode.OK,
-                headers = headersOf(HttpHeaders.ContentType to listOf("text/plain"), "x-obfuscated" to listOf("2")),
-            )
-        }
-        val context = DefaultSourceContext(
-            httpClient = HttpClient(mockEngine),
-            preferredLanguages = listOf(SourceLanguage.ENGLISH),
-        )
+        val context = noNetworkContext(stubBrowserFetch(mapOf("info" to bodyFile)))
         val source = ScriptedAnimeSource(context, ScriptedExtensionFixtures.load("miruro"))
 
         val title = source.getById("178789")
@@ -70,26 +76,8 @@ class ScriptedMiruroSourceTest {
         val sourcesBody = File("src/test/resources/beakokit/miruro/sources-bee-sub-obfuscated.txt")
         assumeTrue(episodesBody.exists() && sourcesBody.exists(), "captured obfuscated fixture bodies are not present locally")
 
-        val mockEngine = MockEngine { request ->
-            val e = request.url.parameters["e"].orEmpty()
-            val standard = e.replace('-', '+').replace('_', '/')
-            val padded = standard + "=".repeat((4 - standard.length % 4) % 4)
-            val envelope = String(Base64.getDecoder().decode(padded), Charsets.UTF_8)
-            val body = when {
-                envelope.contains("\"path\":\"info") -> infoBody.readText().trim()
-                envelope.contains("\"path\":\"episodes\"") -> episodesBody.readText().trim()
-                envelope.contains("\"path\":\"sources\"") -> sourcesBody.readText().trim()
-                else -> error("Unexpected pipe path in envelope: $envelope")
-            }
-            respond(
-                content = body,
-                status = HttpStatusCode.OK,
-                headers = headersOf(HttpHeaders.ContentType to listOf("text/plain"), "x-obfuscated" to listOf("2")),
-            )
-        }
-        val context = DefaultSourceContext(
-            httpClient = HttpClient(mockEngine),
-            preferredLanguages = listOf(SourceLanguage.ENGLISH),
+        val context = noNetworkContext(
+            stubBrowserFetch(mapOf("info" to infoBody, "episodes" to episodesBody, "sources" to sourcesBody)),
         )
         val source = ScriptedAnimeSource(context, ScriptedExtensionFixtures.load("miruro"))
         val title = source.getById("178789")

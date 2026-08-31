@@ -9,6 +9,7 @@ import io.ktor.http.HttpMethod
 import io.ktor.http.Parameters
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
+import org.akkirrai.beakokit.api.BrowserFetchRequest
 import org.akkirrai.beakokit.api.ChallengeSessionRequest
 import org.akkirrai.beakokit.api.SourceErrorKind
 import org.akkirrai.beakokit.api.SourceException
@@ -152,6 +153,7 @@ class RhinoExtensionRuntime(
         val fetchFunction = FetchFunction(sourceContext, scope)
         ScriptableObject.putProperty(scope, "fetch", fetchFunction)
         ScriptableObject.putProperty(scope, "challenge", ChallengeFunction(sourceContext, scope))
+        ScriptableObject.putProperty(scope, "browserFetch", BrowserFetchFunction(sourceContext, scope))
         ScriptableObject.putProperty(
             scope,
             "preferredLanguage",
@@ -410,6 +412,51 @@ class RhinoExtensionRuntime(
             ScriptableObject.putProperty(result, "cookies", cookiesObject)
             ScriptableObject.putProperty(result, "cookieHeader", session.cookieHeader)
             ScriptableObject.putProperty(result, "userAgent", session.userAgent)
+            return result
+        }
+    }
+
+    /**
+     * Runs one HTTP request from inside a real WebView page's own JS context instead of a plain
+     * HTTP client - for a site whose bot-management binds a solved challenge to the exact client
+     * that solved it (TLS/JA3 fingerprint, not just a cookie), a cookie harvested via [challenge]
+     * and replayed through this runtime's own HTTP client can still be rejected. `browserFetch(
+     * pageUrl, targetUrl, options)` loads `pageUrl` in a WebView, then performs `fetch(targetUrl,
+     * ...)` from within that page and returns the same `{status, ok, body, headers}` shape [fetch]
+     * does, so it's a drop-in replacement at call sites already written against it.
+     */
+    private class BrowserFetchFunction(
+        private val sourceContext: SourceContext,
+        private val scope: Scriptable,
+    ) : org.mozilla.javascript.BaseFunction() {
+        override fun call(
+            cx: Context,
+            scope: Scriptable,
+            thisObj: Scriptable,
+            args: Array<out Any?>,
+        ): Any {
+            val pageUrl = Context.toString(args.getOrNull(0))
+            val targetUrl = Context.toString(args.getOrNull(1))
+            val options = args.getOrNull(2) as? NativeObject
+            val method = (options?.get("method", options) as? String)?.uppercase() ?: "GET"
+            val headers = (options?.get("headers", options) as? NativeObject)?.entries
+                ?.associate { (key, value) -> key.toString() to Context.toString(value) }
+                .orEmpty()
+            val body = options?.get("body", options) as? String
+
+            val response = runBlocking {
+                sourceContext.browserFetchProvider.fetch(
+                    BrowserFetchRequest(pageUrl = pageUrl, targetUrl = targetUrl, method = method, headers = headers, body = body),
+                )
+            }
+
+            val result = cx.newObject(this.scope)
+            ScriptableObject.putProperty(result, "status", response.status)
+            ScriptableObject.putProperty(result, "ok", response.status in 200..299)
+            ScriptableObject.putProperty(result, "body", response.body)
+            val headersObject = cx.newObject(this.scope)
+            response.headers.forEach { (name, value) -> ScriptableObject.putProperty(headersObject, name.lowercase(), value) }
+            ScriptableObject.putProperty(result, "headers", headersObject)
             return result
         }
     }
