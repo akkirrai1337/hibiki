@@ -111,6 +111,7 @@ fun WatchSourcesScreen(
                     itemsIndexed(state.items, key = { _, source -> source.sourceId }) { index, source ->
                         WatchSourceRow(
                             source = source,
+                            isLastWatched = source.sourceId == state.lastWatchedSourceId,
                             enabled = !navigationLocked,
                             shape = watchSourceRowShape(index, state.items.size),
                             onClick = {
@@ -151,6 +152,7 @@ fun WatchSourcesScreen(
 @Composable
 private fun WatchSourceRow(
     source: WatchSource,
+    isLastWatched: Boolean,
     enabled: Boolean,
     shape: RoundedCornerShape,
     onClick: () -> Unit,
@@ -180,6 +182,14 @@ private fun WatchSourceRow(
                     text = "· $count ${stringResource(R.string.watch_episodes_short)}",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                )
+            }
+            if (isLastWatched) {
+                Text(
+                    text = "· ${stringResource(R.string.watch_source_last_watched)}",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.primary,
                     maxLines = 1,
                 )
             }

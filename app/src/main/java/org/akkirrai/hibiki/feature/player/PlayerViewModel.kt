@@ -399,11 +399,16 @@ class PlayerViewModel(
         episodeId: String,
         episodes: List<WatchEpisode>,
     ): Long? {
-        val exactProgress = watchStateRepository.getEpisodeProgress(titleId, episodeId)
+        val state = _uiState.value
+        val exactProgress = watchStateRepository.getEpisodeProgress(
+            titleId = titleId,
+            episodeId = episodeId,
+            sourceId = state.currentSourceId,
+        )
         val episodeNumber = episodes.firstOrNull { it.id == episodeId }?.number
         val numberProgress = episodeNumber?.let { number ->
             watchStateRepository.getEpisodeProgress(titleId)
-                .filter { it.episodeNumber == number }
+                .filter { it.sourceId == state.currentSourceId && it.episodeNumber == number }
                 .maxByOrNull { it.updatedAt }
         }
         val progress = exactProgress ?: numberProgress ?: return null
@@ -438,7 +443,11 @@ class PlayerViewModel(
 
         val knownEpisodeNumber = requestedEpisodeNumber
             ?: currentEpisodes.firstOrNull { it.id == requestedEpisodeId }?.number
-            ?: watchStateRepository.getEpisodeProgress(titleId, requestedEpisodeId)?.episodeNumber
+            ?: watchStateRepository.getEpisodeProgress(
+                titleId = titleId,
+                episodeId = requestedEpisodeId,
+                sourceId = _uiState.value.currentSourceId,
+            )?.episodeNumber
 
         return knownEpisodeNumber?.let { episodeNumber ->
             episodes.firstOrNull { it.number == episodeNumber }

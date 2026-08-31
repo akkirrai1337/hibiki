@@ -169,6 +169,7 @@
     <string name="watch_sources_empty_title">Озвучки не найдены</string>
     <string name="watch_sources_empty_message">Для этого тайтла пока нет доступных источников.</string>
     <string name="watch_sources_load_more">Загрузить ещё</string>
+    <string name="watch_source_last_watched">Смотрели последней</string>
     <string name="watch_source_auto_title">Автовыбор</string>
     <string name="watch_episodes_empty_title">Серии не найдены</string>
     <string name="watch_episodes_short">эп.</string>

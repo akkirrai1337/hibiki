@@ -153,7 +153,7 @@ fun EpisodesScreen(
     val libraryRepository = remember(dependencies) { dependencies.libraryRepository() }
     val titleId = remember(sourceId) { watchTitleIdFromSourceId(sourceId) }
     var savedProgress by remember(titleId) {
-        mutableStateOf(watchStateRepository.getEpisodeProgress(titleId))
+        mutableStateOf(watchStateRepository.getEpisodeProgressForSource(titleId, sourceId))
     }
     val navigationLockedState = rememberWatchNavigationLockState(lifecycleOwner)
     val navigationLocked = navigationLockedState.value
@@ -225,7 +225,7 @@ fun EpisodesScreen(
                         titleId = titleId,
                         episodeIds = content.items.mapTo(mutableSetOf(), WatchEpisode::id),
                     )
-                    watchStateRepository.getEpisodeProgress(titleId)
+                    watchStateRepository.getEpisodeProgressForSource(titleId, sourceId)
                 }
                 downloadStates = withContext(Dispatchers.IO) {
                     offlineDownloadRepository.getEpisodeStates(
@@ -330,7 +330,7 @@ fun EpisodesScreen(
                                                     positionMs = progress.durationMs,
                                                     durationMs = progress.durationMs,
                                                 )
-                                                watchStateRepository.getEpisodeProgress(titleId)
+                                                watchStateRepository.getEpisodeProgressForSource(titleId, sourceId)
                                             }
                                         }
                                     }
@@ -357,7 +357,7 @@ fun EpisodesScreen(
                                 coroutineScope.launch {
                                     savedProgress = withContext(Dispatchers.IO) {
                                         if (resolveEpisodeStatus(progress) == EpisodeProgressStatus.Watched) {
-                                            watchStateRepository.clearEpisodeProgress(titleId, episode.id)
+                                            watchStateRepository.clearEpisodeProgress(titleId, episode.id, sourceId)
                                         } else {
                                             val durationMs = progress?.durationMs?.takeIf { it > 0L } ?: 1L
                                             watchStateRepository.saveEpisodeProgress(
@@ -372,7 +372,7 @@ fun EpisodesScreen(
                                                 durationMs = durationMs,
                                             )
                                         }
-                                        watchStateRepository.getEpisodeProgress(titleId)
+                                        watchStateRepository.getEpisodeProgressForSource(titleId, sourceId)
                                     }
                                 }
                             },

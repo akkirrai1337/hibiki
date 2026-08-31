@@ -16,11 +16,13 @@ import org.akkirrai.hibiki.app.di.hibikiDependencies
 import org.akkirrai.hibiki.core.download.OfflineDownloadRepository
 import org.akkirrai.hibiki.core.model.WatchSource
 import org.akkirrai.hibiki.core.source.AnimeWatchRepository
+import org.akkirrai.hibiki.core.source.WatchStateRepository
 
 class WatchSourcesViewModel(
     private val animeId: String,
     private val repository: AnimeWatchRepository,
     private val offlineDownloadRepository: OfflineDownloadRepository,
+    private val watchStateRepository: WatchStateRepository,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(WatchSourcesScreenState())
     val uiState: StateFlow<WatchSourcesScreenState> = _uiState.asStateFlow()
@@ -51,6 +53,7 @@ class WatchSourcesViewModel(
     }
 
     private fun loadSources(forceRefresh: Boolean) {
+        val lastWatchedSourceId = watchStateRepository.getTitleWatchState(animeId)?.sourceId
         val cached = repository.getCachedSources(animeId)
         val cachedSources = mergeSources(
             primary = cached?.sources.orEmpty(),
@@ -66,6 +69,7 @@ class WatchSourcesViewModel(
                 hasMoreItems = false,
                 showAllItems = false,
                 errorMessage = null,
+                lastWatchedSourceId = lastWatchedSourceId,
             )
         } else {
             _uiState.value = WatchSourcesScreenState(
@@ -80,6 +84,7 @@ class WatchSourcesViewModel(
                 ),
                 showAllItems = false,
                 errorMessage = null,
+                lastWatchedSourceId = lastWatchedSourceId,
             )
         }
         if (!forceRefresh && cached != null) {
@@ -207,6 +212,7 @@ class WatchSourcesViewModel(
                 animeId = animeId,
                 repository = dependencies.animeWatchRepository(),
                 offlineDownloadRepository = dependencies.offlineDownloadRepository(),
+                watchStateRepository = dependencies.watchStateRepository(),
             ) as T
         }
     }
@@ -224,6 +230,7 @@ data class WatchSourcesScreenState(
     val hasMoreItems: Boolean = false,
     val showAllItems: Boolean = false,
     val errorMessage: String? = null,
+    val lastWatchedSourceId: String? = null,
 )
 
 internal fun Throwable.toUiMessage(): String {

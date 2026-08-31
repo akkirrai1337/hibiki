@@ -18,6 +18,20 @@ class WatchStateStorageKeyTest {
     }
 
     @Test
+    fun `parses source specific progress key`() {
+        assertEquals(
+            ProgressStorageKey(
+                titleId = "source:ani-liberty:10213",
+                episodeId = "episode-5",
+                sourceId = "source:ani-liberty:10213|watch|anilibria-0",
+            ),
+            parseProgressStorageKey(
+                "progress_source:ANI_LIBERTY:10213|episode|episode-5|source|source:ani-liberty:10213|watch|anilibria-0",
+            ),
+        )
+    }
+
+    @Test
     fun `reads source scoped key written by legacy colon format`() {
         assertEquals(
             ProgressStorageKey(
