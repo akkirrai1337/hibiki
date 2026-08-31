@@ -67,7 +67,13 @@ class PlayerViewModel(
                 isLoading = true,
                 errorMessage = null,
                 failedStreamUrls = it.failedStreamUrls + excludedStreamUrls,
-                recoveryAttempted = excludedStreamUrls.isNotEmpty(),
+                // A caller passing excludedStreamUrls is an automatic recovery attempt (see
+                // recoverFromPlaybackError below) - count it against the per-episode cap so a
+                // stream that resolves "successfully" but then reliably fails to actually play
+                // (e.g. a CORS-blocked relay CDN) can't retry itself forever. Any other caller
+                // (selecting a different episode/player/quality) is a fresh, user-initiated
+                // attempt and resets the count.
+                autoRecoveryCount = if (excludedStreamUrls.isNotEmpty()) it.autoRecoveryCount + 1 else 0,
             )
         }
         loadSettingsOptions()
@@ -134,7 +140,6 @@ class PlayerViewModel(
                             currentEpisodeNumber = effectiveEpisodeNumber,
                             pendingSeekMs = savedSeekMs ?: it.pendingSeekMs,
                             failedStreamUrls = it.failedStreamUrls - stream.streamUrl,
-                            recoveryAttempted = false,
                             selectedQualityLabel = stream.qualityLabel ?: it.selectedQualityLabel,
                         )
                     }
@@ -155,7 +160,6 @@ class PlayerViewModel(
                             episodes = episodes,
                             currentEpisodeId = effectiveEpisodeId,
                             currentEpisodeNumber = effectiveEpisodeNumber,
-                            recoveryAttempted = false,
                         )
                     }
                 }
@@ -181,15 +185,27 @@ class PlayerViewModel(
                 pendingSeekMs = resumePositionMs.coerceAtLeast(0L),
                 settingsOptionsKey = null,
                 failedStreamUrls = emptySet(),
-                recoveryAttempted = false,
+                autoRecoveryCount = 0,
             )
         }
         load()
     }
 
+    /**
+     * Auto-triggered from [Player.Listener.onPlayerError]. A resolved stream can pass the source's
+     * own resolution step and still be unplayable for a reason that has nothing to do with which
+     * candidate URL was picked (e.g. a relay CDN that's CORS-blocked no matter which mirror is
+     * tried) - without a cap, every such failure looks like "try the next candidate" and the player
+     * retries forever, stuck on a loading spinner with no visible error. [MAX_AUTO_RECOVERY_ATTEMPTS]
+     * bounds that; past it, a real error is surfaced instead of another silent retry.
+     */
     fun recoverFromPlaybackError(streamUrl: String?) {
         val state = _uiState.value
-        if (state.isLoading || state.recoveryAttempted) {
+        if (state.isLoading) return
+        if (state.autoRecoveryCount >= MAX_AUTO_RECOVERY_ATTEMPTS) {
+            _uiState.update {
+                it.copy(errorMessage = "Не удалось воспроизвести поток после нескольких попыток")
+            }
             return
         }
         val excluded = streamUrl?.takeIf(String::isNotBlank)?.let { setOf(it) } ?: emptySet()
@@ -256,7 +272,7 @@ class PlayerViewModel(
                     pendingSeekMs = resumePositionMs.coerceAtLeast(0L),
                     settingsOptionsKey = null,
                     failedStreamUrls = emptySet(),
-                    recoveryAttempted = false,
+                    autoRecoveryCount = 0,
                 )
             }
             watchStateRepository.saveSelectedSource(
@@ -281,7 +297,7 @@ class PlayerViewModel(
                 pendingSeekMs = resumePositionMs.coerceAtLeast(0L),
                 settingsOptionsKey = null,
                 failedStreamUrls = emptySet(),
-                recoveryAttempted = false,
+                autoRecoveryCount = 0,
             )
         }
         persistSelection()
@@ -295,7 +311,7 @@ class PlayerViewModel(
                 playback = null,
                 pendingSeekMs = resumePositionMs.coerceAtLeast(0L),
                 failedStreamUrls = emptySet(),
-                recoveryAttempted = false,
+                autoRecoveryCount = 0,
             )
         }
         persistSelection()
@@ -470,7 +486,7 @@ data class PlayerUiState(
     val pendingSeekMs: Long = 0L,
     val errorMessage: String? = null,
     val failedStreamUrls: Set<String> = emptySet(),
-    val recoveryAttempted: Boolean = false,
+    val autoRecoveryCount: Int = 0,
     val isSettingsLoading: Boolean = false,
     val settingsOptions: PlaybackSettingsOptions = PlaybackSettingsOptions(),
     val settingsOptionsKey: String? = null,
@@ -498,3 +514,4 @@ private fun <T> Result<T>.throwIfCancelled(): Result<T> {
 private const val PLAYBACK_LOG_TAG = "HibikiPlayback"
 private const val PLAYBACK_END_WINDOW_MS = 30_000L
 private const val PLAYBACK_END_PERCENT = 5L
+private const val MAX_AUTO_RECOVERY_ATTEMPTS = 2
