@@ -39,8 +39,8 @@ android {
         applicationId = "org.akkirrai.hibiki"
         minSdk = 26
         targetSdk = 36
-        versionCode = 210
-        versionName = "2.1.0"
+        versionCode = 250
+        versionName = "2.5.0"
 
         buildConfigField("boolean", "GITHUB_UPDATES_ENABLED", "true")
 

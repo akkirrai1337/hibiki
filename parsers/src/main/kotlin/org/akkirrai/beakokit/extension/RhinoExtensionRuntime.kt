@@ -117,6 +117,7 @@ class RhinoExtensionRuntime(
 
     private fun installGlobals(cx: Context, scope: ScriptableObject) {
         ScriptableObject.putProperty(scope, "Jsoup", Context.javaToJS(JsoupBinding(), scope))
+        ScriptableObject.putProperty(scope, "Base64", Context.javaToJS(Base64Binding(), scope))
         ScriptableObject.putProperty(scope, "console", Context.javaToJS(ConsoleBinding(sourceContext), scope))
         val fetchFunction = FetchFunction(sourceContext, scope)
         ScriptableObject.putProperty(scope, "fetch", fetchFunction)
@@ -140,6 +141,32 @@ class RhinoExtensionRuntime(
 
         fun resolve(baseUrl: String, relative: String): String =
             runCatching { URI(baseUrl).resolve(relative).toString() }.getOrDefault(relative)
+    }
+
+    /**
+     * Base64 encode/decode as a host global - Rhino has no native atob/btoa, and hand-rolling a
+     * decoder was showing up duplicated verbatim across extensions that need to unwrap a
+     * base64-encoded HTML/URI fragment (kodik.js, donghuastream.js, ...). Decoding follows the
+     * same "one byte per char code" convention those hand-rolled versions used (so existing
+     * `String.fromCharCode`-based post-processing keeps working unchanged), and tolerates stray
+     * whitespace/newlines and missing padding the way they did too.
+     */
+    class Base64Binding {
+        fun decode(value: String): String {
+            val cleaned = value.replace(Regex("[^A-Za-z0-9+/]"), "")
+            val padded = cleaned + "=".repeat((4 - cleaned.length % 4) % 4)
+            val bytes = try {
+                java.util.Base64.getDecoder().decode(padded)
+            } catch (error: IllegalArgumentException) {
+                return ""
+            }
+            return String(CharArray(bytes.size) { (bytes[it].toInt() and 0xFF).toChar() })
+        }
+
+        fun encode(value: String): String {
+            val bytes = ByteArray(value.length) { (value[it].code and 0xFF).toByte() }
+            return java.util.Base64.getEncoder().encodeToString(bytes)
+        }
     }
 
     class ConsoleBinding(private val sourceContext: SourceContext) {

@@ -111,6 +111,11 @@ class AnimeSearchRepository(
                 val source = sourceManager?.forTitle(id) ?: currentSource()
                 val title = runCatching { source.details(id) }
                     .getOrElse {
+                        // A source.details() failure here is otherwise completely silent: the
+                        // fallback below quietly serves sparse search-card data (no status,
+                        // description, or episode count) instead of surfacing an error, which
+                        // makes a genuine source bug look like "this title just has no details".
+                        AppLogger.w(TAG, "getDetails: source.details failed for $id, falling back to search", it)
                         source.search(fallback.title)
                             .bestMatchFor(fallback.title)
                             ?: throw it
