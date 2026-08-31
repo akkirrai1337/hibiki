@@ -140,7 +140,11 @@ fun SourceExtensionsScreen(
             .distinctBy(MarketplaceExtension::id)
     }
     val sourceExtensions = mergedExtensions.filter { it.type == "source" }
-    val extensionLanguages = mergedExtensions.map(MarketplaceExtension::lang).distinct().sorted()
+    // Player-resolver extensions have no lang field at all (index.json defaults it to "" - see
+    // build_index.py) and language filtering only makes sense for sources anyway, so this must
+    // come from sourceExtensions, not every mergedExtensions entry - otherwise that blank default
+    // shows up as an empty, unlabeled toggle in the language filter dialog.
+    val extensionLanguages = sourceExtensions.map(MarketplaceExtension::lang).distinct().sorted()
 
     // Extensions tab still consumes the flat Loading/Error/Loaded shape it always has - derived
     // here from the per-repository results so SourceRepositoryList/MarketplaceExtensionRow don't
