@@ -145,6 +145,7 @@ class RhinoExtensionRuntime(
         ScriptableObject.putProperty(scope, "Jsoup", Context.javaToJS(JsoupBinding(), scope))
         ScriptableObject.putProperty(scope, "Base64", Context.javaToJS(Base64Binding(), scope))
         ScriptableObject.putProperty(scope, "Url", Context.javaToJS(UrlBinding(), scope))
+        ScriptableObject.putProperty(scope, "AnimeTitle", AnimeTitleFunction(scope))
         ScriptableObject.putProperty(scope, "console", Context.javaToJS(ConsoleBinding(sourceContext), scope))
         val fetchFunction = FetchFunction(sourceContext, scope)
         ScriptableObject.putProperty(scope, "fetch", fetchFunction)
@@ -268,6 +269,45 @@ class RhinoExtensionRuntime(
             val headersObject = cx.newObject(this.scope)
             responseHeaders.forEach { (name, value) -> ScriptableObject.putProperty(headersObject, name.lowercase(), value) }
             ScriptableObject.putProperty(result, "headers", headersObject)
+            return result
+        }
+    }
+
+    /**
+     * Fills in every [org.akkirrai.beakokit.model.AnimeTitle] field a source doesn't set itself, as
+     * a host global - the same ~25-key "base object + override" literal was hand-copied verbatim
+     * into 8 source payloads (ani-liberty.js, anichi.js, animego.js, animepahe.js, animevost.js,
+     * donghuastream.js, kickassanime.js, yummy-anime.js). Each keeps its own one-line
+     * `function title(fields) { return AnimeTitle(fields); }` wrapper so existing `title({...})`
+     * call sites don't need touching.
+     */
+    private class AnimeTitleFunction(private val scope: Scriptable) : org.mozilla.javascript.BaseFunction() {
+        private val nullDefaultKeys = listOf(
+            "russianName", "englishName", "japaneseName", "year", "type", "episodeCount",
+            "posterUrl", "status", "description", "nextEpisodeAt", "ageRating", "viewCount",
+            "trailer", "sourceMaterial", "season", "availableEpisodeCount", "posterFallbackUrl",
+        )
+        private val emptyListDefaultKeys = listOf(
+            "synonyms", "genres", "ratings", "screenshots", "studios",
+            "mainCharacters", "similarAnime", "franchiseAnime", "relatedAnime",
+        )
+
+        override fun call(
+            cx: Context,
+            scope: Scriptable,
+            thisObj: Scriptable,
+            args: Array<out Any?>,
+        ): Any {
+            val result = cx.newObject(this.scope)
+            nullDefaultKeys.forEach { ScriptableObject.putProperty(result, it, null) }
+            emptyListDefaultKeys.forEach { ScriptableObject.putProperty(result, it, cx.newArray(this.scope, 0)) }
+            val fields = args.getOrNull(0) as? Scriptable
+            if (fields != null) {
+                for (id in fields.ids) {
+                    val key = id as? String ?: continue
+                    ScriptableObject.putProperty(result, key, ScriptableObject.getProperty(fields, key))
+                }
+            }
             return result
         }
     }

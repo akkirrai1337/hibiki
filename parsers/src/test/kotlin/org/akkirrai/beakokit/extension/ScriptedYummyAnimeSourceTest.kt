@@ -72,6 +72,7 @@ class ScriptedYummyAnimeSourceTest {
                 FixtureRoute.fromResource(path = "/anime/987654/recommendations", resource = "beakokit/yummy/empty-response.json"),
                 FixtureRoute.fromResource(path = "/anime/schedule", resource = "beakokit/yummy/catalog-latest.json"),
                 FixtureRoute.fromResource(path = "/swagger.json", resource = "beakokit/yummy/swagger.json"),
+                FixtureRoute.fromResource(path = "/anime/genres", resource = "beakokit/yummy/genres.json"),
             ),
             preferredLanguages = listOf(SourceLanguage.ENGLISH),
         ).use { host ->
