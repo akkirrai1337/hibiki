@@ -53,4 +53,27 @@ class BeakoKitHttpDefaultsTest {
             client.close()
         }
     }
+
+    @Test
+    fun `keeps cookies between requests to the same source`() = runBlocking {
+        var requestCount = 0
+        val client = HttpClient(MockEngine { request ->
+            requestCount += 1
+            if (requestCount == 1) {
+                respond("configured", headers = headersOf(HttpHeaders.SetCookie, "sort=title; Path=/"))
+            } else {
+                assertEquals("sort=title", request.headers[HttpHeaders.Cookie])
+                respond("sorted")
+            }
+        }) {
+            installBeakoKitHttpDefaults()
+        }
+
+        try {
+            client.post("https://source.test/configure")
+            assertEquals(HttpStatusCode.OK, client.get("https://source.test/page/2").status)
+        } finally {
+            client.close()
+        }
+    }
 }

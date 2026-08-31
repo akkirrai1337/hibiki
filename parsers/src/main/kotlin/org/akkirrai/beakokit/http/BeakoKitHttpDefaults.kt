@@ -5,6 +5,8 @@ import io.ktor.client.engine.HttpClientEngineConfig
 import io.ktor.client.plugins.HttpRequestRetry
 import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.plugins.UserAgent
+import io.ktor.client.plugins.cookies.AcceptAllCookiesStorage
+import io.ktor.client.plugins.cookies.HttpCookies
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.request.HttpRequest
 import io.ktor.client.request.HttpRequestBuilder
@@ -44,6 +46,13 @@ fun <T : HttpClientEngineConfig> HttpClientConfig<T>.installBeakoKitHttpDefaults
 
     install(UserAgent) {
         agent = policy.userAgent
+    }
+    // Some otherwise ordinary catalog features (for example AnimeVost sorting) are selected by a
+    // form POST and remembered by the site in its session cookie. Source calls share one client,
+    // so retaining standards-compliant cookies here makes that behavior available to every
+    // scripted source without each extension reimplementing a fragile cookie jar.
+    install(HttpCookies) {
+        storage = AcceptAllCookiesStorage()
     }
     install(HttpTimeout) {
         connectTimeoutMillis = policy.connectTimeoutMillis
