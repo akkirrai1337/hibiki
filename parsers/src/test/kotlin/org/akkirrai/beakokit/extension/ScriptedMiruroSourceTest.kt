@@ -8,6 +8,8 @@ import org.akkirrai.beakokit.api.BrowserFetchRequest
 import org.akkirrai.beakokit.api.BrowserFetchResponse
 import org.akkirrai.beakokit.api.SourceLanguage
 import org.akkirrai.beakokit.api.context.DefaultSourceContext
+import org.akkirrai.beakokit.model.AnimeSearchRequest
+import org.akkirrai.beakokit.model.AnimeSearchSort
 import org.akkirrai.beakokit.model.PlayerType
 import org.akkirrai.beakokit.testkit.ScriptedExtensionFixtures
 import org.junit.jupiter.api.Assumptions.assumeTrue
@@ -94,5 +96,42 @@ class ScriptedMiruroSourceTest {
         val hls = links.first { it.type == PlayerType.DIRECT_HLS }
         assertTrue(hls.url.endsWith(".m3u8") || hls.url.contains(".m3u8"))
         assertEquals("Sub", hls.translation)
+    }
+
+    /**
+     * Regression test for a real bug caught live: the server hard-caps `search/browse`'s `perPage`
+     * at 50 (a larger value 502s), but the old code requested `perPage = min(offset + limit, 50)`
+     * on page 1 and sliced `[offset, offset + limit)` out of it - for any offset >= 50 that slice
+     * fell entirely outside the single page fetched, silently returning an empty catalog (surfaced
+     * as a permanently-empty Home screen once its randomized trending offset exceeded 50). The fix
+     * fetches however many consecutive 50-item pages actually cover the requested window.
+     */
+    @Test
+    fun `search paginates past the server's 50-item page cap`() = runBlocking {
+        assumeTrue(ScriptedExtensionFixtures.isAvailable("miruro"), "miruro.js fixture is not present locally")
+
+        val browserFetchProvider = BrowserFetchProvider { request ->
+            val e = java.net.URI(request.targetUrl).query.orEmpty().removePrefix("e=")
+            val standard = e.replace('-', '+').replace('_', '/')
+            val padded = standard + "=".repeat((4 - standard.length % 4) % 4)
+            val envelope = String(Base64.getDecoder().decode(padded), Charsets.UTF_8)
+            val pageMatch = Regex("\"page\":(\\d+)").find(envelope) ?: error("no page in envelope: $envelope")
+            val perPageMatch = Regex("\"perPage\":(\\d+)").find(envelope) ?: error("no perPage in envelope: $envelope")
+            val page = pageMatch.groupValues[1].toInt()
+            val perPage = perPageMatch.groupValues[1].toInt()
+            require(perPage <= 50) { "server would 502 above perPage=50, got $perPage" }
+            val start = (page - 1) * perPage
+            val items = (start until start + perPage).joinToString(",") { id ->
+                """{"id":$id,"idMal":$id,"title":{"english":"Title $id"},"coverImage":{},"format":"TV","status":"RELEASING"}"""
+            }
+            BrowserFetchResponse(status = 200, body = "[$items]")
+        }
+        val context = noNetworkContext(browserFetchProvider)
+        val source = ScriptedAnimeSource(context, ScriptedExtensionFixtures.load("miruro"))
+
+        val results = source.search(AnimeSearchRequest(limit = 24, offset = 99, sort = AnimeSearchSort.RATING))
+
+        assertEquals(24, results.size)
+        assertEquals((99..122).map { it.toString() }, results.map { it.id })
     }
 }
