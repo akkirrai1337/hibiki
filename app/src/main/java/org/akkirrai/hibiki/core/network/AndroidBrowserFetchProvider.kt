@@ -8,6 +8,7 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -47,10 +48,30 @@ class AndroidBrowserFetchProvider(
     private var session: PageSession? = null
     private val pending = ConcurrentHashMap<String, PendingCall>()
 
-    override suspend fun fetch(request: BrowserFetchRequest): BrowserFetchResponse = mutex.withLock {
-        val webView = currentSession(request.pageUrl)
-        runFetch(webView, request)
+    // evaluateJavascript's in-page fetch() bypasses BeakoKitHttpDefaults entirely - it's not the
+    // Ktor client at all - so it gets none of the automatic retry-on-429/5xx a plain fetch()/
+    // Provider call would. Mirrors that same policy here so a transient rate-limit or hiccup on one
+    // provider doesn't fail the whole call; honors a numeric Retry-After if the site sends one.
+    override suspend fun fetch(request: BrowserFetchRequest): BrowserFetchResponse {
+        var attempt = 0
+        while (true) {
+            val response = mutex.withLock {
+                val webView = currentSession(request.pageUrl)
+                runFetch(webView, request)
+            }
+            if (attempt >= MAX_RETRIES || !isTransientStatus(response.status)) return response
+            val retryAfterSeconds = response.headers.entries
+                .firstOrNull { (name, _) -> name.equals("retry-after", ignoreCase = true) }
+                ?.value?.toLongOrNull()
+            val delayMs = retryAfterSeconds?.times(1_000)?.coerceIn(0, MAX_RETRY_AFTER_MS)
+                ?: (1_000L shl attempt)
+            AppLogger.w(TAG, "Retrying after HTTP ${response.status}: target=${request.targetUrl}, attempt=${attempt + 1}, delayMs=$delayMs")
+            delay(delayMs)
+            attempt++
+        }
     }
+
+    private fun isTransientStatus(status: Int): Boolean = status == 429 || status in 500..599
 
     private suspend fun currentSession(pageUrl: String): WebView {
         val existing = session
@@ -191,6 +212,8 @@ class AndroidBrowserFetchProvider(
         const val TAG = "BrowserFetch"
         const val PAGE_LOAD_TIMEOUT_MS = 20_000L
         const val FETCH_TIMEOUT_MS = 20_000L
+        const val MAX_RETRIES = 2
+        const val MAX_RETRY_AFTER_MS = 30_000L
         const val BRIDGE_NAME = "HibikiBrowserFetchBridge"
         const val CHROME_USER_AGENT = "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Mobile Safari/537.36"
     }
