@@ -11,6 +11,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import org.akkirrai.beakokit.extension.ScriptExtensionManifest
 import org.akkirrai.beakokit.extension.PlayerResolverExtensionManifest
+import java.net.URI
 
 @Serializable
 data class MarketplaceExtension(
@@ -55,7 +56,7 @@ class ExtensionMarketplaceClient(
     private val json = Json { ignoreUnknownKeys = true }
 
     suspend fun fetchIndex(): MarketplaceIndex {
-        val response = client.get(stableRepositoryUrl(indexUrl)) { noCacheHeaders() }
+        val response = getHttps(indexUrl, "Repository index")
         if (!response.status.isSuccess()) {
             throw ExtensionMarketplaceException("Repository index request failed: HTTP ${response.status.value}")
         }
@@ -86,11 +87,28 @@ class ExtensionMarketplaceClient(
     }
 
     private suspend fun fetchText(url: String, label: String): String {
-        val response = client.get(stableRepositoryUrl(url)) { noCacheHeaders() }
+        val response = getHttps(url, label)
         if (!response.status.isSuccess()) {
             throw ExtensionMarketplaceException("Request for $label failed: HTTP ${response.status.value}")
         }
         return response.bodyAsText()
+    }
+
+    /** An extension's executable manifest and payload must never travel over a mutable HTTP hop. */
+    private suspend fun getHttps(url: String, label: String) = client.get(stableRepositoryUrl(url)) {
+        requireHttpsUrl(url, label)
+        noCacheHeaders()
+    }.also { response ->
+        if (!response.call.request.url.protocol.name.equals("https", ignoreCase = true)) {
+            throw ExtensionMarketplaceException("$label was redirected to a non-HTTPS URL")
+        }
+    }
+
+    private fun requireHttpsUrl(url: String, label: String) {
+        val uri = runCatching { URI(url) }.getOrNull()
+        if (uri?.scheme?.equals("https", ignoreCase = true) != true || uri.host.isNullOrBlank()) {
+            throw ExtensionMarketplaceException("$label URL must use HTTPS")
+        }
     }
 
     // raw.githubusercontent.com sits behind Fastly, which caches each URL for a few minutes

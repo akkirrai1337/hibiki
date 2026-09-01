@@ -415,6 +415,7 @@
     <string name="source_extensions_repositories_add">Add repository</string>
     <string name="source_extensions_repositories_add_hint">Repository index URL</string>
     <string name="source_extensions_repositories_add_disabled">Adding third-party repositories is disabled for now</string>
+    <string name="source_extensions_repositories_invalid_url">Enter a valid HTTPS repository index URL</string>
     <string name="source_extensions_repositories_remove">Remove</string>
     <string name="source_extensions_repositories_empty">No repositories added yet</string>
     <string name="source_extensions_repositories_extension_count">%1$d extensions</string>

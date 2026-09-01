@@ -409,6 +409,7 @@
     <string name="source_extensions_repositories_add">Добавить репозиторий</string>
     <string name="source_extensions_repositories_add_hint">URL индекса репозитория</string>
     <string name="source_extensions_repositories_add_disabled">Функция добавления сторонних репозиториев пока отключена</string>
+    <string name="source_extensions_repositories_invalid_url">Введите корректный HTTPS-адрес индекса репозитория</string>
     <string name="source_extensions_repositories_remove">Удалить</string>
     <string name="source_extensions_repositories_empty">Репозитории ещё не добавлены</string>
     <string name="source_extensions_repositories_extension_count">%1$d расширений</string>

@@ -77,6 +77,17 @@ class ExtensionMarketplaceClientTest {
         client.close()
     }
 
+    @Test
+    fun `fetchIndex rejects a non-HTTPS repository URL`() = runBlocking {
+        val client = textPlainClient("{}")
+
+        assertThrowsMarketplaceException {
+            ExtensionMarketplaceClient(client, "http://example.com/repository/index.json").fetchIndex()
+        }
+
+        client.close()
+    }
+
     private suspend fun assertThrowsMarketplaceException(block: suspend () -> Unit) {
         try {
             block()
@@ -140,6 +151,22 @@ class ExtensionMarketplaceClientTest {
         val merged = ExtensionMarketplaceClient(client).fetchManifest(extension)
 
         assertTrue(merged.contains("var Provider = {};"))
+        client.close()
+    }
+
+    @Test
+    fun `fetchManifest rejects a non-HTTPS manifest URL`() = runBlocking {
+        val client = textPlainClient("{}")
+        val extension = MarketplaceExtension(
+            id = "animevost",
+            name = "AnimeVost",
+            version = "1.0.0",
+            lang = "ru",
+            manifestUrl = "http://example.com/animevost.manifest.json",
+        )
+
+        assertThrowsMarketplaceException { ExtensionMarketplaceClient(client).fetchManifest(extension) }
+
         client.close()
     }
 

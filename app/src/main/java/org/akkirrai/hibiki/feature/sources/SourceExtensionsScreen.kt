@@ -225,7 +225,7 @@ fun SourceExtensionsScreen(
         query = ""
         searchOpen = false
     }
-    val thirdPartyRepositoriesDisabledMessage = stringResource(R.string.source_extensions_repositories_add_disabled)
+    val invalidRepositoryUrlMessage = stringResource(R.string.source_extensions_repositories_invalid_url)
 
     Column(modifier = modifier.fillMaxSize()) {
         SourceExtensionsToolbar(
@@ -345,11 +345,15 @@ fun SourceExtensionsScreen(
                 addRepositoryDialogOpen = false
             },
             onDismiss = { addRepositoryDialogOpen = false },
-            // Third-party repositories aren't supported yet (no sandboxing/trust story for
-            // arbitrary scripted-extension payloads from an untrusted feed) - the dialog stays
-            // reachable so the "+" button isn't dead, but every attempt is rejected up front
-            // instead of actually validating/adding anything.
-            validate = { thirdPartyRepositoriesDisabledMessage },
+            validate = { url ->
+                if (!isHttpsRepositoryIndexUrl(url)) {
+                    invalidRepositoryUrlMessage
+                } else {
+                    runCatching {
+                        ExtensionMarketplaceClient(marketplaceHttpClient, url).fetchIndex()
+                    }.exceptionOrNull()?.message
+                }
+            },
         )
     }
 
@@ -755,6 +759,12 @@ private fun repositoryDisplayName(url: String): String {
     val match = Regex("""^https?://raw\.githubusercontent\.com/([^/]+)/([^/]+)/""").find(url)
     return match?.let { "${it.groupValues[1]}/${it.groupValues[2]}" } ?: url
 }
+
+private fun isHttpsRepositoryIndexUrl(url: String): Boolean = runCatching {
+    Uri.parse(url).let { uri ->
+        uri.scheme.equals("https", ignoreCase = true) && !uri.host.isNullOrBlank()
+    }
+}.getOrDefault(false)
 
 @Composable
 private fun AddRepositoryDialog(
