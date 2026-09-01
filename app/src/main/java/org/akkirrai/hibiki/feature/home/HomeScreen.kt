@@ -159,8 +159,10 @@ fun HomeScreen(
     val state by viewModel.uiState.collectAsState()
     val featuredAnime = state.featuredAnime
     val continueAnime = state.continueAnime
+    val recentlyWatched = state.recentlyWatched
     val errorMessage = state.errorMessage
-    val hasContent = featuredAnime.isNotEmpty() || continueAnime != null || state.trending.isNotEmpty() || state.recentlyUpdated.isNotEmpty()
+    val hasContent = featuredAnime.isNotEmpty() || continueAnime != null || recentlyWatched.isNotEmpty() ||
+        state.trending.isNotEmpty() || state.recentlyUpdated.isNotEmpty()
     val focusManager = LocalFocusManager.current
     val keyboardController = LocalSoftwareKeyboardController.current
     var showSearchFilters by rememberSaveable { mutableStateOf(false) }
@@ -300,6 +302,7 @@ fun HomeScreen(
                             homeFeedContent(
                                 featuredAnime = featuredAnime,
                                 continueAnime = continueAnime,
+                                recentlyWatched = recentlyWatched,
                                 trending = state.trending,
                                 isTrendingLoadingMore = state.isTrendingLoadingMore,
                                 isActive = isActive,
@@ -356,6 +359,7 @@ fun HomeScreen(
 private fun LazyListScope.homeFeedContent(
     featuredAnime: List<Anime>,
     continueAnime: Anime?,
+    recentlyWatched: List<Anime>,
     trending: List<Anime>,
     isTrendingLoadingMore: Boolean,
     isActive: Boolean,
@@ -379,6 +383,18 @@ private fun LazyListScope.homeFeedContent(
             Box(modifier = Modifier.padding(horizontal = UiDimens.ScreenPadding)) {
                 ContinueWatchingCard(anime = anime, onClick = { onAnimeClick(anime) })
             }
+        }
+    }
+    if (recentlyWatched.isNotEmpty()) {
+        item {
+            AnimeSection(
+                title = stringResource(R.string.home_recently_watched),
+                icon = Icons.Outlined.History,
+                items = recentlyWatched,
+                onAnimeClick = onAnimeClick,
+                sharedCardModifier = sharedCardModifier,
+                sharedPosterModifier = sharedPosterModifier,
+            )
         }
     }
     verticalAnimeListContent(
@@ -864,6 +880,8 @@ private fun AnimeSection(
     items: List<Anime>,
     onAnimeClick: (Anime) -> Unit,
     onActionClick: (() -> Unit)? = null,
+    sharedCardModifier: @Composable (Anime) -> Modifier = { Modifier },
+    sharedPosterModifier: @Composable (Anime) -> Modifier = { Modifier },
 ) {
     Column(
         verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -895,6 +913,8 @@ private fun AnimeSection(
                     titleOverflow = TextOverflow.Ellipsis,
                     reservedTitleLines = 3,
                     reserveMetaLine = true,
+                    sharedCardModifier = sharedCardModifier(anime),
+                    sharedPosterModifier = sharedPosterModifier(anime),
                 )
             }
         }

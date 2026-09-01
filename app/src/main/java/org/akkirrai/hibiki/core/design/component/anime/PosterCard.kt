@@ -46,6 +46,8 @@ fun PosterCard(
     titleOverflow: TextOverflow = TextOverflow.Clip,
     reservedTitleLines: Int? = null,
     reserveMetaLine: Boolean = false,
+    sharedCardModifier: Modifier = Modifier,
+    sharedPosterModifier: Modifier = Modifier,
 ) {
     val density = LocalDensity.current
     val titleStyle = MaterialTheme.typography.bodySmall
@@ -64,7 +66,9 @@ fun PosterCard(
     }
 
     Column(
-        modifier = modifier.then(
+        modifier = modifier
+            .then(sharedCardModifier)
+            .then(
             if (onClick != null) {
                 Modifier.clickable(onClick = onClick)
             } else {
@@ -73,7 +77,7 @@ fun PosterCard(
         ),
         verticalArrangement = Arrangement.spacedBy(UiDimens.SmallSpacing)
     ) {
-        PosterArtwork(anime = anime)
+        PosterArtwork(anime = anime, modifier = sharedPosterModifier)
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -124,6 +128,8 @@ fun AnimePosterCardItem(
     titleOverflow: TextOverflow = TextOverflow.Clip,
     reservedTitleLines: Int? = null,
     reserveMetaLine: Boolean = false,
+    sharedCardModifier: Modifier = Modifier,
+    sharedPosterModifier: Modifier = Modifier,
 ) {
     PosterCard(
         anime = anime,
@@ -134,6 +140,8 @@ fun AnimePosterCardItem(
         titleOverflow = titleOverflow,
         reservedTitleLines = reservedTitleLines,
         reserveMetaLine = reserveMetaLine,
+        sharedCardModifier = sharedCardModifier,
+        sharedPosterModifier = sharedPosterModifier,
         modifier = modifier
             .then(if (width != null) Modifier.width(width) else Modifier)
             .then(if (height != null) Modifier.height(height) else Modifier),

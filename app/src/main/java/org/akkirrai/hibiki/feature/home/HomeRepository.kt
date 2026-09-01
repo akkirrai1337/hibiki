@@ -59,6 +59,7 @@ class HomeRepository(
         return HomeUiState(
             featuredAnime = MockAnimeData.trending.take(FEATURED_COUNT),
             continueAnime = loadStoredContinueAnime(),
+            recentlyWatched = loadRecentlyWatchedAnime().drop(1).take(RECENTLY_WATCHED_LIMIT),
             popular = emptyList(),
             trending = MockAnimeData.trending,
             recentlyUpdated = MockAnimeData.recent,
@@ -85,9 +86,11 @@ class HomeRepository(
             if (cached.selectionSeed == selectionSeed && cached.languageKey == languageKey) {
                 AppLogger.d(TAG, "loadHomeState: using cachedHomeContent — " +
                     "trending=${cached.trending.size}, recentlyUpdated=${cached.recentlyUpdated.size}, seed=$selectionSeed, lang=$languageKey")
+                val recentlyWatched = loadRecentlyWatchedAnime()
                 return HomeUiState(
                     featuredAnime = cached.featuredAnime,
                     continueAnime = loadContinueAnime(),
+                    recentlyWatched = recentlyWatched.drop(1).take(RECENTLY_WATCHED_LIMIT),
                     popular = emptyList(),
                     trending = cached.trending,
                     recentlyUpdated = cached.recentlyUpdated,
@@ -149,9 +152,11 @@ class HomeRepository(
         AppLogger.d(TAG, "loadHomeState: cachedHomeContent written — " +
             "trending=${trending.size}, recentlyUpdated=${recentlyUpdated.size}")
 
+        val recentlyWatched = loadRecentlyWatchedAnime()
         return HomeUiState(
             featuredAnime = featuredAnime,
             continueAnime = loadContinueAnime(),
+            recentlyWatched = recentlyWatched.drop(1).take(RECENTLY_WATCHED_LIMIT),
             popular = emptyList(),
             trending = trending,
             recentlyUpdated = recentlyUpdated,
@@ -219,6 +224,18 @@ class HomeRepository(
         val progress = watchStateRepository.getRecentTitleWatchState() ?: return null
         return findStoredAnime(progress.titleId)
     }
+
+    /** Mirrors the previous Home feed: the active title is featured above, not duplicated here. */
+    private fun loadRecentlyWatchedAnime(): List<Anime> = watchStateRepository
+        .getAllEpisodeProgress()
+        .groupBy { progress -> progress.titleId }
+        .mapNotNull { (titleId, progress) ->
+            findStoredAnime(titleId)?.let { anime ->
+                anime to progress.maxOfOrNull { item -> item.updatedAt }
+            }
+        }
+        .sortedByDescending { (_, updatedAt) -> updatedAt ?: Long.MIN_VALUE }
+        .map { (anime, _) -> anime }
 
     private fun findStoredAnime(titleId: String): Anime? =
         offlineTitleMetadataRepository.get(titleId)
@@ -445,6 +462,7 @@ class HomeRepository(
     private companion object {
         const val TAG = "HomeRepository"
         const val HOME_SECTION_LIMIT = 12
+        const val RECENTLY_WATCHED_LIMIT = 15
         const val HOME_FULL_SECTION_LIMIT = 100
         const val HOME_TRENDING_WINDOW_SIZE = 24
         const val HOME_TRENDING_MAX_OFFSET_EXCLUSIVE = 201

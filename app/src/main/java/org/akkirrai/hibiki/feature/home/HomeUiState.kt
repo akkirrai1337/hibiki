@@ -10,6 +10,7 @@ data class HomeUiState(
     val errorMessage: String? = null,
     val featuredAnime: List<Anime> = emptyList(),
     val continueAnime: Anime? = null,
+    val recentlyWatched: List<Anime> = emptyList(),
     val popular: List<Anime> = emptyList(),
     val trending: List<Anime> = emptyList(),
     val isTrendingLoadingMore: Boolean = false,
