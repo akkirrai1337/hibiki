@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -16,6 +17,7 @@ import androidx.compose.material3.MaterialTheme
 import coil.compose.AsyncImage
 import coil.request.ErrorResult
 import coil.request.SuccessResult
+import kotlinx.coroutines.delay
 import org.akkirrai.hibiki.core.log.AppLogger
 
 @Composable
@@ -35,6 +37,21 @@ fun PosterImage(
     }
     var isLoading by remember(normalizedPrimary, normalizedFallback) {
         mutableStateOf(activeUrl != null)
+    }
+    // A shared-element transition (e.g. catalog card -> details poster) hands this composable a
+    // *new* instance once it settles into its final spot, resetting isLoading to true even though
+    // Coil already has the exact same URL in memory from the transition a frame earlier - the
+    // cache hit resolves within a frame or two, but that's still enough for the placeholder to
+    // flash visibly. Only actually showing it once loading has been underway for a bit filters out
+    // that flash while still covering a genuinely slow/uncached load.
+    var showPlaceholder by remember(normalizedPrimary, normalizedFallback) { mutableStateOf(false) }
+    LaunchedEffect(isLoading, normalizedPrimary, normalizedFallback) {
+        if (isLoading) {
+            delay(PLACEHOLDER_FLASH_GUARD_MILLIS)
+            showPlaceholder = true
+        } else {
+            showPlaceholder = false
+        }
     }
 
     if (activeUrl == null) {
@@ -77,11 +94,14 @@ fun PosterImage(
             },
         )
 
-        if (isLoading) {
+        if (showPlaceholder) {
             placeholder()
         }
     }
 }
+
+/** Loading states shorter than this never show a placeholder, to avoid flashing one for an image that's already cached. */
+private const val PLACEHOLDER_FLASH_GUARD_MILLIS = 120L
 
 @Composable
 fun PosterPlaceholder(

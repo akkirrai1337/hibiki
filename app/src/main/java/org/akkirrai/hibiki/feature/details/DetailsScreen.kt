@@ -1050,6 +1050,20 @@ private fun DetailHeroMedia(
     val fallbackUrl = anime.posterUrl ?: anime.posterFallbackUrl
     val hasBannerImage = !imageUrl.isNullOrBlank() || !fallbackUrl.isNullOrBlank()
     var isBannerLoaded by remember(imageUrl, fallbackUrl) { mutableStateOf(!hasBannerImage) }
+    // The shared-element transition from a catalog card hands this composable a fresh instance
+    // once it settles, resetting isBannerLoaded to false even though Coil already has this exact
+    // image in memory from the transition a frame earlier - showing the skeleton immediately makes
+    // that near-instant cache hit read as a visible flicker instead of a seamless landing. Same
+    // debounce idea as PosterImage's placeholder guard.
+    var showBannerSkeleton by remember(imageUrl, fallbackUrl) { mutableStateOf(false) }
+    LaunchedEffect(isBannerLoaded, imageUrl, fallbackUrl) {
+        if (!isBannerLoaded) {
+            delay(BANNER_SKELETON_FLASH_GUARD_MILLIS)
+            showBannerSkeleton = true
+        } else {
+            showBannerSkeleton = false
+        }
+    }
     Box(
         modifier = modifier
             .clipToBounds()
@@ -1081,7 +1095,7 @@ private fun DetailHeroMedia(
         )
 
         AnimatedVisibility(
-            visible = !isBannerLoaded,
+            visible = showBannerSkeleton,
             enter = fadeIn(animationSpec = tween(120)),
             exit = fadeOut(animationSpec = tween(180)),
         ) {
@@ -1282,13 +1296,15 @@ private fun DetailContentCard(
                             accent = MaterialTheme.colorScheme.tertiary,
                         )
                     }
-                    item {
-                        DetailInfoPill(
-                            label = stringResource(R.string.details_episodes_released),
-                            value = heroInfo.episodes.ifBlank { stringResource(R.string.search_filters_not_selected) },
-                            icon = Icons.Outlined.FormatListNumbered,
-                            accent = MaterialTheme.colorScheme.primary,
-                        )
+                    heroInfo.episodes.takeIf(String::isNotBlank)?.let { episodes ->
+                        item {
+                            DetailInfoPill(
+                                label = stringResource(R.string.details_episodes_released),
+                                value = episodes,
+                                icon = Icons.Outlined.FormatListNumbered,
+                                accent = MaterialTheme.colorScheme.primary,
+                            )
+                        }
                     }
                     item {
                         DetailInfoPill(
@@ -2129,6 +2145,7 @@ private fun findResumeWatchState(
 }
 
 private const val WATCHED_END_TOLERANCE_MS = 1_000L
+private const val BANNER_SKELETON_FLASH_GUARD_MILLIS = 120L
 
 private fun formatEpisodeNumber(number: Double): String {
     return if (number % 1.0 == 0.0) {
