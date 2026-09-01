@@ -44,6 +44,29 @@ class RhinoExtensionRuntimeSandboxTest {
     }
 
     @Test
+    fun `getClass reflection escape via an exposed Java object is blocked`() {
+        // Removing the Packages/java/JavaImporter globals (the two tests above) blocks *named*
+        // class lookup, but every Java object a script already holds - like the Jsoup Document
+        // below - still exposes the public getClass() every Java object has. Without a
+        // ClassShutter, that alone reaches arbitrary classes via plain reflection with no need for
+        // java/Packages at all: doc.getClass().forName("java.lang.Runtime")... This was confirmed
+        // to actually work before RhinoExtensionRuntime installed HibikiClassShutter.
+        val runtime = RhinoExtensionRuntime(
+            extensionId = "sandbox-test",
+            payload = """
+                var Provider = {
+                    search: function() {
+                        var doc = Jsoup.parse("<a></a>");
+                        return doc.getClass().forName("java.lang.Runtime");
+                    }
+                };
+            """.trimIndent(),
+            sourceContext = context(),
+        )
+        assertFailsWith<Exception> { runtime.callRaw("search", arrayOf()) }
+    }
+
+    @Test
     fun `curated Jsoup binding still works`() {
         val runtime = RhinoExtensionRuntime(
             extensionId = "sandbox-test",

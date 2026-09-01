@@ -93,6 +93,16 @@ class ScriptExtensionValidationException(
     violations.joinToString(prefix = "Invalid script extension '$extensionId': ", separator = "; "),
 )
 
+/** Thrown by [ScriptExtensionRepository.install]/[PlayerResolverExtensionRepository.install] when a different repository tries to claim an already-installed id. */
+class ScriptExtensionOriginConflictException(
+    val extensionId: String,
+    val installedFromOrigin: String,
+    val attemptedOrigin: String,
+) : SecurityException(
+    "Extension '$extensionId' is already installed from a different repository " +
+        "($installedFromOrigin) and cannot be overwritten by $attemptedOrigin",
+)
+
 /** A manifest that failed to load, kept alongside valid ones so a broken file never crashes the catalog. */
 data class InvalidScriptExtension(
     val id: String,

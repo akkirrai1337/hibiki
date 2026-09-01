@@ -34,18 +34,35 @@ class ScriptExtensionRepository(private val extensionsDir: File) {
         ?.sortedBy(File::getName)
         .orEmpty()
 
-    /** Validates and persists [manifestJson] as `<id>.json`, overwriting any existing install. */
-    fun install(manifestJson: String) {
+    /**
+     * Validates and persists [manifestJson] as `<id>.json`, overwriting any existing install from
+     * the *same* [originRepositoryUrl]. A different origin claiming an id that's already installed
+     * is refused instead - without this, a third-party repository could publish an extension (or,
+     * worse, a [PlayerResolverExtensionRepository] resolver silently pulled in by some other
+     * source's `resolverDependencies`) reusing an official id like `animevost` or `anitube-ashdi`
+     * and silently replace its trusted code the next time anyone installs/updates it. An id that's
+     * never been installed before, or was last installed from this exact origin, proceeds as
+     * before. [originRepositoryUrl] is empty for the built-in default repository so existing
+     * installs from before this check keep working without needing a migration.
+     */
+    fun install(manifestJson: String, originRepositoryUrl: String) {
         val manifest = json.decodeFromString(ScriptExtensionManifest.serializer(), manifestJson)
         manifest.violations().takeIf(List<String>::isNotEmpty)?.let { violations ->
             throw ScriptExtensionValidationException(manifest.id, violations)
         }
+        val originFile = File(extensionsDir, "${manifest.id}.origin")
+        val existingOrigin = originFile.takeIf(File::exists)?.readText()?.trim()
+        if (!existingOrigin.isNullOrEmpty() && existingOrigin != originRepositoryUrl) {
+            throw ScriptExtensionOriginConflictException(manifest.id, existingOrigin, originRepositoryUrl)
+        }
         extensionsDir.mkdirs()
         File(extensionsDir, "${manifest.id}.json").writeText(json.encodeToString(ScriptExtensionManifest.serializer(), manifest))
+        originFile.writeText(originRepositoryUrl)
     }
 
     fun uninstall(id: String) {
         File(extensionsDir, "$id.json").delete()
+        File(extensionsDir, "$id.origin").delete()
     }
 
     /** Every currently-installed manifest (payload included), skipping any that fail to parse. */

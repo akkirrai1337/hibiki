@@ -59,13 +59,20 @@ interface BrowserScriptResolver {
 class PlayerResolverExtensionRepository(private val extensionsDir: File) {
     private val json = Json { ignoreUnknownKeys = true; explicitNulls = false }
 
-    fun install(manifestJson: String) {
+    /** See [ScriptExtensionRepository.install] - same cross-repository id-collision protection, applied to resolvers. */
+    fun install(manifestJson: String, originRepositoryUrl: String) {
         val manifest = json.decodeFromString(PlayerResolverExtensionManifest.serializer(), manifestJson)
         manifest.violations().takeIf(List<String>::isNotEmpty)?.let { throw IllegalArgumentException(it.joinToString()) }
+        val originFile = File(extensionsDir, "${manifest.id}.resolver.origin")
+        val existingOrigin = originFile.takeIf(File::exists)?.readText()?.trim()
+        if (!existingOrigin.isNullOrEmpty() && existingOrigin != originRepositoryUrl) {
+            throw ScriptExtensionOriginConflictException(manifest.id, existingOrigin, originRepositoryUrl)
+        }
         extensionsDir.mkdirs()
         File(extensionsDir, "${manifest.id}.resolver.json").writeText(
             json.encodeToString(PlayerResolverExtensionManifest.serializer(), manifest),
         )
+        originFile.writeText(originRepositoryUrl)
     }
 
     fun loadAll(context: SourceContext): List<StreamExtractor> = extensionsDir

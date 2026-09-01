@@ -25,6 +25,7 @@ import org.akkirrai.beakokit.http.resolveUrl
 import org.akkirrai.beakokit.http.schemeOf
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
+import org.mozilla.javascript.ClassShutter
 import org.mozilla.javascript.Context
 import org.mozilla.javascript.Function
 import org.mozilla.javascript.NativeJSON
@@ -32,7 +33,13 @@ import org.mozilla.javascript.NativeObject
 import org.mozilla.javascript.Scriptable
 import org.mozilla.javascript.ScriptableObject
 import org.mozilla.javascript.WrapFactory
+import java.io.IOException
 import java.net.URI
+
+/** Matches a JVM network-exception class name, e.g. inside a "X cannot be cast to Y" message. */
+private val NETWORK_EXCEPTION_CLASS_NAME = Regex(
+    """[\w.]*\b(?:UnknownHost|Connect|SocketTimeout|SSLHandshake|NoRouteToHost|UnresolvedAddress)Exception\b""",
+)
 
 /**
  * Runs one scripted extension's JS payload inside a sandboxed Rhino interpreter.
@@ -59,8 +66,10 @@ class RhinoExtensionRuntime(
     private val scope: ScriptableObject
 
     init {
+        installRhinoTimeoutGuard()
         val cx = Context.enter()
         try {
+            cx.getClassShutterSetter()?.setClassShutter(HibikiClassShutter)
             cx.optimizationLevel = -1
             cx.languageVersion = Context.VERSION_ES6
             cx.wrapFactory = StringPassthroughWrapFactory
@@ -91,6 +100,12 @@ class RhinoExtensionRuntime(
     fun callRaw(functionName: String, args: Array<out Any?>): String = synchronized(lock) {
         val cx = Context.enter()
         try {
+            // Context.enter() can hand back a different underlying Context on a different thread
+            // (Rhino keeps one per calling thread) than the one `init` set the shutter on, and
+            // setClassShutter() throws if called twice on the *same* Context - so this has to be
+            // re-armed defensively on every call, tolerating "already set" via the null-if-set
+            // getClassShutterSetter() rather than calling setClassShutter() unconditionally.
+            cx.getClassShutterSetter()?.setClassShutter(HibikiClassShutter)
             cx.optimizationLevel = -1
             cx.wrapFactory = StringPassthroughWrapFactory
             val provider = ScriptableObject.getProperty(scope, "Provider") as? Scriptable
@@ -108,12 +123,45 @@ class RhinoExtensionRuntime(
             Context.toString(NativeJSON.stringify(cx, scope, result, null, null))
         } catch (error: SourceException) {
             throw error
-        } catch (error: Exception) {
+        } catch (error: RhinoScriptTimeoutError) {
+            // Caught here, one frame outside the interpreter - not inside the script's own
+            // try/catch, which is exactly what throwing an Error instead of an Exception prevents.
             throw SourceException(
-                "Extension '$extensionId' threw while running $functionName: ${error.message ?: error}",
+                "Extension '$extensionId' timed out while running $functionName: ${error.message}",
                 cause = error,
-                kind = SourceErrorKind.PARSE,
+                kind = SourceErrorKind.UNAVAILABLE,
             )
+        } catch (error: Exception) {
+            // A real network failure (DNS not resolved yet on a cold app start, connection reset,
+            // ...) doesn't always surface as the plain IOException it started as - Rhino invokes
+            // the fetch/challenge/browserFetch host functions through the JVM's reflective
+            // Method.invoke, and something in that path (observed against a real device with the
+            // network not up yet at process start) loses the original exception and rethrows a
+            // ClassCastException whose *message* names it instead, e.g. "java.net.UnknownHostException
+            // cannot be cast to java.lang.Error" - which carries none of the original as a `cause`
+            // to walk. Recognizing that shape from the message, in addition to walking the cause
+            // chain for a real IOException, means the surfaced error kind - and whether callers/the
+            // resilience policy treat it as transient - reflects what actually went wrong instead of
+            // an opaque "extension threw" parse error.
+            val ioCause = generateSequence(error as Throwable) { it.cause }.firstOrNull { it is IOException } as IOException?
+            val networkExceptionInMessage = NETWORK_EXCEPTION_CLASS_NAME.find(error.message.orEmpty())?.value
+            throw when {
+                ioCause != null -> SourceException(
+                    "Extension '$extensionId' network request failed while running $functionName: ${ioCause.message ?: ioCause}",
+                    cause = error,
+                    kind = SourceErrorKind.NETWORK,
+                )
+                networkExceptionInMessage != null -> SourceException(
+                    "Extension '$extensionId' network request failed while running $functionName: $networkExceptionInMessage",
+                    cause = error,
+                    kind = SourceErrorKind.NETWORK,
+                )
+                else -> SourceException(
+                    "Extension '$extensionId' threw while running $functionName: ${error.message ?: error}",
+                    cause = error,
+                    kind = SourceErrorKind.PARSE,
+                )
+            }
         } finally {
             Context.exit()
         }
@@ -132,6 +180,25 @@ class RhinoExtensionRuntime(
     private object StringPassthroughWrapFactory : WrapFactory() {
         override fun wrap(cx: Context?, scope: Scriptable?, obj: Any?, staticType: Class<*>?): Any? =
             if (obj is String) obj else super.wrap(cx, scope, obj, staticType)
+    }
+
+    /**
+     * Closes the actual sandbox escape [hardenScope] only looks like it closes: removing the
+     * `Packages`/`java`/`JavaImporter` globals blocks *named* class lookup, but any Java object a
+     * script already holds - e.g. the `org.jsoup.nodes.Document` [JsoupBinding.parse] returns -
+     * still exposes the public `getClass()` every Java object has. From there, plain reflection
+     * (`.getClass().forName("java.lang.Runtime")...`) reaches arbitrary classes with no need for
+     * `java`/`Packages` at all; a payload doing exactly that was confirmed to work before this
+     * shutter existed. Rhino consults a [ClassShutter] every time it needs to reflect a class's
+     * members (see `JavaMembers`'s constructor) - including the class returned by `getClass()`
+     * itself - so an allowlist here blocks the escape at that exact point: script code can still
+     * call methods on the [JsoupBinding]/Jsoup types it's meant to use, but the moment it tries to
+     * invoke anything on a `java.lang.Class`/`java.lang.reflect.*` object, building that class's
+     * members throws instead of succeeding.
+     */
+    private object HibikiClassShutter : ClassShutter {
+        override fun visibleToScripts(fullClassName: String): Boolean =
+            fullClassName.startsWith("org.akkirrai.beakokit.") || fullClassName.startsWith("org.jsoup.")
     }
 
     private fun hardenScope(scope: ScriptableObject) {

@@ -36,7 +36,7 @@ class ScriptedKodikResolverTest {
 
     private fun installKodikResolver(host: SourceFixtureHost) =
         PlayerResolverExtensionRepository(java.nio.file.Files.createTempDirectory("kodik-resolver").toFile())
-            .apply { install(ScriptedResolverFixtures.loadJson("kodik")) }
+            .apply { install(ScriptedResolverFixtures.loadJson("kodik"), originRepositoryUrl = "repo") }
             .loadAll(host.context)
             .single()
 

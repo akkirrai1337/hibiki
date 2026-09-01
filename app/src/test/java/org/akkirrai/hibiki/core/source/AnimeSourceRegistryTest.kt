@@ -35,7 +35,10 @@ class AnimeSourceRegistryTest {
         val extensionsDir = Files.createTempDirectory("hibiki-registry-install").toFile()
         AnimeSourceRegistry.initialize(extensionsDir)
 
-        AnimeSourceRegistry.installScriptExtension(Json.encodeToString(ScriptExtensionManifest.serializer(), manifest))
+        AnimeSourceRegistry.installScriptExtension(
+            Json.encodeToString(ScriptExtensionManifest.serializer(), manifest),
+            originRepositoryUrl = "",
+        )
 
         val descriptor = AnimeSourceRegistry.descriptor(SourceId("test-source"))
         assertEquals("Test Source", descriptor.name)

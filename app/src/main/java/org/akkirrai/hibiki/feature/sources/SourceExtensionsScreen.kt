@@ -139,6 +139,20 @@ fun SourceExtensionsScreen(
             .flatten()
             .distinctBy(MarketplaceExtension::id)
     }
+    // Which repository each installed-or-installable id should be considered to "belong" to, for
+    // ScriptExtensionRepository/PlayerResolverExtensionRepository's cross-repository overwrite
+    // guard - first repository in sourceRepositoryUrls order wins an id, mirroring the distinctBy
+    // above exactly, so a later/third-party repository can never claim an id an earlier one (e.g.
+    // the built-in default) already serves.
+    val originByExtensionId = remember(sourceRepositoryUrls, repoStates) {
+        val origins = mutableMapOf<String, String>()
+        sourceRepositoryUrls.forEach { url ->
+            (repoStates[url] as? RepoFetchResult.Loaded)?.extensions?.forEach { extension ->
+                origins.putIfAbsent(extension.id, url)
+            }
+        }
+        origins
+    }
     val sourceExtensions = mergedExtensions.filter { it.type == "source" }
     // Player-resolver extensions have no lang field at all (index.json defaults it to "" - see
     // build_index.py) and language filtering only makes sense for sources anyway, so this must
@@ -289,9 +303,13 @@ fun SourceExtensionsScreen(
                                     } ?: error("Required resolver '$resolverId' is not present in this repository")
                                     AnimeSourceRegistry.installPlayerResolverExtension(
                                         marketplaceClient.fetchPlayerResolverManifest(resolver),
+                                        originByExtensionId[resolver.id].orEmpty(),
                                     )
                                 }
-                                AnimeSourceRegistry.installScriptExtension(marketplaceClient.fetchManifest(extension))
+                                AnimeSourceRegistry.installScriptExtension(
+                                    marketplaceClient.fetchManifest(extension),
+                                    originByExtensionId[extension.id].orEmpty(),
+                                )
                                 if (hadNoSources) {
                                     preferences.setAnimeSource(SourceId(extension.id))
                                 }
@@ -557,7 +575,7 @@ private fun SourceRepositoryList(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(top = 8.dp, bottom = bottomContentPadding),
+            .padding(top = 8.dp),
     ) {
         when (state) {
             is RepositoryLoadState.Loading -> SourceRepositoryMessage(stringResource(R.string.source_extensions_repository_loading))
@@ -579,9 +597,21 @@ private fun SourceRepositoryList(
                 if (visibleExtensions.isEmpty()) {
                     SourceRepositoryMessage(stringResource(R.string.source_extensions_repository_empty))
                 } else {
+                    // The nav-bar reservation belongs in the LazyColumn's own contentPadding (like
+                    // CatalogScreen/LibraryScreen do), not on this wrapping Column - padding a
+                    // Column shrinks its measured height, so the LazyColumn's fillMaxSize() sizes
+                    // itself to (screen - bottomContentPadding) and then *also* insets its content
+                    // by the same amount a second time, needlessly cramming the list into a
+                    // shorter viewport than it needs and making the last row look clipped right
+                    // above the floating bottom bar instead of scrolling clear of it.
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 16.dp),
+                        contentPadding = PaddingValues(
+                            start = 16.dp,
+                            end = 16.dp,
+                            top = 8.dp,
+                            bottom = bottomContentPadding + 16.dp,
+                        ),
                     ) {
                         items(visibleExtensions, key = MarketplaceExtension::id) { extension ->
                             // A resolver dependency can be fixed and re-published without its
@@ -624,14 +654,19 @@ private fun RepositoriesList(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(top = 8.dp, bottom = bottomContentPadding),
+            .padding(top = 8.dp),
     ) {
         if (urls.isEmpty()) {
             SourceRepositoryMessage(stringResource(R.string.source_extensions_repositories_empty))
         } else {
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                contentPadding = PaddingValues(
+                    start = 16.dp,
+                    end = 16.dp,
+                    top = 8.dp,
+                    bottom = bottomContentPadding + 8.dp,
+                ),
             ) {
                 items(urls, key = { it }) { url ->
                     RepositoryCard(

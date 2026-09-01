@@ -132,19 +132,24 @@ object AnimeSourceRegistry {
         refresh()
     }
 
-    /** Validates and persists a manifest fetched from a repository, then reloads the catalog. */
-    fun installScriptExtension(manifestJson: String) {
+    /**
+     * Validates and persists a manifest fetched from a repository, then reloads the catalog.
+     * [originRepositoryUrl] identifies which repository this manifest came from, so
+     * [ScriptExtensionRepository.install] can refuse a different repository silently overwriting
+     * an id it doesn't own.
+     */
+    fun installScriptExtension(manifestJson: String, originRepositoryUrl: String) {
         val repository = scriptRepository
             ?: error("AnimeSourceRegistry.initialize must be called before installing extensions")
-        repository.install(manifestJson)
+        repository.install(manifestJson, originRepositoryUrl)
         refresh()
     }
 
     /** Installs a portable player resolver. Resolver files never appear as catalog sources. */
-    fun installPlayerResolverExtension(manifestJson: String) {
+    fun installPlayerResolverExtension(manifestJson: String, originRepositoryUrl: String) {
         val repository = playerResolverRepository
             ?: error("AnimeSourceRegistry.initialize must be called before installing resolvers")
-        repository.install(manifestJson)
+        repository.install(manifestJson, originRepositoryUrl)
         extensionGenerationCounter.incrementAndGet()
     }
 

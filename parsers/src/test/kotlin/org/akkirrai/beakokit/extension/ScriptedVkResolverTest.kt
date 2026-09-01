@@ -30,7 +30,7 @@ class ScriptedVkResolverTest {
 
     private fun installVkResolver(host: SourceFixtureHost) =
         PlayerResolverExtensionRepository(Files.createTempDirectory("vk-resolver").toFile())
-            .apply { install(ScriptedResolverFixtures.loadJson("vk")) }
+            .apply { install(ScriptedResolverFixtures.loadJson("vk"), originRepositoryUrl = "repo") }
             .loadAll(host.context)
             .single()
 

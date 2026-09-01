@@ -37,6 +37,7 @@ class PlayerResolverExtensionRepositoryTest {
                     """.trimIndent(),
                 ),
             ),
+            originRepositoryUrl = "repo",
         )
         val client = HttpClient(MockEngine { respond("", HttpStatusCode.OK) })
         val resolver = repository.loadAll(

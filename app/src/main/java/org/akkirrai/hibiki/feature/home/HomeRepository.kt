@@ -5,7 +5,10 @@ import io.ktor.client.HttpClient
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
 import kotlin.random.Random
+import org.akkirrai.beakokit.api.SourceErrorKind
+import org.akkirrai.beakokit.api.SourceException
 import org.akkirrai.beakokit.api.SourceId
 import org.akkirrai.beakokit.model.AnimeSearchFilterCatalog
 import org.akkirrai.beakokit.model.AnimeSearchRequest
@@ -101,13 +104,15 @@ class HomeRepository(
             0
         }
         AppLogger.d(TAG, "loadHomeState: cache miss, calling getCatalog(limit=$HOME_TRENDING_WINDOW_SIZE, offset=$trendingOffset, lang=$languageKey)")
-        val catalog = source.search(
-            AnimeSearchRequest(
-                limit = HOME_TRENDING_WINDOW_SIZE,
-                offset = trendingOffset,
-                sort = AnimeSearchSort.RATING,
-            ),
-        )
+        val catalog = retryOnColdStartNetworkFailure {
+            source.search(
+                AnimeSearchRequest(
+                    limit = HOME_TRENDING_WINDOW_SIZE,
+                    offset = trendingOffset,
+                    sort = AnimeSearchSort.RATING,
+                ),
+            )
+        }
         AppLogger.d(TAG, "loadHomeState: getCatalog returned ${catalog.size} items")
 
         if (catalog.isEmpty()) {
@@ -225,6 +230,34 @@ class HomeRepository(
         if (!hasActiveInternetConnection(appContext)) {
             throw NoInternetConnectionException(appContext.getString(R.string.home_error_no_internet))
         }
+    }
+
+    /**
+     * Retries a source call a couple of times on a transient network failure before giving up.
+     * [hasActiveInternetConnection] can report the network as up moments before DNS/routing is
+     * actually usable - most visibly right after the app process starts (e.g. installed via adb
+     * with the screen off), where the very first request can fail with a raw connectivity error
+     * even though [ensureInternetConnection] just passed. A short, bounded retry absorbs that race
+     * instead of surfacing a hard error the user has to manually dismiss with Retry.
+     */
+    private suspend fun <T> retryOnColdStartNetworkFailure(block: suspend () -> T): T {
+        var attempt = 0
+        while (true) {
+            try {
+                return block()
+            } catch (error: Exception) {
+                if (attempt >= COLD_START_RETRY_ATTEMPTS || !error.isTransientNetworkFailure()) throw error
+                attempt++
+                AppLogger.w(TAG, "retryOnColdStartNetworkFailure: attempt $attempt after ${error.message}")
+                delay(COLD_START_RETRY_DELAY_MILLIS * attempt)
+            }
+        }
+    }
+
+    private fun Throwable.isTransientNetworkFailure(): Boolean = when (this) {
+        is java.io.IOException -> true
+        is SourceException -> kind == SourceErrorKind.NETWORK || kind == SourceErrorKind.UNAVAILABLE
+        else -> false
     }
 
     suspend fun loadRecentlyUpdatedPage(
@@ -422,6 +455,8 @@ class HomeRepository(
         const val RANDOM_CATALOG_MAX_OFFSET = 5_000
         const val RANDOM_CATALOG_ATTEMPTS = 5
         val RANDOM_CATALOG_SORTS = AnimeSearchSort.entries
+        const val COLD_START_RETRY_ATTEMPTS = 2
+        const val COLD_START_RETRY_DELAY_MILLIS = 400L
     }
 
     private data class CachedHomeContent(
