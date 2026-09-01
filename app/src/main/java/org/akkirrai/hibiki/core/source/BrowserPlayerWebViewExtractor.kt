@@ -47,9 +47,18 @@ class BrowserPlayerWebViewExtractor(
     override suspend fun extractVariants(link: PlayerLink): List<VideoStream> {
         val resolver = resolvers.firstOrNull { it.supportsBrowser(link) }
             ?: throw SourceException("No browser resolver is installed for this player")
+        // Unlike BrowserFetchRequest, PlayerLink.url carries no scheme validation of its own - a
+        // source/resolver pair (own trust boundary as any other scripted extension) could otherwise
+        // point this WebView's initial loadUrl() at a content:// URI. allowFileAccess=false below
+        // already blocks the file:// case; this closes the same gap for content:// up front instead
+        // of relying on that setting alone.
+        val pageUrl = normalizeUrl(link.url)
+        if (!pageUrl.startsWith("https://", ignoreCase = true) && !pageUrl.startsWith("http://", ignoreCase = true)) {
+            throw SourceException("Browser resolver page URL must be HTTP(S): $pageUrl")
+        }
         AppLogger.d(TAG, "Start: host=${hostOf(link.url)}, player=${link.playerName.orEmpty()}")
         val capture = withContext(Dispatchers.Main) {
-            capture(normalizeUrl(link.url), link.headers, resolver.browserScript(link))
+            capture(pageUrl, link.headers, resolver.browserScript(link))
         }
         val streams = capture.streams
         val session = capture.session
@@ -263,6 +272,7 @@ class BrowserPlayerWebViewExtractor(
                 settings.domStorageEnabled = true
                 settings.mediaPlaybackRequiresUserGesture = false
                 settings.allowFileAccess = false
+                settings.allowContentAccess = false
                 settings.userAgentString = CHROME_USER_AGENT
                 addJavascriptInterface(object {
                     @JavascriptInterface fun stream(url: String) = handler.post { add(url, emptyMap(), BrowserCaptureOrigin.VIDEO_ELEMENT) }

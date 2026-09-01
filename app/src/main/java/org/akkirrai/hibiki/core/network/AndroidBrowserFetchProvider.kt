@@ -1,9 +1,12 @@
 package org.akkirrai.hibiki.core.network
 
 import android.content.Context
+import android.net.http.SslError
 import android.os.Handler
 import android.os.Looper
 import android.webkit.JavascriptInterface
+import android.webkit.SslErrorHandler
+import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import java.util.UUID
@@ -94,8 +97,30 @@ class AndroidBrowserFetchProvider(
                 settings.javaScriptEnabled = true
                 settings.domStorageEnabled = true
                 settings.userAgentString = CHROME_USER_AGENT
+                // pageUrl is required to be HTTPS by BrowserFetchRequest's own validation, but
+                // that only covers the *initial* load - the page's own script is free to navigate
+                // itself afterward, and this WebView's addJavascriptInterface bridge stays
+                // attached to whatever it navigates to. Without these, a source's page could
+                // self-navigate to file:///data/data/<pkg>/... and use the bridge (or a same-origin
+                // fetch) to read this app's own private storage - something a pure Rhino payload
+                // has no access to at all post-ClassShutter. Disabling file/content access and
+                // refusing any non-HTTPS navigation closes that off; it's the same hardening
+                // ChallengeSessionActivity's own WebView already applies.
+                settings.allowFileAccess = false
+                settings.allowContentAccess = false
                 addJavascriptInterface(FetchBridge(handler), BRIDGE_NAME)
                 webViewClient = object : WebViewClient() {
+                    override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
+                        val allowed = request.url.scheme.equals("https", ignoreCase = true)
+                        if (!allowed) AppLogger.w(TAG, "Blocked browser-fetch navigation to ${request.url}")
+                        return !allowed
+                    }
+
+                    override fun onReceivedSslError(view: WebView, handler: SslErrorHandler, error: SslError) {
+                        AppLogger.w(TAG, "SSL error ${error.primaryError} on ${error.url}")
+                        handler.cancel()
+                    }
+
                     override fun onPageFinished(view: WebView, url: String) {
                         if (delivered) return
                         delivered = true
