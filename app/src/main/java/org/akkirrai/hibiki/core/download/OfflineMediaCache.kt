@@ -147,27 +147,31 @@ object OfflineMediaCache {
     fun buildPlaybackDataSourceFactory(
         context: Context,
         headers: Map<String, String>,
+        resourceHeadersByUrl: Map<String, Map<String, String>> = emptyMap(),
     ): DataSource.Factory {
         return CacheDataSource.Factory()
             .setCache(getStreamingCache(context))
-            .setUpstreamDataSourceFactory(buildUpstreamDataSourceFactory(context, headers))
+            .setUpstreamDataSourceFactory(buildUpstreamDataSourceFactory(context, headers, resourceHeadersByUrl))
             .setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
     }
 
     fun buildUpstreamDataSourceFactory(
         context: Context,
         headers: Map<String, String>,
+        resourceHeadersByUrl: Map<String, Map<String, String>> = emptyMap(),
     ): DataSource.Factory {
-        val requestHeaders = buildPlaybackRequestHeaders(headers)
         val httpFactory = DefaultHttpDataSource.Factory()
             .setAllowCrossProtocolRedirects(true)
             .setConnectTimeoutMs(PLAYER_CONNECT_TIMEOUT_MS)
             .setReadTimeoutMs(PLAYER_READ_TIMEOUT_MS)
             .setUserAgent(PLAYER_HTTP_USER_AGENT)
-            .setDefaultRequestProperties(requestHeaders)
+            .setDefaultRequestProperties(buildPlaybackRequestHeaders(emptyMap()))
+        val headerInjectingFactory = HeaderInjectingHttpDataSourceFactory(httpFactory) { url ->
+            playbackRequestHeadersForUrl(headers, resourceHeadersByUrl, url)
+        }
         return DefaultDataSource.Factory(
             context.applicationContext,
-            BrowserSessionCookieDataSourceFactory(httpFactory),
+            BrowserSessionCookieDataSourceFactory(headerInjectingFactory),
         )
     }
 
@@ -188,6 +192,14 @@ object OfflineMediaCache {
 
         return requestHeaders
     }
+
+    internal fun playbackRequestHeadersForUrl(
+        defaultHeaders: Map<String, String>,
+        resourceHeadersByUrl: Map<String, Map<String, String>>,
+        url: String,
+    ): Map<String, String> = buildPlaybackRequestHeaders(
+        resourceHeadersByUrl[url]?.ifEmpty { defaultHeaders } ?: defaultHeaders,
+    )
 
     @Synchronized
     private fun getDatabaseProvider(context: Context): StandaloneDatabaseProvider {

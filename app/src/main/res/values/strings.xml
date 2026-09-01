@@ -203,6 +203,8 @@
     <string name="watch_player_retry">Retry</string>
     <string name="watch_episode_number">Episode %1$s</string>
     <string name="watch_player_settings">Player settings</string>
+    <string name="watch_player_subtitles_enable">Enable subtitles</string>
+    <string name="watch_player_subtitles_disable">Disable subtitles</string>
     <string name="watch_player_picture_in_picture">Picture-in-picture</string>
     <string name="watch_player_audio_only">Audio only</string>
     <string name="watch_player_show_video">Show video</string>

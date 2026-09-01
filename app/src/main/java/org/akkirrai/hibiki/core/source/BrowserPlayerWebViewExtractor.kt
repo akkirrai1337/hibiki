@@ -29,6 +29,7 @@ import org.akkirrai.beakokit.http.resolveUrl
 import org.akkirrai.beakokit.model.PlayerLink
 import org.akkirrai.beakokit.model.PlayerType
 import org.akkirrai.beakokit.model.StreamType
+import org.akkirrai.beakokit.model.SubtitleTrack
 import org.akkirrai.beakokit.model.VideoStream
 import org.akkirrai.hibiki.core.log.AppLogger
 import kotlin.coroutines.resume
@@ -47,9 +48,11 @@ class BrowserPlayerWebViewExtractor(
         val resolver = resolvers.firstOrNull { it.supportsBrowser(link) }
             ?: throw SourceException("No browser resolver is installed for this player")
         AppLogger.d(TAG, "Start: host=${hostOf(link.url)}, player=${link.playerName.orEmpty()}")
-        val (streams, session) = withContext(Dispatchers.Main) {
+        val capture = withContext(Dispatchers.Main) {
             capture(normalizeUrl(link.url), link.headers, resolver.browserScript(link))
         }
+        val streams = capture.streams
+        val session = capture.session
         if (streams.isEmpty()) {
             session?.let { WebViewStreamRelay.discard(it.webView, it.handler) }
             throw SourceException("Browser resolver did not expose a playable stream")
@@ -64,14 +67,44 @@ class BrowserPlayerWebViewExtractor(
         // AnimeWatchRepository's resolveAttemptTimeoutMillis); a CDN that blocks plain HTTP clients
         // (the whole reason WebViewStreamRelay exists) can otherwise eat that entire budget here
         // before ever reaching the relay fallback, silently timing out the attempt with no error.
-        val audio = BrowserStreamSelector.findAudio(streams)
+        val audio = link.audioUrl?.let { url ->
+            BrowserCapturedStream(url, link.audioHeaders.ifEmpty { link.headers }, BrowserCaptureOrigin.SOURCE_AUDIO)
+        } ?: BrowserStreamSelector.findAudio(streams)
             ?: withTimeoutOrNull(AUDIO_PROBE_TIMEOUT_MS) { ranked.firstNotNullOfOrNull { fetchAudioFromMaster(it) } }
         // Some CDNs behind bot management block a plain HTTP client on TLS fingerprint alone, no
         // matter how closely its headers mimic a browser - the WebView that resolved this link is a
         // genuine Chromium network stack, so it's kept alive as a relay backend and offered as a
         // second candidate per stream. PlaybackResolver tries candidates in order, so the fast
         // direct URL is always attempted first and this fallback only costs anything when needed.
-        val relayToken = session?.let { WebViewStreamRelay.register(it.webView, it.handler, ranked.firstOrNull()?.headers.orEmpty()) }
+        val capturedSubtitles = capture.subtitles.map { subtitle ->
+            SubtitleTrack(
+                url = subtitle.url,
+                label = subtitle.label,
+                language = subtitle.language,
+                headers = refreshCookie(subtitle.url, subtitle.headers),
+            )
+        }
+        val subtitles = (
+            link.subtitles.map { subtitle ->
+                subtitle.copy(headers = refreshCookie(subtitle.url, subtitle.headers.ifEmpty { link.headers }))
+            } + capturedSubtitles
+        ).distinctBy(SubtitleTrack::url)
+        val resourceHeaders = buildMap {
+            ranked.forEach { put(it.url, refreshCookie(it.url, it.headers)) }
+            audio?.let { put(it.url, refreshCookie(it.url, it.headers)) }
+            subtitles.forEach { put(it.url, it.headers) }
+        }
+        val relayToken = session?.let {
+            withContext(Dispatchers.IO) {
+                WebViewStreamRelay.register(
+                    webView = it.webView,
+                    handler = it.handler,
+                    headers = resourceHeaders[ranked.first().url].orEmpty(),
+                    initialUrls = resourceHeaders.keys,
+                    resourceHeaders = resourceHeaders,
+                )
+            }
+        }
         return ranked.flatMap { stream ->
             val direct = VideoStream(
                 url = stream.url,
@@ -80,6 +113,7 @@ class BrowserPlayerWebViewExtractor(
                 headers = refreshCookie(stream.url, stream.headers),
                 audioUrl = audio?.url?.takeUnless { it == stream.url },
                 audioHeaders = audio?.let { refreshCookie(it.url, it.headers) }.orEmpty(),
+                subtitles = subtitles,
             )
             val proxied = relayToken?.let { token ->
                 VideoStream(
@@ -89,6 +123,12 @@ class BrowserPlayerWebViewExtractor(
                     headers = emptyMap(),
                     audioUrl = audio?.url?.takeUnless { it == stream.url }?.let { WebViewStreamRelay.proxyUrl(token, it) },
                     audioHeaders = emptyMap(),
+                    subtitles = subtitles.map { subtitle ->
+                        subtitle.copy(
+                            url = WebViewStreamRelay.proxyUrl(token, subtitle.url),
+                            headers = emptyMap(),
+                        )
+                    },
                 )
             }
             listOfNotNull(direct, proxied)
@@ -132,10 +172,11 @@ class BrowserPlayerWebViewExtractor(
         pageUrl: String,
         pageHeaders: Map<String, String>,
         resolverScript: String,
-    ): Pair<List<BrowserCapturedStream>, CaptureSession?> =
+    ): BrowserCaptureResult =
         suspendCancellableCoroutine { continuation ->
             val handler = Handler(Looper.getMainLooper())
             val captures = mutableListOf<BrowserCapturedStream>()
+            val subtitles = mutableListOf<BrowserCapturedSubtitle>()
             var webView: WebView? = null
             var delivered = false
             var probes = 0
@@ -169,7 +210,13 @@ class BrowserPlayerWebViewExtractor(
                 // Chromium already drained, surfacing as "body stream already used"/"already read".
                 val session = webView?.also { it.webViewClient = WebViewClient() }?.let { CaptureSession(it, handler) }
                 webView = null
-                if (continuation.isActive) continuation.resume(result to session)
+                if (continuation.isActive) continuation.resume(
+                    BrowserCaptureResult(
+                        streams = result,
+                        subtitles = subtitles.distinctBy(BrowserCapturedSubtitle::url),
+                        session = session,
+                    ),
+                )
             }
             fun add(url: String, headers: Map<String, String>, origin: BrowserCaptureOrigin) {
                 if (!BrowserStreamSelector.isHls(url)) return
@@ -183,6 +230,17 @@ class BrowserPlayerWebViewExtractor(
                 // before PlaybackResolver's per-player timeout cancels this coroutine.
                 settle?.let(handler::removeCallbacks)
                 settle = Runnable(::finish).also { handler.postDelayed(it, STREAM_SETTLE_DELAY_MS) }
+            }
+            fun addSubtitle(url: String, label: String?, language: String?) {
+                if (!VTT_URL.matches(url)) return
+                if (subtitles.any { it.url == url }) return
+                subtitles += BrowserCapturedSubtitle(
+                    url = url,
+                    label = label?.trim()?.takeIf(String::isNotBlank),
+                    language = language?.trim()?.takeIf(String::isNotBlank),
+                    headers = playbackHeaders(url, emptyMap(), pageUrl, CookieManager.getInstance().getCookie(url)),
+                )
+                AppLogger.d(TAG, "Subtitle captured: language=${language.orEmpty()}, host=${hostOf(url)}")
             }
             fun probe(view: WebView) {
                 if (delivered || webView !== view || probes++ >= MAX_PROBES) return
@@ -211,6 +269,8 @@ class BrowserPlayerWebViewExtractor(
                     @JavascriptInterface fun master(url: String) = handler.post { add(url, emptyMap(), BrowserCaptureOrigin.SOURCE_MASTER) }
                     @JavascriptInterface fun video(url: String) = handler.post { add(url, emptyMap(), BrowserCaptureOrigin.SOURCE_VIDEO) }
                     @JavascriptInterface fun audio(url: String) = handler.post { add(url, emptyMap(), BrowserCaptureOrigin.SOURCE_AUDIO) }
+                    @JavascriptInterface fun subtitle(url: String, label: String?, language: String?) =
+                        handler.post { addSubtitle(url, label, language) }
                     @JavascriptInterface fun done() = handler.post(::finish)
                 }, "HibikiResolver")
                 // Must run before loadUrl(): a WebView.addJavascriptInterface call only becomes
@@ -296,6 +356,7 @@ class BrowserPlayerWebViewExtractor(
         const val TAG = "BrowserPlayerResolver"
         val QUALITY = Regex("""(?<!\\d)(240|360|480|540|720|1080|1440|2160)(?:p|\\.m3u8|/)""")
         val AUDIO_MEDIA_URI = Regex("#EXT-X-MEDIA:[^\\n]*TYPE=AUDIO[^\\n]*URI=\"([^\"]+)\"", RegexOption.IGNORE_CASE)
+        val VTT_URL = Regex("https?://.+\\.vtt(?:[?#].*)?", RegexOption.IGNORE_CASE)
         const val VIDEO_ELEMENT_PROBE = """;(function(){try{var v=document.querySelector('video');if(!v)return;var r=function(){var u=v.currentSrc||v.src||'';if(/\\.m3u8(?:[?#]|$)/i.test(u))HibikiResolver.stream(u)};r();v.addEventListener('loadedmetadata',r,{once:true});v.addEventListener('canplay',r,{once:true});v.addEventListener('playing',r,{once:true})}catch(e){}})();"""
     }
 }
@@ -307,8 +368,20 @@ internal object BrowserResolverRouting {
 
 internal class CaptureSession(val webView: WebView, val handler: Handler)
 
+private data class BrowserCaptureResult(
+    val streams: List<BrowserCapturedStream>,
+    val subtitles: List<BrowserCapturedSubtitle>,
+    val session: CaptureSession?,
+)
+
 internal enum class BrowserCaptureOrigin { NETWORK, VIDEO_ELEMENT, SOURCE_MASTER, SOURCE_VIDEO, SOURCE_AUDIO }
 internal data class BrowserCapturedStream(val url: String, val headers: Map<String, String>, val origin: BrowserCaptureOrigin)
+private data class BrowserCapturedSubtitle(
+    val url: String,
+    val label: String?,
+    val language: String?,
+    val headers: Map<String, String>,
+)
 
 /** Pure selection policy, unit-testable without Android WebView or a real site. */
 internal object BrowserStreamSelector {

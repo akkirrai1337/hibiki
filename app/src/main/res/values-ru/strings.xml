@@ -197,6 +197,8 @@
     <string name="watch_player_retry">Повторить</string>
     <string name="watch_episode_number">Серия %1$s</string>
     <string name="watch_player_settings">Настройки плеера</string>
+    <string name="watch_player_subtitles_enable">Включить субтитры</string>
+    <string name="watch_player_subtitles_disable">Выключить субтитры</string>
     <string name="watch_player_picture_in_picture">Картинка в картинке</string>
     <string name="watch_player_audio_only">Только звук</string>
     <string name="watch_player_show_video">Показать видео</string>

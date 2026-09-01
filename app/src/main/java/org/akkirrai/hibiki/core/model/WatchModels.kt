@@ -25,10 +25,18 @@ data class PlaybackStream(
     val headers: Map<String, String> = emptyMap(),
     val audioStreamUrl: String? = null,
     val audioHeaders: Map<String, String> = emptyMap(),
+    val subtitles: List<PlaybackSubtitle> = emptyList(),
     /** A site-controlled browser playback page requested by a resolver extension. */
     val browserScript: String? = null,
     val segments: List<PlaybackSegment> = emptyList(),
     val videoId: Long? = null,
+)
+
+data class PlaybackSubtitle(
+    val url: String,
+    val label: String? = null,
+    val language: String? = null,
+    val headers: Map<String, String> = emptyMap(),
 )
 
 data class PlaybackSegment(

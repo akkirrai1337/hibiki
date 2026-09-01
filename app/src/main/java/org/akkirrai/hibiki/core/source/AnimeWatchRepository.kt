@@ -37,6 +37,7 @@ import org.akkirrai.hibiki.app.settings.LanguageMode
 import org.akkirrai.hibiki.core.model.PlaybackLinkOption
 import org.akkirrai.hibiki.core.model.PlaybackSegment
 import org.akkirrai.hibiki.core.model.PlaybackSegmentType
+import org.akkirrai.hibiki.core.model.PlaybackSubtitle
 import org.akkirrai.hibiki.core.model.PlaybackSettingsOptions
 import org.akkirrai.hibiki.core.model.PlaybackStream
 import org.akkirrai.hibiki.core.model.PlaybackStreamType
@@ -233,6 +234,14 @@ class AnimeWatchRepository(
             ).mapNotNull { it?.trim()?.takeIf(String::isNotBlank) }.distinct(),
             headers = resolved.stream.headers.ifEmpty { resolved.link.headers },
             audioStreamUrl = resolved.stream.audioUrl,
+            subtitles = resolved.stream.subtitles.map { subtitle ->
+                PlaybackSubtitle(
+                    url = subtitle.url,
+                    label = subtitle.label,
+                    language = subtitle.language,
+                    headers = subtitle.headers,
+                )
+            },
             audioHeaders = resolved.stream.audioHeaders,
             segments = selectPlaybackSegments(
                 apiSegments = resolved.link.segments,

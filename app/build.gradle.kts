@@ -140,6 +140,7 @@ dependencies {
     implementation(libs.androidx.media3.database)
     implementation(libs.androidx.media3.session)
     implementation(libs.androidx.media3.ui)
+    implementation(libs.play.services.cronet)
     testImplementation(libs.junit)
     testImplementation("io.ktor:ktor-client-mock:${libs.versions.ktor.get()}")
     androidTestImplementation(libs.androidx.junit)

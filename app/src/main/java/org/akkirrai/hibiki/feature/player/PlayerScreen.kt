@@ -13,6 +13,7 @@ import android.content.pm.ActivityInfo
 import android.content.pm.PackageManager
 import android.graphics.drawable.Icon
 import android.os.Build
+import android.os.Looper
 import android.os.SystemClock
 import android.view.LayoutInflater
 import android.view.TextureView
@@ -77,6 +78,8 @@ import androidx.compose.material.icons.outlined.RecordVoiceOver
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.SkipNext
 import androidx.compose.material.icons.outlined.Speed
+import androidx.compose.material.icons.outlined.Subtitles
+import androidx.compose.material.icons.outlined.SubtitlesOff
 import androidx.compose.material.icons.outlined.VideoSettings
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -139,21 +142,29 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.media3.common.C
 import androidx.media3.common.MediaItem
+import androidx.media3.common.MimeTypes.TEXT_VTT
 import androidx.media3.common.MimeTypes
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.PlaybackParameters
 import androidx.media3.common.Player
 import androidx.media3.common.VideoSize
+import androidx.media3.common.text.CueGroup
 import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.exoplayer.DefaultLoadControl
+import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.Renderer
 import androidx.media3.exoplayer.dash.DashMediaSource
 import androidx.media3.exoplayer.hls.HlsMediaSource
 import androidx.media3.exoplayer.source.MediaSource
 import androidx.media3.exoplayer.source.MergingMediaSource
 import androidx.media3.exoplayer.source.ProgressiveMediaSource
+import androidx.media3.exoplayer.source.SingleSampleMediaSource
+import androidx.media3.exoplayer.text.TextOutput
+import androidx.media3.exoplayer.text.TextRenderer
 import androidx.media3.session.MediaSession
 import androidx.media3.ui.PlayerView
 import kotlinx.coroutines.CoroutineScope
@@ -257,6 +268,11 @@ fun PlayerScreen(
     var restoreWindowUi by restoreWindowUiState
     val autoSkipSegments = preferencesState.autoSkipSegments
     val autoPlayNextEpisode = preferencesState.autoPlayNextEpisode
+    val subtitleTracksAvailable = state.playback?.subtitles?.isNotEmpty() == true
+    var subtitlesEnabled by remember(state.currentSourceId, state.currentEpisodeId, state.playback?.streamUrl) {
+        mutableStateOf(subtitleTracksAvailable)
+    }
+    val subtitleLinesState = remember { mutableStateOf(emptyList<String>()) }
     LaunchedEffect(preferencesState.playbackSpeed) {
         playbackSpeed = preferencesState.playbackSpeed
     }
@@ -273,7 +289,7 @@ fun PlayerScreen(
     val offlineTitleMetadataRepository = remember(context) { OfflineTitleMetadataRepository(context) }
     val discordRpcManager = remember(context) { DiscordRpcManager.get(context) }
     val exoPlayer = remember(context) {
-        ExoPlayer.Builder(context)
+        ExoPlayer.Builder(context, LegacyTextRenderersFactory(context))
             .setSeekBackIncrementMs(SEEK_INCREMENT_MS)
             .setSeekForwardIncrementMs(SEEK_INCREMENT_MS)
             .setLoadControl(
@@ -458,6 +474,7 @@ fun PlayerScreen(
         sliderPositionMs = sliderPositionMsState,
         handledEndedEpisodeId = handledEndedEpisodeIdState,
         watchedSecondsSnapshot = { watchedSecondsSnapshot() },
+        subtitleLines = subtitleLinesState,
         onDisposed = { doubleTapSeek.cancelPending() },
     )
 
@@ -718,6 +735,7 @@ fun PlayerScreen(
                             useController = false
                             setShowBuffering(PlayerView.SHOW_BUFFERING_NEVER)
                             player = exoPlayer
+                            subtitleView?.visibility = View.GONE
                             applyVideoScale(videoScaleMode, videoAspectRatio)
                             attachedPlayerView = this
                         }
@@ -725,11 +743,19 @@ fun PlayerScreen(
                 update = { playerView ->
                     attachedPlayerView = playerView
                     playerView.player = if (isAudioOnly) null else exoPlayer
+                    playerView.subtitleView?.visibility = View.GONE
                     playerView.applyVideoScale(videoScaleMode, videoAspectRatio)
                 },
                 modifier = Modifier.fillMaxSize()
             )
         }
+
+        PlayerSubtitleOverlay(
+            lines = subtitleLinesState.value,
+            visible = subtitlesEnabled && !isAudioOnly && state.playback?.streamType != PlaybackStreamType.BROWSER,
+            controlsVisible = controlsVisible,
+            modifier = Modifier.align(Alignment.BottomCenter),
+        )
 
         AnimatedVisibility(
             visible = holdSpeedOverlayVisible,
@@ -912,6 +938,17 @@ fun PlayerScreen(
                     onVideoScaleModeClick = {
                         keepControlsVisible()
                         appPreferences.setVideoScaleMode(videoScaleMode.next())
+                    },
+                    subtitlesAvailable = subtitleTracksAvailable,
+                    subtitlesEnabled = subtitlesEnabled,
+                    onSubtitlesClick = {
+                        keepControlsVisible()
+                        val enabled = !subtitlesEnabled
+                        exoPlayer.trackSelectionParameters = exoPlayer.trackSelectionParameters
+                            .buildUpon()
+                            .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, !enabled)
+                            .build()
+                        subtitlesEnabled = enabled
                     },
                     settingsEnabled = true,
                     onSettingsClick = {
@@ -1898,6 +1935,41 @@ private enum class PlayerSettingsDestination(
 }
 
 @Composable
+private fun PlayerSubtitleOverlay(
+    lines: List<String>,
+    visible: Boolean,
+    controlsVisible: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    AnimatedVisibility(
+        visible = visible && lines.isNotEmpty(),
+        modifier = modifier
+            .navigationBarsPadding()
+            .padding(
+                start = 24.dp,
+                end = 24.dp,
+                bottom = if (controlsVisible) 108.dp else 34.dp,
+            ),
+        enter = fadeIn(animationSpec = tween(90)),
+        exit = fadeOut(animationSpec = tween(90)),
+    ) {
+        Surface(
+            shape = RoundedCornerShape(3.dp),
+            color = Color.Black.copy(alpha = 0.76f),
+        ) {
+            Text(
+                text = lines.joinToString(separator = "\n"),
+                modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp),
+                color = Color.White,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Medium,
+                textAlign = TextAlign.Center,
+            )
+        }
+    }
+}
+
+@Composable
 private fun PlayerBottomOverlay(
     durationMs: Long,
     bufferedPositionMs: Long,
@@ -1906,6 +1978,9 @@ private fun PlayerBottomOverlay(
     onSliderValueChangeFinished: () -> Unit,
     videoScaleMode: VideoScaleMode,
     onVideoScaleModeClick: () -> Unit,
+    subtitlesAvailable: Boolean,
+    subtitlesEnabled: Boolean,
+    onSubtitlesClick: () -> Unit,
     settingsEnabled: Boolean,
     onSettingsClick: () -> Unit,
     pictureInPictureEnabled: Boolean,
@@ -1974,6 +2049,26 @@ private fun PlayerBottomOverlay(
                             contentDescription = stringResource(videoScaleMode.contentDescriptionResId()),
                             tint = Color.White,
                         )
+                    }
+                    if (subtitlesAvailable) {
+                        AppFilledIconButton(
+                            onClick = onSubtitlesClick,
+                            modifier = Modifier.size(46.dp),
+                            style = AppFilledIconButtonStyle.DarkOverlay,
+                        ) {
+                            Icon(
+                                imageVector = if (subtitlesEnabled) {
+                                    Icons.Outlined.SubtitlesOff
+                                } else {
+                                    Icons.Outlined.Subtitles
+                                },
+                                contentDescription = stringResource(
+                                    if (subtitlesEnabled) R.string.watch_player_subtitles_disable
+                                    else R.string.watch_player_subtitles_enable,
+                                ),
+                                tint = Color.White,
+                            )
+                        }
                     }
                     AppFilledIconButton(
                         onClick = onLockClick,
@@ -2866,10 +2961,26 @@ private fun PlayerMediaPreparationEffect(
     }
 }
 
+/** Media3 1.8 keeps WebVTT decoding behind a compatibility switch. */
+private class LegacyTextRenderersFactory(context: Context) : DefaultRenderersFactory(context) {
+    override fun buildTextRenderers(
+        context: Context,
+        output: TextOutput,
+        outputLooper: Looper,
+        extensionRendererMode: Int,
+        out: ArrayList<Renderer>,
+    ) {
+        out += TextRenderer(output, outputLooper).apply {
+            experimentalSetLegacyDecodingEnabled(true)
+        }
+    }
+}
+
 private fun PlaybackStream.toMediaSource(context: Context): MediaSource {
     val dataSourceFactory = OfflineMediaCache.buildPlaybackDataSourceFactory(
         context = context,
         headers = headers,
+        resourceHeadersByUrl = subtitles.associate { subtitle -> subtitle.url to subtitle.headers },
     )
     val mediaItem = MediaItem.Builder()
         .setUri(streamUrl.toUri())
@@ -2891,13 +3002,42 @@ private fun PlaybackStream.toMediaSource(context: Context): MediaSource {
         PlaybackStreamType.MP4 -> ProgressiveMediaSource.Factory(dataSourceFactory).createMediaSource(mediaItem)
         PlaybackStreamType.BROWSER -> error("Browser playback does not have a Media3 source")
     }
-    val audioUrl = audioStreamUrl ?: return videoSource
-    val audioSource = HlsMediaSource.Factory(
-        OfflineMediaCache.buildPlaybackDataSourceFactory(context, audioHeaders.ifEmpty { headers }),
-    ).setAllowChunklessPreparation(true).createMediaSource(
-        MediaItem.Builder().setUri(audioUrl.toUri()).setMimeType(MimeTypes.APPLICATION_M3U8).build(),
-    )
-    return MergingMediaSource(videoSource, audioSource)
+    val sources = buildList<MediaSource> {
+        add(videoSource)
+        audioStreamUrl?.let { audioUrl ->
+            add(
+                HlsMediaSource.Factory(
+                    OfflineMediaCache.buildPlaybackDataSourceFactory(context, audioHeaders.ifEmpty { headers }),
+                ).setAllowChunklessPreparation(true).createMediaSource(
+                    MediaItem.Builder().setUri(audioUrl.toUri()).setMimeType(MimeTypes.APPLICATION_M3U8).build(),
+                ),
+            )
+        }
+        subtitles.forEach { subtitle ->
+            val configuration = MediaItem.SubtitleConfiguration.Builder(subtitle.url.toUri())
+                .setMimeType(TEXT_VTT)
+                .setLabel(subtitle.label)
+                .setLanguage(subtitle.language)
+                .setSelectionFlags(
+                    if (
+                        subtitle.language.equals("eng", ignoreCase = true) ||
+                        subtitle.language.equals("en", ignoreCase = true) ||
+                        subtitle.label.equals("English", ignoreCase = true)
+                    ) {
+                        C.SELECTION_FLAG_DEFAULT
+                    } else {
+                        0
+                    },
+                )
+                .build()
+            add(
+                SingleSampleMediaSource.Factory(
+                    OfflineMediaCache.buildPlaybackDataSourceFactory(context, subtitle.headers.ifEmpty { headers }),
+                ).createMediaSource(configuration, C.TIME_UNSET),
+            )
+        }
+    }
+    return if (sources.size == 1) videoSource else MergingMediaSource(*sources.toTypedArray())
 }
 
 /** Generic visible WebView adapter for extensions that need browser session playback. */
@@ -3145,6 +3285,7 @@ private fun PlayerPlaybackListenerEffect(
     sliderPositionMs: MutableLongState,
     handledEndedEpisodeId: MutableState<String?>,
     watchedSecondsSnapshot: () -> List<Long>,
+    subtitleLines: MutableState<List<String>>,
     onDisposed: () -> Unit,
 ) {
     DisposableEffect(exoPlayer) {
@@ -3158,6 +3299,12 @@ private fun PlayerPlaybackListenerEffect(
 
             override fun onIsPlayingChanged(playing: Boolean) {
                 isPlaying.value = playing
+            }
+
+            override fun onCues(cueGroup: CueGroup) {
+                subtitleLines.value = cueGroup.cues.mapNotNull { cue ->
+                    cue.text?.toString()?.trim()?.takeIf(String::isNotBlank)
+                }.distinct()
             }
 
             override fun onPlaybackStateChanged(playbackState: Int) {
@@ -3219,6 +3366,7 @@ private fun PlayerPlaybackListenerEffect(
                 watchedSeconds = watchedSecondsSnapshot(),
             )
             exoPlayer.removeListener(listener)
+            subtitleLines.value = emptyList()
             mediaSession.release()
             exoPlayer.release()
         }

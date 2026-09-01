@@ -238,6 +238,12 @@ data class PlayerLink(
     val translation: String? = null,
     val segments: List<VideoSegment> = emptyList(),
     val videoId: Long? = null,
+    /** Optional separately muxed audio rendition already known by the source. */
+    val audioUrl: String? = null,
+    /** Empty means the audio rendition inherits [headers]. */
+    val audioHeaders: Map<String, String> = emptyMap(),
+    /** Source-owned subtitle tracks that do not require a player-specific resolver. */
+    val subtitles: List<SubtitleTrack> = emptyList(),
 )
 
 @Serializable
@@ -257,6 +263,17 @@ data class VideoStream(
     /** Optional separately muxed audio rendition for the video stream. */
     val audioUrl: String? = null,
     val audioHeaders: Map<String, String> = emptyMap(),
+    val subtitles: List<SubtitleTrack> = emptyList(),
+)
+
+/** An external timed-text track associated with a directly playable stream. */
+@Serializable
+data class SubtitleTrack(
+    val url: String,
+    val label: String? = null,
+    val language: String? = null,
+    /** Empty means the track inherits its enclosing video stream's headers. */
+    val headers: Map<String, String> = emptyMap(),
 )
 
 @Serializable
