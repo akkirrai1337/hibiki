@@ -42,6 +42,7 @@ logs
 
 # Local-only scripted extension fixtures used by parsers tests, not shipped in the main repo
 parsers/src/test/resources/beakokit/extensions/
+parsers/src/test/resources/beakokit/resolvers/
 # Raw captured (obfuscated) API responses used only to test decoding a specific site's response
 # format - real scraped third-party data, not a hand-written fixture, so it doesn't belong in the
 # repo either.
