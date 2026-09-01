@@ -75,16 +75,12 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withTimeoutOrNull
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.core.network.NoInternetConnectionException
 import org.akkirrai.hibiki.core.network.hasActiveInternetConnection
@@ -812,14 +808,13 @@ class CatalogViewModel(
                     val known = knownDescriptions[card.anime.id] ?: return@map card
                     CatalogAnimeCard(card.anime.copy(description = known))
                 }
-                val items = eagerlyEnrichFirstItems(withKnownDescriptions)
                 _uiState.update { state ->
                     state.copy(
                         isLoading = false,
                         title = "",
                         description = page.description,
                         filterCatalog = page.filterCatalog,
-                        items = items,
+                        items = withKnownDescriptions,
                         currentPage = page.currentPage,
                         canLoadMore = page.canLoadMore,
                     )
@@ -833,28 +828,6 @@ class CatalogViewModel(
                 }
             }
         }
-    }
-
-    /** The first frame can wait briefly for above-the-fold descriptions to avoid cards visibly
-     * popping in. It must never wait for a source's per-title endpoint indefinitely: public
-     * catalog APIs can rate-limit these parallel enrichment requests. Remaining descriptions
-     * still arrive lazily as cards scroll into view via [enrichDescription]. */
-    private suspend fun eagerlyEnrichFirstItems(items: List<CatalogAnimeCard>): List<CatalogAnimeCard> {
-        val eagerCount = EAGER_DESCRIPTION_COUNT.coerceAtMost(items.size)
-        if (eagerCount == 0) return items
-        val enrichedEager = withTimeoutOrNull(EAGER_DESCRIPTION_TIMEOUT_MS) {
-            coroutineScope {
-                items.take(eagerCount).map { card ->
-                    async {
-                        if (!card.anime.description.isNullOrBlank()) return@async card
-                        val description = runCatching { repository.enrichDescription(card.anime) }
-                            .getOrNull()?.description
-                        if (description.isNullOrBlank()) card else CatalogAnimeCard(card.anime.copy(description = description))
-                    }
-                }.awaitAll()
-            }
-        } ?: items.take(eagerCount)
-        return enrichedEager + items.drop(eagerCount)
     }
 
     fun updateQuery(query: String) {
@@ -958,8 +931,6 @@ class CatalogViewModel(
 
     private companion object {
         const val DESCRIPTION_UPDATE_BATCH_WINDOW_MS = 100L
-        const val EAGER_DESCRIPTION_COUNT = 6
-        const val EAGER_DESCRIPTION_TIMEOUT_MS = 1_500L
     }
 
     class Factory(
