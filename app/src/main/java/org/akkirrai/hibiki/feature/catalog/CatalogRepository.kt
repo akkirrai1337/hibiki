@@ -81,7 +81,7 @@ class CatalogRepository(
     }
 
     private companion object {
-        const val CATALOG_PAGE_SIZE = 50
+        const val CATALOG_PAGE_SIZE = 24
     }
 }
 
