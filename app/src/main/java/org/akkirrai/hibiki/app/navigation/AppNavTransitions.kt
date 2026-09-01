@@ -26,3 +26,19 @@ fun appScreenPopEnterTransition(): EnterTransition {
 fun appScreenPopExitTransition(): ExitTransition {
     return appScreenExitTransition()
 }
+
+/**
+ * Main sections cross-fade. Unlike a fade-through transition, both surfaces remain visible for
+ * the whole duration, so the app background never flashes between them.
+ */
+fun appTopLevelEnterTransition(): EnterTransition {
+    return fadeIn(
+        animationSpec = tween(durationMillis = 180),
+    )
+}
+
+fun appTopLevelExitTransition(): ExitTransition {
+    return fadeOut(
+        animationSpec = tween(durationMillis = 180),
+    )
+}

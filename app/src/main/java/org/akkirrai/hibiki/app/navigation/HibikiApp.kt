@@ -4,9 +4,16 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedContentScope
 import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.animation.SharedTransitionScope
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -27,10 +34,15 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
@@ -72,6 +84,8 @@ import org.akkirrai.hibiki.feature.player.WatchSourcesScreen
 import org.akkirrai.hibiki.feature.settings.SettingsScreen
 import org.akkirrai.hibiki.feature.sources.SourceExtensionsScreen
 import org.akkirrai.hibiki.app.settings.LocalAppLanguage
+import org.akkirrai.hibiki.app.settings.LocalAppPreferencesState
+import org.akkirrai.hibiki.core.source.extension.SourceExtensionUpdateChecker
 
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
@@ -85,6 +99,10 @@ fun HibikiApp(
     val context = LocalContext.current
     val discordRpcManager = remember(context) { DiscordRpcManager.get(context) }
     val appLanguage = LocalAppLanguage.current
+    val sourceRepositoryUrls = LocalAppPreferencesState.current.sourceRepositoryUrls
+    val sourceUpdateChecker = remember(context) { SourceExtensionUpdateChecker.get(context) }
+    val sourceUpdateCount by sourceUpdateChecker.updateCount.collectAsState()
+    LaunchedEffect(sourceRepositoryUrls) { sourceUpdateChecker.refresh(sourceRepositoryUrls) }
     val destinations = TopLevelDestination.entries
     val currentBackStackEntry = navController.currentBackStackEntryAsState()
     val currentDestination = currentBackStackEntry.value?.destination
@@ -120,6 +138,7 @@ fun HibikiApp(
                 topLevelBottomContentPadding = topLevelBottomContentPadding,
                 isTopLevelDestination = isTopLevelDestination,
                 currentTopLevel = currentTopLevel,
+                sourceUpdateCount = sourceUpdateCount,
                 onCheckForUpdates = onCheckForUpdates,
                 onConfigureNotifications = onConfigureNotifications,
             )
@@ -136,6 +155,7 @@ private fun HibikiNavHost(
     topLevelBottomContentPadding: Dp = BottomBarHeight + BottomBarContentExtraPadding,
     isTopLevelDestination: Boolean = false,
     currentTopLevel: TopLevelDestination = TopLevelDestination.Home,
+    sourceUpdateCount: Int = 0,
     onCheckForUpdates: () -> Unit = {},
     onConfigureNotifications: () -> Unit = {},
 ) {
@@ -163,7 +183,7 @@ private fun HibikiNavHost(
             .background(MaterialTheme.colorScheme.surface)
             .clipToBounds()
     ) {
-        composable(route = TopLevelDestination.Home.route) { backStackEntry ->
+        topLevelComposable(route = TopLevelDestination.Home.route) { backStackEntry ->
             val context = LocalContext.current
             val homeViewModel: HomeViewModel = viewModel(
                 viewModelStoreOwner = backStackEntry,
@@ -171,6 +191,7 @@ private fun HibikiNavHost(
             )
             TopLevelScreenContainer(
                 destination = TopLevelDestination.Home,
+                sourceUpdateCount = sourceUpdateCount,
                 destinations = TopLevelDestination.entries,
                 onDestinationClick = { destination ->
                     navController.runIfCurrent(backStackEntry) {
@@ -204,6 +225,7 @@ private fun HibikiNavHost(
         topLevelComposable(route = TopLevelDestination.Profile.route) { backStackEntry ->
             TopLevelScreenContainer(
                 destination = TopLevelDestination.Profile,
+                sourceUpdateCount = sourceUpdateCount,
                 destinations = TopLevelDestination.entries,
                 onDestinationClick = { destination ->
                     navController.runIfCurrent(backStackEntry) {
@@ -225,6 +247,7 @@ private fun HibikiNavHost(
         topLevelComposable(route = TopLevelDestination.Catalog.route) { backStackEntry ->
             TopLevelScreenContainer(
                 destination = TopLevelDestination.Catalog,
+                sourceUpdateCount = sourceUpdateCount,
                 destinations = TopLevelDestination.entries,
                 onDestinationClick = { destination ->
                     navController.runIfCurrent(backStackEntry) {
@@ -256,6 +279,7 @@ private fun HibikiNavHost(
         topLevelComposable(route = TopLevelDestination.Library.route) { backStackEntry ->
             TopLevelScreenContainer(
                 destination = TopLevelDestination.Library,
+                sourceUpdateCount = sourceUpdateCount,
                 destinations = TopLevelDestination.entries,
                 onDestinationClick = { destination ->
                     navController.runIfCurrent(backStackEntry) {
@@ -280,6 +304,7 @@ private fun HibikiNavHost(
         topLevelComposable(route = TopLevelDestination.Sources.route) { backStackEntry ->
             TopLevelScreenContainer(
                 destination = TopLevelDestination.Sources,
+                sourceUpdateCount = sourceUpdateCount,
                 destinations = TopLevelDestination.entries,
                 onDestinationClick = { destination ->
                     navController.runIfCurrent(backStackEntry) {
@@ -295,10 +320,34 @@ private fun HibikiNavHost(
         }
         composable(
             route = AnimeNavType.SETTINGS_ROUTE,
-            enterTransition = { appScreenEnterTransition() },
-            exitTransition = { appScreenExitTransition() },
-            popEnterTransition = { appScreenPopEnterTransition() },
-            popExitTransition = { appScreenPopExitTransition() },
+            enterTransition = {
+                if (initialState.destination.route == TopLevelDestination.Profile.route) {
+                    appTopLevelEnterTransition()
+                } else {
+                    appScreenEnterTransition()
+                }
+            },
+            exitTransition = {
+                if (targetState.destination.route == TopLevelDestination.Profile.route) {
+                    appTopLevelExitTransition()
+                } else {
+                    appScreenExitTransition()
+                }
+            },
+            popEnterTransition = {
+                if (initialState.destination.route == TopLevelDestination.Profile.route) {
+                    appTopLevelEnterTransition()
+                } else {
+                    appScreenPopEnterTransition()
+                }
+            },
+            popExitTransition = {
+                if (targetState.destination.route == TopLevelDestination.Profile.route) {
+                    appTopLevelExitTransition()
+                } else {
+                    appScreenPopExitTransition()
+                }
+            },
         ) { backStackEntry ->
             DestinationScreenContainer {
                 SettingsScreen(
@@ -605,6 +654,7 @@ private val BottomBarContentExtraPadding = 12.dp
 @Composable
 private fun TopLevelScreenContainer(
     destination: TopLevelDestination,
+    sourceUpdateCount: Int,
     destinations: List<TopLevelDestination>,
     onDestinationClick: (TopLevelDestination) -> Unit,
     content: @Composable () -> Unit,
@@ -617,6 +667,7 @@ private fun TopLevelScreenContainer(
         AppBottomBar(
             destinations = destinations,
             currentTopLevel = destination,
+            sourceUpdateCount = sourceUpdateCount,
             onDestinationClick = onDestinationClick,
             modifier = Modifier.align(Alignment.BottomCenter),
         )
@@ -636,6 +687,7 @@ private fun DestinationScreenContainer(
 private fun AppBottomBar(
     destinations: List<TopLevelDestination>,
     currentTopLevel: TopLevelDestination,
+    sourceUpdateCount: Int,
     onDestinationClick: (TopLevelDestination) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -674,6 +726,7 @@ private fun AppBottomBar(
                 destinations.forEach { destination ->
                     AppBottomBarItem(
                         destination = destination,
+                        badgeCount = if (destination == TopLevelDestination.Sources) sourceUpdateCount else 0,
                         selected = currentTopLevel == destination,
                         onClick = { onDestinationClick(destination) },
                         modifier = Modifier.weight(1f),
@@ -687,6 +740,7 @@ private fun AppBottomBar(
 @Composable
 private fun AppBottomBarItem(
     destination: TopLevelDestination,
+    badgeCount: Int,
     selected: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
@@ -698,6 +752,10 @@ private fun AppBottomBarItem(
     }
     val interactionSource = remember { MutableInteractionSource() }
     val pillShape = RoundedCornerShape(18.dp)
+    var showSelectedIcon by remember { mutableStateOf(false) }
+    LaunchedEffect(selected) {
+        showSelectedIcon = selected
+    }
 
     Column(
         modifier = modifier
@@ -730,12 +788,34 @@ private fun AppBottomBarItem(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center,
             ) {
-                Icon(
-                    imageVector = destination.icon,
-                    contentDescription = stringResource(destination.labelRes),
-                    modifier = Modifier.size(BottomBarIconSize),
-                    tint = contentColor,
-                )
+                AnimatedContent(
+                    targetState = showSelectedIcon,
+                    transitionSpec = {
+                        (fadeIn(tween(180)) + scaleIn(initialScale = 0.72f, animationSpec = tween(180))) togetherWith
+                            (fadeOut(tween(90)) + scaleOut(targetScale = 0.72f, animationSpec = tween(90)))
+                    },
+                    label = "bottomBarIcon",
+                ) { isSelectedIcon ->
+                    Icon(
+                        imageVector = if (isSelectedIcon) destination.selectedIcon else destination.icon,
+                        contentDescription = stringResource(destination.labelRes),
+                        modifier = Modifier.size(BottomBarIconSize),
+                        tint = contentColor,
+                    )
+                }
+                if (badgeCount > 0) {
+                    Text(
+                        text = if (badgeCount > 9) "9+" else badgeCount.toString(),
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(top = 1.dp, end = 5.dp)
+                            .background(MaterialTheme.colorScheme.error, CircleShape)
+                            .padding(horizontal = 4.dp, vertical = 1.dp),
+                        color = MaterialTheme.colorScheme.onError,
+                        fontSize = 9.sp,
+                        fontWeight = FontWeight.Bold,
+                    )
+                }
             }
         }
 
@@ -777,9 +857,51 @@ private fun NavGraphBuilder.topLevelComposable(
 ) {
     composable(
         route = route,
+        enterTransition = {
+            if (initialState.destination.isTopLevelRoute() ||
+                route == TopLevelDestination.Profile.route && initialState.destination.isSettingsRoute()
+            ) {
+                appTopLevelEnterTransition()
+            } else {
+                appScreenEnterTransition()
+            }
+        },
+        exitTransition = {
+            if (targetState.destination.isTopLevelRoute() ||
+                route == TopLevelDestination.Profile.route && targetState.destination.isSettingsRoute()
+            ) {
+                appTopLevelExitTransition()
+            } else {
+                appScreenExitTransition()
+            }
+        },
+        popEnterTransition = {
+            if (initialState.destination.isTopLevelRoute() ||
+                route == TopLevelDestination.Profile.route && initialState.destination.isSettingsRoute()
+            ) {
+                appTopLevelEnterTransition()
+            } else {
+                appScreenPopEnterTransition()
+            }
+        },
+        popExitTransition = {
+            if (targetState.destination.isTopLevelRoute() ||
+                route == TopLevelDestination.Profile.route && targetState.destination.isSettingsRoute()
+            ) {
+                appTopLevelExitTransition()
+            } else {
+                appScreenPopExitTransition()
+            }
+        },
         content = { backStackEntry -> content(backStackEntry) },
     )
 }
+
+private fun androidx.navigation.NavDestination.isTopLevelRoute(): Boolean =
+    TopLevelDestination.entries.any { destination -> destination.route == route }
+
+private fun androidx.navigation.NavDestination.isSettingsRoute(): Boolean =
+    route == AnimeNavType.SETTINGS_ROUTE
 
 private fun NavHostController.navigateTopLevelDestination(
     currentTopLevel: TopLevelDestination,
