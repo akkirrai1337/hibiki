@@ -417,6 +417,8 @@
     <string name="source_extensions_repositories_add_disabled">Adding third-party repositories is disabled for now</string>
     <string name="source_extensions_repositories_invalid_url">Enter a valid HTTPS repository index URL</string>
     <string name="source_extensions_repositories_remove">Remove</string>
+    <string name="source_extensions_repositories_remove_confirm_title">Remove repository?</string>
+    <string name="source_extensions_repositories_remove_confirm_message">Remove %1$s from the repository list? Installed extensions will remain available.</string>
     <string name="source_extensions_repositories_empty">No repositories added yet</string>
     <string name="source_extensions_repositories_extension_count">%1$d extensions</string>
     <string name="onboarding_welcome_title">Welcome to hibiki</string>

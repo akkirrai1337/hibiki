@@ -117,6 +117,7 @@ fun SourceExtensionsScreen(
     var languageFilterOpen by remember { mutableStateOf(false) }
     var selectedLanguages by remember { mutableStateOf(emptySet<String>()) }
     var addRepositoryDialogOpen by remember { mutableStateOf(false) }
+    var repositoryPendingRemovalUrl by remember { mutableStateOf<String?>(null) }
     var repositoryRefreshSignal by remember { mutableStateOf(0) }
     val marketplaceHttpClient = remember { AndroidHttpClientFactory.create() }
     DisposableEffect(marketplaceHttpClient) { onDispose { marketplaceHttpClient.close() } }
@@ -332,7 +333,7 @@ fun SourceExtensionsScreen(
                     urls = sourceRepositoryUrls,
                     repoStates = repoStates,
                     bottomContentPadding = bottomContentPadding,
-                    onRemove = { url -> preferences.removeSourceRepository(url) },
+                    onRemove = { url -> repositoryPendingRemovalUrl = url },
                 )
             }
         }
@@ -354,6 +355,17 @@ fun SourceExtensionsScreen(
                     }.exceptionOrNull()?.message
                 }
             },
+        )
+    }
+
+    repositoryPendingRemovalUrl?.let { url ->
+        RemoveRepositoryDialog(
+            url = url,
+            onConfirm = {
+                preferences.removeSourceRepository(url)
+                repositoryPendingRemovalUrl = null
+            },
+            onDismiss = { repositoryPendingRemovalUrl = null },
         )
     }
 
@@ -758,6 +770,36 @@ private fun RepositoryCard(
 private fun repositoryDisplayName(url: String): String {
     val match = Regex("""^https?://raw\.githubusercontent\.com/([^/]+)/([^/]+)/""").find(url)
     return match?.let { "${it.groupValues[1]}/${it.groupValues[2]}" } ?: url
+}
+
+@Composable
+private fun RemoveRepositoryDialog(
+    url: String,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.source_extensions_repositories_remove_confirm_title)) },
+        text = {
+            Text(
+                stringResource(
+                    R.string.source_extensions_repositories_remove_confirm_message,
+                    repositoryDisplayName(url),
+                ),
+            )
+        },
+        confirmButton = {
+            TextButton(onClick = onConfirm) {
+                Text(stringResource(R.string.source_extensions_repositories_remove))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.action_cancel))
+            }
+        },
+    )
 }
 
 private fun isHttpsRepositoryIndexUrl(url: String): Boolean = runCatching {
