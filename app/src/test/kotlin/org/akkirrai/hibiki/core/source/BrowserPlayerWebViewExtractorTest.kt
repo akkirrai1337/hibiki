@@ -4,6 +4,8 @@ import org.akkirrai.beakokit.extension.BrowserScriptResolver
 import org.akkirrai.beakokit.extension.BrowserPlaybackMode
 import org.akkirrai.beakokit.model.PlayerLink
 import org.akkirrai.beakokit.model.PlayerType
+import org.akkirrai.beakokit.model.StreamType
+import org.akkirrai.beakokit.model.StreamValidationResult
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -53,6 +55,24 @@ class BrowserPlayerWebViewExtractorTest {
         val master = BrowserCapturedStream("https://cdn.example/master.m3u8", emptyMap(), BrowserCaptureOrigin.SOURCE_MASTER)
 
         assertEquals(master, BrowserStreamSelector.select(listOf(rendition, master)))
+    }
+
+    @Test
+    fun `direct relay fallback accepts transport blocks and rejects missing media`() {
+        fun failure(status: Int?) = StreamValidationResult(
+            success = false,
+            streamType = StreamType.HLS,
+            quality = null,
+            finalUrl = "https://cdn.example/master.m3u8",
+            statusCode = status,
+            message = "test",
+        )
+
+        assertTrue(DirectRelayFallbackPolicy.shouldRelay(listOf(failure(403))))
+        assertTrue(DirectRelayFallbackPolicy.shouldRelay(listOf(failure(429))))
+        assertTrue(DirectRelayFallbackPolicy.shouldRelay(listOf(failure(200))))
+        assertTrue(DirectRelayFallbackPolicy.shouldRelay(listOf(failure(null))))
+        assertFalse(DirectRelayFallbackPolicy.shouldRelay(listOf(failure(404))))
     }
 
     private fun embed(url: String, type: PlayerType = PlayerType.EMBED) = PlayerLink(url, type, null)

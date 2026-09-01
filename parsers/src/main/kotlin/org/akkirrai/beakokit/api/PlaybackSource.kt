@@ -42,6 +42,20 @@ interface StreamExtractor {
     suspend fun extractVariants(link: PlayerLink): List<VideoStream> = listOf(extract(link))
 }
 
+/**
+ * A secondary transport for a link that already has a normal extractor.
+ *
+ * Playback resolution keeps the normal extractor as the fast path and asks fallback extractors
+ * only after its candidates fail validation. This lets platform runtimes provide heavier recovery
+ * paths (for example a browser-backed relay) without paying their startup cost for every stream.
+ */
+interface FallbackStreamExtractor : StreamExtractor {
+    fun shouldAttempt(
+        link: PlayerLink,
+        validationFailures: List<StreamValidationResult>,
+    ): Boolean
+}
+
 /** Verifies that a resolved stream can be consumed before it reaches the player. */
 interface StreamValidator {
     suspend fun validate(stream: VideoStream): StreamValidationResult

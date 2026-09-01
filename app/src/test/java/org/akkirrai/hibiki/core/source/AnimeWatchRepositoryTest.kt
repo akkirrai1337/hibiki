@@ -62,6 +62,8 @@ class AnimeWatchRepositoryTest {
         assertEquals(15_000L, repository.resolveAttemptTimeoutMillis(null, "Kodik"))
         assertEquals(15_000L, repository.resolveAttemptTimeoutMillis("Kodik", "Aksor"))
         assertEquals(20_000L, repository.resolveAttemptTimeoutMillis("Kodik", "Kodik"))
+        assertEquals(35_000L, repository.resolveAttemptTimeoutMillis(null, "Direct", PlayerType.DIRECT_HLS))
+        assertEquals(45_000L, repository.resolveAttemptTimeoutMillis("Direct", "Direct", PlayerType.DIRECT_MP4))
     }
 
     @Test

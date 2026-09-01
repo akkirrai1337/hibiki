@@ -13,9 +13,46 @@ import org.akkirrai.beakokit.model.VideoStream
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class HttpStreamValidatorTest {
+    @Test
+    fun `fails a video stream when its separate audio playlist is blocked`() = runBlocking {
+        val requestedAuthorization = mutableMapOf<String, String?>()
+        val client = HttpClient(MockEngine { request ->
+            requestedAuthorization[request.url.encodedPath] = request.headers[HttpHeaders.Authorization]
+            when (request.url.encodedPath) {
+                "/video.m3u8" -> respond(
+                    content = "#EXTM3U\n#EXTINF:6,\nvideo-1.ts",
+                    status = HttpStatusCode.OK,
+                )
+                "/audio.m3u8" -> respond(
+                    content = "blocked",
+                    status = HttpStatusCode.Forbidden,
+                )
+                else -> error("Unexpected URL: ${request.url}")
+            }
+        })
+
+        val result = HttpStreamValidator(client).validate(
+            VideoStream(
+                url = "https://media.test/video.m3u8",
+                type = StreamType.HLS,
+                quality = "1080p",
+                headers = mapOf(HttpHeaders.Authorization to "video-token"),
+                audioUrl = "https://media.test/audio.m3u8",
+                audioHeaders = mapOf(HttpHeaders.Authorization to "audio-token"),
+            ),
+        )
+
+        assertFalse(result.success)
+        assertEquals(HttpStatusCode.Forbidden.value, result.statusCode)
+        assertTrue(result.message.contains("Аудиодорожка"))
+        assertEquals("video-token", requestedAuthorization["/video.m3u8"])
+        assertEquals("audio-token", requestedAuthorization["/audio.m3u8"])
+    }
+
     @Test
     fun `validation propagates coroutine cancellation`() = runBlocking {
         val client = HttpClient(MockEngine { throw CancellationException("player changed") })

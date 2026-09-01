@@ -14,6 +14,7 @@ ktor = "3.5.0"
 coil = "2.7.0"
 coroutines = "1.10.2"
 media3 = "1.8.0"
+playServicesCronet = "18.0.1"
 palette = "1.0.0"
 materialKolor = "4.1.1"
 kizzyRpc = "ad8f2e32eb"
@@ -53,6 +54,7 @@ androidx-media3-datasource = { group = "androidx.media3", name = "media3-datasou
 androidx-media3-database = { group = "androidx.media3", name = "media3-database", version.ref = "media3" }
 androidx-media3-session = { group = "androidx.media3", name = "media3-session", version.ref = "media3" }
 androidx-media3-ui = { group = "androidx.media3", name = "media3-ui", version.ref = "media3" }
+play-services-cronet = { group = "com.google.android.gms", name = "play-services-cronet", version.ref = "playServicesCronet" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

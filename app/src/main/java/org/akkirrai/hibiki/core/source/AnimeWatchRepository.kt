@@ -28,6 +28,7 @@ import org.akkirrai.beakokit.playback.validation.HttpStreamValidator
 import org.akkirrai.beakokit.model.Episode
 import org.akkirrai.beakokit.model.AnimeTitle
 import org.akkirrai.beakokit.model.PlayerLink
+import org.akkirrai.beakokit.model.PlayerType
 import org.akkirrai.beakokit.model.StreamType
 import org.akkirrai.beakokit.model.VideoSegment
 import org.akkirrai.beakokit.model.VideoSegmentType
@@ -212,7 +213,9 @@ class AnimeWatchRepository(
             links = links,
             excludedStreamUrls = excludedStreamUrls,
             preferredQuality = preferredQuality,
-            attemptTimeoutMillis = { link -> resolveAttemptTimeoutMillis(preferredPlayerName, link.playerName) },
+            attemptTimeoutMillis = { link ->
+                resolveAttemptTimeoutMillis(preferredPlayerName, link.playerName, link.type)
+            },
         )
         AppLogger.d(
             TAG,
@@ -234,6 +237,7 @@ class AnimeWatchRepository(
             ).mapNotNull { it?.trim()?.takeIf(String::isNotBlank) }.distinct(),
             headers = resolved.stream.headers.ifEmpty { resolved.link.headers },
             audioStreamUrl = resolved.stream.audioUrl,
+            audioHeaders = resolved.stream.audioHeaders,
             subtitles = resolved.stream.subtitles.map { subtitle ->
                 PlaybackSubtitle(
                     url = subtitle.url,
@@ -242,7 +246,6 @@ class AnimeWatchRepository(
                     headers = subtitle.headers,
                 )
             },
-            audioHeaders = resolved.stream.audioHeaders,
             segments = selectPlaybackSegments(
                 apiSegments = resolved.link.segments,
                 extractedSegments = resolved.stream.segments,
@@ -453,7 +456,15 @@ class AnimeWatchRepository(
     internal fun resolveAttemptTimeoutMillis(
         preferredPlayerName: String?,
         candidatePlayerName: String?,
+        playerType: PlayerType? = null,
     ): Long {
+        if (playerType == PlayerType.DIRECT_HLS || playerType == PlayerType.DIRECT_MP4) {
+            return if (matchesPreferredPlayer(candidatePlayerName, preferredPlayerName)) {
+                DIRECT_PREFERRED_RESOLVE_TIMEOUT_MS
+            } else {
+                DIRECT_AUTO_RESOLVE_TIMEOUT_MS
+            }
+        }
         return if (matchesPreferredPlayer(candidatePlayerName, preferredPlayerName)) {
             PREFERRED_RESOLVE_TIMEOUT_MS
         } else {
@@ -551,6 +562,7 @@ class AnimeWatchRepository(
         activeExtractors = buildList {
             add(DirectHlsExtractor())
             add(DirectMp4Extractor())
+            appContext?.let { add(DirectStreamWebViewRelayExtractor(it)) }
             // Downloaded resolver extensions win over compatibility implementations below.
             addAll(downloadedResolvers)
             add(AniBoomExtractor(client))
@@ -671,6 +683,8 @@ class AnimeWatchRepository(
         // tight for it, silently timing the whole attempt out with no error surfaced to the user.
         const val AUTO_RESOLVE_TIMEOUT_MS = 15_000L
         const val PREFERRED_RESOLVE_TIMEOUT_MS = 20_000L
+        const val DIRECT_AUTO_RESOLVE_TIMEOUT_MS = 35_000L
+        const val DIRECT_PREFERRED_RESOLVE_TIMEOUT_MS = 45_000L
     }
 }
 

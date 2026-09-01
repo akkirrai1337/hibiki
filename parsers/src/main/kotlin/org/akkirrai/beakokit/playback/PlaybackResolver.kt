@@ -5,6 +5,7 @@ import kotlinx.coroutines.withTimeout
 import org.akkirrai.beakokit.api.SourceErrorKind
 import org.akkirrai.beakokit.api.SourceException
 import org.akkirrai.beakokit.api.SourceUnavailableException
+import org.akkirrai.beakokit.api.FallbackStreamExtractor
 import org.akkirrai.beakokit.api.StreamExtractor
 import org.akkirrai.beakokit.api.StreamValidator
 import org.akkirrai.beakokit.model.PlayerLink
@@ -68,35 +69,64 @@ class PlaybackResolver(
         val failures = mutableListOf<Throwable>()
         var supportedLinkSeen = false
         for (link in links) {
-            val extractor = extractors.firstOrNull { it.supports(link) }
-            if (extractor == null) continue
+            val matchingExtractors = extractors.filter { it.supports(link) }
+            if (matchingExtractors.isEmpty()) continue
             supportedLinkSeen = true
 
             try {
                 val timeout = attemptTimeoutMillis(link)
                 require(timeout > 0) { "Playback attempt timeout must be positive" }
                 val resolved = withTimeout(timeout) {
-                    val streams = extractor.extractVariants(link)
-                        .filterNot { it.url in excludedStreamUrls }
-                        .sortedWith(streamQualityComparator(preferredQuality))
-                    if (streams.isEmpty()) throw ExtractorFailedException(link.playerName)
-
-                    streams.firstNotNullOfOrNull { stream ->
-                        val validation = validator.validate(stream)
-                        if (validation.success) {
-                            ResolvedPlaybackStream(
-                                link = link,
-                                stream = stream,
-                                validation = validation,
-                                availableQualityLabels = streams.mapNotNull { candidate ->
-                                    candidate.quality?.trim()?.takeIf(String::isNotBlank)
-                                }.distinct(),
-                            )
-                        } else {
-                            failures += validation.toFailure(link.playerName)
-                            null
-                        }
+                    val validationFailures = mutableListOf<StreamValidationResult>()
+                    val primary = matchingExtractors.firstOrNull { it !is FallbackStreamExtractor }
+                    val fallbacks = matchingExtractors.filterIsInstance<FallbackStreamExtractor>()
+                    val attempts = buildList<StreamExtractor> {
+                        primary?.let(::add)
+                        addAll(fallbacks)
                     }
+
+                    var successful: ResolvedPlaybackStream? = null
+                    for (extractor in attempts) {
+                        if (extractor is FallbackStreamExtractor &&
+                            !extractor.shouldAttempt(link, validationFailures)
+                        ) {
+                            continue
+                        }
+                        val streams = try {
+                            extractor.extractVariants(link)
+                                .filterNot { it.url in excludedStreamUrls }
+                                .sortedWith(streamQualityComparator(preferredQuality))
+                        } catch (error: CancellationException) {
+                            throw error
+                        } catch (error: Throwable) {
+                            failures += error
+                            continue
+                        }
+                        if (streams.isEmpty()) {
+                            failures += ExtractorFailedException(link.playerName)
+                            continue
+                        }
+
+                        for (stream in streams) {
+                            val validation = validator.validate(stream)
+                            if (validation.success) {
+                                successful = ResolvedPlaybackStream(
+                                    link = link,
+                                    stream = stream,
+                                    validation = validation,
+                                    availableQualityLabels = streams.mapNotNull { candidate ->
+                                        candidate.quality?.trim()?.takeIf(String::isNotBlank)
+                                    }.distinct(),
+                                )
+                                break
+                            } else {
+                                validationFailures += validation
+                                failures += validation.toFailure(link.playerName)
+                            }
+                        }
+                        if (successful != null) break
+                    }
+                    successful
                 }
                 if (resolved != null) return resolved
             } catch (error: CancellationException) {

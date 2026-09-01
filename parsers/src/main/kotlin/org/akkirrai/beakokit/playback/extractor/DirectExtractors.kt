@@ -14,6 +14,9 @@ class DirectHlsExtractor : StreamExtractor {
         type = StreamType.HLS,
         quality = link.quality,
         headers = link.headers,
+        audioUrl = link.audioUrl,
+        audioHeaders = link.audioHeaders,
+        subtitles = link.subtitles,
     )
 }
 
@@ -25,5 +28,8 @@ class DirectMp4Extractor : StreamExtractor {
         type = StreamType.MP4,
         quality = link.quality,
         headers = link.headers,
+        audioUrl = link.audioUrl,
+        audioHeaders = link.audioHeaders,
+        subtitles = link.subtitles,
     )
 }

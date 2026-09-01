@@ -20,10 +20,34 @@ class HttpStreamValidator(
 ) : StreamValidator {
     override suspend fun validate(stream: VideoStream): StreamValidationResult =
         try {
-            when (stream.type) {
+            val videoResult = when (stream.type) {
                 StreamType.HLS -> validateHls(stream)
                 StreamType.MP4 -> validateMp4(stream)
                 StreamType.DASH -> validateDash(stream)
+            }
+            if (!videoResult.success || stream.audioUrl.isNullOrBlank()) {
+                videoResult
+            } else {
+                val audioResult = validateHls(
+                    stream.copy(
+                        url = stream.audioUrl,
+                        type = StreamType.HLS,
+                        quality = null,
+                        headers = stream.audioHeaders.ifEmpty { stream.headers },
+                        audioUrl = null,
+                        audioHeaders = emptyMap(),
+                        subtitles = emptyList(),
+                    ),
+                )
+                if (audioResult.success) {
+                    videoResult
+                } else {
+                    failure(
+                        stream,
+                        audioResult.statusCode,
+                        "Аудиодорожка недоступна: ${audioResult.message}",
+                    )
+                }
             }
         } catch (error: CancellationException) {
             throw error
