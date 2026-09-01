@@ -35,6 +35,14 @@ class WatchSourcesViewModel(
         loadSources(forceRefresh = false)
     }
 
+    fun refreshLastWatchedSource() {
+        _uiState.update {
+            it.copy(
+                lastWatchedSourceId = watchStateRepository.getTitleWatchState(animeId)?.sourceId,
+            )
+        }
+    }
+
     fun retry() {
         val current = _uiState.value
         if (current.items.isEmpty()) {
