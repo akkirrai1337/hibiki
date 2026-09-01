@@ -75,7 +75,6 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -193,12 +192,6 @@ fun CatalogScreen(
         listState = listState,
         onVisibilityChange = { isSortScrollVisible = it },
     )
-    CatalogDescriptionPrefetchEffect(
-        listState = listState,
-        items = listUiState.items,
-        onPrefetch = viewModel::enrichDescription,
-    )
-
     Box(modifier = modifier.fillMaxSize()) {
         when {
             state.isLoading && state.items.isEmpty() -> {
@@ -253,7 +246,6 @@ fun CatalogScreen(
                         onAnimeClick = onAnimeClick,
                         libraryStatusByAnimeId = libraryStatusByAnimeId,
                         onRetryLoadMore = viewModel::loadMore,
-                    onItemVisible = viewModel::enrichDescription,
                     sharedCardModifier = sharedCardModifier,
                     sharedPosterModifier = sharedPosterModifier,
                 )
@@ -346,7 +338,6 @@ private fun CatalogAnimeListContent(
     onAnimeClick: (Anime) -> Unit,
     libraryStatusByAnimeId: Map<String, org.akkirrai.hibiki.core.source.LibraryCategory>,
     onRetryLoadMore: () -> Unit,
-    onItemVisible: (Anime) -> Unit,
     sharedCardModifier: @Composable (Anime) -> Modifier,
     sharedPosterModifier: @Composable (Anime) -> Modifier,
 ) {
@@ -386,7 +377,6 @@ private fun CatalogAnimeListContent(
                     LibraryStatusPosterFooter(category)
                 }
             },
-            onItemVisible = onItemVisible,
             sharedCardModifier = sharedCardModifier,
             sharedPosterModifier = sharedPosterModifier,
         )
@@ -455,30 +445,6 @@ private fun CatalogPaginationEffect(
         }.collect { shouldLoadMore ->
             if (shouldLoadMore) onLoadMore()
         }
-    }
-}
-
-/** Starts fetching descriptions for cards a few rows below the visible window, not just the
- * ones already on screen - so by the time the user actually scrolls to them, the description is
- * often already there instead of popping in a beat late. Safe to call redundantly: `enrichDescription`
- * already dedupes in-flight/complete requests, so a card that's already visible or already
- * enriched is a no-op here. */
-@Composable
-private fun CatalogDescriptionPrefetchEffect(
-    listState: androidx.compose.foundation.lazy.LazyListState,
-    items: List<Anime>,
-    onPrefetch: (Anime) -> Unit,
-) {
-    val latestItems by rememberUpdatedState(items)
-    val latestOnPrefetch by rememberUpdatedState(onPrefetch)
-    LaunchedEffect(listState) {
-        snapshotFlow { listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index }
-            .collect { lastVisibleIndex ->
-                if (lastVisibleIndex == null) return@collect
-                for (index in (lastVisibleIndex + 1)..(lastVisibleIndex + CATALOG_DESCRIPTION_READ_AHEAD)) {
-                    latestItems.getOrNull(index)?.let(latestOnPrefetch)
-                }
-            }
     }
 }
 
@@ -704,8 +670,6 @@ class CatalogViewModel(
     )
     val uiState: StateFlow<CatalogUiState> = _uiState.asStateFlow()
 
-    private val descriptionUpdates = Channel<Pair<String, String>>(Channel.UNLIMITED)
-    private val descriptionRequests = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
     private var searchJob: kotlinx.coroutines.Job? = null
 
     init {
@@ -731,51 +695,6 @@ class CatalogViewModel(
                 load()
             }
         }
-        observeDescriptionUpdates()
-    }
-
-    /** Some sources (e.g. AnimePahe) don't include a description on catalog/search cards at
-     * all - only on the details page. Fetches it lazily as cards scroll into view (wired to
-     * each card's onItemVisible) instead of blocking the whole page load. Only the
-     * `description` field is ever merged back into the card - the details fetch can return a
-     * less complete `Anime` than the catalog parse did (e.g. a source's details page missing a
-     * field the listing had), and swapping in the whole object used to silently drop those
-     * fields (year disappearing from the card's meta line was one instance). */
-    fun enrichDescription(anime: Anime) {
-        if (!anime.description.isNullOrBlank() || !descriptionRequests.add(anime.id)) return
-        viewModelScope.launch(Dispatchers.IO) {
-            runCatching { repository.enrichDescription(anime) }
-                .onSuccess { enriched ->
-                    val description = enriched.description
-                    if (!description.isNullOrBlank()) descriptionUpdates.trySend(anime.id to description)
-                }
-                .also { descriptionRequests.remove(anime.id) }
-        }
-    }
-
-    private fun observeDescriptionUpdates() {
-        viewModelScope.launch {
-            for (firstUpdate in descriptionUpdates) {
-                val updates = linkedMapOf(firstUpdate)
-                delay(DESCRIPTION_UPDATE_BATCH_WINDOW_MS)
-                while (true) {
-                    val nextUpdate = descriptionUpdates.tryReceive().getOrNull() ?: break
-                    updates[nextUpdate.first] = nextUpdate.second
-                }
-                _uiState.update { state -> state.replaceDescriptions(updates) }
-            }
-        }
-    }
-
-    private fun CatalogUiState.replaceDescriptions(updates: Map<String, String>): CatalogUiState {
-        var changed = false
-        val updatedItems = items.map { card ->
-            updates[card.anime.id]?.let { description ->
-                changed = true
-                CatalogAnimeCard(card.anime.copy(description = description))
-            } ?: card
-        }
-        return if (changed) copy(items = updatedItems) else this
     }
 
     fun load() {
@@ -918,7 +837,6 @@ class CatalogViewModel(
     }
 
     override fun onCleared() {
-        descriptionUpdates.close()
         repository.close()
         super.onCleared()
     }
@@ -930,7 +848,6 @@ class CatalogViewModel(
     }
 
     private companion object {
-        const val DESCRIPTION_UPDATE_BATCH_WINDOW_MS = 100L
     }
 
     class Factory(
@@ -1006,4 +923,3 @@ private val CATALOG_PULL_REFRESH_INDICATOR_TOP_OFFSET_WITHOUT_SORT =
     CATALOG_HEADER_TOP_PADDING + CATALOG_SEARCH_BAR_HEIGHT - 8.dp
 private const val CATALOG_SORT_ANIMATION_DURATION_MS = 220
 private const val CATALOG_SCROLL_THRESHOLD = 3
-private const val CATALOG_DESCRIPTION_READ_AHEAD = 3
