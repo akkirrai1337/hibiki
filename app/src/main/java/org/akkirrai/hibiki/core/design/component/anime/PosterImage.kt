@@ -1,6 +1,7 @@
 package org.akkirrai.hibiki.core.design.component.anime
 
 import android.graphics.drawable.Drawable
+import android.graphics.drawable.BitmapDrawable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -12,11 +13,16 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.graphics.painter.BitmapPainter
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.material3.MaterialTheme
 import coil.compose.AsyncImage
 import coil.request.ErrorResult
 import coil.request.SuccessResult
+import androidx.core.graphics.drawable.toBitmap
+import java.lang.ref.WeakReference
 import kotlinx.coroutines.delay
 import org.akkirrai.hibiki.core.log.AppLogger
 
@@ -35,8 +41,17 @@ fun PosterImage(
     var activeUrl by remember(normalizedPrimary, normalizedFallback) {
         mutableStateOf(normalizedPrimary ?: normalizedFallback)
     }
+    // The source card stays composed while a shared-element transition is in flight. Reuse the
+    // drawable it has already decoded as this instance's placeholder, rather than exposing the
+    // card/background for the frame or two before Coil completes the new request. For a trailer
+    // banner, the poster fallback gives the same stable bridge until the trailer still is ready.
+    var retainedDrawable by remember(normalizedPrimary, normalizedFallback) {
+        mutableStateOf(
+            cachedPosterDrawable(normalizedPrimary) ?: cachedPosterDrawable(normalizedFallback),
+        )
+    }
     var isLoading by remember(normalizedPrimary, normalizedFallback) {
-        mutableStateOf(activeUrl != null)
+        mutableStateOf(activeUrl != null && retainedDrawable == null)
     }
     // A shared-element transition (e.g. catalog card -> details poster) hands this composable a
     // *new* instance once it settles into its final spot, resetting isLoading to true even though
@@ -59,16 +74,25 @@ fun PosterImage(
         return
     }
 
+    val retainedPainter = retainedDrawable?.let { drawable ->
+        rememberPosterDrawablePainter(drawable)
+    }
+
     Box(modifier = modifier) {
         AsyncImage(
             model = activeUrl,
             contentDescription = contentDescription,
             modifier = Modifier.fillMaxSize(),
             contentScale = contentScale,
-            onLoading = { isLoading = true },
+            placeholder = retainedPainter,
+            onLoading = { isLoading = retainedDrawable == null },
             onSuccess = { state ->
                 isLoading = false
-                (state.result as? SuccessResult)?.drawable?.let { drawable -> onImageSuccess?.invoke(drawable) }
+                (state.result as? SuccessResult)?.drawable?.let { drawable ->
+                    retainedDrawable = drawable
+                    cachePosterDrawable(activeUrl, drawable)
+                    onImageSuccess?.invoke(drawable)
+                }
             },
             onError = { state ->
                 val failedUrl = activeUrl
@@ -102,6 +126,25 @@ fun PosterImage(
 
 /** Loading states shorter than this never show a placeholder, to avoid flashing one for an image that's already cached. */
 private const val PLACEHOLDER_FLASH_GUARD_MILLIS = 120L
+
+private val posterDrawableCache = mutableMapOf<String, WeakReference<Drawable>>()
+
+private fun cachedPosterDrawable(url: String?): Drawable? = url
+    ?.let { synchronized(posterDrawableCache) { posterDrawableCache[it]?.get() } }
+
+private fun cachePosterDrawable(url: String?, drawable: Drawable) {
+    if (url != null) synchronized(posterDrawableCache) {
+        posterDrawableCache[url] = WeakReference(drawable)
+    }
+}
+
+@Composable
+private fun rememberPosterDrawablePainter(drawable: Drawable): Painter {
+    val bitmap = remember(drawable) {
+        (drawable as? BitmapDrawable)?.bitmap ?: drawable.toBitmap()
+    }
+    return remember(bitmap) { BitmapPainter(bitmap.asImageBitmap()) }
+}
 
 @Composable
 fun PosterPlaceholder(
