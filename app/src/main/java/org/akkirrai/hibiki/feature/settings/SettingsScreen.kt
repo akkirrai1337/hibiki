@@ -25,15 +25,16 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.outlined.Contrast
 import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.DarkMode
-import androidx.compose.material.icons.outlined.Language
+import androidx.compose.material.icons.outlined.FastForward
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.Palette
 import androidx.compose.material.icons.outlined.Share
-import androidx.compose.material.icons.outlined.SkipNext
-import androidx.compose.material.icons.outlined.Update
+import androidx.compose.material.icons.outlined.Translate
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Button
@@ -185,7 +186,7 @@ fun SettingsScreen(
                 SettingsItems(count = 2) { index, shape ->
                     when (index) {
                         0 -> SettingsVerticalItem(
-                            icon = Icons.Outlined.Language,
+                            icon = Icons.Outlined.Translate,
                             title = stringResource(R.string.settings_language),
                             shape = shape,
                         ) {
@@ -214,11 +215,25 @@ fun SettingsScreen(
             }
         }
 
+        item(key = "sources") {
+            SettingsSection(title = stringResource(R.string.settings_sources)) {
+                SettingsItems(count = 1) { _, shape ->
+                    SettingsSwitchItem(
+                        icon = Icons.Filled.VisibilityOff,
+                        title = stringResource(R.string.settings_hide_nsfw_sources),
+                        checked = preferences.hideNsfwSources,
+                        shape = shape,
+                        onCheckedChange = appPreferences::setHideNsfwSources,
+                    )
+                }
+            }
+        }
+
         item(key = "player") {
             SettingsSection(title = stringResource(R.string.settings_player)) {
                 SettingsItems(count = 1) { _, _ ->
                     SettingsSwitchItem(
-                        icon = Icons.Outlined.SkipNext,
+                        icon = Icons.Outlined.FastForward,
                         title = stringResource(R.string.settings_auto_skip_segments),
                         checked = preferences.autoSkipSegments,
                         shape = CircleShape,
@@ -256,7 +271,7 @@ fun SettingsScreen(
                 SettingsSection(title = stringResource(R.string.settings_updates)) {
                     SettingsItems(count = 1) { _, _ ->
                         SettingsActionItem(
-                            icon = Icons.Outlined.Update,
+                            icon = Icons.Filled.Refresh,
                             title = stringResource(R.string.settings_check_updates),
                             shape = CircleShape,
                             onClick = onCheckForUpdates,

@@ -22,7 +22,6 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
@@ -41,6 +40,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -66,7 +66,6 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
@@ -99,6 +98,8 @@ import org.akkirrai.hibiki.core.source.extension.ExtensionMarketplaceClient
 import org.akkirrai.hibiki.core.source.extension.ExtensionMarketplaceException
 import org.akkirrai.hibiki.core.source.extension.MarketplaceExtension
 import org.akkirrai.hibiki.core.source.extension.isExtensionVersionNewer
+import org.akkirrai.hibiki.core.source.extension.SourceExtensionUpdateChecker
+import org.akkirrai.hibiki.core.source.extension.isUpdateAvailable
 
 /**
  * Sources tab: the "Extensions" page browses `hibiki-sources`' marketplace index over the
@@ -111,6 +112,7 @@ fun SourceExtensionsScreen(
     modifier: Modifier = Modifier,
     bottomContentPadding: Dp = UiDimens.ScreenPadding,
 ) {
+    val context = LocalContext.current
     var selectedTab by rememberSaveable { mutableStateOf(0) }
     var query by rememberSaveable { mutableStateOf("") }
     var searchOpen by rememberSaveable { mutableStateOf(false) }
@@ -127,9 +129,11 @@ fun SourceExtensionsScreen(
     var extensionInstallErrors by remember { mutableStateOf(emptyMap<String, String>()) }
 
     val preferences = LocalAppPreferences.current
-    val sourceRepositoryUrls = LocalAppPreferencesState.current.sourceRepositoryUrls
-    val selectedSource = LocalAppPreferencesState.current.animeSource
+    val appPreferencesState = LocalAppPreferencesState.current
+    val sourceRepositoryUrls = appPreferencesState.sourceRepositoryUrls
+    val selectedSource = appPreferencesState.animeSource
     val haptic = LocalHapticFeedback.current
+    val updateChecker = remember(context) { SourceExtensionUpdateChecker.get(context) }
 
     val pagerState = rememberPagerState(initialPage = 0) { 2 }
     val tabScope = rememberCoroutineScope()
@@ -197,6 +201,7 @@ fun SourceExtensionsScreen(
     }
 
     LaunchedEffect(repositoryRefreshSignal, sourceRepositoryUrls) { loadRepositories(sourceRepositoryUrls) }
+    LaunchedEffect(sourceRepositoryUrls) { updateChecker.refresh(sourceRepositoryUrls) }
 
     // This screen's composable stays alive across bottom-nav tab switches (the NavHost restores
     // rather than recreates it, so its `remember`ed state survives) - without this, the
@@ -284,9 +289,37 @@ fun SourceExtensionsScreen(
                     query = query,
                     state = repositoryLoadState,
                     selectedLanguages = selectedLanguages,
+                    hideNsfwSources = appPreferencesState.hideNsfwSources,
                     selectedSource = selectedSource,
                     installingIds = installingExtensionIds,
                     installErrors = extensionInstallErrors,
+                    onUpdateAll = { extensions -> extensions.forEach { extension ->
+                        installingExtensionIds = installingExtensionIds + extension.id
+                        extensionInstallErrors = extensionInstallErrors - extension.id
+                        tabScope.launch {
+                            try {
+                                extension.resolverDependencies.forEach { resolverId ->
+                                    val resolver = mergedExtensions.firstOrNull {
+                                        it.id == resolverId && it.type == "player-resolver"
+                                    } ?: error("Required resolver '$resolverId' is not present in this repository")
+                                    AnimeSourceRegistry.installPlayerResolverExtension(
+                                        marketplaceClient.fetchPlayerResolverManifest(resolver),
+                                        originByExtensionId[resolver.id].orEmpty(),
+                                    )
+                                }
+                                AnimeSourceRegistry.installScriptExtension(
+                                    marketplaceClient.fetchManifest(extension),
+                                    originByExtensionId[extension.id].orEmpty(),
+                                )
+                            } catch (error: Exception) {
+                                extensionInstallErrors = extensionInstallErrors +
+                                    (extension.id to (error.message ?: error.toString()))
+                            } finally {
+                                installingExtensionIds = installingExtensionIds - extension.id
+                                updateChecker.updateFrom(mergedExtensions)
+                            }
+                        }
+                    } },
                     onRetry = { tabScope.launch { loadRepositories(sourceRepositoryUrls) } },
                     onInstall = { extension ->
                         installingExtensionIds = installingExtensionIds + extension.id
@@ -319,6 +352,7 @@ fun SourceExtensionsScreen(
                                     (extension.id to (error.message ?: error.toString()))
                             } finally {
                                 installingExtensionIds = installingExtensionIds - extension.id
+                                updateChecker.updateFrom(mergedExtensions)
                             }
                         }
                     },
@@ -580,9 +614,11 @@ private fun SourceRepositoryList(
     query: String,
     state: RepositoryLoadState,
     selectedLanguages: Set<String>,
+    hideNsfwSources: Boolean,
     selectedSource: SourceId,
     installingIds: Set<String>,
     installErrors: Map<String, String>,
+    onUpdateAll: (List<MarketplaceExtension>) -> Unit,
     onRetry: () -> Unit,
     onInstall: (MarketplaceExtension) -> Unit,
     onSelect: (String) -> Unit,
@@ -608,11 +644,18 @@ private fun SourceRepositoryList(
                         extension.name.contains(query, ignoreCase = true) ||
                         extension.id.contains(query, ignoreCase = true)
                     val matchesLanguage = selectedLanguages.isEmpty() || extension.lang in selectedLanguages
-                    extension.type == "source" && matchesQuery && matchesLanguage
+                    val matchesContentRating = !hideNsfwSources || !extension.isNsfw
+                    extension.type == "source" && matchesQuery && matchesLanguage && matchesContentRating
                 }
                 if (visibleExtensions.isEmpty()) {
                     SourceRepositoryMessage(stringResource(R.string.source_extensions_repository_empty))
                 } else {
+                    val installedExtensions = visibleExtensions.filter { it.id in installedVersions }
+                    val updateAvailableExtensions = installedExtensions.filter { extension ->
+                        extension.isUpdateAvailable(installedVersions, installedResolverVersions, state.extensions)
+                    }
+                    val upToDateExtensions = installedExtensions - updateAvailableExtensions.toSet()
+                    val availableExtensions = visibleExtensions.filterNot { it.id in installedVersions }
                     // The nav-bar reservation belongs in the LazyColumn's own contentPadding (like
                     // CatalogScreen/LibraryScreen do), not on this wrapping Column - padding a
                     // Column shrinks its measured height, so the LazyColumn's fillMaxSize() sizes
@@ -629,28 +672,79 @@ private fun SourceRepositoryList(
                             bottom = bottomContentPadding + 16.dp,
                         ),
                     ) {
-                        items(visibleExtensions, key = MarketplaceExtension::id) { extension ->
-                            // A resolver dependency can be fixed and re-published without its
-                            // owning source's own version changing at all - without this, that fix
-                            // would never reach anyone already past the initial install (see
-                            // MarketplaceExtensionRow's onInstall, which is what actually refetches
-                            // resolverDependencies, but only runs when the user taps an update).
-                            val resolverUpdateAvailable = extension.resolverDependencies.any { resolverId ->
-                                val installed = installedResolverVersions[resolverId] ?: return@any false
-                                val available = state.extensions.firstOrNull { it.id == resolverId && it.type == "player-resolver" }
-                                available != null && isExtensionVersionNewer(available.version, installed)
+                        if (updateAvailableExtensions.isNotEmpty()) {
+                            item(key = "available_updates") {
+                                SourceExtensionSectionHeader(
+                                    title = stringResource(R.string.source_extensions_updates_section, updateAvailableExtensions.size),
+                                )
                             }
-                            MarketplaceExtensionRow(
+                            item(key = "update_all_extensions") {
+                                TextButton(onClick = { onUpdateAll(updateAvailableExtensions) }) {
+                                    Text(stringResource(R.string.source_extensions_update_all))
+                                }
+                            }
+                        }
+                        items(updateAvailableExtensions, key = MarketplaceExtension::id) { extension ->
+                            MarketplaceExtensionItem(
                                 extension = extension,
-                                installedVersion = installedVersions[extension.id],
-                                resolverUpdateAvailable = resolverUpdateAvailable,
-                                installing = extension.id in installingIds,
-                                errorMessage = installErrors[extension.id],
-                                selected = installedVersions.containsKey(extension.id) &&
-                                    extension.id == selectedSource.value,
-                                onInstall = { onInstall(extension) },
-                                onSelect = { onSelect(extension.id) },
-                                onUninstall = { onUninstall(extension.id) },
+                                installedVersions = installedVersions,
+                                installedResolverVersions = installedResolverVersions,
+                                stateExtensions = state.extensions,
+                                installingIds = installingIds,
+                                installErrors = installErrors,
+                                selectedSource = selectedSource,
+                                onInstall = onInstall,
+                                onSelect = onSelect,
+                                onUninstall = onUninstall,
+                            )
+                        }
+                        if (upToDateExtensions.isNotEmpty()) {
+                            item(key = "installed_extensions") {
+                                SourceExtensionSectionHeader(
+                                    title = stringResource(
+                                        R.string.source_extensions_installed_section,
+                                        upToDateExtensions.size,
+                                    ),
+                                )
+                            }
+                        }
+                        items(upToDateExtensions, key = MarketplaceExtension::id) { extension ->
+                            MarketplaceExtensionItem(
+                                extension = extension,
+                                installedVersions = installedVersions,
+                                installedResolverVersions = installedResolverVersions,
+                                stateExtensions = state.extensions,
+                                installingIds = installingIds,
+                                installErrors = installErrors,
+                                selectedSource = selectedSource,
+                                onInstall = onInstall,
+                                onSelect = onSelect,
+                                onUninstall = onUninstall,
+                            )
+                        }
+                        if (availableExtensions.isNotEmpty()) {
+                            item(key = "available_extensions") {
+                                SourceExtensionSectionHeader(
+                                    title = stringResource(
+                                        R.string.source_extensions_available_section,
+                                        availableExtensions.size,
+                                    ),
+                                    separatedFromPrevious = installedExtensions.isNotEmpty(),
+                                )
+                            }
+                        }
+                        items(availableExtensions, key = MarketplaceExtension::id) { extension ->
+                            MarketplaceExtensionItem(
+                                extension = extension,
+                                installedVersions = installedVersions,
+                                installedResolverVersions = installedResolverVersions,
+                                stateExtensions = state.extensions,
+                                installingIds = installingIds,
+                                installErrors = installErrors,
+                                selectedSource = selectedSource,
+                                onInstall = onInstall,
+                                onSelect = onSelect,
+                                onUninstall = onUninstall,
                             )
                         }
                     }
@@ -658,6 +752,68 @@ private fun SourceRepositoryList(
             }
         }
     }
+}
+
+@Composable
+private fun SourceExtensionSectionHeader(
+    title: String,
+    separatedFromPrevious: Boolean = false,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = if (separatedFromPrevious) 20.dp else 4.dp, bottom = 4.dp),
+    ) {
+        if (separatedFromPrevious) {
+            HorizontalDivider(
+                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+                modifier = Modifier.padding(bottom = 16.dp),
+            )
+        }
+        Text(
+            text = title,
+            style = MaterialTheme.typography.labelLarge,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.primary,
+        )
+    }
+}
+
+@Composable
+private fun MarketplaceExtensionItem(
+    extension: MarketplaceExtension,
+    installedVersions: Map<String, String>,
+    installedResolverVersions: Map<String, String>,
+    stateExtensions: List<MarketplaceExtension>,
+    installingIds: Set<String>,
+    installErrors: Map<String, String>,
+    selectedSource: SourceId,
+    onInstall: (MarketplaceExtension) -> Unit,
+    onSelect: (String) -> Unit,
+    onUninstall: (String) -> Unit,
+) {
+    // A resolver dependency can be fixed and re-published without its owning source's own
+    // version changing at all. Reinstalling a source refetches its resolver dependencies, so
+    // surface that update alongside the source's own version update.
+    val resolverUpdateAvailable = extension.resolverDependencies.any { resolverId ->
+        val installed = installedResolverVersions[resolverId] ?: return@any false
+        val available = stateExtensions.firstOrNull {
+            it.id == resolverId && it.type == "player-resolver"
+        }
+        available != null && isExtensionVersionNewer(available.version, installed)
+    }
+    MarketplaceExtensionRow(
+        extension = extension,
+        installedVersion = installedVersions[extension.id],
+        resolverUpdateAvailable = resolverUpdateAvailable,
+        installing = extension.id in installingIds,
+        errorMessage = installErrors[extension.id],
+        selected = installedVersions.containsKey(extension.id) &&
+            extension.id == selectedSource.value,
+        onInstall = { onInstall(extension) },
+        onSelect = { onSelect(extension.id) },
+        onUninstall = { onUninstall(extension.id) },
+    )
 }
 
 @Composable
@@ -945,32 +1101,33 @@ private fun MarketplaceExtensionRow(
                 modifier = Modifier.size(52.dp).clip(CircleShape),
             )
             Column(modifier = Modifier.weight(1f)) {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
+                Text(
+                    text = extension.name,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        text = extension.name,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Medium,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f, fill = false),
+                        text = "${extension.lang.uppercase()} · $versionLabel",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (installedVersion != null && !upToDate) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        },
                     )
                     if (extension.isNsfw) {
-                        NsfwBadge()
+                        Text(
+                            text = " · 18+",
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.error,
+                        )
                     }
                 }
-                Text(
-                    text = "${extension.lang.uppercase()} · $versionLabel",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = if (installedVersion != null && !upToDate) {
-                        MaterialTheme.colorScheme.primary
-                    } else {
-                        MaterialTheme.colorScheme.onSurfaceVariant
-                    },
-                )
             }
             if (selected) {
                 Icon(
@@ -1002,19 +1159,6 @@ private fun MarketplaceExtensionRow(
             )
         }
     }
-}
-
-@Composable
-private fun NsfwBadge() {
-    Text(
-        text = stringResource(R.string.source_extensions_nsfw_badge),
-        style = MaterialTheme.typography.labelSmall,
-        fontWeight = FontWeight.Bold,
-        color = Color.White,
-        modifier = Modifier
-            .background(color = Color(0xFFD32F2F), shape = RoundedCornerShape(4.dp))
-            .padding(horizontal = 5.dp, vertical = 1.dp),
-    )
 }
 
 @Composable

@@ -27,6 +27,7 @@
     <string name="action_more">Ещё</string>
 
     <string name="home_continue_title">Продолжить просмотр</string>
+    <string name="home_recently_watched">Недавно просмотренные</string>
     <string name="home_trending">Сейчас в тренде</string>
     <string name="home_see_all">Смотреть все</string>
     <string name="home_recent_updates">Недавние обновления</string>
@@ -381,6 +382,7 @@
     <string name="settings_downloads_summary">Заглушка для настроек офлайн-хранилища</string>
     <string name="settings_sources">Источник аниме</string>
     <string name="settings_sources_summary">Выбор источника каталога и данных о тайтлах</string>
+    <string name="settings_hide_nsfw_sources">Скрывать NSFW-источники</string>
     <string name="settings_notifications">Уведомления</string>
     <string name="settings_notifications_not_asked">Разрешение ещё не запрашивалось</string>
     <string name="settings_notifications_enabled">Включены</string>
@@ -397,11 +399,14 @@
     <string name="source_extensions_manage">Управление</string>
     <string name="source_extensions_update">Обновить</string>
     <string name="source_extensions_resolver_update">доступно обновление плеера</string>
-    <string name="source_extensions_nsfw_badge">18+</string>
     <string name="source_extensions_uninstall">Удалить</string>
     <string name="source_extensions_empty">Ничего не найдено по запросу</string>
     <string name="source_extensions_install">Установить</string>
     <string name="source_extensions_installed">Установлено</string>
+    <string name="source_extensions_installed_section">Установленные · %1$d</string>
+    <string name="source_extensions_updates_section">Доступны обновления · %1$d</string>
+    <string name="source_extensions_update_all">Обновить все</string>
+    <string name="source_extensions_available_section">Доступные · %1$d</string>
     <string name="source_extensions_repository_loading">Загрузка доступных расширений…</string>
     <string name="source_extensions_repository_error">Не удалось загрузить репозиторий расширений</string>
     <string name="source_extensions_repository_retry">Повторить</string>

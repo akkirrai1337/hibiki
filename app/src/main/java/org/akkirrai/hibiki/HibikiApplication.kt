@@ -7,6 +7,6 @@ import java.io.File
 class HibikiApplication : Application() {
     override fun onCreate() {
         super.onCreate()
-        AnimeSourceRegistry.initialize(File(filesDir, "extensions"))
+        AnimeSourceRegistry.initialize(this, File(filesDir, "extensions"))
     }
 }

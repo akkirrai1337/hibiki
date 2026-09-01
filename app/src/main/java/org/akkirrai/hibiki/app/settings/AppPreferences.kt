@@ -52,7 +52,13 @@ data class AppPreferencesState(
     val videoScaleMode: VideoScaleMode = VideoScaleMode.FIT,
     val discordRpcEnabled: Boolean = false,
     val discordRpcExcludedTitleIds: Set<String> = emptySet(),
+    val hideNsfwSources: Boolean = false,
     val sourceRepositoryUrls: List<String> = listOf(ExtensionMarketplaceClient.DEFAULT_INDEX_URL),
+)
+
+data class RememberedAnimeSourceAppearance(
+    val name: String,
+    val iconUrl: String?,
 )
 
 class AppPreferences(context: Context) {
@@ -74,6 +80,7 @@ class AppPreferences(context: Context) {
             KEY_VIDEO_SCALE_MODE,
             KEY_DISCORD_RPC_ENABLED,
             KEY_DISCORD_RPC_EXCLUDED_TITLE_IDS,
+            KEY_HIDE_NSFW_SOURCES,
             KEY_SOURCE_REPOSITORY_URLS -> {
                 _state.value = readState(prefs)
             }
@@ -153,6 +160,10 @@ class AppPreferences(context: Context) {
         prefs.edit().putStringSet(KEY_DISCORD_RPC_EXCLUDED_TITLE_IDS, excludedIds).apply()
     }
 
+    fun setHideNsfwSources(hide: Boolean) {
+        prefs.edit().putBoolean(KEY_HIDE_NSFW_SOURCES, hide).apply()
+    }
+
     fun addSourceRepository(url: String) {
         val normalized = url.trim().takeIf(String::isNotBlank) ?: return
         val urls = readSourceRepositoryUrls(prefs)
@@ -186,7 +197,10 @@ class AppPreferences(context: Context) {
         const val KEY_VIDEO_SCALE_MODE = "video_scale_mode"
         const val KEY_DISCORD_RPC_ENABLED = "discord_rpc_enabled"
         const val KEY_DISCORD_RPC_EXCLUDED_TITLE_IDS = "discord_rpc_excluded_title_ids"
+        const val KEY_HIDE_NSFW_SOURCES = "hide_nsfw_sources"
         const val KEY_SOURCE_REPOSITORY_URLS = "source_repository_urls"
+        private const val KEY_KNOWN_ANIME_SOURCE_NAMES = "known_anime_source_names"
+        private const val NAME_SEPARATOR = '\u001F'
         private const val KEY_THEME_MODE = "theme_mode"
         private const val KEY_USE_SYSTEM_COLOR_SCHEME = "use_system_color_scheme"
         private const val KEY_USE_AMOLED_THEME = "use_amoled_theme"
@@ -223,6 +237,57 @@ class AppPreferences(context: Context) {
                 .apply()
         }
 
+        /** Keeps source names and icons available for stored cards after an extension is removed. */
+        fun rememberAnimeSourceAppearances(
+            context: Context,
+            appearances: Map<String, RememberedAnimeSourceAppearance>,
+        ) {
+            if (appearances.isEmpty()) return
+            val preferences = context.applicationContext
+                .getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            val storedAppearances = preferences.getStringSet(KEY_KNOWN_ANIME_SOURCE_NAMES, emptySet())
+                .orEmpty()
+                .associate { entry ->
+                    val parts = entry.split(NAME_SEPARATOR, limit = 3)
+                    parts.first() to RememberedAnimeSourceAppearance(
+                        name = parts.getOrElse(1) { "" },
+                        iconUrl = parts.getOrNull(2)?.takeIf(String::isNotBlank),
+                    )
+                }
+                .toMutableMap()
+            appearances.forEach { (id, appearance) ->
+                if (id.isNotBlank() && appearance.name.isNotBlank()) {
+                    storedAppearances[id] = appearance
+                }
+            }
+            preferences.edit()
+                .putStringSet(
+                    KEY_KNOWN_ANIME_SOURCE_NAMES,
+                    storedAppearances.mapTo(linkedSetOf()) { (id, appearance) ->
+                        "$id$NAME_SEPARATOR${appearance.name}$NAME_SEPARATOR${appearance.iconUrl.orEmpty()}"
+                    },
+                )
+                .apply()
+        }
+
+        fun rememberedAnimeSourceAppearance(
+            context: Context,
+            sourceId: SourceId,
+        ): RememberedAnimeSourceAppearance? =
+            context.applicationContext
+                .getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                .getStringSet(KEY_KNOWN_ANIME_SOURCE_NAMES, emptySet())
+                .orEmpty()
+                .firstOrNull { it.substringBefore(NAME_SEPARATOR) == sourceId.value }
+                ?.let { entry ->
+                    val parts = entry.split(NAME_SEPARATOR, limit = 3)
+                    RememberedAnimeSourceAppearance(
+                        name = parts.getOrElse(1) { "" },
+                        iconUrl = parts.getOrNull(2)?.takeIf(String::isNotBlank),
+                    )
+                }
+                ?.takeIf { it.name.isNotBlank() }
+
         private fun readState(prefs: SharedPreferences): AppPreferencesState {
             return AppPreferencesState(
                 themeMode = prefs.getString(KEY_THEME_MODE, ThemeMode.SYSTEM.name)
@@ -255,6 +320,7 @@ class AppPreferences(context: Context) {
                     .getStringSet(KEY_DISCORD_RPC_EXCLUDED_TITLE_IDS, emptySet())
                     .orEmpty()
                     .toSet(),
+                hideNsfwSources = prefs.getBoolean(KEY_HIDE_NSFW_SOURCES, false),
                 sourceRepositoryUrls = readSourceRepositoryUrls(prefs),
             )
         }

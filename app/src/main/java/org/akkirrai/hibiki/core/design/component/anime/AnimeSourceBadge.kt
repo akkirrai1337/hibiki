@@ -8,6 +8,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -23,12 +26,20 @@ fun AnimeSourceBadge(
     titleId: String,
     modifier: Modifier = Modifier,
 ) {
-    val source = AnimeSourceRegistry.descriptorForStoredTitleOrNull(titleId) ?: return
+    val source = AnimeSourceRegistry.appearanceForStoredTitleOrNull(titleId) ?: return
     Surface(
         modifier = modifier,
         shape = CircleShape,
-        color = MaterialTheme.colorScheme.surfaceContainerHigh,
-        contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+        color = if (source.isInstalled) {
+            MaterialTheme.colorScheme.surfaceContainerHigh
+        } else {
+            MaterialTheme.colorScheme.errorContainer
+        },
+        contentColor = if (source.isInstalled) {
+            MaterialTheme.colorScheme.onSurfaceVariant
+        } else {
+            MaterialTheme.colorScheme.onErrorContainer
+        },
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp),
@@ -50,6 +61,13 @@ fun AnimeSourceBadge(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
+            if (!source.isInstalled) {
+                Icon(
+                    imageVector = Icons.Outlined.Delete,
+                    contentDescription = null,
+                    modifier = Modifier.size(14.dp),
+                )
+            }
         }
     }
 }

@@ -26,6 +26,7 @@ import org.akkirrai.beakokit.extension.PlayerResolverExtensionRepository
 import org.akkirrai.beakokit.api.StreamExtractor
 import org.akkirrai.beakokit.model.AnimeSearchFilterCatalog
 import org.akkirrai.hibiki.app.settings.AppPreferences
+import org.akkirrai.hibiki.app.settings.RememberedAnimeSourceAppearance
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.core.log.AppLogger
 import org.akkirrai.hibiki.core.network.AndroidBrowserFetchProvider
@@ -93,6 +94,8 @@ object AnimeSourceRegistry {
 
     @Volatile
     private var scriptRepository: ScriptExtensionRepository? = null
+    @Volatile
+    private var applicationContext: Context? = null
     private var playerResolverRepository: PlayerResolverExtensionRepository? = null
 
     // Compose state (not just @Volatile) so screens reading `sources`/`catalog` recompose the
@@ -111,6 +114,11 @@ object AnimeSourceRegistry {
         get() = extensionGenerationCounter.get()
 
     /** Points the registry at [extensionsDir] and loads whatever extensions are already installed there. */
+    fun initialize(context: Context, extensionsDir: File) {
+        applicationContext = context.applicationContext
+        initialize(extensionsDir)
+    }
+
     fun initialize(extensionsDir: File) {
         scriptRepository = ScriptExtensionRepository(extensionsDir)
         playerResolverRepository = PlayerResolverExtensionRepository(extensionsDir)
@@ -124,6 +132,17 @@ object AnimeSourceRegistry {
         scriptCatalogEntries = result.entries
         registrationsState = result.entries.map(::registrationFor)
         installedManifestsState = scriptRepository?.installedManifests().orEmpty()
+        applicationContext?.let { context ->
+            AppPreferences.rememberAnimeSourceAppearances(
+                context,
+                registrationsState.associate { registration ->
+                    registration.descriptor.id.value to RememberedAnimeSourceAppearance(
+                        name = registration.descriptor.name,
+                        iconUrl = registration.descriptor.iconUrl,
+                    )
+                },
+            )
+        }
         extensionGenerationCounter.incrementAndGet()
     }
 
@@ -246,6 +265,28 @@ object AnimeSourceRegistry {
                 ?: AppPreferences.DEFAULT_ANIME_SOURCE_ID,
         )
 
+    /** Display information for stored cards, including sources whose extension was removed. */
+    fun appearanceForStoredTitleOrNull(titleId: String): StoredSourceAppearance? {
+        val sourceId = AnimeKey.parse(titleId)?.sourceId ?: AppPreferences.DEFAULT_ANIME_SOURCE_ID
+        descriptorOrNull(sourceId)?.let { source ->
+            return StoredSourceAppearance(
+                name = source.name,
+                iconUrl = source.iconUrl,
+                iconRes = source.iconRes,
+                isInstalled = true,
+            )
+        }
+        val remembered = applicationContext?.let {
+            AppPreferences.rememberedAnimeSourceAppearance(it, sourceId)
+        }
+        return StoredSourceAppearance(
+            name = remembered?.name ?: sourceId.value.takeIf(String::isNotBlank) ?: return null,
+            iconUrl = remembered?.iconUrl,
+            iconRes = R.drawable.animite_media_type_anime,
+            isInstalled = false,
+        )
+    }
+
     private fun registration(sourceId: SourceId): Registration =
         registrationsState.firstOrNull { it.descriptor.id == sourceId }
             ?: throw NoSourcesInstalledException(sourceId)
@@ -285,6 +326,13 @@ object AnimeSourceRegistry {
         sourceExecutionPolicy = sourceExecutionPolicy,
     )
 }
+
+data class StoredSourceAppearance(
+    val name: String,
+    val iconUrl: String?,
+    @param:DrawableRes val iconRes: Int,
+    val isInstalled: Boolean,
+)
 
 /** Thrown when no installed source matches - callers already generically handle [org.akkirrai.beakokit.api.SourceException]. */
 class NoSourcesInstalledException(sourceId: SourceId) : org.akkirrai.beakokit.api.SourceUnavailableException(
