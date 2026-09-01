@@ -42,8 +42,9 @@ class ScriptExtensionRepository(private val extensionsDir: File) {
      * source's `resolverDependencies`) reusing an official id like `animevost` or `anitube-ashdi`
      * and silently replace its trusted code the next time anyone installs/updates it. An id that's
      * never been installed before, or was last installed from this exact origin, proceeds as
-     * before. [originRepositoryUrl] is empty for the built-in default repository so existing
-     * installs from before this check keep working without needing a migration.
+     * before - including anything installed before this check existed, which has no `.origin`
+     * file yet and so is treated the same as "never installed" (whichever repository updates it
+     * first now owns it going forward) rather than needing a migration.
      */
     fun install(manifestJson: String, originRepositoryUrl: String) {
         val manifest = json.decodeFromString(ScriptExtensionManifest.serializer(), manifestJson)

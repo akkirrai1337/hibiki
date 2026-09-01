@@ -22,6 +22,16 @@ import org.mozilla.javascript.Scriptable
  * [instructionThreshold] bytecode instructions, and once [scriptTimeoutMillis] has elapsed it
  * throws a plain [Error] - not an [Exception] - specifically so a script's own `try { while(true){} }
  * catch (e) { }` can't swallow the interrupt and keep looping.
+ *
+ * [scriptTimeoutMillis]'s default is deliberately generous rather than tight: it only needs to
+ * guarantee eventual termination, not react quickly, and a real `Provider` call can legitimately
+ * chain several sequential `fetch()`s (e.g. AniKappa's source x dubbing group discovery, or
+ * AnimePahe re-solving a Cloudflare challenge) - each already individually allowed up to
+ * `requestTimeoutMillis`/`socketTimeoutMillis` (30s) plus up to `maxRetries` retries honoring a
+ * server's `Retry-After` (up to `maxRetryAfterMillis`, another 30s each) by
+ * [org.akkirrai.beakokit.http.BeakoKitHttpPolicy]. A single slow-but-legitimate request can
+ * already approach 90s under that policy, so anything close to Rhino's own 10s example would kill
+ * real extensions on a bad network long before the HTTP layer's own timeouts would.
  */
 /**
  * Deliberately a [java.lang.Error], not a [RuntimeException] - Rhino's interpreter only lets a
@@ -65,8 +75,15 @@ private object HibikiContextFactory : ContextFactory() {
 
 /** Installs [HibikiContextFactory] as Rhino's global factory exactly once; safe to call from every [RhinoExtensionRuntime]. */
 internal fun installRhinoTimeoutGuard() {
-    if (!ContextFactory.hasExplicitGlobal()) {
+    if (ContextFactory.hasExplicitGlobal()) return
+    try {
         ContextFactory.initGlobal(HibikiContextFactory)
+    } catch (_: IllegalStateException) {
+        // Lost a race with another thread's first RhinoExtensionRuntime (each extension's
+        // RhinoRuntimePool is its own lazily-created pool, so two different extensions used for
+        // the first time concurrently can both reach here before either has installed the
+        // factory) - initGlobal() is synchronized internally, so exactly one caller wins and the
+        // other lands here; either way the factory ends up installed, which is all this needs.
     }
 }
 
@@ -76,4 +93,4 @@ internal fun installRhinoTimeoutGuard() {
  * timeout - every real [RhinoExtensionRuntime] uses these defaults.
  */
 internal var instructionThreshold = 10_000
-internal var scriptTimeoutMillis = 15_000L
+internal var scriptTimeoutMillis = 120_000L
