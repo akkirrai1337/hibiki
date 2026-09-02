@@ -410,7 +410,7 @@
     <string name="source_extensions_install">Install</string>
     <string name="source_extensions_installed">Installed</string>
     <string name="source_extensions_installed_section">Installed · %1$d</string>
-    <string name="source_extensions_updates_section">Updates available · %1$d</string>
+    <string name="source_extensions_updates_section">Updates</string>
     <string name="source_extensions_update_all">Update all</string>
     <string name="source_extensions_available_section">Available · %1$d</string>
     <string name="source_extensions_repository_loading">Loading available extensions…</string>

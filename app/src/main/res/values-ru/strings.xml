@@ -404,7 +404,7 @@
     <string name="source_extensions_install">Установить</string>
     <string name="source_extensions_installed">Установлено</string>
     <string name="source_extensions_installed_section">Установленные · %1$d</string>
-    <string name="source_extensions_updates_section">Доступны обновления · %1$d</string>
+    <string name="source_extensions_updates_section">Обновления</string>
     <string name="source_extensions_update_all">Обновить все</string>
     <string name="source_extensions_available_section">Доступные · %1$d</string>
     <string name="source_extensions_repository_loading">Загрузка доступных расширений…</string>

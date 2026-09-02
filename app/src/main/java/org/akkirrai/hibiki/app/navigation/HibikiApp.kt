@@ -648,6 +648,7 @@ private val BottomBarItemHeight = 48.dp
 private val BottomBarActivePillWidth = 68.dp
 private val BottomBarActivePillHeight = 30.dp
 private val BottomBarIconSize = 22.dp
+private val BottomBarUpdateBadgeSize = 18.dp
 private val BottomBarLabelSize = 11.sp
 private val BottomBarContentExtraPadding = 12.dp
 
@@ -804,17 +805,24 @@ private fun AppBottomBarItem(
                     )
                 }
                 if (badgeCount > 0) {
-                    Text(
-                        text = if (badgeCount > 9) "9+" else badgeCount.toString(),
+                    Surface(
                         modifier = Modifier
                             .align(Alignment.TopEnd)
-                            .padding(top = 1.dp, end = 5.dp)
-                            .background(MaterialTheme.colorScheme.error, CircleShape)
-                            .padding(horizontal = 4.dp, vertical = 1.dp),
-                        color = MaterialTheme.colorScheme.onError,
-                        fontSize = 9.sp,
-                        fontWeight = FontWeight.Bold,
-                    )
+                            .padding(top = 1.dp, end = 4.dp)
+                            .size(BottomBarUpdateBadgeSize),
+                        shape = CircleShape,
+                        color = MaterialTheme.colorScheme.error,
+                        contentColor = MaterialTheme.colorScheme.onError,
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Text(
+                                text = if (badgeCount > 9) "9+" else badgeCount.toString(),
+                                fontSize = if (badgeCount > 9) 8.sp else 9.sp,
+                                lineHeight = 9.sp,
+                                fontWeight = FontWeight.Bold,
+                            )
+                        }
+                    }
                 }
             }
         }

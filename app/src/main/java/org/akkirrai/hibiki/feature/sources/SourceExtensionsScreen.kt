@@ -44,6 +44,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Switch
@@ -675,13 +676,18 @@ private fun SourceRepositoryList(
                         if (updateAvailableExtensions.isNotEmpty()) {
                             item(key = "available_updates") {
                                 SourceExtensionSectionHeader(
-                                    title = stringResource(R.string.source_extensions_updates_section, updateAvailableExtensions.size),
+                                    title = stringResource(R.string.source_extensions_updates_section),
+                                    action = {
+                                        OutlinedButton(onClick = { onUpdateAll(updateAvailableExtensions) }) {
+                                            Icon(
+                                                imageVector = Icons.Outlined.Refresh,
+                                                contentDescription = null,
+                                                modifier = Modifier.padding(end = 6.dp).size(18.dp),
+                                            )
+                                            Text(stringResource(R.string.source_extensions_update_all))
+                                        }
+                                    },
                                 )
-                            }
-                            item(key = "update_all_extensions") {
-                                TextButton(onClick = { onUpdateAll(updateAvailableExtensions) }) {
-                                    Text(stringResource(R.string.source_extensions_update_all))
-                                }
                             }
                         }
                         items(updateAvailableExtensions, key = MarketplaceExtension::id) { extension ->
@@ -705,6 +711,7 @@ private fun SourceRepositoryList(
                                         R.string.source_extensions_installed_section,
                                         upToDateExtensions.size,
                                     ),
+                                    separatedFromPrevious = updateAvailableExtensions.isNotEmpty(),
                                 )
                             }
                         }
@@ -758,24 +765,32 @@ private fun SourceRepositoryList(
 private fun SourceExtensionSectionHeader(
     title: String,
     separatedFromPrevious: Boolean = false,
+    action: (@Composable () -> Unit)? = null,
 ) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(top = if (separatedFromPrevious) 20.dp else 4.dp, bottom = 4.dp),
+            .padding(top = if (separatedFromPrevious) 24.dp else 8.dp, bottom = 8.dp),
     ) {
         if (separatedFromPrevious) {
             HorizontalDivider(
                 color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
-                modifier = Modifier.padding(bottom = 16.dp),
+                modifier = Modifier.padding(bottom = 20.dp),
             )
         }
-        Text(
-            text = title,
-            style = MaterialTheme.typography.labelLarge,
-            fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.primary,
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            action?.invoke()
+        }
     }
 }
 
