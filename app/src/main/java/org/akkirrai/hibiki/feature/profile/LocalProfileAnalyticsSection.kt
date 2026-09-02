@@ -25,7 +25,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -62,7 +61,6 @@ internal fun AnalyticsCard(
     val hasActivity = snapshot.activeDaysCount > 0
     val pages = remember(
         snapshot.libraryStatusSegments,
-        snapshot.genreSegments,
         snapshot.watchTimeLabel,
         snapshot.libraryTotal,
     ) {
@@ -128,28 +126,6 @@ private fun AnalyticsDonutPager(
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface,
             )
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                PageArrowButton(
-                    enabled = currentPage > 0,
-                    onClick = { currentPage -= 1 },
-                    isBack = true,
-                    size = 32.dp,
-                )
-                Text(
-                    text = "${currentPage + 1}/${pages.size}",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                PageArrowButton(
-                    enabled = currentPage < pages.lastIndex,
-                    onClick = { currentPage += 1 },
-                    isBack = false,
-                    size = 32.dp,
-                )
-            }
         }
         AnimatedContent(
             targetState = currentPage,
@@ -201,41 +177,6 @@ private fun AnalyticsDonutPager(
                     }
                 }
             }
-        }
-    }
-}
-
-@Composable
-private fun PageArrowButton(
-    enabled: Boolean,
-    onClick: () -> Unit,
-    isBack: Boolean,
-    modifier: Modifier = Modifier,
-    size: Dp = 40.dp,
-) {
-    Surface(
-        modifier = modifier,
-        shape = RoundedCornerShape(14.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = if (enabled) 0.28f else 0.12f),
-    ) {
-        IconButton(
-            onClick = onClick,
-            enabled = enabled,
-            modifier = Modifier.size(size),
-        ) {
-            Icon(
-                imageVector = if (isBack) {
-                    Icons.AutoMirrored.Outlined.KeyboardArrowLeft
-                } else {
-                    Icons.AutoMirrored.Outlined.KeyboardArrowRight
-                },
-                contentDescription = null,
-                tint = if (enabled) {
-                    MaterialTheme.colorScheme.onSurface
-                } else {
-                    MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.46f)
-                },
-            )
         }
     }
 }
@@ -459,20 +400,6 @@ private fun buildAnalyticsPages(snapshot: LocalProfileSnapshot): List<AnalyticsP
                 )
             },
             legendColumns = 2,
-        ),
-        AnalyticsPage(
-            title = "Жанры",
-            centerPrimary = snapshot.genreSegments.sumOf(DistributionSegment::count).toString(),
-            centerSecondary = "жанров",
-            segments = snapshot.genreSegments.map { segment ->
-                AnalyticsSegment(
-                    label = segment.label,
-                    valueLabel = segment.count.toString(),
-                    weight = segment.count.toFloat(),
-                    color = segment.color,
-                )
-            },
-            legendColumns = 3,
         ),
     )
 }
