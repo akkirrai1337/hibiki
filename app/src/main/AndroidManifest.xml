@@ -39,10 +39,6 @@
             </intent-filter>
         </service>
 
-        <receiver
-            android:name=".core.reminder.EpisodeReminderReceiver"
-            android:exported="false" />
-
         <activity
             android:name=".core.discord.DiscordAuthActivity"
             android:exported="false"

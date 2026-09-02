@@ -1,10 +1,5 @@
 package org.akkirrai.hibiki.feature.player
 
-import android.Manifest
-import android.content.pm.PackageManager
-import android.os.Build
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
@@ -35,11 +30,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Undo
-import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Download
-import androidx.compose.material.icons.outlined.NotificationAdd
 import androidx.compose.material.icons.outlined.Pause
 import androidx.compose.material.icons.outlined.PlayArrow
 import androidx.compose.material.icons.outlined.VideoLibrary
@@ -81,7 +74,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
-import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
@@ -103,7 +95,6 @@ import org.akkirrai.hibiki.core.model.EpisodeProgressStatus
 import org.akkirrai.hibiki.core.model.EpisodeWatchProgress
 import org.akkirrai.hibiki.core.model.WatchEpisode
 import org.akkirrai.hibiki.core.model.WatchSource
-import org.akkirrai.hibiki.core.reminder.EpisodeReminderScheduler
 import org.akkirrai.hibiki.core.source.LibraryCategory
 import org.akkirrai.hibiki.core.source.LibraryRepository
 import org.akkirrai.hibiki.core.source.OfflineTitleMetadataRepository
@@ -162,8 +153,7 @@ fun EpisodesScreen(
 
     // Cached from whatever Details visit populated it (offlineTitleMetadataRepository is also
     // what saveToLibrary below reads from) -- this screen only otherwise knows about individual
-    // episodes, not the anime's own nextEpisodeAt/status, so there's nothing to key an upcoming-
-    // episode reminder off without it.
+    // episodes, not the anime's own nextEpisodeAt/status.
     val cachedAnime = remember(titleId) { offlineTitleMetadataRepository.get(titleId) }
     val nextEpisodeEta = rememberNextEpisodeEta(cachedAnime?.nextEpisodeAt)
         ?.takeIf { cachedAnime != null && isOngoingStatus(cachedAnime.status) }
@@ -190,32 +180,6 @@ fun EpisodesScreen(
     val nextEpisodeNumber = remember(episodeItems) {
         (episodeItems.maxOfOrNull { it.number }?.toInt() ?: 0) + 1
     }
-    var isEpisodeReminderSet by remember(titleId, nextEpisodeNumber) {
-        mutableStateOf(EpisodeReminderScheduler.isScheduled(context, titleId, nextEpisodeNumber))
-    }
-    fun scheduleEpisodeReminder() {
-        val nextEpisodeAt = cachedAnime?.nextEpisodeAt ?: return
-        EpisodeReminderScheduler.schedule(context, titleId, cachedAnime.title, nextEpisodeNumber, nextEpisodeAt)
-        isEpisodeReminderSet = true
-    }
-    val notificationPermissionLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission(),
-    ) { granted -> if (granted) scheduleEpisodeReminder() }
-    val onEpisodeReminderClick: () -> Unit = onEpisodeReminderClick@{
-        if (isEpisodeReminderSet) {
-            EpisodeReminderScheduler.cancel(context, titleId, nextEpisodeNumber)
-            isEpisodeReminderSet = false
-            return@onEpisodeReminderClick
-        }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
-            ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
-        ) {
-            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-        } else {
-            scheduleEpisodeReminder()
-        }
-    }
-
     LaunchedEffect(state.result, sourceId, lifecycleOwner) {
         val content = state.result as? EpisodesUiState.Content ?: return@LaunchedEffect
         lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
@@ -421,8 +385,6 @@ fun EpisodesScreen(
                                 episodeNumber = nextEpisodeNumber,
                                 countdownText = nextEpisodeEta,
                                 shape = itemShape,
-                                isReminderSet = isEpisodeReminderSet,
-                                onReminderClick = onEpisodeReminderClick,
                             )
                         }
                     }
@@ -607,8 +569,6 @@ private fun UpcomingEpisodeRow(
     episodeNumber: Int,
     countdownText: String,
     shape: RoundedCornerShape,
-    isReminderSet: Boolean,
-    onReminderClick: () -> Unit,
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth().clip(shape),
@@ -630,14 +590,6 @@ private fun UpcomingEpisodeRow(
                 modifier = Modifier.weight(1f),
             )
             UpcomingEpisodeCountdownChip(countdownText)
-            WatchDownloadIconButton(
-                icon = if (isReminderSet) Icons.Filled.NotificationsActive else Icons.Outlined.NotificationAdd,
-                contentDescription = stringResource(
-                    if (isReminderSet) R.string.episode_reminder_scheduled else R.string.episode_reminder_schedule,
-                ),
-                active = isReminderSet,
-                onClick = onReminderClick,
-            )
         }
     }
 }
