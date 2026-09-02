@@ -156,7 +156,7 @@ internal object WebViewStreamRelay {
     /** Drops a session immediately without waiting for the idle reaper, e.g. when the caller knows
      * upfront that no relay fallback will ever be needed for it. */
     fun discard(webView: WebView, handler: Handler) {
-        handler.post { webView.destroy() }
+        handler.post { webView.destroyAndClearData() }
     }
 
     fun proxyUrl(token: String, targetUrl: String): String =
@@ -211,7 +211,7 @@ internal object WebViewStreamRelay {
         val now = System.currentTimeMillis()
         sessions.entries.removeIf { (_, session) ->
             val idle = now - session.lastUsed.get() > SESSION_IDLE_TIMEOUT_MS
-            if (idle) session.handler.post { session.webView.destroy() }
+            if (idle) session.handler.post { session.webView.destroyAndClearData() }
             idle
         }
     }

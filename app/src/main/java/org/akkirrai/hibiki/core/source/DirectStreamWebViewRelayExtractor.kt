@@ -174,7 +174,7 @@ internal class DirectStreamWebViewRelayExtractor(
                     )
                 }
                 continuation.invokeOnCancellation {
-                    webView?.let { current -> handler.post { current.destroy() } }
+                    webView?.let { current -> handler.post { current.destroyAndClearData() } }
                 }
             }
         }

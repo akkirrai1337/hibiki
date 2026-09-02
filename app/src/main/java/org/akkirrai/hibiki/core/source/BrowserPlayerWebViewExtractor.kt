@@ -197,9 +197,9 @@ class BrowserPlayerWebViewExtractor(
                 val current = webView ?: return
                 webView = null
                 if (Looper.myLooper() == Looper.getMainLooper()) {
-                    current.destroy()
+                    current.destroyAndClearData()
                 } else {
-                    handler.post { current.destroy() }
+                    handler.post { current.destroyAndClearData() }
                 }
             }
 

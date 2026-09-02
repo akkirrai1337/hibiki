@@ -20,6 +20,7 @@ import org.akkirrai.beakokit.api.BrowserFetchRequest
 import org.akkirrai.beakokit.api.BrowserFetchResponse
 import org.akkirrai.beakokit.api.SourceUnavailableException
 import org.akkirrai.hibiki.core.log.AppLogger
+import org.akkirrai.hibiki.core.source.destroyAndClearData
 import org.json.JSONObject
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
@@ -82,7 +83,7 @@ class AndroidBrowserFetchProvider(
             return existing.webView
         }
         existing?.destroyed = true
-        existing?.let { destroyed -> onMain { destroyed.webView.destroy() } }
+        existing?.let { destroyed -> onMain { destroyed.webView.destroyAndClearData() } }
         val webView = loadPage(pageUrl)
         session = PageSession(pageUrl, webView)
         return webView
@@ -134,7 +135,7 @@ class AndroidBrowserFetchProvider(
                 if (delivered) return@Runnable
                 delivered = true
                 AppLogger.w(TAG, "Page load timed out: $pageUrl")
-                webView.destroy()
+                webView.destroyAndClearData()
                 if (continuation.isActive) {
                     continuation.resumeWithException(SourceUnavailableException("Browser page load timed out for $pageUrl"))
                 }
@@ -142,7 +143,7 @@ class AndroidBrowserFetchProvider(
             handler.postDelayed(timeout, PAGE_LOAD_TIMEOUT_MS)
             webView.loadUrl(pageUrl)
             continuation.invokeOnCancellation {
-                if (!delivered) onMain { webView.destroy() }
+                if (!delivered) onMain { webView.destroyAndClearData() }
             }
         }
     }
