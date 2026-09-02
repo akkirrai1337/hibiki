@@ -45,7 +45,11 @@ class AnimeSearchRepository(
      * query and no filters) from the search bar's idle state (nothing typed, nothing filtered -
      * home/search screens rely on getting `emptyList()` back there rather than a full listing).
      */
-    suspend fun search(request: AnimeSearchRequest, allowEmptyQuery: Boolean = false): List<Anime> {
+    suspend fun search(
+        request: AnimeSearchRequest,
+        allowEmptyQuery: Boolean = false,
+        forceRefresh: Boolean = false,
+    ): List<Anime> {
         val normalizedQuery = request.query.trim()
         val hasFilters = request.typeAliases.isNotEmpty() ||
             request.statusAliases.isNotEmpty() ||
@@ -58,7 +62,9 @@ class AnimeSearchRepository(
 
         val normalizedRequest = request.copy(query = normalizedQuery)
         val cacheKey = searchCacheKey(normalizedRequest)
-        getCachedSearch(cacheKey)?.let { return it }
+        if (!forceRefresh) {
+            getCachedSearch(cacheKey)?.let { return it }
+        }
 
         ensureInternetConnection()
 

@@ -1,5 +1,6 @@
 package org.akkirrai.hibiki.feature.catalog
 
+import android.os.SystemClock
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.animateColorAsState
@@ -208,7 +209,7 @@ fun CatalogScreen(
                     actionLabel = stringResource(
                         if (noSourcesInstalled) R.string.action_open_sources else R.string.search_retry,
                     ),
-                    onActionClick = if (noSourcesInstalled) onOpenSources else viewModel::load,
+                    onActionClick = if (noSourcesInstalled) onOpenSources else { { viewModel.load() } },
                     icon = Icons.Outlined.WarningAmber,
                     iconTint = MaterialTheme.colorScheme.error,
                 )
@@ -697,28 +698,38 @@ class CatalogViewModel(
         }
     }
 
-    fun load() {
+    fun load(forceRefresh: Boolean = false) {
         val currentState = _uiState.value
         val filters = currentState.filters
         val query = currentState.query
         val sort = currentState.selectedSort
+        // PullToRefreshBox needs this state in the same UI turn as onRefresh. Setting it only
+        // from the IO coroutine lets the indicator finish its release animation before it learns
+        // that a refresh has begun, which makes it look as though the gesture was ignored.
+        _uiState.update {
+            it.copy(
+                isLoading = true,
+                errorMessage = null,
+                loadMoreError = null,
+            )
+        }
         viewModelScope.launch(Dispatchers.IO) {
-            _uiState.update {
-                it.copy(
-                    isLoading = true,
-                    errorMessage = null,
-                    loadMoreError = null,
-                )
-            }
-            runCatching {
+            val refreshStartedAt = if (forceRefresh) SystemClock.elapsedRealtime() else 0L
+            val result = runCatching {
                 ensureInternetConnection()
                 repository.loadPage(
                     page = 1,
                     filters = filters,
                     query = query,
                     sort = sort,
+                    forceRefresh = forceRefresh,
                 )
-            }.onSuccess { page ->
+            }
+            if (forceRefresh) {
+                delay((CATALOG_PULL_REFRESH_MIN_DURATION_MS -
+                    (SystemClock.elapsedRealtime() - refreshStartedAt)).coerceAtLeast(0L))
+            }
+            result.onSuccess { page ->
                 val knownDescriptions = currentState.items
                     .mapNotNull { card -> card.anime.description?.takeIf { it.isNotBlank() }?.let { card.anime.id to it } }
                     .toMap()
@@ -771,7 +782,7 @@ class CatalogViewModel(
     }
 
     fun refresh() {
-        if (!_uiState.value.isLoading) load()
+        if (!_uiState.value.isLoading) load(forceRefresh = true)
     }
 
     private fun catalogSortFor(source: org.akkirrai.beakokit.api.SourceId): CatalogSort {
@@ -923,3 +934,4 @@ private val CATALOG_PULL_REFRESH_INDICATOR_TOP_OFFSET_WITHOUT_SORT =
     CATALOG_HEADER_TOP_PADDING + CATALOG_SEARCH_BAR_HEIGHT - 8.dp
 private const val CATALOG_SORT_ANIMATION_DURATION_MS = 220
 private const val CATALOG_SCROLL_THRESHOLD = 3
+private const val CATALOG_PULL_REFRESH_MIN_DURATION_MS = 350L

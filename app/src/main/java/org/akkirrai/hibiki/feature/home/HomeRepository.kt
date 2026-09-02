@@ -280,14 +280,21 @@ class HomeRepository(
     suspend fun loadRecentlyUpdatedPage(
         offset: Int,
         limit: Int = HOME_SECTION_LIMIT,
+        forceRefresh: Boolean = false,
     ): List<Anime> {
         val sourceId = selectedSourceId()
-        val catalog = cachedRecentUpdates
-            ?.takeIf { it.sourceId == sourceId }
-            ?.items
-            ?: loadRecentlyUpdatedCatalog().also {
+        val catalog = if (forceRefresh) {
+            loadRecentlyUpdatedCatalog().also {
                 cachedRecentUpdates = CachedSourceAnime(sourceId, it)
             }
+        } else {
+            cachedRecentUpdates
+                ?.takeIf { it.sourceId == sourceId }
+                ?.items
+                ?: loadRecentlyUpdatedCatalog().also {
+                    cachedRecentUpdates = CachedSourceAnime(sourceId, it)
+                }
+        }
         return catalog.drop(offset.coerceAtLeast(0)).take(limit.coerceAtLeast(1))
     }
 

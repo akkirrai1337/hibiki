@@ -24,6 +24,7 @@ class CatalogRepository(
         filters: AnimeSearchFilters = AnimeSearchFilters(),
         query: String = "",
         sort: CatalogSort = CatalogSort.Popular,
+        forceRefresh: Boolean = false,
     ): CatalogPage {
         val pageIndex = page.coerceAtLeast(1)
         val catalog = searchRepository.getSearchFilterCatalog()
@@ -43,6 +44,7 @@ class CatalogRepository(
             homeRepository.loadRecentlyUpdatedPage(
                 offset = offset,
                 limit = CATALOG_PAGE_SIZE,
+                forceRefresh = forceRefresh,
             ).filter { item -> query.isBlank() || item.title.contains(query, ignoreCase = true) }
         } else {
             searchRepository.search(
@@ -59,6 +61,7 @@ class CatalogRepository(
                     yearTo = filters.yearTo,
                 ),
                 allowEmptyQuery = true,
+                forceRefresh = forceRefresh,
             )
         }
 
