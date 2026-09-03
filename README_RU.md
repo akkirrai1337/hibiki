@@ -32,7 +32,7 @@
 
 <div align="center">
 
-### 🖼️ Скриншоты
+### 🖼️ Скриншоты приложения
 
 <div align="center">
     <img src="./docs/screenshots/main.jpg" alt="Главная" width="250"/>

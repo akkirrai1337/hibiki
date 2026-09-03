@@ -32,7 +32,7 @@
 
 <div align="center">
 
-### 🖼️ Screenshots
+### 🖼️ App screenshots
 
 <div align="center">
     <img src="./docs/screenshots/main.jpg" alt="Home screen" width="250"/>
