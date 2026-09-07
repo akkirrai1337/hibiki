@@ -20,6 +20,7 @@ enum class ThemeMode {
 enum class LanguageMode(val tag: String?) {
     SYSTEM(null),
     RUSSIAN("ru"),
+    UKRAINIAN("uk"),
     ENGLISH("en")
 }
 

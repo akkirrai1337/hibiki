@@ -423,8 +423,8 @@
     <string name="onboarding_welcome_title">Welcome to hibiki</string>
     <string name="onboarding_welcome_description">Let’s set up the app in a couple of steps so you can start watching right away.</string>
     <string name="onboarding_get_started">Get started</string>
-    <string name="onboarding_source_title">Anime source</string>
-    <string name="onboarding_source_description">We selected sources based on your device language.</string>
+    <string name="onboarding_source_title">Choose your first source</string>
+    <string name="onboarding_source_description">Sources bring anime to hibiki. Install one below — your first source will be selected automatically. You can also do this later.</string>
     <string name="onboarding_source_no_match">We couldn’t find sources for your device language. Choose one from the full list.</string>
     <string name="onboarding_view_all_sources">View all sources</string>
     <string name="onboarding_all_sources_title">All anime sources</string>
@@ -449,6 +449,7 @@
     <string name="settings_language_sheet_description">Choose the app interface language.</string>
     <string name="settings_language_system_summary">Follow the device language by default</string>
     <string name="settings_language_russian">Russian</string>
+    <string name="settings_language_ukrainian">Ukrainian</string>
     <string name="settings_language_russian_summary">Force the app interface to Russian</string>
     <string name="settings_language_english">English</string>
     <string name="settings_language_english_summary">Force the app interface to English</string>

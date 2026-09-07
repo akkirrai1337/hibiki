@@ -417,8 +417,8 @@
     <string name="onboarding_welcome_title">Добро пожаловать в hibiki</string>
     <string name="onboarding_welcome_description">Настроим приложение за пару шагов, чтобы вы могли сразу начать просмотр.</string>
     <string name="onboarding_get_started">Начать настройку</string>
-    <string name="onboarding_source_title">Источник аниме</string>
-    <string name="onboarding_source_description">Мы подобрали источники на основе языка вашего устройства.</string>
+    <string name="onboarding_source_title">Выберите первый источник</string>
+    <string name="onboarding_source_description">Источники добавляют аниме в hibiki. Установите любой из списка — первый источник станет активным автоматически. Это можно сделать и позже.</string>
     <string name="onboarding_source_no_match">Не удалось подобрать источники по языку устройства. Выберите источник из полного списка.</string>
     <string name="onboarding_view_all_sources">Посмотреть все источники</string>
     <string name="onboarding_all_sources_title">Все источники аниме</string>
@@ -442,6 +442,7 @@
     <string name="settings_language">Язык</string>
     <string name="settings_language_system_summary">По умолчанию использовать язык устройства</string>
     <string name="settings_language_russian">Русский</string>
+    <string name="settings_language_ukrainian">Украинский</string>
     <string name="settings_language_russian_summary">Принудительно использовать русский интерфейс</string>
     <string name="settings_language_english">Английский</string>
     <string name="settings_language_english_summary">Принудительно использовать английский интерфейс</string>

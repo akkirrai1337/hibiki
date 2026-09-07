@@ -317,7 +317,7 @@ class AnimeSearchRepository(
 
     private fun preferEnglish(): Boolean {
         return when (appPreferences?.state?.value?.languageMode ?: LanguageMode.SYSTEM) {
-            LanguageMode.ENGLISH -> true
+            LanguageMode.ENGLISH, LanguageMode.UKRAINIAN -> true
             LanguageMode.RUSSIAN -> false
             LanguageMode.SYSTEM -> appContext?.resources?.configuration?.locales?.get(0)?.language != "ru"
         }
@@ -332,6 +332,7 @@ class AnimeSearchRepository(
 
     private fun searchCacheKey(request: AnimeSearchRequest): String {
         val languageKey = when (appPreferences?.state?.value?.languageMode ?: LanguageMode.SYSTEM) {
+            LanguageMode.UKRAINIAN -> "uk"
             LanguageMode.ENGLISH -> "en"
             LanguageMode.RUSSIAN -> "ru"
             LanguageMode.SYSTEM -> "sys"
@@ -371,6 +372,7 @@ class AnimeSearchRepository(
 
     private fun detailsCacheKey(id: String): String {
         val languageKey = when (appPreferences?.state?.value?.languageMode ?: LanguageMode.SYSTEM) {
+            LanguageMode.UKRAINIAN -> "uk"
             LanguageMode.ENGLISH -> "en"
             LanguageMode.RUSSIAN -> "ru"
             LanguageMode.SYSTEM -> "sys"

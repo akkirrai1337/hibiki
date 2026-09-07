@@ -8,6 +8,10 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -36,6 +40,7 @@ import androidx.compose.material.icons.outlined.Palette
 import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material.icons.outlined.Translate
 import androidx.compose.material3.Icon
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Button
 import androidx.compose.material3.OutlinedButton
@@ -53,9 +58,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
@@ -107,6 +114,7 @@ fun SettingsScreen(
     val haptic = LocalHapticFeedback.current
     val appPreferences = LocalAppPreferences.current
     val preferences = LocalAppPreferencesState.current
+    var isLanguageDialogOpen by rememberSaveable { mutableStateOf(false) }
     val discordRpcManager = remember(context) { DiscordRpcManager.get(context) }
     var isDiscordAuthDialogOpen by remember { mutableStateOf(false) }
     var pendingDiscordToken by remember { mutableStateOf<String?>(null) }
@@ -185,21 +193,14 @@ fun SettingsScreen(
             SettingsSection(title = stringResource(R.string.settings_preferences)) {
                 SettingsItems(count = 2) { index, shape ->
                     when (index) {
-                        0 -> SettingsVerticalItem(
+                        0 -> SettingsActionItem(
                             icon = Icons.Outlined.Translate,
                             title = stringResource(R.string.settings_language),
+                            subtitle = languageModeLabel(preferences.languageMode),
                             shape = shape,
-                        ) {
-                            SettingsSegmentedControl(
-                                options = listOf(LanguageMode.RUSSIAN, LanguageMode.ENGLISH, LanguageMode.SYSTEM),
-                                selectedOption = preferences.languageMode,
-                                label = ::languageModeLabel,
-                                onSelect = { mode ->
-                                    appPreferences.setLanguageMode(mode)
-                                    haptic.performHapticFeedback(HapticFeedbackType.SegmentTick)
-                                },
-                            )
-                        }
+                            showNavigationArrow = true,
+                            onClick = { isLanguageDialogOpen = true },
+                        )
 
                         1 -> SettingsActionItem(
                             icon = Icons.Outlined.Notifications,
@@ -347,6 +348,17 @@ fun SettingsScreen(
         }
     }
 
+    if (isLanguageDialogOpen) {
+        LanguageSelectionDialog(
+            selectedLanguage = preferences.languageMode,
+            onSelect = { mode ->
+                appPreferences.setLanguageMode(mode)
+                haptic.performHapticFeedback(HapticFeedbackType.SegmentTick)
+            },
+            onDismiss = { isLanguageDialogOpen = false },
+        )
+    }
+
     if (isDiscordAuthDialogOpen) {
         DiscordAuthDialog(
             manager = discordRpcManager,
@@ -361,6 +373,51 @@ fun SettingsScreen(
                 isDiscordAuthDialogOpen = false
             },
         )
+    }
+}
+
+@Composable
+private fun LanguageSelectionDialog(
+    selectedLanguage: LanguageMode,
+    onSelect: (LanguageMode) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val appLanguage = LocalAppLanguage.current
+    Dialog(onDismissRequest = onDismiss) {
+        LocalizedAppContext(languageMode = appLanguage) {
+            Surface(shape = RoundedCornerShape(28.dp), tonalElevation = 6.dp) {
+                Column(
+                    modifier = Modifier.verticalScroll(rememberScrollState()).padding(vertical = 24.dp),
+                ) {
+                    Text(
+                        text = stringResource(R.string.settings_language),
+                        style = MaterialTheme.typography.headlineSmall,
+                        modifier = Modifier.padding(horizontal = 24.dp),
+                    )
+                    Column(Modifier.padding(top = 12.dp).selectableGroup()) {
+                        listOf(LanguageMode.SYSTEM, LanguageMode.UKRAINIAN, LanguageMode.RUSSIAN, LanguageMode.ENGLISH).forEach { mode ->
+                            Row(
+                                modifier = Modifier.fillMaxWidth()
+                                    .selectable(
+                                        selected = mode == selectedLanguage,
+                                        role = Role.RadioButton,
+                                        onClick = { onSelect(mode) },
+                                    )
+                                    .padding(horizontal = 24.dp, vertical = 14.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                            ) {
+                                RadioButton(selected = mode == selectedLanguage, onClick = null)
+                                Text(languageModeLabel(mode), style = MaterialTheme.typography.bodyLarge)
+                            }
+                        }
+                    }
+                    TextButton(onClick = onDismiss, modifier = Modifier.align(Alignment.End).padding(end = 16.dp)) {
+                        Text(stringResource(R.string.action_cancel))
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -952,6 +1009,7 @@ private fun languageModeLabel(mode: LanguageMode): String {
         when (mode) {
             LanguageMode.SYSTEM -> R.string.settings_language_system
             LanguageMode.RUSSIAN -> R.string.settings_language_russian
+            LanguageMode.UKRAINIAN -> R.string.settings_language_ukrainian
             LanguageMode.ENGLISH -> R.string.settings_language_english
         },
     )

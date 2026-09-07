@@ -484,6 +484,7 @@ class AnimeWatchRepository(
     }
 
     private fun currentLanguageKey(): String = when (appPreferences?.state?.value?.languageMode ?: LanguageMode.SYSTEM) {
+        LanguageMode.UKRAINIAN -> "uk"
         LanguageMode.ENGLISH -> "en"
         LanguageMode.RUSSIAN -> "ru"
         LanguageMode.SYSTEM -> if (appContext?.resources?.configuration?.locales?.get(0)?.language == "ru") "ru" else "en"

@@ -53,9 +53,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.app.settings.NotificationPermissionState
+import org.akkirrai.hibiki.feature.sources.SourceExtensionsScreen
 
 private enum class OnboardingStep {
     WELCOME,
+    SOURCES,
     NOTIFICATIONS,
 }
 
@@ -68,10 +70,13 @@ fun FirstLaunchOnboarding(
 ) {
     var stepName by rememberSaveable { mutableStateOf(OnboardingStep.WELCOME.name) }
     val step = OnboardingStep.valueOf(stepName)
+    var installationActive by remember { mutableStateOf(false) }
     BackHandler(enabled = step != OnboardingStep.WELCOME) {
+        if (installationActive) return@BackHandler
         stepName = when (step) {
             OnboardingStep.WELCOME -> OnboardingStep.WELCOME.name
-            OnboardingStep.NOTIFICATIONS -> OnboardingStep.WELCOME.name
+            OnboardingStep.SOURCES -> OnboardingStep.WELCOME.name
+            OnboardingStep.NOTIFICATIONS -> OnboardingStep.SOURCES.name
         }
     }
 
@@ -106,7 +111,12 @@ fun FirstLaunchOnboarding(
             ) { currentStep ->
                 when (currentStep) {
                     OnboardingStep.WELCOME -> WelcomeStep(
-                        onStart = { stepName = OnboardingStep.NOTIFICATIONS.name },
+                        onStart = { stepName = OnboardingStep.SOURCES.name },
+                        modifier = Modifier.fillMaxSize(),
+                    )
+
+                    OnboardingStep.SOURCES -> SourcesStep(
+                        onInstallationActiveChanged = { installationActive = it },
                         modifier = Modifier.fillMaxSize(),
                     )
 
@@ -124,15 +134,18 @@ fun FirstLaunchOnboarding(
             // and makes the outgoing page visibly jump upward.
             OnboardingFooter(
                 step = step,
+                navigationEnabled = !installationActive,
                 onBack = {
                     stepName = when (step) {
                         OnboardingStep.WELCOME -> OnboardingStep.WELCOME.name
-                        OnboardingStep.NOTIFICATIONS -> OnboardingStep.WELCOME.name
+                        OnboardingStep.SOURCES -> OnboardingStep.WELCOME.name
+                        OnboardingStep.NOTIFICATIONS -> OnboardingStep.SOURCES.name
                     }
                 },
                 onNext = {
                     when (step) {
-                        OnboardingStep.WELCOME -> stepName = OnboardingStep.NOTIFICATIONS.name
+                        OnboardingStep.WELCOME -> stepName = OnboardingStep.SOURCES.name
+                        OnboardingStep.SOURCES -> stepName = OnboardingStep.NOTIFICATIONS.name
                         OnboardingStep.NOTIFICATIONS -> onComplete()
                         }
                 },
@@ -140,6 +153,44 @@ fun FirstLaunchOnboarding(
         }
     }
 
+}
+
+@Composable
+private fun SourcesStep(
+    onInstallationActiveChanged: (Boolean) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier = modifier) {
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 28.dp, vertical = 20.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Text(
+                text = stringResource(R.string.onboarding_source_title),
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center,
+            )
+            Text(
+                text = stringResource(R.string.onboarding_source_description),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+            )
+        }
+        Surface(
+            modifier = Modifier.weight(1f).padding(horizontal = 12.dp),
+            shape = RoundedCornerShape(24.dp),
+            tonalElevation = 1.dp,
+        ) {
+            SourceExtensionsScreen(
+                onboarding = true,
+                onInstallationActiveChanged = onInstallationActiveChanged,
+                bottomContentPadding = 12.dp,
+            )
+        }
+    }
 }
 
 @Composable
@@ -263,6 +314,7 @@ private fun PermissionStatus(text: String) {
 @Composable
 private fun OnboardingFooter(
     step: OnboardingStep,
+    navigationEnabled: Boolean,
     onBack: () -> Unit,
     onNext: () -> Unit,
 ) {
@@ -278,7 +330,7 @@ private fun OnboardingFooter(
     ) {
         Box(modifier = Modifier.width(88.dp), contentAlignment = Alignment.CenterStart) {
             if (step != OnboardingStep.WELCOME) {
-                TextButton(onClick = onBack) {
+                TextButton(onClick = onBack, enabled = navigationEnabled) {
                     Text(stringResource(R.string.onboarding_back))
                 }
             }
@@ -292,6 +344,7 @@ private fun OnboardingFooter(
             if (step != OnboardingStep.WELCOME) {
                 TextButton(
                     onClick = onNext,
+                    enabled = navigationEnabled,
                 ) {
                     Text(
                         stringResource(

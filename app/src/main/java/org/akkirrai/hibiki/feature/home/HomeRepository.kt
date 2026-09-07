@@ -427,7 +427,7 @@ class HomeRepository(
 
     private fun preferEnglish(): Boolean {
         return when (appPreferences.state.value.languageMode) {
-            LanguageMode.ENGLISH -> true
+            LanguageMode.ENGLISH, LanguageMode.UKRAINIAN -> true
             LanguageMode.RUSSIAN -> false
             LanguageMode.SYSTEM -> appContext.resources.configuration.locales[0]?.language != "ru"
         }

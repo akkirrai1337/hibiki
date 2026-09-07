@@ -112,6 +112,8 @@ import org.akkirrai.hibiki.core.source.extension.isUpdateAvailable
 fun SourceExtensionsScreen(
     modifier: Modifier = Modifier,
     bottomContentPadding: Dp = UiDimens.ScreenPadding,
+    onboarding: Boolean = false,
+    onInstallationActiveChanged: (Boolean) -> Unit = {},
 ) {
     val context = LocalContext.current
     var selectedTab by rememberSaveable { mutableStateOf(0) }
@@ -128,6 +130,9 @@ fun SourceExtensionsScreen(
     var repoStates by remember { mutableStateOf<Map<String, RepoFetchResult>>(emptyMap()) }
     var installingExtensionIds by remember { mutableStateOf(emptySet<String>()) }
     var extensionInstallErrors by remember { mutableStateOf(emptyMap<String, String>()) }
+    LaunchedEffect(installingExtensionIds.isNotEmpty()) {
+        onInstallationActiveChanged(installingExtensionIds.isNotEmpty())
+    }
 
     val preferences = LocalAppPreferences.current
     val appPreferencesState = LocalAppPreferencesState.current
@@ -136,7 +141,7 @@ fun SourceExtensionsScreen(
     val haptic = LocalHapticFeedback.current
     val updateChecker = remember(context) { SourceExtensionUpdateChecker.get(context) }
 
-    val pagerState = rememberPagerState(initialPage = 0) { 2 }
+    val pagerState = rememberPagerState(initialPage = 0) { if (onboarding) 1 else 2 }
     val tabScope = rememberCoroutineScope()
 
     val mergedExtensions = remember(sourceRepositoryUrls, repoStates) {
@@ -253,7 +258,7 @@ fun SourceExtensionsScreen(
                 repositoryRefreshSignal++
             },
         )
-        PrimaryTabRow(
+        if (!onboarding) PrimaryTabRow(
             selectedTabIndex = pagerState.currentPage,
             containerColor = MaterialTheme.colorScheme.background,
         ) {
