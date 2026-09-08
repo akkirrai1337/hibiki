@@ -28,11 +28,9 @@
     <string name="action_more">More</string>
     <string name="local_profile_tab_overview">About</string>
     <string name="local_profile_tab_activity">Active</string>
-    <string name="local_profile_tab_favorites">Favorites</string>
     <string name="local_profile_stat_total">TOTAL\nANIME</string>
     <string name="local_profile_stat_days">DAYS\nWATCHED</string>
     <string name="local_profile_stat_time">WATCH\nTIME</string>
-    <string name="local_profile_empty_favorites">No favourite titles yet</string>
 
     <string name="home_continue_title">Continue watching</string>
     <string name="home_recently_watched">Recently watched</string>

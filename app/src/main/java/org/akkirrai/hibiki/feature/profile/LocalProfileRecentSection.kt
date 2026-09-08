@@ -1,6 +1,7 @@
 package org.akkirrai.hibiki.feature.profile
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -31,6 +32,7 @@ import org.akkirrai.hibiki.core.design.component.anime.PosterPlaceholder
 @Composable
 internal fun RecentLibraryCard(
     items: List<RecentLibraryItem>,
+    onItemClick: (RecentLibraryItem) -> Unit,
     showTitle: Boolean = true,
 ) {
     Column(
@@ -56,7 +58,7 @@ internal fun RecentLibraryCard(
                 }
             } else {
                 items.forEach { item ->
-                    RecentLibraryRow(item)
+                    RecentLibraryRow(item = item, onClick = { onItemClick(item) })
                 }
             }
     }
@@ -65,10 +67,13 @@ internal fun RecentLibraryCard(
 @Composable
 private fun RecentLibraryRow(
     item: RecentLibraryItem,
+    onClick: () -> Unit,
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .clickable(onClick = onClick)
             .padding(vertical = 8.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically,

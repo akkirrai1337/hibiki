@@ -79,12 +79,16 @@ import org.akkirrai.hibiki.R
 import coil.compose.AsyncImage
 import org.akkirrai.hibiki.app.settings.LocalAppLanguage
 import org.akkirrai.hibiki.app.settings.withLanguage
+import androidx.compose.runtime.DisposableEffect
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import org.akkirrai.hibiki.core.model.Anime
 import org.akkirrai.hibiki.core.design.animation.continuousRotation
 
 private enum class LocalProfileTab(val titleRes: Int) {
     Overview(R.string.local_profile_tab_overview),
     Activity(R.string.local_profile_tab_activity),
-    Favorites(R.string.local_profile_tab_favorites),
 }
 
 /**
@@ -96,11 +100,20 @@ private enum class LocalProfileTab(val titleRes: Int) {
 @Composable
 fun LocalProfileScreen(
     onSettingsClick: () -> Unit,
+    onAnimeClick: (Anime) -> Unit = {},
     bottomContentPadding: Dp = 0.dp,
     modifier: Modifier = Modifier,
     viewModel: LocalProfileViewModel = viewModel(factory = LocalProfileViewModel.Factory(LocalContext.current)),
 ) {
     val state by viewModel.uiState.collectAsState()
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner, viewModel) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_START) viewModel.refresh()
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
     var isEditingProfile by remember { mutableStateOf(false) }
     var editedName by remember(state.data.profileName) { mutableStateOf(state.data.profileName) }
     val avatarPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
@@ -218,9 +231,8 @@ fun LocalProfileScreen(
                     modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background),
                 ) { page ->
                     when (LocalProfileTab.entries[page]) {
-                        LocalProfileTab.Overview -> LocalOverviewTab(snapshot, bottomContentPadding)
+                        LocalProfileTab.Overview -> LocalOverviewTab(snapshot, bottomContentPadding, onAnimeClick)
                         LocalProfileTab.Activity -> LocalActivityTab(snapshot, bottomContentPadding)
-                        LocalProfileTab.Favorites -> LocalFavoritesTab(snapshot.favoriteLibraryItems, bottomContentPadding)
                     }
                 }
             }
@@ -414,7 +426,11 @@ private fun ProfileActionButton(
 
 /** Direct port of AboutTab's vertically scrolling content and StatsRow arrangement. */
 @Composable
-private fun LocalOverviewTab(snapshot: LocalProfileSnapshot, bottomContentPadding: Dp) {
+private fun LocalOverviewTab(
+    snapshot: LocalProfileSnapshot,
+    bottomContentPadding: Dp,
+    onAnimeClick: (Anime) -> Unit,
+) {
     Column(
         modifier = Modifier
             .fillMaxHeight()
@@ -425,7 +441,7 @@ private fun LocalOverviewTab(snapshot: LocalProfileSnapshot, bottomContentPaddin
     ) {
         LocalStatsRow(snapshot)
         GenreBars(snapshot.genreSegments)
-        RecentLibraryCard(snapshot.recentLibraryItems)
+        RecentLibraryCard(items = snapshot.recentLibraryItems, onItemClick = { onAnimeClick(it.anime) })
     }
 }
 
@@ -496,25 +512,6 @@ private fun LocalActivityTab(snapshot: LocalProfileSnapshot, bottomContentPaddin
             .padding(start = AnimiteLargePadding, top = AnimiteLargePadding, end = AnimiteLargePadding)
             .padding(bottom = bottomContentPadding + AnimiteLargePadding),
     ) { AnalyticsCard(snapshot) }
-}
-
-@Composable
-private fun LocalFavoritesTab(items: List<RecentLibraryItem>, bottomContentPadding: Dp) {
-    if (items.isEmpty()) {
-        Box(Modifier.fillMaxHeight().padding(AnimiteLargePadding), contentAlignment = Alignment.TopCenter) {
-            Text(stringResource(R.string.local_profile_empty_favorites), color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-    } else {
-        Column(
-            Modifier
-                .fillMaxHeight()
-                .verticalScroll(rememberScrollState())
-                .padding(start = AnimiteLargePadding, top = AnimiteLargePadding, end = AnimiteLargePadding)
-                .padding(bottom = bottomContentPadding + AnimiteLargePadding),
-        ) {
-            RecentLibraryCard(items = items, showTitle = false)
-        }
-    }
 }
 
 private val AnimiteBannerHeight = 168.dp

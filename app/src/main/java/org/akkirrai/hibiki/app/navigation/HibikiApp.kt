@@ -234,6 +234,11 @@ private fun HibikiNavHost(
                 },
             ) {
                 LocalProfileScreen(
+                    onAnimeClick = { anime ->
+                        navController.runIfCurrent(backStackEntry) {
+                            navController.navigate(AnimeNavType.createDetailsRoute(anime))
+                        }
+                    },
                     onSettingsClick = {
                         navController.runIfCurrent(backStackEntry) {
                             navController.navigate(AnimeNavType.SETTINGS_ROUTE)

@@ -45,6 +45,7 @@ internal fun buildProfileSnapshot(
         .map { item ->
             val category = item.categories.primaryCategory()
             RecentLibraryItem(
+                anime = item.anime,
                 title = item.anime.title,
                 posterUrl = item.anime.posterUrl,
                 ratingLabel = item.anime.ratings.firstOrNull()?.value?.let(::formatRating),
@@ -55,22 +56,6 @@ internal fun buildProfileSnapshot(
         }
         .distinctBy(RecentLibraryItem::title)
         .take(5)
-        .toList()
-    val favoriteItems = localData.library
-        .asSequence()
-        .filter { LibraryCategory.Favorite in it.categories && it.anime.title.isNotBlank() }
-        .sortedByDescending { it.addedAt ?: 0L }
-        .take(6)
-        .map { item ->
-            RecentLibraryItem(
-                title = item.anime.title,
-                posterUrl = item.anime.posterUrl,
-                ratingLabel = item.anime.ratings.firstOrNull()?.value?.let(::formatRating),
-                statusLabel = resources.getString(LibraryCategory.Favorite.labelResId),
-                dateLabel = item.addedAt?.let { formatEpochDateShort(resources, it) }.orEmpty(),
-                color = LibraryCategory.Favorite.color(),
-            )
-        }
         .toList()
     val allMetadata = localData.library.map { it.anime }.distinctBy(Anime::id)
     val genreSegments = allMetadata.flatMap { it.genres }.groupingBy { it.trim() }
@@ -91,7 +76,6 @@ internal fun buildProfileSnapshot(
         libraryStatusSegments = librarySegments,
         activityDays = activityDays,
         recentLibraryItems = localRecentItems,
-        favoriteLibraryItems = favoriteItems,
         genreSegments = genreSegments,
         genreTrackedTitlesCount = allMetadata.count { it.genres.isNotEmpty() },
     )
@@ -151,13 +135,12 @@ internal data class LocalProfileSnapshot(
     val libraryStatusSegments: List<DistributionSegment>,
     val activityDays: List<ActivityDay>,
     val recentLibraryItems: List<RecentLibraryItem>,
-    val favoriteLibraryItems: List<RecentLibraryItem>,
     val genreSegments: List<DistributionSegment>,
     val genreTrackedTitlesCount: Int,
 )
 internal data class DistributionSegment(val label: String, val count: Int, val color: Color)
 internal data class ActivityDay(val dateLabel: String, val episodeCount: Int)
-internal data class RecentLibraryItem(val title: String, val posterUrl: String?, val ratingLabel: String?, val statusLabel: String, val dateLabel: String, val color: Color)
+internal data class RecentLibraryItem(val anime: Anime, val title: String, val posterUrl: String?, val ratingLabel: String?, val statusLabel: String, val dateLabel: String, val color: Color)
 
 private const val ACTIVITY_HISTORY_DAYS = 30
 private val ACTIVITY_DATE_FORMATTER = DateTimeFormatter.ofPattern("dd.MM")

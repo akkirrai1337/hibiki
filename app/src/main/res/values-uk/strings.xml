@@ -27,11 +27,9 @@
     <string name="action_more">Більше</string>
     <string name="local_profile_tab_overview">Огляд</string>
     <string name="local_profile_tab_activity">Активність</string>
-    <string name="local_profile_tab_favorites">Улюблене</string>
     <string name="local_profile_stat_total">УСЬОГО\nАНІМЕ</string>
     <string name="local_profile_stat_days">ДНІВ\nПЕРЕГЛЯДУ</string>
     <string name="local_profile_stat_time">ЧАС\nПЕРЕГЛЯДУ</string>
-    <string name="local_profile_empty_favorites">Улюблених аніме ще немає</string>
     <string name="home_continue_title">Продовжити перегляд</string>
     <string name="home_recently_watched">Нещодавно переглянуті</string>
     <string name="home_trending">Зараз у тренді</string>
