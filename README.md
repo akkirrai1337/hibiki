@@ -8,6 +8,8 @@
 
   **hibiki is an Android app with a personal anime catalogue, local library, player, and on-device watch progress. Content providers are selected through external source repositories; the app does not host or distribute content.**
 
+  There is also a [desktop app](https://github.com/akkirrai1337/hibiki-desktop) for Windows, which uses the same source format.
+
   ![Android 8.0+](https://img.shields.io/badge/android-8.0+-brightgreen)
   ![Kotlin](https://img.shields.io/badge/kotlin-2.2.10-7F52FF)
   ![Jetpack Compose](https://img.shields.io/badge/UI-Jetpack%20Compose-4285F4)

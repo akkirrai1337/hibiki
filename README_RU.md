@@ -8,6 +8,8 @@
 
   **hibiki — Android-приложение с личным каталогом аниме, локальной библиотекой, плеером и прогрессом просмотра на устройстве. Источники подключаются через внешние репозитории; приложение не хранит и не распространяет контент.**
 
+  Также есть [десктопное приложение](https://github.com/akkirrai1337/hibiki-desktop) для Windows с тем же форматом источников.
+
   ![Android 8.0+](https://img.shields.io/badge/android-8.0+-brightgreen)
   ![Kotlin](https://img.shields.io/badge/kotlin-2.2.10-7F52FF)
   ![Jetpack Compose](https://img.shields.io/badge/UI-Jetpack%20Compose-4285F4)
