@@ -83,6 +83,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.math.roundToInt
+import org.akkirrai.hibiki.app.settings.AppPreferences
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.app.di.hibikiDependencies
 import org.akkirrai.hibiki.core.design.UiDimens
@@ -103,7 +104,6 @@ import org.akkirrai.hibiki.core.source.watchTitleIdFromSourceId
 import org.akkirrai.hibiki.feature.details.isOngoingStatus
 import org.akkirrai.hibiki.feature.details.rememberNextEpisodeEta
 
-private const val WATCHED_END_TOLERANCE_MS = 1_000L
 private const val EPISODES_PAGE_SIZE = 24
 private const val EPISODE_ROW_ANIMATION_DURATION_MILLIS = 220
 
@@ -1028,7 +1028,9 @@ private fun buildEpisodeSubtitle(
 }
 
 private fun EpisodeWatchProgress.isWatchedToEnd(): Boolean {
-    return durationMs > 0L && positionMs >= (durationMs - WATCHED_END_TOLERANCE_MS).coerceAtLeast(0L)
+    // Percent of the duration rather than "within a second of the very end": stopping during the
+    // credits is still finishing an episode, and the exact share is the user's own setting now.
+    return durationMs > 0L && positionMs >= durationMs * AppPreferences.watchedThresholdPercent / 100L
 }
 
 private fun formatEpisodeNumber(number: Double): String {

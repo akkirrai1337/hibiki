@@ -508,4 +508,12 @@
     <string name="update_download_failed">The update could not be downloaded</string>
     <string name="update_not_available">You already have the latest version</string>
     <string name="update_check_failed">Could not check for updates</string>
+    <string name="settings_auto_skip_delay">Auto-skip delay</string>
+    <string name="settings_auto_skip_delay_hint">Delay before skipping opening/ending</string>
+    <string name="settings_skip_button_timeout">"Skip" button timeout</string>
+    <string name="settings_skip_button_timeout_hint">How long the skip button stays on screen</string>
+    <string name="settings_watched_threshold">Auto-watched threshold</string>
+    <string name="settings_watched_threshold_hint">Episode share to mark as watched</string>
+    <string name="settings_seconds_value">%1$d s</string>
+    <string name="settings_percent_value">%1$d%%</string>
 </resources>

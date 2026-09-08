@@ -500,4 +500,12 @@
     <string name="update_download_failed">Не вдалося завантажити оновлення</string>
     <string name="update_not_available">У вас уже найновіша версія</string>
     <string name="update_check_failed">Не вдалося перевірити оновлення</string>
+    <string name="settings_auto_skip_delay">Затримка авто-пропуску</string>
+    <string name="settings_auto_skip_delay_hint">Затримка перед пропуском опенінгу/ендінгу</string>
+    <string name="settings_skip_button_timeout">Час показу кнопки «Пропустити»</string>
+    <string name="settings_skip_button_timeout_hint">Скільки кнопка «Пропустити» видна на екрані</string>
+    <string name="settings_watched_threshold">Поріг автоперегляду</string>
+    <string name="settings_watched_threshold_hint">Частка серії для позначки «переглянуто»</string>
+    <string name="settings_seconds_value">%1$d с</string>
+    <string name="settings_percent_value">%1$d%%</string>
 </resources>

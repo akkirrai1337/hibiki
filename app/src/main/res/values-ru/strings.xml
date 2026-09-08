@@ -510,4 +510,12 @@
     <string name="local_profile_stat_days">ДНИ\nПРОСМОТРА</string>
     <string name="local_profile_stat_time">ВРЕМЯ\nПРОСМОТРА</string>
     <string name="local_profile_empty_favorites">Пока нет любимых тайтлов</string>
+    <string name="settings_auto_skip_delay">Задержка авто-пропуска</string>
+    <string name="settings_auto_skip_delay_hint">Задержка перед пропуском опенинга/эндинга</string>
+    <string name="settings_skip_button_timeout">Время показа кнопки «Пропустить»</string>
+    <string name="settings_skip_button_timeout_hint">Сколько кнопка «Пропустить» видна на экране</string>
+    <string name="settings_watched_threshold">Порог автопросмотра</string>
+    <string name="settings_watched_threshold_hint">Доля серии для отметки «просмотрено»</string>
+    <string name="settings_seconds_value">%1$d с</string>
+    <string name="settings_percent_value">%1$d%%</string>
 </resources>

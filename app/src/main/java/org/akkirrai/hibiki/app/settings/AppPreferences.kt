@@ -48,6 +48,15 @@ data class AppPreferencesState(
     val onboardingCompleted: Boolean = false,
     val notificationPermissionState: NotificationPermissionState = NotificationPermissionState.NOT_ASKED,
     val autoSkipSegments: Boolean = false,
+    // Seconds the skip-segment countdown runs for. Two independent values, not one shared timer:
+    // "how long before it skips for you" and "how long the button stays on screen before going
+    // away" are different trade-offs, and only one of them is ever in play at a time (whichever
+    // autoSkipSegments selects). Mirrors the desktop app's playerPrefsStore.
+    val autoSkipDelaySeconds: Int = AppPreferences.DEFAULT_SKIP_TIMER_SECONDS,
+    val skipButtonTimeoutSeconds: Int = AppPreferences.DEFAULT_SKIP_TIMER_SECONDS,
+    // How far into an episode (percent of its duration) counts as watched - was hardcoded at 90%
+    // in two different places before this existed.
+    val watchedThresholdPercent: Int = AppPreferences.DEFAULT_WATCHED_THRESHOLD_PERCENT,
     val autoPlayNextEpisode: Boolean = true,
     val playbackSpeed: Float = 1f,
     val videoScaleMode: VideoScaleMode = VideoScaleMode.FIT,
@@ -76,6 +85,9 @@ class AppPreferences(context: Context) {
             KEY_ONBOARDING_COMPLETED,
             KEY_NOTIFICATION_PERMISSION_STATE,
             KEY_AUTO_SKIP_SEGMENTS,
+            KEY_AUTO_SKIP_DELAY_SECONDS,
+            KEY_SKIP_BUTTON_TIMEOUT_SECONDS,
+            KEY_WATCHED_THRESHOLD_PERCENT,
             KEY_AUTO_PLAY_NEXT_EPISODE,
             KEY_PLAYBACK_SPEED,
             KEY_VIDEO_SCALE_MODE,
@@ -130,6 +142,18 @@ class AppPreferences(context: Context) {
 
     fun setAutoSkipSegments(enabled: Boolean) {
         prefs.edit().putBoolean(KEY_AUTO_SKIP_SEGMENTS, enabled).apply()
+    }
+
+    fun setAutoSkipDelaySeconds(seconds: Int) {
+        prefs.edit().putInt(KEY_AUTO_SKIP_DELAY_SECONDS, clampSkipTimer(seconds)).apply()
+    }
+
+    fun setSkipButtonTimeoutSeconds(seconds: Int) {
+        prefs.edit().putInt(KEY_SKIP_BUTTON_TIMEOUT_SECONDS, clampSkipTimer(seconds)).apply()
+    }
+
+    fun setWatchedThresholdPercent(percent: Int) {
+        prefs.edit().putInt(KEY_WATCHED_THRESHOLD_PERCENT, clampWatchedThreshold(percent)).apply()
     }
 
     fun setAutoPlayNextEpisode(enabled: Boolean) {
@@ -191,8 +215,37 @@ class AppPreferences(context: Context) {
 
         val DEFAULT_ANIME_SOURCE_ID = SourceId("yummy-anime")
 
+        // Bounds for the two skip timers - letting either reach 0 defeats the point (an instant,
+        // unannounced auto-skip; or a button gone before it can be pressed), and anything past
+        // half a minute outlives the segment it belongs to. Same range the desktop app uses.
+        const val SKIP_TIMER_MIN_SECONDS = 1
+        const val SKIP_TIMER_MAX_SECONDS = 30
+        const val DEFAULT_SKIP_TIMER_SECONDS = 10
+
+        // Below 50% would mark something watched after barely starting it; above 95% leaves no
+        // room for stopping a few seconds before the credits.
+        const val WATCHED_THRESHOLD_MIN_PERCENT = 50
+        const val WATCHED_THRESHOLD_MAX_PERCENT = 95
+        const val DEFAULT_WATCHED_THRESHOLD_PERCENT = 90
+
+        /** Last value read from storage, for the non-composable, context-less watched checks in
+         * WatchStateRepository and the episode lists. readState() below keeps it current: it runs
+         * on construction and on every change this class is notified about. */
+        @Volatile
+        private var cachedWatchedThresholdPercent = DEFAULT_WATCHED_THRESHOLD_PERCENT
+        val watchedThresholdPercent: Int get() = cachedWatchedThresholdPercent
+
+        private fun clampSkipTimer(seconds: Int): Int =
+            seconds.coerceIn(SKIP_TIMER_MIN_SECONDS, SKIP_TIMER_MAX_SECONDS)
+
+        private fun clampWatchedThreshold(percent: Int): Int =
+            percent.coerceIn(WATCHED_THRESHOLD_MIN_PERCENT, WATCHED_THRESHOLD_MAX_PERCENT)
+
         const val PREFS_NAME = "hibiki_app_preferences"
         const val KEY_AUTO_SKIP_SEGMENTS = "auto_skip_segments"
+        const val KEY_AUTO_SKIP_DELAY_SECONDS = "auto_skip_delay_seconds"
+        const val KEY_SKIP_BUTTON_TIMEOUT_SECONDS = "skip_button_timeout_seconds"
+        const val KEY_WATCHED_THRESHOLD_PERCENT = "watched_threshold_percent"
         const val KEY_AUTO_PLAY_NEXT_EPISODE = "auto_play_next_episode"
         const val KEY_PLAYBACK_SPEED = "playback_speed"
         const val KEY_VIDEO_SCALE_MODE = "video_scale_mode"
@@ -311,6 +364,15 @@ class AppPreferences(context: Context) {
                     }
                     ?: NotificationPermissionState.NOT_ASKED,
                 autoSkipSegments = prefs.getBoolean(KEY_AUTO_SKIP_SEGMENTS, false),
+                autoSkipDelaySeconds = clampSkipTimer(
+                    prefs.getInt(KEY_AUTO_SKIP_DELAY_SECONDS, DEFAULT_SKIP_TIMER_SECONDS),
+                ),
+                skipButtonTimeoutSeconds = clampSkipTimer(
+                    prefs.getInt(KEY_SKIP_BUTTON_TIMEOUT_SECONDS, DEFAULT_SKIP_TIMER_SECONDS),
+                ),
+                watchedThresholdPercent = clampWatchedThreshold(
+                    prefs.getInt(KEY_WATCHED_THRESHOLD_PERCENT, DEFAULT_WATCHED_THRESHOLD_PERCENT),
+                ).also { cachedWatchedThresholdPercent = it },
                 autoPlayNextEpisode = prefs.getBoolean(KEY_AUTO_PLAY_NEXT_EPISODE, true),
                 playbackSpeed = normalizePlaybackSpeed(prefs.getFloat(KEY_PLAYBACK_SPEED, 1f)),
                 videoScaleMode = prefs.getString(KEY_VIDEO_SCALE_MODE, VideoScaleMode.FIT.name)

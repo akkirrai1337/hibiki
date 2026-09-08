@@ -278,7 +278,15 @@ fun PlayerScreen(
     }
     val handledEndedEpisodeIdState = remember { mutableStateOf<String?>(null) }
     var handledEndedEpisodeId by handledEndedEpisodeIdState
-    var skipCountdownSeconds by remember { mutableIntStateOf(SKIP_SEGMENT_COUNTDOWN_SECONDS) }
+    // Which of the two timers applies is decided by autoSkipSegments, exactly as on desktop: with
+    // auto-skip on it is "how long before the player skips for you", with it off it is "how long
+    // the skip button stays on screen before it goes away by itself".
+    val skipSegmentTimeoutSeconds = if (autoSkipSegments) {
+        preferencesState.autoSkipDelaySeconds
+    } else {
+        preferencesState.skipButtonTimeoutSeconds
+    }
+    var skipCountdownSeconds by remember { mutableIntStateOf(skipSegmentTimeoutSeconds) }
     var hiddenSkipSegmentKey by remember { mutableStateOf<String?>(null) }
     var holdSpeedOverlayVisible by remember { mutableStateOf(false) }
     val watchedSeconds = remember(state.currentSourceId, state.currentEpisodeId) { mutableSetOf<Long>() }
@@ -590,16 +598,16 @@ fun PlayerScreen(
     val activeSkipSegment = rawActiveSkipSegment
         ?.takeIf { activeSkipSegmentKey != null && hiddenSkipSegmentKey != activeSkipSegmentKey }
 
-    LaunchedEffect(activeSkipSegmentKey, autoSkipSegments) {
+    LaunchedEffect(activeSkipSegmentKey, autoSkipSegments, skipSegmentTimeoutSeconds) {
         val key = activeSkipSegmentKey ?: run {
-            skipCountdownSeconds = SKIP_SEGMENT_COUNTDOWN_SECONDS
+            skipCountdownSeconds = skipSegmentTimeoutSeconds
             return@LaunchedEffect
         }
         val segment = rawActiveSkipSegment ?: return@LaunchedEffect
         if (hiddenSkipSegmentKey == key) return@LaunchedEffect
 
-        skipCountdownSeconds = SKIP_SEGMENT_COUNTDOWN_SECONDS
-        repeat(SKIP_SEGMENT_COUNTDOWN_SECONDS) {
+        skipCountdownSeconds = skipSegmentTimeoutSeconds
+        repeat(skipSegmentTimeoutSeconds) {
             delay(1_000L)
             if (hiddenSkipSegmentKey == key) return@LaunchedEffect
             skipCountdownSeconds = (skipCountdownSeconds - 1).coerceAtLeast(0)
@@ -857,6 +865,7 @@ fun PlayerScreen(
             ) {
                 PlayerSkipSegmentOverlay(
                     countdownSeconds = skipCountdownSeconds,
+                    countdownStartSeconds = skipSegmentTimeoutSeconds,
                     autoSkipEnabled = autoSkipSegments,
                     onSkipClick = {
                         skipToSegmentEnd(skipSegment)
@@ -1381,6 +1390,7 @@ private fun PlayerOverlayHandle(
 @Composable
 private fun PlayerSkipSegmentOverlay(
     countdownSeconds: Int,
+    countdownStartSeconds: Int,
     autoSkipEnabled: Boolean,
     onSkipClick: () -> Unit,
     onWatchClick: () -> Unit,
@@ -1399,7 +1409,7 @@ private fun PlayerSkipSegmentOverlay(
             )
         }
         PlayerSkipSegmentButton(
-            text = "$skipLabel (${countdownSeconds.coerceIn(0, SKIP_SEGMENT_COUNTDOWN_SECONDS)})",
+            text = "$skipLabel (${countdownSeconds.coerceIn(0, countdownStartSeconds)})",
             onClick = onSkipClick,
             primary = true,
         )
@@ -2512,7 +2522,6 @@ private const val MAX_BUFFER_MS = 60_000
 private const val BUFFER_FOR_PLAYBACK_MS = 1_500
 private const val BUFFER_FOR_PLAYBACK_AFTER_REBUFFER_MS = 3_000
 private const val PLAYER_CONTROLS_AUTO_HIDE_DELAY_MS = 2_500L
-private const val SKIP_SEGMENT_COUNTDOWN_SECONDS = 10
 private val PLAYER_SHEET_COLOR = Color(0xFF121212)
 private val PLAYER_SETTINGS_SHEET_MAX_WIDTH = 460.dp
 private val PLAYER_SETTINGS_PANEL_MAX_HEIGHT = 300.dp

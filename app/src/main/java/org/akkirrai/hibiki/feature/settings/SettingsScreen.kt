@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
@@ -35,6 +36,9 @@ import androidx.compose.material.icons.outlined.Contrast
 import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.DarkMode
 import androidx.compose.material.icons.outlined.FastForward
+import androidx.compose.material.icons.outlined.CheckCircle
+import androidx.compose.material.icons.outlined.Timer
+import androidx.compose.material.icons.outlined.TouchApp
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.Palette
 import androidx.compose.material.icons.outlined.Share
@@ -48,6 +52,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
@@ -87,6 +92,7 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.core.graphics.drawable.toBitmap
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.BuildConfig
+import org.akkirrai.hibiki.app.settings.AppPreferences
 import org.akkirrai.hibiki.app.settings.LanguageMode
 import org.akkirrai.hibiki.app.settings.LocalAppLanguage
 import org.akkirrai.hibiki.app.settings.LocalAppPreferences
@@ -100,6 +106,7 @@ import org.akkirrai.hibiki.core.discord.DiscordAuthActivity
 import org.akkirrai.hibiki.core.discord.DiscordRpcConnectionStatus
 import org.akkirrai.hibiki.core.discord.DiscordRpcManager
 import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
 
 @Composable
 fun SettingsScreen(
@@ -232,14 +239,46 @@ fun SettingsScreen(
 
         item(key = "player") {
             SettingsSection(title = stringResource(R.string.settings_player)) {
-                SettingsItems(count = 1) { _, _ ->
-                    SettingsSwitchItem(
-                        icon = Icons.Outlined.FastForward,
-                        title = stringResource(R.string.settings_auto_skip_segments),
-                        checked = preferences.autoSkipSegments,
-                        shape = CircleShape,
-                        onCheckedChange = appPreferences::setAutoSkipSegments,
-                    )
+                SettingsItems(count = 4) { index, shape ->
+                    when (index) {
+                        0 -> SettingsSwitchItem(
+                            icon = Icons.Outlined.FastForward,
+                            title = stringResource(R.string.settings_auto_skip_segments),
+                            checked = preferences.autoSkipSegments,
+                            shape = shape,
+                            onCheckedChange = appPreferences::setAutoSkipSegments,
+                        )
+                        1 -> SettingsSliderItem(
+                            icon = Icons.Outlined.Timer,
+                            title = stringResource(R.string.settings_auto_skip_delay),
+                            hint = stringResource(R.string.settings_auto_skip_delay_hint),
+                            value = preferences.autoSkipDelaySeconds,
+                            valueRange = AppPreferences.SKIP_TIMER_MIN_SECONDS..AppPreferences.SKIP_TIMER_MAX_SECONDS,
+                            valueLabel = { current -> stringResource(R.string.settings_seconds_value, current) },
+                            shape = shape,
+                            onValueChange = appPreferences::setAutoSkipDelaySeconds,
+                        )
+                        2 -> SettingsSliderItem(
+                            icon = Icons.Outlined.TouchApp,
+                            title = stringResource(R.string.settings_skip_button_timeout),
+                            hint = stringResource(R.string.settings_skip_button_timeout_hint),
+                            value = preferences.skipButtonTimeoutSeconds,
+                            valueRange = AppPreferences.SKIP_TIMER_MIN_SECONDS..AppPreferences.SKIP_TIMER_MAX_SECONDS,
+                            valueLabel = { current -> stringResource(R.string.settings_seconds_value, current) },
+                            shape = shape,
+                            onValueChange = appPreferences::setSkipButtonTimeoutSeconds,
+                        )
+                        else -> SettingsSliderItem(
+                            icon = Icons.Outlined.CheckCircle,
+                            title = stringResource(R.string.settings_watched_threshold),
+                            hint = stringResource(R.string.settings_watched_threshold_hint),
+                            value = preferences.watchedThresholdPercent,
+                            valueRange = AppPreferences.WATCHED_THRESHOLD_MIN_PERCENT..AppPreferences.WATCHED_THRESHOLD_MAX_PERCENT,
+                            valueLabel = { current -> stringResource(R.string.settings_percent_value, current) },
+                            shape = shape,
+                            onValueChange = appPreferences::setWatchedThresholdPercent,
+                        )
+                    }
                 }
             }
         }
@@ -487,6 +526,84 @@ private fun SettingsVerticalItem(
     ) {
         SettingsItemHeader(icon = icon, title = title)
         content()
+    }
+}
+
+// Enough for the widest label any of these sliders can show ("100%" / "30 s").
+private val SETTINGS_SLIDER_VALUE_WIDTH = 48.dp
+
+@Composable
+private fun SettingsSliderItem(
+    icon: ImageVector,
+    title: String,
+    hint: String,
+    value: Int,
+    valueRange: IntRange,
+    valueLabel: @Composable (Int) -> String,
+    shape: Shape,
+    onValueChange: (Int) -> Unit,
+) {
+    // The slider drives a local value while it is being dragged and only writes to preferences on
+    // release: every intermediate step would otherwise be a SharedPreferences commit that comes
+    // back through the state flow and recomposes the whole settings screen mid-gesture.
+    var draggedValue by remember(value) { mutableStateOf<Int?>(null) }
+    val shownValue = draggedValue ?: value
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(shape)
+            .background(MaterialTheme.colorScheme.surfaceContainer)
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                modifier = Modifier.size(28.dp),
+                tint = MaterialTheme.colorScheme.onSurface,
+            )
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(2.dp),
+            ) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.9f),
+                )
+                Text(
+                    text = hint,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Text(
+                text = valueLabel(shownValue),
+                // Fixed width, end-aligned: the label's own width otherwise changes with the digits
+                // it happens to be showing (7 s vs 8 s vs 10 s are all different widths in this
+                // font), which moves the wrap point of the hint next to it - so the whole card grew
+                // and shrank by a line as the slider passed certain values.
+                modifier = Modifier.width(SETTINGS_SLIDER_VALUE_WIDTH),
+                textAlign = TextAlign.End,
+                maxLines = 1,
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.primary,
+            )
+        }
+        Slider(
+            value = shownValue.toFloat(),
+            onValueChange = { draggedValue = it.roundToInt() },
+            onValueChangeFinished = { draggedValue?.let(onValueChange) },
+            valueRange = valueRange.first.toFloat()..valueRange.last.toFloat(),
+            // No tick marks: 30 steps' worth of dots reads as noise on a track this wide, and the
+            // exact value is already spelled out next to the title. The value stays integral -
+            // onValueChange rounds it - the slider just doesn't draw the stops.
+            steps = 0,
+        )
     }
 }
 
