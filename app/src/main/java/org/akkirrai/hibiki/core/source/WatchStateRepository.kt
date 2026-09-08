@@ -4,8 +4,8 @@ import android.content.Context
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
-import org.akkirrai.hibiki.app.settings.AppPreferences
 import org.akkirrai.hibiki.core.model.EpisodeWatchProgress
+import org.akkirrai.hibiki.core.model.isEpisodeWatched
 import org.akkirrai.hibiki.core.model.TitleWatchState
 import org.akkirrai.hibiki.core.model.WatchSourceSelection
 
@@ -426,8 +426,7 @@ class WatchStateRepository(context: Context) {
         val deltaMs = (positionMs - previousPositionMs)
             .coerceAtLeast(0L)
             .coerceAtMost(durationMs.coerceAtLeast(0L))
-        val completed = durationMs > 0L &&
-            positionMs >= durationMs * AppPreferences.watchedThresholdPercent / 100L
+        val completed = isEpisodeWatched(positionMs, durationMs)
         if (deltaMs == 0L && !completed) return
 
         val date = Instant.ofEpochMilli(updatedAt).atZone(ZoneId.systemDefault()).toLocalDate()

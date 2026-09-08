@@ -135,7 +135,6 @@ import coil.request.SuccessResult
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
-import org.akkirrai.hibiki.app.settings.AppPreferences
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.app.di.hibikiDependencies
 import org.akkirrai.hibiki.core.design.icon
@@ -151,6 +150,9 @@ import org.akkirrai.hibiki.core.design.component.anime.PosterImage
 import org.akkirrai.hibiki.core.model.Anime
 import org.akkirrai.hibiki.core.model.AnimeRating
 import org.akkirrai.hibiki.core.model.EpisodeWatchProgress
+import org.akkirrai.hibiki.core.model.formatEpisodeNumber
+import org.akkirrai.hibiki.core.model.formatPlaybackTime
+import org.akkirrai.hibiki.core.model.isWatchedToEnd
 import org.akkirrai.hibiki.core.model.RelatedAnime
 import org.akkirrai.hibiki.core.model.TitleWatchState
 import org.akkirrai.hibiki.core.model.WatchSource
@@ -1086,7 +1088,7 @@ private fun ResumePill(
                     text = stringResource(
                         R.string.details_continue_episode_position,
                         formatEpisodeNumber(resumeState.episodeNumber),
-                        formatPlaybackPosition(resumeState.positionMs),
+                        formatPlaybackTime(resumeState.positionMs),
                     ),
                     style = MaterialTheme.typography.labelSmall,
                     color = Color.White.copy(alpha = 0.78f),
@@ -2175,11 +2177,6 @@ private fun resolveNextEpisodeNumber(
     }
 }
 
-private fun EpisodeWatchProgress.isWatchedToEnd(): Boolean {
-    // Percent of the duration rather than "within a second of the very end": stopping during the
-    // credits is still finishing an episode, and the exact share is the user's own setting now.
-    return durationMs > 0L && positionMs >= durationMs * AppPreferences.watchedThresholdPercent / 100L
-}
 
 private fun findResumeWatchState(
     repository: WatchStateRepository,
@@ -2206,26 +2203,6 @@ private fun findResumeWatchState(
 
 private const val BANNER_SKELETON_FLASH_GUARD_MILLIS = 120L
 
-
-private fun formatEpisodeNumber(number: Double): String {
-    return if (number % 1.0 == 0.0) {
-        number.toInt().toString()
-    } else {
-        number.toString()
-    }
-}
-
-private fun formatPlaybackPosition(positionMs: Long): String {
-    val totalSeconds = positionMs.coerceAtLeast(0L) / 1_000L
-    val hours = totalSeconds / 3_600L
-    val minutes = totalSeconds % 3_600L / 60L
-    val seconds = totalSeconds % 60L
-    return if (hours > 0L) {
-        "%d:%02d:%02d".format(hours, minutes, seconds)
-    } else {
-        "%02d:%02d".format(minutes, seconds)
-    }
-}
 
 @Composable
 private fun buildSourceSelectorLabel(

@@ -177,6 +177,7 @@ import kotlinx.coroutines.launch
 import java.net.URI
 import kotlin.math.max
 import kotlin.math.min
+import org.akkirrai.hibiki.core.model.formatPlaybackTime
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.core.discord.DiscordPlaybackPresence
 import org.akkirrai.hibiki.core.discord.DiscordRpcManager
@@ -2040,7 +2041,7 @@ private fun PlayerBottomOverlay(
                 verticalAlignment = Alignment.Top,
             ) {
                 Text(
-                    text = "${formatDuration(sliderPositionMs)} / ${formatDuration(durationMs)}",
+                    text = "${formatPlaybackTime(sliderPositionMs)} / ${formatPlaybackTime(durationMs)}",
                     modifier = Modifier.padding(top = 1.dp),
                     color = Color.White.copy(alpha = 0.78f),
                     style = MaterialTheme.typography.labelMedium
@@ -2486,21 +2487,6 @@ private fun localizedEpisodeTitle(title: String): String {
         stringResource(R.string.watch_episode_number, fallbackEpisodeNumber)
     } else {
         title
-    }
-}
-
-private fun formatDuration(durationMs: Long): String {
-    if (durationMs <= 0) {
-        return "00:00"
-    }
-    val totalSeconds = durationMs / 1000
-    val hours = totalSeconds / 3600
-    val minutes = totalSeconds % 3600 / 60
-    val seconds = totalSeconds % 60
-    return if (hours > 0) {
-        "%d:%02d:%02d".format(hours, minutes, seconds)
-    } else {
-        "%02d:%02d".format(minutes, seconds)
     }
 }
 

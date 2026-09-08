@@ -22,6 +22,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
+import org.akkirrai.hibiki.core.model.formatPlaybackTime
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.app.settings.AppPreferences
 import org.akkirrai.hibiki.app.settings.withAppPreferencesLanguage
@@ -506,19 +507,7 @@ class DiscordRpcManager private constructor(
 
         private fun formatProgress(positionMs: Long, durationMs: Long): String? {
             if (durationMs <= 0L) return null
-            return "${formatTime(positionMs)}/${formatTime(durationMs)}"
-        }
-
-        private fun formatTime(timeMs: Long): String {
-            val totalSeconds = timeMs.coerceAtLeast(0L) / 1_000L
-            val hours = totalSeconds / 3_600L
-            val minutes = totalSeconds % 3_600L / 60L
-            val seconds = totalSeconds % 60L
-            return if (hours > 0L) {
-                "%d:%02d:%02d".format(hours, minutes, seconds)
-            } else {
-                "%02d:%02d".format(minutes, seconds)
-            }
+            return "${formatPlaybackTime(positionMs)}/${formatPlaybackTime(durationMs)}"
         }
 
         private fun formatEpisodeNumber(number: Double): String =

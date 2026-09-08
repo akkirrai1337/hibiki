@@ -83,7 +83,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.math.roundToInt
-import org.akkirrai.hibiki.app.settings.AppPreferences
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.app.di.hibikiDependencies
 import org.akkirrai.hibiki.core.design.UiDimens
@@ -94,6 +93,9 @@ import org.akkirrai.hibiki.core.download.OfflineDownloadRepository
 import org.akkirrai.hibiki.core.download.OfflineEpisodeDownloadState
 import org.akkirrai.hibiki.core.model.EpisodeProgressStatus
 import org.akkirrai.hibiki.core.model.EpisodeWatchProgress
+import org.akkirrai.hibiki.core.model.formatEpisodeNumber
+import org.akkirrai.hibiki.core.model.formatPlaybackTime
+import org.akkirrai.hibiki.core.model.isWatchedToEnd
 import org.akkirrai.hibiki.core.model.WatchEpisode
 import org.akkirrai.hibiki.core.model.WatchSource
 import org.akkirrai.hibiki.core.source.LibraryCategory
@@ -418,7 +420,7 @@ private fun EpisodesListHeader(
                     R.string.watch_continue_episode,
                     formatEpisodeNumber(resumeEpisode.number),
                 ),
-                position = "${formatDuration(resumeProgress.positionMs)} / ${formatDuration(resumeProgress.durationMs)}",
+                position = "${formatPlaybackTime(resumeProgress.positionMs)} / ${formatPlaybackTime(resumeProgress.durationMs)}",
                 progressFraction = resumeProgress.positionMs.toFloat() / resumeProgress.durationMs.toFloat(),
                 onClick = onResumeClick,
                 onMarkWatched = onResumeMarkWatched,
@@ -753,7 +755,7 @@ private fun EpisodeRow(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                EpisodeNumberTile(number = formatEpisodeNumber(episode.number), status = status)
+                EpisodeNumberTile(number = formatEpisodeTile(episode.number), status = status)
                 Column(
                     modifier = Modifier.weight(1f),
                     verticalArrangement = Arrangement.spacedBy(if (inProgress) 4.dp else 6.dp),
@@ -973,7 +975,7 @@ private fun buildEpisodeHeadline(
     progress: EpisodeWatchProgress?,
     status: EpisodeProgressStatus,
 ): AnnotatedString {
-    val number = formatEpisodeNumber(episode.number)
+    val number = formatEpisodeTile(episode.number)
     val headline = when (status) {
         EpisodeProgressStatus.Watched -> stringResource(R.string.watch_episode_headline_watched, number)
         else -> stringResource(R.string.watch_episode_headline, number)
@@ -992,7 +994,7 @@ private fun buildEpisodeHeadline(
                     fontSize = MaterialTheme.typography.bodySmall.fontSize,
                 )
             ) {
-                append(" • ${formatDuration(progress.positionMs)} / ${formatDuration(progress.durationMs)}")
+                append(" • ${formatPlaybackTime(progress.positionMs)} / ${formatPlaybackTime(progress.durationMs)}")
             }
         }
     } else if (status == EpisodeProgressStatus.Watched) {
@@ -1027,23 +1029,11 @@ private fun buildEpisodeSubtitle(
     }
 }
 
-private fun EpisodeWatchProgress.isWatchedToEnd(): Boolean {
-    // Percent of the duration rather than "within a second of the very end": stopping during the
-    // credits is still finishing an episode, and the exact share is the user's own setting now.
-    return durationMs > 0L && positionMs >= durationMs * AppPreferences.watchedThresholdPercent / 100L
-}
 
-private fun formatEpisodeNumber(number: Double): String {
-    val text = if (number % 1.0 == 0.0) number.toInt().toString() else number.toString()
+/** The episode grid aligns on two digits ("01", "02"), which the plain number doesn't give. */
+private fun formatEpisodeTile(number: Double): String {
+    val text = formatEpisodeNumber(number)
     return text.takeIf { '.' in it } ?: text.padStart(2, '0')
-}
-
-private fun formatDuration(durationMs: Long): String {
-    if (durationMs <= 0L) return "00:00"
-    val totalSeconds = durationMs / 1000
-    val minutes = totalSeconds / 60
-    val seconds = totalSeconds % 60
-    return "%02d:%02d".format(minutes, seconds)
 }
 
 private fun OfflineEpisodeDownloadState.keepsTitleSaved(): Boolean {
