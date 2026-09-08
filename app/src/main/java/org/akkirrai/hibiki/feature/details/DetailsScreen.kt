@@ -717,54 +717,73 @@ private fun DetailHeroSection(
     )
     val bannerHeight = 224.dp
     val posterExpandedHeight = 200.dp
-    val posterTop = 212.dp
-    val detailsTop = 224.dp
     val detailsHeight = 180.dp
-    val heroHeight = 412.dp
+    // Without a banner there is no artwork the poster/title need to clear, so the band it used to
+    // occupy shrinks instead of staying behind as empty background. Everything below just moves up
+    // with it, keeping the hero's own proportions intact.
+    val hasHeroMedia = anime.trailer?.playbackUrl != null || (resumeState != null && resumeFrame != null)
+    val heroTopTrim = if (hasHeroMedia) 0.dp else 96.dp
+    val posterTop = 212.dp - heroTopTrim
+    val detailsTop = 224.dp - heroTopTrim
+    val heroHeight = 412.dp - heroTopTrim
 
     Column(
         modifier = Modifier.fillMaxWidth(),
     ) {
+        // The banner only earns its space when it actually shows something the poster below doesn't:
+        // a trailer still, or the frame the last watch session stopped on. For the common case
+        // (neither) it was a second, cropped copy of the poster sitting right on top of the poster
+        // itself - so that case drops the banner entirely and leaves the accent-tinted screen
+        // background showing, with no banner edge and no empty band left behind.
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(heroHeight),
         ) {
-            DetailHeroMedia(
-                anime = anime,
-                resumeState = resumeState,
-                resumeFrame = resumeFrame,
-                onResumeClick = onResumeClick,
-                onTrailerClick = onTrailerClick,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(bannerHeight),
-                onPosterLoaded = onPosterLoaded,
-            )
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(80.dp)
-                    .align(Alignment.TopCenter)
-                    .offset(y = bannerHeight - 80.dp)
-                    .background(
-                        Brush.verticalGradient(
-                            listOf(Color.Transparent, MaterialTheme.colorScheme.background),
+            if (hasHeroMedia) {
+                DetailHeroMedia(
+                    anime = anime,
+                    resumeState = resumeState,
+                    resumeFrame = resumeFrame,
+                    onResumeClick = onResumeClick,
+                    onTrailerClick = onTrailerClick,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(bannerHeight),
+                )
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(80.dp)
+                        .align(Alignment.TopCenter)
+                        .offset(y = bannerHeight - 80.dp)
+                        .background(
+                            Brush.verticalGradient(
+                                listOf(Color.Transparent, MaterialTheme.colorScheme.background),
+                            )
                         )
-                    )
-            )
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(heroHeight - bannerHeight)
-                    .align(Alignment.BottomCenter)
-                    .background(MaterialTheme.colorScheme.background)
-            )
+                )
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(heroHeight - bannerHeight)
+                        .align(Alignment.BottomCenter)
+                        .background(MaterialTheme.colorScheme.background)
+                )
+            } else {
+                DetailHeroBackdrop(
+                    resumeState = resumeState,
+                    onResumeClick = onResumeClick,
+                    bannerHeight = bannerHeight - heroTopTrim,
+                    modifier = Modifier.fillMaxSize(),
+                )
+            }
             PosterHeroInline(
                 anime = anime,
                 height = posterExpandedHeight - posterHeightOffset,
                 onPosterClick = onPosterClick,
                 sharedPosterModifier = sharedPosterModifier,
+                onPosterLoaded = onPosterLoaded,
                 modifier = Modifier
                     .align(Alignment.TopStart)
                     .offset(y = posterTop + posterHeightOffset)
@@ -1036,6 +1055,75 @@ private fun NestedScrollableContent(
 }
 
 @Composable
+private fun ResumePill(
+    resumeState: TitleWatchState,
+    onResumeClick: (TitleWatchState) -> Unit,
+) {
+    Surface(
+        onClick = { onResumeClick(resumeState) },
+        shape = CircleShape,
+        color = Color.Black.copy(alpha = 0.58f),
+        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.28f)),
+        contentColor = Color.White,
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 18.dp, vertical = 11.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                imageVector = Icons.Filled.PlayArrow,
+                contentDescription = null,
+                modifier = Modifier.size(28.dp),
+            )
+            Column {
+                Text(
+                    text = stringResource(R.string.details_watch_continue),
+                    style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+                )
+                Text(
+                    text = stringResource(
+                        R.string.details_continue_episode_position,
+                        formatEpisodeNumber(resumeState.episodeNumber),
+                        formatPlaybackPosition(resumeState.positionMs),
+                    ),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Color.White.copy(alpha = 0.78f),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun DetailHeroBackdrop(
+    resumeState: TitleWatchState?,
+    onResumeClick: (TitleWatchState) -> Unit,
+    bannerHeight: Dp,
+    modifier: Modifier = Modifier,
+) {
+    // Nothing to draw here on purpose: the screen background is already tinted with the title's
+    // own accent color (see titleSeedColor), so a blurred copy of the poster on top of it would
+    // just be the duplicate-artwork problem again, one blur removed.
+    Box(modifier = modifier.background(MaterialTheme.colorScheme.background)) {
+        // No stop-frame to show, but there is somewhere to resume to - keep the pill where it has
+        // always been (centered in the band the banner used to occupy) rather than dropping the
+        // entry point along with the banner.
+        if (resumeState != null) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(bannerHeight)
+                    .align(Alignment.TopCenter),
+                contentAlignment = Alignment.Center,
+            ) {
+                ResumePill(resumeState = resumeState, onResumeClick = onResumeClick)
+            }
+        }
+    }
+}
+
+@Composable
 private fun DetailHeroMedia(
     anime: Anime,
     resumeState: TitleWatchState?,
@@ -1043,7 +1131,6 @@ private fun DetailHeroMedia(
     onResumeClick: (TitleWatchState) -> Unit,
     onTrailerClick: () -> Unit,
     modifier: Modifier = Modifier,
-    onPosterLoaded: ((Drawable) -> Unit)? = null,
 ) {
     val trailer = anime.trailer?.takeIf { it.playbackUrl != null }
     val imageUrl = trailer?.thumbnailUrl ?: anime.posterUrl
@@ -1088,10 +1175,7 @@ private fun DetailHeroMedia(
                         scaleY = 1.025f
                     }
                 },
-            onImageLoaded = { drawable ->
-                isBannerLoaded = true
-                if (trailer == null) onPosterLoaded?.invoke(drawable)
-            },
+            onImageLoaded = { isBannerLoaded = true },
         )
 
         AnimatedVisibility(
@@ -1117,40 +1201,7 @@ private fun DetailHeroMedia(
                 } else {
                     0f
                 }
-                Surface(
-                    onClick = { onResumeClick(resumeState) },
-                    shape = CircleShape,
-                    color = Color.Black.copy(alpha = 0.58f),
-                    border = BorderStroke(1.dp, Color.White.copy(alpha = 0.28f)),
-                    contentColor = Color.White,
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 18.dp, vertical = 11.dp),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.PlayArrow,
-                            contentDescription = null,
-                            modifier = Modifier.size(28.dp),
-                        )
-                        Column {
-                            Text(
-                                text = stringResource(R.string.details_watch_continue),
-                                style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
-                            )
-                            Text(
-                                text = stringResource(
-                                    R.string.details_continue_episode_position,
-                                    formatEpisodeNumber(resumeState.episodeNumber),
-                                    formatPlaybackPosition(resumeState.positionMs),
-                                ),
-                                style = MaterialTheme.typography.labelSmall,
-                                color = Color.White.copy(alpha = 0.78f),
-                            )
-                        }
-                    }
-                }
+                ResumePill(resumeState = resumeState, onResumeClick = onResumeClick)
                 if (progress > 0f) {
                     LinearProgressIndicator(
                         progress = { progress },
@@ -1606,6 +1657,7 @@ private fun PosterHeroInline(
     onPosterClick: () -> Unit,
     sharedPosterModifier: Modifier,
     modifier: Modifier = Modifier,
+    onPosterLoaded: ((Drawable) -> Unit)? = null,
 ) {
     Card(
         modifier = modifier
@@ -1621,6 +1673,11 @@ private fun PosterHeroInline(
             imageUrl = anime.posterUrl,
             fallbackUrl = anime.posterFallbackUrl,
             contentDescription = anime.title,
+            // The accent color is sampled here rather than off the banner: the poster is the one
+            // image the hero always shows (the banner is now conditional), and it is the artwork
+            // the color is supposed to come from anyway. Sampling it here means no waiting on the
+            // delayed network fallback in DetailsScreen when there is no banner to load.
+            onImageLoaded = onPosterLoaded,
         )
     }
 }
@@ -2147,6 +2204,7 @@ private fun findResumeWatchState(
 private const val WATCHED_END_TOLERANCE_MS = 1_000L
 private const val BANNER_SKELETON_FLASH_GUARD_MILLIS = 120L
 
+
 private fun formatEpisodeNumber(number: Double): String {
     return if (number % 1.0 == 0.0) {
         number.toInt().toString()
@@ -2249,7 +2307,7 @@ private fun isAnnouncementStatus(status: String, episodesLabel: String = ""): Bo
 
 @Composable
 internal fun rememberNextEpisodeEta(nextEpisodeAt: Long?): String? {
-    val seconds = nextEpisodeAt?.takeIf { it > 0L } ?: return null
+    val seconds = nextEpisodeAt.toEpochSecondsOrNull() ?: return null
     var nowEpochSeconds by remember(seconds) {
         mutableLongStateOf(System.currentTimeMillis() / 1_000L)
     }
@@ -2280,6 +2338,11 @@ internal fun rememberNextEpisodeEta(nextEpisodeAt: Long?): String? {
             remainingSeconds.coerceAtLeast(0L),
         )
     }
+}
+
+internal fun Long?.toEpochSecondsOrNull(): Long? {
+    val timestamp = this?.takeIf { it > 0L } ?: return null
+    return if (timestamp >= 100_000_000_000L) timestamp / 1_000L else timestamp
 }
 
 @Composable

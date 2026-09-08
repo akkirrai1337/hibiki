@@ -22,6 +22,14 @@ class DetailsScreenLogicTest {
     }
 
     @Test
+    fun `next episode timestamp accepts source milliseconds and seconds`() {
+        assertEquals(1_788_739_200L, 1_788_739_200L.toEpochSecondsOrNull())
+        assertEquals(1_788_739_200L, 1_788_739_200_000L.toEpochSecondsOrNull())
+        assertNull(0L.toEpochSecondsOrNull())
+        assertNull(null.toEpochSecondsOrNull())
+    }
+
+    @Test
     fun `scheme image urls are normalized before loading`() {
         assertEquals(
             "https://static.yani.tv/poster.webp",
