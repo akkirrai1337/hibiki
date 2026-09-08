@@ -47,6 +47,15 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    // The project carries a large amount of pre-existing lint debt (mostly media3's UnstableApi
+    // opt-in warnings), which made `lintDebug` fail on the first of ~175 errors and therefore
+    // useless as a signal. The baseline freezes what already exists so lint reports only what is
+    // newly introduced; regenerate it with `./gradlew :app:updateLintBaseline` once the debt is
+    // actually paid down.
+    lint {
+        baseline = file("lint-baseline.xml")
+    }
+
     signingConfigs {
         create("release") {
             if (!releaseStoreFile.isNullOrBlank()) {

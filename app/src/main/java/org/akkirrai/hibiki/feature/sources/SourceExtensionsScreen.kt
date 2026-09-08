@@ -69,6 +69,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
@@ -89,6 +90,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import org.akkirrai.beakokit.api.SourceId
 import org.akkirrai.hibiki.R
+import org.akkirrai.hibiki.app.settings.LocalAppLanguage
 import org.akkirrai.hibiki.app.settings.LocalAppPreferences
 import org.akkirrai.hibiki.app.settings.LocalAppPreferencesState
 import org.akkirrai.hibiki.core.design.UiDimens
@@ -170,6 +172,25 @@ fun SourceExtensionsScreen(
     // come from sourceExtensions, not every mergedExtensions entry - otherwise that blank default
     // shows up as an empty, unlabeled toggle in the language filter dialog.
     val extensionLanguages = sourceExtensions.map(MarketplaceExtension::lang).distinct().sorted()
+
+    // First run only (onboarding, in practice): start with the filter already narrowed to the
+    // user's own language, so a Ukrainian install opens on Ukrainian sources instead of every
+    // source in the index. Seeded once and recorded in preferences - after that the filter is
+    // whatever the user leaves it as, and switching the app language later does not touch it.
+    val appLanguage = LocalAppLanguage.current
+    val systemLanguage = LocalConfiguration.current.locales[0].language
+    LaunchedEffect(extensionLanguages, appPreferencesState.sourceLanguageFilterSeeded) {
+        if (appPreferencesState.sourceLanguageFilterSeeded) return@LaunchedEffect
+        // Nothing to match against yet - the repositories are still loading.
+        if (extensionLanguages.isEmpty()) return@LaunchedEffect
+        val preferred = normalizeSourceLanguage(appLanguage.tag ?: systemLanguage)
+        extensionLanguages
+            .firstOrNull { normalizeSourceLanguage(it) == preferred }
+            ?.let { selectedLanguages = setOf(it) }
+        // Marked even when the index has nothing in that language: the seeding attempt is what
+        // happens once, not the successful match.
+        preferences.markSourceLanguageFilterSeeded()
+    }
 
     // Extensions tab still consumes the flat Loading/Error/Loaded shape it always has - derived
     // here from the per-repository results so SourceRepositoryList/MarketplaceExtensionRow don't
@@ -588,6 +609,17 @@ private data class SourceLanguagePresentation(
     val nativeName: String,
     val englishName: String,
 )
+
+/** Index entries and locale tags don't have to agree on spelling ("uk" vs "ukrainian"). */
+private fun normalizeSourceLanguage(language: String): String = when (val value = language.lowercase().substringBefore('-')) {
+    "ru", "russian" -> "ru"
+    "uk", "ukrainian" -> "uk"
+    "en", "english" -> "en"
+    "pt", "portuguese" -> "pt"
+    "tr", "turkish" -> "tr"
+    "th", "thai" -> "th"
+    else -> value
+}
 
 private fun sourceLanguagePresentation(language: String): SourceLanguagePresentation = when (language.lowercase()) {
     "ru", "russian" -> SourceLanguagePresentation("русский", "Russian")

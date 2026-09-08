@@ -63,6 +63,10 @@ data class AppPreferencesState(
     val discordRpcEnabled: Boolean = false,
     val discordRpcExcludedTitleIds: Set<String> = emptySet(),
     val hideNsfwSources: Boolean = false,
+    // Whether the source marketplace has already seeded its language filter from the app/system
+    // language. A one-time thing: after the first run the filter is whatever the user leaves it
+    // as, and changing the app language later does not re-apply it.
+    val sourceLanguageFilterSeeded: Boolean = false,
     val sourceRepositoryUrls: List<String> = listOf(ExtensionMarketplaceClient.DEFAULT_INDEX_URL),
 )
 
@@ -94,6 +98,7 @@ class AppPreferences(context: Context) {
             KEY_DISCORD_RPC_ENABLED,
             KEY_DISCORD_RPC_EXCLUDED_TITLE_IDS,
             KEY_HIDE_NSFW_SOURCES,
+            KEY_SOURCE_LANGUAGE_FILTER_SEEDED,
             KEY_SOURCE_REPOSITORY_URLS -> {
                 _state.value = readState(prefs)
             }
@@ -189,6 +194,10 @@ class AppPreferences(context: Context) {
         prefs.edit().putBoolean(KEY_HIDE_NSFW_SOURCES, hide).apply()
     }
 
+    fun markSourceLanguageFilterSeeded() {
+        prefs.edit().putBoolean(KEY_SOURCE_LANGUAGE_FILTER_SEEDED, true).apply()
+    }
+
     fun addSourceRepository(url: String) {
         val normalized = url.trim().takeIf(String::isNotBlank) ?: return
         val urls = readSourceRepositoryUrls(prefs)
@@ -252,6 +261,7 @@ class AppPreferences(context: Context) {
         const val KEY_DISCORD_RPC_ENABLED = "discord_rpc_enabled"
         const val KEY_DISCORD_RPC_EXCLUDED_TITLE_IDS = "discord_rpc_excluded_title_ids"
         const val KEY_HIDE_NSFW_SOURCES = "hide_nsfw_sources"
+        const val KEY_SOURCE_LANGUAGE_FILTER_SEEDED = "source_language_filter_seeded"
         const val KEY_SOURCE_REPOSITORY_URLS = "source_repository_urls"
         private const val KEY_KNOWN_ANIME_SOURCE_NAMES = "known_anime_source_names"
         private const val NAME_SEPARATOR = '\u001F'
@@ -384,6 +394,7 @@ class AppPreferences(context: Context) {
                     .orEmpty()
                     .toSet(),
                 hideNsfwSources = prefs.getBoolean(KEY_HIDE_NSFW_SOURCES, false),
+                sourceLanguageFilterSeeded = prefs.getBoolean(KEY_SOURCE_LANGUAGE_FILTER_SEEDED, false),
                 sourceRepositoryUrls = readSourceRepositoryUrls(prefs),
             )
         }
