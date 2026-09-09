@@ -79,6 +79,29 @@ class WatchStateRepository(context: Context) {
             .apply()
     }
 
+    fun getSelectedPlayer(titleId: String, sourceId: String): String? {
+        val scopedPlayer = legacyCompatibleTitleIds(titleId)
+            .firstNotNullOfOrNull { candidateId ->
+                prefs.getString(selectedPlayerForSourceKey(candidateId, sourceId), null)
+            }
+        if (scopedPlayer != null) return scopedPlayer
+
+        // Preserve the old title-wide choice for the voiceover it originally belonged to.
+        return getSelectedSource(titleId)
+            .takeIf { it.sourceId == sourceId }
+            ?.playerName
+    }
+
+    fun saveSelectedPlayer(titleId: String, sourceId: String, playerName: String?) {
+        val normalizedTitleId = YummyIdMigration.normalizeTitleId(titleId)
+        prefs.edit().apply {
+            legacyCompatibleTitleIds(titleId).forEach { candidateId ->
+                remove(selectedPlayerForSourceKey(candidateId, sourceId))
+            }
+            putString(selectedPlayerForSourceKey(normalizedTitleId, sourceId), playerName)
+        }.apply()
+    }
+
     fun getTitleWatchState(titleId: String): TitleWatchState? {
         val normalizedTitleId = YummyIdMigration.normalizeTitleId(titleId)
         val progressItems = getEpisodeProgress(normalizedTitleId)
@@ -306,6 +329,9 @@ class WatchStateRepository(context: Context) {
     private fun selectedQualityKey(titleId: String): String = "selected_source_quality_$titleId"
 
     private fun selectedPlayerKey(titleId: String): String = "selected_player_$titleId"
+
+    private fun selectedPlayerForSourceKey(titleId: String, sourceId: String): String =
+        "selected_player_for_source_${titleId}_$sourceId"
 
     private fun selectedBackendKey(titleId: String): String = "selected_backend_$titleId"
 

@@ -45,7 +45,7 @@ class PlayerViewModel(
             currentSourceId = sourceId,
             currentEpisodeId = episodeId,
             currentEpisodeNumber = initialEpisodeNumber,
-            selectedPlayerName = savedSelection?.playerName,
+            selectedPlayerName = watchStateRepository.getSelectedPlayer(titleId, sourceId),
             selectedQualityLabel = savedSelection?.quality,
         )
     )
@@ -263,12 +263,13 @@ class PlayerViewModel(
         viewModelScope.launch(Dispatchers.IO) {
             val episodes = repository.getEpisodes(source.sourceId)
             val matching = episodes.firstOrNull { it.number == currentEpisode.number } ?: episodes.firstOrNull() ?: return@launch
+            val rememberedPlayer = watchStateRepository.getSelectedPlayer(titleId, source.sourceId)
             _uiState.update {
                 it.copy(
                     currentSourceId = source.sourceId,
                     currentEpisodeId = matching.id,
                     episodes = episodes,
-                    selectedPlayerName = null,
+                    selectedPlayerName = rememberedPlayer,
                     selectedQualityLabel = source.qualityLabel,
                     pendingSeekMs = resumePositionMs.coerceAtLeast(0L),
                     settingsOptionsKey = null,
@@ -281,7 +282,7 @@ class PlayerViewModel(
                 sourceId = source.sourceId,
                 sourceTitle = source.title,
                 quality = source.qualityLabel,
-                playerName = null,
+                playerName = rememberedPlayer,
                 autoSelect = false,
             )
             restoreSavedSeek()
@@ -358,6 +359,11 @@ class PlayerViewModel(
     private fun persistSelection() {
         val state = _uiState.value
         val previousSelection = watchStateRepository.getSelectedSource(titleId)
+        watchStateRepository.saveSelectedPlayer(
+            titleId = titleId,
+            sourceId = state.currentSourceId,
+            playerName = state.selectedPlayerName,
+        )
         watchStateRepository.saveSelectedSource(
             titleId = titleId,
             sourceId = state.currentSourceId,
