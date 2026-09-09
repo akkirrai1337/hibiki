@@ -19,9 +19,16 @@ class ScriptExtensionRepository(private val extensionsDir: File) {
         prettyPrint = true
     }
 
+    /**
+     * [manifests] carries the very objects [entries] were built from. A manifest file embeds its
+     * whole JS payload, so reading one is reading a source's entire code - handing the parsed
+     * result back means a caller that needs both does not read and decode every installed
+     * extension a second time to get it.
+     */
     data class LoadResult(
         val entries: List<SourceCatalogEntry>,
         val invalid: List<InvalidScriptExtension>,
+        val manifests: List<ScriptExtensionManifest> = emptyList(),
     ) {
         companion object {
             val EMPTY = LoadResult(emptyList(), emptyList())
@@ -74,11 +81,13 @@ class ScriptExtensionRepository(private val extensionsDir: File) {
     fun loadAll(): LoadResult {
         val entries = mutableListOf<SourceCatalogEntry>()
         val invalid = mutableListOf<InvalidScriptExtension>()
+        val manifests = mutableListOf<ScriptExtensionManifest>()
         listManifestFiles().forEach { file ->
             runCatching {
                 val manifest = json.decodeFromString(ScriptExtensionManifest.serializer(), file.readText())
                 val violations = manifest.violations()
                 if (violations.isNotEmpty()) throw ScriptExtensionValidationException(manifest.id, violations)
+                manifests += manifest
                 entries += SourceCatalogEntry(
                     info = manifest.toSourceInfo(),
                     factory = SourceFactory { context -> ScriptedAnimeSource(context, manifest) },
@@ -91,6 +100,6 @@ class ScriptExtensionRepository(private val extensionsDir: File) {
                 )
             }
         }
-        return LoadResult(entries, invalid)
+        return LoadResult(entries, invalid, manifests)
     }
 }

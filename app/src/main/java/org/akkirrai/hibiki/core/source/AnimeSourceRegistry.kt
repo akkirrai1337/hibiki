@@ -132,7 +132,9 @@ object AnimeSourceRegistry {
         invalidScriptExtensionsState = result.invalid
         scriptCatalogEntries = result.entries
         registrationsState = result.entries.map(::registrationFor)
-        installedManifestsState = scriptRepository?.installedManifests().orEmpty()
+        // From the load above, not a second pass over the same files: each one embeds a source's
+        // whole JS payload, and this runs on the main thread before the first frame.
+        installedManifestsState = result.manifests
         applicationContext?.let { context ->
             AppPreferences.rememberAnimeSourceAppearances(
                 context,

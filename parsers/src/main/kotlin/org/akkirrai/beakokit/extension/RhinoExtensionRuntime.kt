@@ -36,6 +36,7 @@ import org.mozilla.javascript.Context
 import org.mozilla.javascript.Function
 import org.mozilla.javascript.NativeJSON
 import org.mozilla.javascript.NativeObject
+import org.mozilla.javascript.Script
 import org.mozilla.javascript.Scriptable
 import org.mozilla.javascript.ScriptableObject
 import org.mozilla.javascript.WrapFactory
@@ -121,11 +122,45 @@ private fun ScriptResponse.toScriptable(cx: Context, scope: Scriptable): Scripta
  * a script can only touch the network (via [fetch]) and HTML parsing (via the curated [Jsoup]
  * binding), the same trust boundary as today's compiled-in Kotlin scrapers.
  */
+/**
+ * One extension's payload parsed into Rhino's interpreted form, ready to run in any number of
+ * scopes.
+ *
+ * Parsing is the expensive, scope-independent half of starting a runtime, and a pool builds
+ * several runtimes for the same source - all from the same payload. Compiling once and executing
+ * the result into each fresh scope keeps the sandbox boundary exactly where it was: every runtime
+ * still gets its own scope, its own globals and its own module-level script state.
+ */
+class CompiledExtensionScript internal constructor(
+    internal val extensionId: String,
+    internal val script: Script,
+)
+
+/** Parses [payload] once. Safe to share between runtimes and threads; execution is per-scope. */
+fun compileExtensionScript(extensionId: String, payload: String): CompiledExtensionScript {
+    installRhinoTimeoutGuard()
+    val cx = Context.enter()
+    return try {
+        cx.optimizationLevel = -1
+        cx.languageVersion = Context.VERSION_ES6
+        CompiledExtensionScript(extensionId, cx.compileString(payload, "$extensionId.js", 1, null))
+    } finally {
+        Context.exit()
+    }
+}
+
 class RhinoExtensionRuntime(
-    @PublishedApi internal val extensionId: String,
-    payload: String,
+    compiled: CompiledExtensionScript,
     private val sourceContext: SourceContext,
 ) {
+    @PublishedApi internal val extensionId: String = compiled.extensionId
+
+    constructor(
+        extensionId: String,
+        payload: String,
+        sourceContext: SourceContext,
+    ) : this(compileExtensionScript(extensionId, payload), sourceContext)
+
     private val lock = Any()
 
     @PublishedApi
@@ -143,7 +178,7 @@ class RhinoExtensionRuntime(
             val newScope = cx.initStandardObjects()
             hardenScope(newScope)
             installGlobals(cx, newScope)
-            cx.evaluateString(newScope, payload, "$extensionId.js", 1, null)
+            compiled.script.exec(cx, newScope)
             scope = newScope
         } finally {
             Context.exit()

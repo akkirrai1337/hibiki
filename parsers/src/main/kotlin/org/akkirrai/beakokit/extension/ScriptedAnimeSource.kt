@@ -41,8 +41,11 @@ class ScriptedAnimeSource(
     private val manifest: ScriptExtensionManifest,
 ) : AnimeSource, LatestSource, PlaybackSource, HealthCheckSource {
     private val execution = context.sourceExecutionPolicy
+    // Parsed once for this source and executed into each runtime's own scope, rather than parsed
+    // again per pool member - see CompiledExtensionScript.
+    private val compiledScript by lazy { compileExtensionScript(manifest.id, manifest.payload) }
     private val runtimePool by lazy {
-        RhinoRuntimePool(RUNTIME_POOL_SIZE) { RhinoExtensionRuntime(manifest.id, manifest.payload, context) }
+        RhinoRuntimePool(RUNTIME_POOL_SIZE) { RhinoExtensionRuntime(compiledScript, context) }
     }
     private val requestJson = Json { encodeDefaults = true }
 
