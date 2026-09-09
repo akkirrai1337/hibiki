@@ -34,6 +34,20 @@ import org.akkirrai.beakokit.model.VideoStream
 import org.akkirrai.hibiki.core.log.AppLogger
 import kotlin.coroutines.resume
 
+private const val FIRST_PROBE_DELAY_MS = 125L
+private const val STEADY_PROBE_DELAY_MS = 500L
+
+/**
+ * How long to wait before running the resolver script again, given how many runs have happened.
+ *
+ * Probing starts quickly and settles back to the steady interval. A player that already holds its
+ * stream URL - the ordinary case for a healthy embed - used to be left alone for half a second
+ * before anyone asked it. The tail of the schedule is unchanged, so a page that really does need
+ * time to come up costs what it always did.
+ */
+internal fun nextProbeDelayMs(attempt: Int): Long =
+    (FIRST_PROBE_DELAY_MS shl attempt.coerceIn(0, 3)).coerceAtMost(STEADY_PROBE_DELAY_MS)
+
 /** Generic Android runtime for BROWSER resolvers. Site behaviour lives only in extensions. */
 class BrowserPlayerWebViewExtractor(
     private val context: Context,
@@ -259,7 +273,7 @@ class BrowserPlayerWebViewExtractor(
                         AppLogger.d(TAG, "Resolver script result: $result")
                     }
                 }
-                retry = Runnable { probe(view) }.also { handler.postDelayed(it, PROBE_DELAY_MS) }
+                retry = Runnable { probe(view) }.also { handler.postDelayed(it, nextProbeDelayMs(probes)) }
             }
 
             timeout = Runnable {
@@ -273,6 +287,14 @@ class BrowserPlayerWebViewExtractor(
                 settings.mediaPlaybackRequiresUserGesture = false
                 settings.allowFileAccess = false
                 settings.allowContentAccess = false
+                // Nothing here is ever shown to anyone: this page exists to run a resolver script
+                // and be watched for the stream requests it triggers. Its posters, sprites, avatars
+                // and ad creatives are pure latency and mobile data, and every one of them delays
+                // the page load the first probe waits on. Chromium's own switch is used rather than
+                // an interception hook so the page still looks like an ordinary browser to a site
+                // that inspects how it loads.
+                settings.loadsImagesAutomatically = false
+                settings.blockNetworkImage = true
                 settings.userAgentString = CHROME_USER_AGENT
                 addJavascriptInterface(object {
                     @JavascriptInterface fun stream(url: String) = handler.post { add(url, emptyMap(), BrowserCaptureOrigin.VIDEO_ELEMENT) }
@@ -316,7 +338,7 @@ class BrowserPlayerWebViewExtractor(
                     }
                 }
                 loadUrl(pageUrl, pageHeaders)
-                handler.postDelayed({ probe(this) }, PROBE_DELAY_MS)
+                handler.postDelayed({ probe(this) }, nextProbeDelayMs(0))
             }
             continuation.invokeOnCancellation {
                 AppLogger.w(TAG, "Cancelled: probes=$probes, captured=${captures.size}")
@@ -359,7 +381,6 @@ class BrowserPlayerWebViewExtractor(
     private companion object {
         const val TIMEOUT_MS = 25_000L
         const val AUDIO_PROBE_TIMEOUT_MS = 2_500L
-        const val PROBE_DELAY_MS = 500L
         const val MAX_PROBES = 24
         const val STREAM_SETTLE_DELAY_MS = 1_000L
         const val CHROME_USER_AGENT = "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Mobile Safari/537.36"
