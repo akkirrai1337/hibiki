@@ -28,11 +28,13 @@ import java.util.concurrent.ConcurrentHashMap
 class AnimeSearchRepository(
     context: Context? = null,
     private val client: HttpClient = AndroidHttpClientFactory.create(),
+    sourceManager: AnimeSourceRuntimeManager? = null,
+    private val closeClientOnClose: Boolean = true,
 ) {
     private val searchCache = ConcurrentHashMap<String, CachedSearchResults>()
     private val appContext = context?.applicationContext
     private val appPreferences = appContext?.let(::AppPreferences)
-    private val sourceManager = appContext?.let { AnimeSourceRuntimeManager(it, client) }
+    private val sourceManager = sourceManager ?: appContext?.let { AnimeSourceRuntimeManager(it, client) }
     private val titleMatcher = TitleMatcher()
     private val detailsRequestSlots = Semaphore(MAX_CONCURRENT_DETAILS_REQUESTS)
 
@@ -149,7 +151,7 @@ class AnimeSearchRepository(
 
     fun close() {
         searchCache.clear()
-        client.close()
+        if (closeClientOnClose) client.close()
     }
 
     private fun AnimeTitle.toAnime(

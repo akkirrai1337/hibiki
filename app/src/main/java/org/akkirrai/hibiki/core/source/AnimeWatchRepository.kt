@@ -77,6 +77,8 @@ internal fun watchTitleIdFromSourceId(sourceId: String): String =
 class AnimeWatchRepository(
     context: Context? = null,
     private val client: HttpClient = AndroidHttpClientFactory.create(),
+    sourceManager: AnimeSourceRuntimeManager? = null,
+    private val closeClientOnClose: Boolean = true,
 ) {
     private val cachedSources = ConcurrentHashMap<String, CachedWatchSources>()
     private val sourcePayloads = ConcurrentHashMap<String, SourcePayload>()
@@ -87,7 +89,7 @@ class AnimeWatchRepository(
     private val inFlightPlayerLinks = ConcurrentHashMap<String, CompletableDeferred<List<PlayerLink>>>()
     private val appContext = context?.applicationContext
     private val appPreferences = appContext?.let(::AppPreferences)
-    private val sourceManager = appContext?.let { AnimeSourceRuntimeManager(it, client) }
+    private val sourceManager = sourceManager ?: appContext?.let { AnimeSourceRuntimeManager(it, client) }
     private val validator = HttpStreamValidator(client)
     @Volatile
     private var extractorsGeneration = -1
@@ -369,7 +371,7 @@ class AnimeWatchRepository(
     fun close() {
         clearCaches()
         requestScope.cancel()
-        client.close()
+        if (closeClientOnClose) client.close()
     }
 
     private suspend fun performLoadSources(animeId: String): List<WatchSource> {

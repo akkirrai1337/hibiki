@@ -82,6 +82,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.akkirrai.hibiki.R
+import org.akkirrai.hibiki.app.di.hibikiDependencies
 import org.akkirrai.hibiki.core.network.NoInternetConnectionException
 import org.akkirrai.hibiki.core.network.hasActiveInternetConnection
 import org.akkirrai.hibiki.app.settings.LocalAppLanguage
@@ -868,7 +869,7 @@ class CatalogViewModel(
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             val localizedContext = context.applicationContext.withAppPreferencesLanguage()
             return CatalogViewModel(
-                repository = CatalogRepository(context.applicationContext),
+                repository = context.hibikiDependencies().catalogRepository(),
                 errorContext = localizedContext,
             ) as T
         }

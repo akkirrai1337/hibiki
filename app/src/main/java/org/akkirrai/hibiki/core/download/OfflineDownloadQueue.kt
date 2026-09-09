@@ -22,6 +22,7 @@ import org.akkirrai.hibiki.core.model.WatchEpisode
 import org.akkirrai.hibiki.core.model.WatchSource
 import org.akkirrai.hibiki.core.log.AppLogger
 import org.akkirrai.hibiki.core.source.AnimeWatchRepository
+import org.akkirrai.hibiki.app.di.hibikiDependencies
 import org.akkirrai.hibiki.core.source.OfflineTitleMetadataRepository
 import org.json.JSONArray
 import org.json.JSONObject
@@ -356,7 +357,7 @@ object OfflineDownloadQueue {
         }
 
         scope.launch {
-            val repository = AnimeWatchRepository(context.applicationContext)
+            val repository = context.hibikiDependencies().animeWatchRepository()
             var addedAny = false
             try {
                 entries.forEach { entry ->

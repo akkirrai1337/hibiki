@@ -9,15 +9,29 @@ import org.akkirrai.hibiki.core.model.Anime
 import org.akkirrai.hibiki.core.model.AnimeSearchFilters
 import org.akkirrai.hibiki.core.network.AndroidHttpClientFactory
 import org.akkirrai.hibiki.core.source.AnimeSearchRepository
+import org.akkirrai.hibiki.core.source.AnimeSourceRuntimeManager
 import org.akkirrai.hibiki.feature.home.HomeRepository
 
 class CatalogRepository(
     context: Context,
-    client: HttpClient = AndroidHttpClientFactory.create(),
+    private val client: HttpClient = AndroidHttpClientFactory.create(),
+    sourceManager: AnimeSourceRuntimeManager? = null,
+    private val closeClientOnClose: Boolean = true,
 ) {
     private val appContext = context.applicationContext
-    private val searchRepository = AnimeSearchRepository(appContext, client)
-    private val homeRepository = HomeRepository(appContext)
+    private val sourceManager = sourceManager ?: AnimeSourceRuntimeManager(appContext, client)
+    private val searchRepository = AnimeSearchRepository(
+        context = appContext,
+        client = client,
+        sourceManager = this.sourceManager,
+        closeClientOnClose = false,
+    )
+    private val homeRepository = HomeRepository(
+        context = appContext,
+        client = client,
+        sourceManager = this.sourceManager,
+        closeClientOnClose = false,
+    )
 
     suspend fun loadPage(
         page: Int = 1,
@@ -81,6 +95,7 @@ class CatalogRepository(
     fun close() {
         searchRepository.close()
         homeRepository.close()
+        if (closeClientOnClose) client.close()
     }
 
     private companion object {

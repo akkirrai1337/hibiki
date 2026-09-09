@@ -37,6 +37,8 @@ import org.akkirrai.hibiki.core.source.localizedDisplayName
 class HomeRepository(
     context: Context,
     private val client: HttpClient = AndroidHttpClientFactory.create(),
+    sourceManager: AnimeSourceRuntimeManager? = null,
+    closeClientOnClose: Boolean = true,
 ) {
     @Volatile
     private var cachedHomeContent: CachedHomeContent? = null
@@ -49,8 +51,13 @@ class HomeRepository(
 
     private val appContext = context.applicationContext
     private val appPreferences = AppPreferences(appContext)
-    private val sourceManager = AnimeSourceRuntimeManager(appContext, client)
-    private val searchRepository = AnimeSearchRepository(appContext, client)
+    private val sourceManager = sourceManager ?: AnimeSourceRuntimeManager(appContext, client)
+    private val searchRepository = AnimeSearchRepository(
+        context = appContext,
+        client = client,
+        sourceManager = this.sourceManager,
+        closeClientOnClose = closeClientOnClose,
+    )
     private val watchStateRepository = WatchStateRepository(appContext)
     private val offlineTitleMetadataRepository = OfflineTitleMetadataRepository(appContext)
     private val libraryRepository = LibraryRepository(appContext)
