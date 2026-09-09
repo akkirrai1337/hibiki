@@ -4,16 +4,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.animation.ExperimentalSharedTransitionApi
-import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedContentScope
 import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
-import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -758,10 +752,6 @@ private fun AppBottomBarItem(
     }
     val interactionSource = remember { MutableInteractionSource() }
     val pillShape = RoundedCornerShape(18.dp)
-    var showSelectedIcon by remember { mutableStateOf(false) }
-    LaunchedEffect(selected) {
-        showSelectedIcon = selected
-    }
 
     Column(
         modifier = modifier
@@ -794,21 +784,14 @@ private fun AppBottomBarItem(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center,
             ) {
-                AnimatedContent(
-                    targetState = showSelectedIcon,
-                    transitionSpec = {
-                        (fadeIn(tween(180)) + scaleIn(initialScale = 0.72f, animationSpec = tween(180))) togetherWith
-                            (fadeOut(tween(90)) + scaleOut(targetScale = 0.72f, animationSpec = tween(90)))
-                    },
-                    label = "bottomBarIcon",
-                ) { isSelectedIcon ->
-                    Icon(
-                        imageVector = if (isSelectedIcon) destination.selectedIcon else destination.icon,
-                        contentDescription = stringResource(destination.labelRes),
-                        modifier = Modifier.size(BottomBarIconSize),
-                        tint = contentColor,
-                    )
-                }
+                // Swapped outright, not cross-faded: the bar answers a tap immediately, and the
+                // icon dissolving into its filled twin was 180ms of nothing anyone asked for.
+                Icon(
+                    imageVector = if (selected) destination.selectedIcon else destination.icon,
+                    contentDescription = stringResource(destination.labelRes),
+                    modifier = Modifier.size(BottomBarIconSize),
+                    tint = contentColor,
+                )
                 if (badgeCount > 0) {
                     Surface(
                         modifier = Modifier
