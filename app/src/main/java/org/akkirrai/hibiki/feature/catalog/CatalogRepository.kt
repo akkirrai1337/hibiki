@@ -2,6 +2,8 @@ package org.akkirrai.hibiki.feature.catalog
 
 import android.content.Context
 import io.ktor.client.HttpClient
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import org.akkirrai.beakokit.model.AnimeSearchRequest
 import org.akkirrai.beakokit.model.AnimeSearchFilterCatalog
 import org.akkirrai.beakokit.model.AnimeSearchSort
@@ -39,9 +41,9 @@ class CatalogRepository(
         query: String = "",
         sort: CatalogSort = CatalogSort.Popular,
         forceRefresh: Boolean = false,
-    ): CatalogPage {
+    ): CatalogPage = coroutineScope {
         val pageIndex = page.coerceAtLeast(1)
-        val catalog = searchRepository.getSearchFilterCatalog()
+        val catalogDeferred = async { searchRepository.getSearchFilterCatalog() }
         val offset = (pageIndex - 1) * CATALOG_PAGE_SIZE
         // A source that supports no real search sort of its own (e.g. AnimeVost, AnimePahe -
         // `supportedSorts` is just RELEVANCE) exposes CatalogSort.Updated as its *only* catalog
@@ -52,8 +54,13 @@ class CatalogRepository(
         // A source with a genuine Popular/Alphabetical sort (AniLiberty, YummyAnime, AnimeGo)
         // hits a distinct "/latest" endpoint for Updated - keep using HomeRepository for those,
         // substituting search() would silently swap that feed for generic search-default order.
-        val hasRealSearchSort = catalog.capabilities.supports(AnimeSearchSort.TITLE) ||
-            catalog.capabilities.supports(AnimeSearchSort.RATING)
+        val hasRealSearchSort = if (sort == CatalogSort.Updated) {
+            val catalog = catalogDeferred.await()
+            catalog.capabilities.supports(AnimeSearchSort.TITLE) ||
+                catalog.capabilities.supports(AnimeSearchSort.RATING)
+        } else {
+            false
+        }
         val anime = if (sort == CatalogSort.Updated && hasRealSearchSort) {
             homeRepository.loadRecentlyUpdatedPage(
                 offset = offset,
@@ -79,7 +86,8 @@ class CatalogRepository(
             )
         }
 
-        return CatalogPage(
+        val catalog = catalogDeferred.await()
+        CatalogPage(
             title = "",
             description = null,
             filterCatalog = catalog,
