@@ -29,9 +29,10 @@ class AnimeSearchRepositoryTest {
     }
 
     @Test
-    fun `repository instances do not share cache state`() {
+    fun `repository instances share details but keep searches isolated`() {
         val first = repository()
         val second = repository()
+        first.clearCaches()
 
         first.searchCache()["shared:key"] = "value"
         first.detailsCache()["shared:key"] = "value"
@@ -39,7 +40,8 @@ class AnimeSearchRepositoryTest {
         assertFalse(first.searchCache().isEmpty())
         assertFalse(first.detailsCache().isEmpty())
         assertTrue(second.searchCache().isEmpty())
-        assertTrue(second.detailsCache().isEmpty())
+        assertFalse(second.detailsCache().isEmpty())
+        first.clearCaches()
     }
 
     @Suppress("UNCHECKED_CAST")

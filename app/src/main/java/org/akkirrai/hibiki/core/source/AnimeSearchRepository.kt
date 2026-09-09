@@ -77,7 +77,11 @@ class AnimeSearchRepository(
                     ?: title.toAnime(preferEnglish = preferEnglish)
             }
 
-        searchCache[cacheKey] = CachedSearchResults(items = results)
+        searchCache[cacheKey] = CachedSearchResults(
+            items = results,
+            cachedAt = System.currentTimeMillis(),
+        )
+        trimOldestEntries(searchCache, MAX_SEARCH_CACHE_ENTRIES) { it.cachedAt }
         return results
     }
 
@@ -108,45 +112,53 @@ class AnimeSearchRepository(
             return it
         }
 
-        return detailsMutexes.computeIfAbsent(cacheKey) { Mutex() }.withLock {
-            getCachedDetails(cacheKey)?.let { return@withLock it }
+        val detailsMutex = detailsMutexes.computeIfAbsent(cacheKey) { Mutex() }
+        return try {
+            detailsMutex.withLock {
+                getCachedDetails(cacheKey)?.let { return@withLock it }
 
-            detailsRequestSlots.withPermit {
-                getCachedDetails(cacheKey)?.let { return@withPermit it }
+                detailsRequestSlots.withPermit {
+                    getCachedDetails(cacheKey)?.let { return@withPermit it }
 
-                ensureInternetConnection()
+                    ensureInternetConnection()
 
-                val source = sourceManager?.forTitle(id) ?: currentSource()
-                val title = runCatching { source.details(id) }
-                    .getOrElse {
+                    val source = sourceManager?.forTitle(id) ?: currentSource()
+                    val title = runCatching { source.details(id) }
+                        .getOrElse {
                         // A source.details() failure here is otherwise completely silent: the
                         // fallback below quietly serves sparse search-card data (no status,
                         // description, or episode count) instead of surfacing an error, which
                         // makes a genuine source bug look like "this title just has no details".
                         AppLogger.w(TAG, "getDetails: source.details failed for $id, falling back to search", it)
-                        source.search(fallback.title)
-                            .bestMatchFor(fallback.title)
-                            ?: throw it
-                    }
-                val trailer = title.trailer?.toAnimeTrailer()
-                val anime = title.toAnime(
+                            source.search(fallback.title)
+                                .bestMatchFor(fallback.title)
+                                ?: throw it
+                        }
+                    val trailer = title.trailer?.toAnimeTrailer()
+                    val anime = title.toAnime(
                         canonicalId = title.id,
                         preferEnglish = preferEnglish(),
                         fallback = fallback,
                         trailer = trailer ?: fallback.trailer,
                     )
 
-                detailsCache[cacheKey] = CachedAnime(
-                    anime = anime,
-                )
-                anime
+                    detailsCache[cacheKey] = CachedAnime(
+                        anime = anime,
+                        cachedAt = System.currentTimeMillis(),
+                    )
+                    trimOldestEntries(detailsCache, MAX_DETAILS_CACHE_ENTRIES) { it.cachedAt }
+                    anime
+                }
             }
+        } finally {
+            detailsMutexes.remove(cacheKey, detailsMutex)
         }
     }
 
     fun clearCaches() {
         searchCache.clear()
         detailsCache.clear()
+        detailsMutexes.clear()
     }
 
     fun close() {
@@ -346,6 +358,8 @@ class AnimeSearchRepository(
         return buildString {
             append(SEARCH_CACHE_VERSION)
             append(':')
+            append(AnimeSourceRegistry.extensionGeneration)
+            append(':')
             append(selectedSourceId().value)
             append(':')
             append(languageKey)
@@ -380,7 +394,7 @@ class AnimeSearchRepository(
             LanguageMode.SYSTEM -> "sys"
         }
         val sourceId = sourceManager?.forTitle(id)?.descriptor?.id ?: selectedSourceId()
-        return "$DETAILS_CACHE_VERSION:${sourceId.value}:$languageKey:$id"
+        return "$DETAILS_CACHE_VERSION:${AnimeSourceRegistry.extensionGeneration}:${sourceId.value}:$languageKey:$id"
     }
 
     private fun selectedSourceId() = sourceManager?.selectedId
@@ -391,12 +405,33 @@ class AnimeSearchRepository(
 
     private fun getCachedSearch(key: String): List<Anime>? {
         val cached = searchCache[key] ?: return null
+        if (System.currentTimeMillis() - cached.cachedAt >= SEARCH_CACHE_TTL_MS) {
+            searchCache.remove(key, cached)
+            return null
+        }
         return cached.items
     }
 
     private fun getCachedDetails(key: String): Anime? {
         val cached = detailsCache[key] ?: return null
+        if (System.currentTimeMillis() - cached.cachedAt >= DETAILS_CACHE_TTL_MS) {
+            detailsCache.remove(key, cached)
+            return null
+        }
         return cached.anime
+    }
+
+    private fun <Value> trimOldestEntries(
+        cache: ConcurrentHashMap<String, Value>,
+        maxEntries: Int,
+        cachedAt: (Value) -> Long,
+    ) {
+        val overflow = cache.size - maxEntries
+        if (overflow <= 0) return
+        cache.entries
+            .sortedBy { cachedAt(it.value) }
+            .take(overflow)
+            .forEach { (key, value) -> cache.remove(key, value) }
     }
 
     private fun String.toDisplayType(): String {
@@ -415,10 +450,12 @@ class AnimeSearchRepository(
 
     private data class CachedSearchResults(
         val items: List<Anime>,
+        val cachedAt: Long,
     )
 
     private data class CachedAnime(
         val anime: Anime,
+        val cachedAt: Long,
     )
 
     private object RelatedAnimeTitleMapper {
@@ -440,6 +477,10 @@ class AnimeSearchRepository(
         const val SEARCH_CACHE_VERSION = 2
         const val SEARCH_PAGE_SIZE = 20
         const val MAX_CONCURRENT_DETAILS_REQUESTS = 3
+        const val MAX_SEARCH_CACHE_ENTRIES = 100
+        const val MAX_DETAILS_CACHE_ENTRIES = 200
+        const val SEARCH_CACHE_TTL_MS = 5 * 60_000L
+        const val DETAILS_CACHE_TTL_MS = 30 * 60_000L
         const val DETAILS_CACHE_VERSION = 1
         const val LEGACY_ID_MATCH_CONFIDENCE = 0.72
 
