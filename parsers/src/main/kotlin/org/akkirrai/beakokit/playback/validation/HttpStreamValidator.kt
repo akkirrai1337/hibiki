@@ -2,13 +2,15 @@ package org.akkirrai.beakokit.playback.validation
 
 import io.ktor.client.HttpClient
 import io.ktor.client.request.get
-import io.ktor.client.request.head
 import io.ktor.client.request.header
 import io.ktor.client.statement.bodyAsBytes
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.HttpHeaders
 import io.ktor.http.isSuccess
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import org.akkirrai.beakokit.api.StreamValidator
 import org.akkirrai.beakokit.model.StreamType
 import org.akkirrai.beakokit.model.StreamValidationResult
@@ -105,21 +107,13 @@ class HttpStreamValidator(
     }
 
     private suspend fun validateMp4(stream: VideoStream): StreamValidationResult {
-        val headResponse = client.head(stream.url) {
-            stream.headers.forEach { (name, value) -> header(name, value) }
-        }
         val rangeResponse = client.get(stream.url) {
             stream.headers.forEach { (name, value) -> header(name, value) }
             header(HttpHeaders.Range, "bytes=0-1023")
         }
         val bytes = rangeResponse.bodyAsBytes()
         if (!rangeResponse.status.isSuccess() || bytes.isEmpty()) {
-            val headSummary = if (headResponse.status.isSuccess()) {
-                "HEAD отработал успешно"
-            } else {
-                "HEAD вернул HTTP ${headResponse.status.value}"
-            }
-            return failure(stream, rangeResponse.status.value, "$headSummary, Range GET не вернул данные")
+            return failure(stream, rangeResponse.status.value, "Range GET не вернул данные")
         }
         return StreamValidationResult(
             success = true,
@@ -127,11 +121,7 @@ class HttpStreamValidator(
             quality = stream.quality,
             finalUrl = stream.url,
             statusCode = rangeResponse.status.value,
-            message = if (headResponse.status.isSuccess()) {
-                "HEAD и Range GET успешно вернули данные"
-            } else {
-                "HEAD вернул HTTP ${headResponse.status.value}, но Range GET успешно вернул данные"
-            },
+            message = "Range GET успешно вернул данные",
         )
     }
 
@@ -171,19 +161,29 @@ class HttpStreamValidator(
         val segment = selected
             ?: return failure(stream, 200, "MPD не содержит SegmentTemplate")
 
-        for ((kind, reference) in listOf("init segment" to segment.initialization, "media segment" to segment.media)) {
-            val response = client.get(resolveUrl(stream.url, reference)) {
-                stream.headers.forEach { (name, value) -> header(name, value) }
-                header(HttpHeaders.Range, "bytes=0-1023")
-            }
-            val bytes = response.bodyAsBytes()
-            if (!response.status.isSuccess() || bytes.isEmpty()) {
-                return failure(
-                    stream,
-                    response.status.value,
-                    "$kind не отдаёт данные (HTTP ${response.status.value})",
-                )
-            }
+        val segmentResults = coroutineScope {
+            listOf("init segment" to segment.initialization, "media segment" to segment.media)
+                .map { (kind, reference) ->
+                    async {
+                        val response = client.get(resolveUrl(stream.url, reference)) {
+                            stream.headers.forEach { (name, value) -> header(name, value) }
+                            header(HttpHeaders.Range, "bytes=0-1023")
+                        }
+                        DashSegmentValidation(
+                            kind = kind,
+                            statusCode = response.status.value,
+                            success = response.status.isSuccess() && response.bodyAsBytes().isNotEmpty(),
+                        )
+                    }
+                }
+                .awaitAll()
+        }
+        segmentResults.firstOrNull { !it.success }?.let { failed ->
+            return failure(
+                stream,
+                failed.statusCode,
+                "${failed.kind} не отдаёт данные (HTTP ${failed.statusCode})",
+            )
         }
 
         return StreamValidationResult(
@@ -239,5 +239,11 @@ class HttpStreamValidator(
         val bandwidth: Long,
         val initialization: String,
         val media: String,
+    )
+
+    private data class DashSegmentValidation(
+        val kind: String,
+        val statusCode: Int,
+        val success: Boolean,
     )
 }

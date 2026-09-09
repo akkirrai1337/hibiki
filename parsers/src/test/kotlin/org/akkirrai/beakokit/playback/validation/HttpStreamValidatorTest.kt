@@ -4,6 +4,7 @@ import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.respond
 import io.ktor.http.HttpHeaders
+import io.ktor.http.HttpMethod
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.headersOf
 import kotlinx.coroutines.CancellationException
@@ -17,6 +18,32 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class HttpStreamValidatorTest {
+    @Test
+    fun `mp4 validation uses one ranged get request`() = runBlocking {
+        var requestCount = 0
+        val client = HttpClient(MockEngine { request ->
+            requestCount++
+            assertEquals(HttpMethod.Get, request.method)
+            assertEquals("bytes=0-1023", request.headers[HttpHeaders.Range])
+            respond(
+                content = byteArrayOf(0, 1, 2, 3),
+                status = HttpStatusCode.PartialContent,
+            )
+        })
+
+        val result = HttpStreamValidator(client).validate(
+            VideoStream(
+                url = "https://video.example/video.mp4",
+                type = StreamType.MP4,
+                quality = "1080p",
+            ),
+        )
+
+        assertTrue(result.success, result.message)
+        assertEquals(1, requestCount)
+        client.close()
+    }
+
     @Test
     fun `fails a video stream when its separate audio playlist is blocked`() = runBlocking {
         val requestedAuthorization = mutableMapOf<String, String?>()
@@ -199,13 +226,13 @@ class HttpStreamValidatorTest {
         )
 
         assertTrue(result.success, result.message)
+        assertEquals("https://cdn.example/video/1080.mpd", requestedUrls.first())
         assertEquals(
-            listOf(
-                "https://cdn.example/video/1080.mpd",
+            setOf(
                 "https://cdn.example/video/init-stream0.m4s",
                 "https://cdn.example/video/chunk-stream0-00001.m4s",
             ),
-            requestedUrls,
+            requestedUrls.drop(1).toSet(),
         )
         client.close()
     }
