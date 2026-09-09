@@ -47,6 +47,31 @@ internal fun parseProgressStorageKey(key: String): ProgressStorageKey? {
 class WatchStateRepository(context: Context) {
     private val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
+    /**
+     * The stored progress entries, and only those.
+     *
+     * Every lookup here used to go through `prefs.all`, which hands back a copy of the *entire*
+     * preferences file - every episode of every title ever watched, plus every selection key -
+     * before filtering it down to the one title, or the one episode, being asked about. And the
+     * asking is not rare: resuming an episode does several of these, and each 30-second save
+     * during playback reads the previous entry back before writing.
+     *
+     * So the progress entries are read out once and kept, and every write through this class drops
+     * them. What survives is the filtering itself, prefix rules and legacy key shapes included -
+     * this changes what those rules run against, not what they decide. The cache lives with the
+     * SharedPreferences object rather than with an instance because Android hands the same one to
+     * every caller of getSharedPreferences, and this class is constructed in several places.
+     */
+    private fun progressEntries(): Map<String, String> = synchronized(progressCacheLock) {
+        cachedProgressEntries ?: prefs.all
+            .asSequence()
+            .filter { (key, value) -> key.startsWith(PROGRESS_PREFIX) && value is String }
+            .associate { (key, value) -> key to value as String }
+            .also { cachedProgressEntries = it }
+    }
+
+    private fun invalidateProgressEntries() = synchronized(progressCacheLock) { cachedProgressEntries = null }
+
     fun getSelectedSource(titleId: String): WatchSourceSelection {
         val normalizedTitleId = YummyIdMigration.normalizeTitleId(titleId)
         return WatchSourceSelection(
@@ -77,6 +102,7 @@ class WatchStateRepository(context: Context) {
             .remove(selectedBackendKey(normalizedTitleId))
             .putBoolean(selectedAutoKey(normalizedTitleId), autoSelect)
             .apply()
+        invalidateProgressEntries()
     }
 
     fun getSelectedPlayer(titleId: String, sourceId: String): String? {
@@ -100,6 +126,7 @@ class WatchStateRepository(context: Context) {
             }
             putString(selectedPlayerForSourceKey(normalizedTitleId, sourceId), playerName)
         }.apply()
+        invalidateProgressEntries()
     }
 
     fun getTitleWatchState(titleId: String): TitleWatchState? {
@@ -124,17 +151,14 @@ class WatchStateRepository(context: Context) {
     }
 
     fun getRecentTitleWatchState(): TitleWatchState? {
-        return prefs.all.entries
+        return progressEntries().entries
             .asSequence()
-            .filter { (key, value) ->
-                key.startsWith(PROGRESS_PREFIX) && value is String
-            }
             .mapNotNull { (key, value) ->
                 val progressKey = parseProgressStorageKey(key) ?: return@mapNotNull null
                 parseProgress(
                     titleId = progressKey.titleId,
                     episodeId = progressKey.episodeId,
-                    encoded = value as String,
+                    encoded = value,
                 )
             }
             .groupBy { Triple(it.titleId, it.episodeId, it.sourceId) }
@@ -162,16 +186,14 @@ class WatchStateRepository(context: Context) {
     fun getEpisodeProgress(titleId: String): List<EpisodeWatchProgress> {
         val normalizedTitleId = YummyIdMigration.normalizeTitleId(titleId)
         val prefixes = episodePrefixes(titleId)
-        return prefs.all.entries
-            .filter { (key, value) ->
-                prefixes.any(key::startsWith) && value is String
-            }
+        return progressEntries().entries
+            .filter { (key, _) -> prefixes.any(key::startsWith) }
             .mapNotNull { (key, value) ->
                 val progressKey = parseProgressStorageKey(key) ?: return@mapNotNull null
                 parseProgress(
                     titleId = normalizedTitleId,
                     episodeId = progressKey.episodeId,
-                    encoded = value as String,
+                    encoded = value,
                 )
             }
             .groupBy { it.episodeId to it.sourceId }
@@ -228,6 +250,7 @@ class WatchStateRepository(context: Context) {
                 episodeProgressKeys(legacyTitleId, progress.episodeId).forEach(::remove)
             }
         }.apply()
+        invalidateProgressEntries()
     }
 
     fun saveEpisodeProgress(
@@ -263,6 +286,7 @@ class WatchStateRepository(context: Context) {
         prefs.edit()
             .putString(progressKey(normalizedTitleId, episodeId, sourceId), encoded)
             .apply()
+        invalidateProgressEntries()
 
         recordActivity(
             titleId = normalizedTitleId,
@@ -291,6 +315,7 @@ class WatchStateRepository(context: Context) {
             }
             legacyKeysForSource.forEach(::remove)
         }.apply()
+        invalidateProgressEntries()
     }
 
     private fun parseProgress(
@@ -401,6 +426,11 @@ class WatchStateRepository(context: Context) {
     }
 
     companion object {
+        private val progressCacheLock = Any()
+
+        @Volatile
+        private var cachedProgressEntries: Map<String, String>? = null
+
         const val PREFS_NAME = "hibiki_watch_state"
         // Ten years, which is to say "keep it". The profile's watch-time total and its best
         // streak are lifetime figures on the desktop, and a 90-day window quietly turned both
@@ -419,15 +449,14 @@ class WatchStateRepository(context: Context) {
      * play an episode.
      */
     fun getAllEpisodeProgress(): List<EpisodeWatchProgress> {
-        return prefs.all.entries
+        return progressEntries().entries
             .asSequence()
-            .filter { (key, value) -> key.startsWith(PROGRESS_PREFIX) && value is String }
             .mapNotNull { (key, value) ->
                 val progressKey = parseProgressStorageKey(key) ?: return@mapNotNull null
                 parseProgress(
                     titleId = progressKey.titleId,
                     episodeId = progressKey.episodeId,
-                    encoded = value as String,
+                    encoded = value,
                 )
             }
             .groupBy { Triple(it.titleId, it.episodeId, it.sourceId) }
@@ -481,6 +510,7 @@ class WatchStateRepository(context: Context) {
             .putLong(activityWatchedKey(date), prefs.getLong(activityWatchedKey(date), 0L) + deltaMs)
             .putStringSet(completedKey, completedEpisodes)
             .apply()
+        invalidateProgressEntries()
     }
 
     private fun activityWatchedKey(date: LocalDate): String = "$ACTIVITY_WATCHED_PREFIX$date"
@@ -505,6 +535,7 @@ class WatchStateRepository(context: Context) {
         prefs.edit().apply {
             expiredKeys.forEach(::remove)
         }.apply()
+        invalidateProgressEntries()
     }
 
     data class DailyWatchActivity(
