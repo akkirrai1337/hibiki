@@ -38,11 +38,17 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
+import androidx.compose.material3.TabRowDefaults.SecondaryIndicator
+import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -132,13 +138,20 @@ fun LocalProfileScreen(
                 Box(
                     modifier = bannerModifier.background(MaterialTheme.colorScheme.surfaceContainer),
                 ) {
-                    LocalAvatar(
-                        ratio = ratio,
-                        avatarUri = state.data.profileAvatarUri,
-                        isEditing = isEditingProfile,
-                        onEditClick = { avatarPicker.launch(arrayOf("image/*")) },
+                    // The XP ring lives on the avatar rather than in a card of its own, so the
+                    // level reads as a property of the profile instead of another section.
+                    AvatarLevelRing(
+                        level = snapshot.level,
+                        alpha = (1.5f * ratio - 0.5f).coerceIn(0f, 1f),
                         modifier = Modifier.align(Alignment.BottomCenter),
-                    )
+                    ) {
+                        LocalAvatar(
+                            ratio = ratio,
+                            avatarUri = state.data.profileAvatarUri,
+                            isEditing = isEditingProfile,
+                            onEditClick = { avatarPicker.launch(arrayOf("image/*")) },
+                        )
+                    }
                 }
             },
             bannerElevatedContent = { ratio ->
@@ -185,6 +198,11 @@ fun LocalProfileScreen(
                             overflow = TextOverflow.Ellipsis,
                             textAlign = TextAlign.Center,
                         )
+                        // Bottom padding rather than arrangement spacing: what sits below is
+                        // the tab row, and a line of text touching a tab strip reads as part of it.
+                        Box(Modifier.padding(top = 4.dp, bottom = 16.dp)) {
+                            LevelSummaryLine(snapshot.level, snapshot.streak)
+                        }
                     }
                 }
                 LocalProfileContent(
@@ -381,30 +399,116 @@ private fun ProfileActionButton(
     }
 }
 
-/** Single scrolling column: summary stats, analytics, genres, then recent additions. */
+/**
+ * Two tabs rather than one long column.
+ *
+ * Everything used to stack: stats, level, seven achievement rows, the donut, the activity chart,
+ * genres and recent additions - four screens of scrolling on a profile with no history at all.
+ * The split is by subject: the overview is about the person watching, the library tab is about
+ * what is in the library. A third "stats" tab held only the activity chart and the genre bars,
+ * which are the overview's own numbers spelled out, so they moved back and it went away.
+ *
+ * Horizontal padding is applied per section rather than to the scrolling column, so the
+ * achievements strip can run edge to edge while everything else stays inset.
+ */
 @Composable
 private fun LocalProfileContent(
     snapshot: LocalProfileSnapshot,
     bottomContentPadding: Dp,
     onAnimeClick: (Anime) -> Unit,
 ) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-            .verticalScroll(rememberScrollState())
-            .padding(start = AnimiteLargePadding, top = AnimiteLargePadding, end = AnimiteLargePadding)
-            .padding(bottom = bottomContentPadding + AnimiteLargePadding),
-        verticalArrangement = Arrangement.spacedBy(AnimiteLargePadding),
-    ) {
-        LocalStatsRow(snapshot)
-        // Above the analytics: level and achievements are the part of this screen that says
-        // something on day one, while the charts below need history before they mean anything.
-        LevelCard(snapshot.level, snapshot.streak)
-        AchievementsCard(snapshot.achievements)
-        AnalyticsCard(snapshot)
-        GenreBars(snapshot.genreSegments)
-        RecentLibraryCard(items = snapshot.recentLibraryItems, onItemClick = { onAnimeClick(it.anime) })
+    var selectedTab by rememberSaveable { mutableIntStateOf(0) }
+    var showAchievements by rememberSaveable { mutableStateOf(false) }
+    val tabTitles = listOf(
+        stringResource(R.string.local_profile_tab_overview),
+        stringResource(R.string.local_profile_tab_library),
+    )
+
+    Column(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+        TabRow(
+            selectedTabIndex = selectedTab,
+            containerColor = MaterialTheme.colorScheme.background,
+            contentColor = MaterialTheme.colorScheme.primary,
+            indicator = { positions ->
+                SecondaryIndicator(
+                    Modifier.tabIndicatorOffset(positions[selectedTab]),
+                    color = MaterialTheme.colorScheme.primary,
+                )
+            },
+            divider = {},
+        ) {
+            tabTitles.forEachIndexed { index, title ->
+                Tab(
+                    selected = selectedTab == index,
+                    onClick = { selectedTab = index },
+                    unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    text = {
+                        Text(
+                            title,
+                            style = MaterialTheme.typography.labelLarge,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    },
+                )
+            }
+        }
+        val inset = Modifier.padding(horizontal = AnimiteLargePadding)
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(top = AnimiteLargePadding)
+                .padding(bottom = bottomContentPadding + AnimiteLargePadding),
+            verticalArrangement = Arrangement.spacedBy(AnimiteLargePadding),
+        ) {
+            when (selectedTab) {
+                0 -> {
+                    Box(inset) { LocalStatsRow(snapshot) }
+                    // Full bleed: the strip scrolls, and a strip that stops short of the edge reads
+                    // as a clipped list rather than as one that continues.
+                    AchievementsStrip(
+                        achievements = snapshot.achievements,
+                        edgePadding = AnimiteLargePadding,
+                        onSeeAll = { showAchievements = true },
+                    )
+                    Box(inset) { ActivitySection(snapshot) }
+                    Box(inset) { GenreSection(snapshot.genreSegments) }
+                }
+                else -> {
+                    Box(inset) { LibraryBreakdownSection(snapshot) }
+                    Box(inset) {
+                        RecentLibraryCard(
+                            items = snapshot.recentLibraryItems,
+                            onItemClick = { onAnimeClick(it.anime) },
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    if (showAchievements) {
+        AchievementsSheet(
+            achievements = snapshot.achievements,
+            streak = snapshot.streak,
+            onDismiss = { showAchievements = false },
+        )
+    }
+}
+
+/** The genre bars under a heading. In the old single column their position was the context; on a
+ * tab of their own they need saying what they are. */
+@Composable
+private fun GenreSection(items: List<DistributionSegment>) {
+    if (items.isEmpty()) return
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Text(
+            stringResource(R.string.local_profile_genres_title),
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+        GenreBars(items)
     }
 }
 

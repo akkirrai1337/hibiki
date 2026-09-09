@@ -532,4 +532,13 @@
     <string name="local_profile_achievement_genre_5">Дослідник</string>
     <string name="local_profile_achievement_genre_10">Знавець</string>
     <string name="local_profile_achievement_genre_15">Всеїдний</string>
+
+    <!-- Profile: tabs and section headings -->
+    <string name="local_profile_tab_overview">Огляд</string>
+    <string name="local_profile_tab_library">Бібліотека</string>
+    <string name="local_profile_achievements_all">Усі досягнення</string>
+    <string name="local_profile_genres_title">Жанри</string>
+    <string name="local_profile_library_total">усього</string>
+    <string name="local_profile_level_inline">Рівень %1$d</string>
+    <string name="local_profile_xp_inline">%1$d / %2$d XP</string>
 </resources>

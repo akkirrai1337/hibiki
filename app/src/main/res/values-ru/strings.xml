@@ -542,4 +542,13 @@
     <string name="local_profile_achievement_genre_5">Исследователь</string>
     <string name="local_profile_achievement_genre_10">Знаток</string>
     <string name="local_profile_achievement_genre_15">Всеядный</string>
+
+    <!-- Profile: tabs and section headings -->
+    <string name="local_profile_tab_overview">Обзор</string>
+    <string name="local_profile_tab_library">Библиотека</string>
+    <string name="local_profile_achievements_all">Все достижения</string>
+    <string name="local_profile_genres_title">Жанры</string>
+    <string name="local_profile_library_total">всего</string>
+    <string name="local_profile_level_inline">Уровень %1$d</string>
+    <string name="local_profile_xp_inline">%1$d / %2$d XP</string>
 </resources>

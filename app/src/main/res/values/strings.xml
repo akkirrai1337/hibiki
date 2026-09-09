@@ -540,4 +540,13 @@
     <string name="local_profile_achievement_genre_5">Explorer</string>
     <string name="local_profile_achievement_genre_10">Connoisseur</string>
     <string name="local_profile_achievement_genre_15">Omnivore</string>
+
+    <!-- Profile: tabs and section headings -->
+    <string name="local_profile_tab_overview">Overview</string>
+    <string name="local_profile_tab_library">Library</string>
+    <string name="local_profile_achievements_all">All achievements</string>
+    <string name="local_profile_genres_title">Genres</string>
+    <string name="local_profile_library_total">total</string>
+    <string name="local_profile_level_inline">Level %1$d</string>
+    <string name="local_profile_xp_inline">%1$d / %2$d XP</string>
 </resources>

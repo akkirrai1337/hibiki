@@ -54,11 +54,17 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import org.akkirrai.hibiki.R
 
+/**
+ * The library broken down by status: legend on the left, donut on the right.
+ *
+ * Split out of what used to be one "analytics" card together with the activity chart, because the
+ * two now live on different tabs - the breakdown answers "what is in my library", the chart answers
+ * "when did I watch", and stacking them made the profile a single very long page.
+ */
 @Composable
-internal fun AnalyticsCard(
+internal fun LibraryBreakdownSection(
     snapshot: LocalProfileSnapshot,
 ) {
-    val hasActivity = snapshot.activeDaysCount > 0
     val pages = remember(
         snapshot.libraryStatusSegments,
         snapshot.watchTimeLabel,
@@ -66,6 +72,15 @@ internal fun AnalyticsCard(
     ) {
         buildAnalyticsPages(snapshot)
     }
+    AnalyticsDonutPager(pages = pages, snapshot = snapshot)
+}
+
+/** The 30-day bar chart, showing a week at a time. */
+@Composable
+internal fun ActivitySection(
+    snapshot: LocalProfileSnapshot,
+) {
+    val hasActivity = snapshot.activeDaysCount > 0
     val firstVisibleActivityDay = remember(snapshot.activityDays.size) {
         (snapshot.activityDays.size - ACTIVITY_CHART_VISIBLE_DAYS).coerceAtLeast(0)
     }
@@ -77,33 +92,24 @@ internal fun AnalyticsCard(
     }
     Column(
         modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(22.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        AnalyticsDonutPager(
-            pages = pages,
-            snapshot = snapshot,
+        Text(
+            text = stringResource(R.string.yummy_account_activity_title),
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurface,
         )
-        Column(
-            modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            Text(
-                text = stringResource(R.string.yummy_account_activity_title),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface,
+        BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+            val dayWidth = (maxWidth - (ACTIVITY_CHART_DAY_GAP * (ACTIVITY_CHART_VISIBLE_DAYS - 1))) /
+                ACTIVITY_CHART_VISIBLE_DAYS
+            ActivityBarChart(
+                days = snapshot.activityDays,
+                dayWidth = dayWidth,
+                listState = activityListState,
+                muted = !hasActivity,
+                modifier = Modifier.fillMaxWidth(),
             )
-            BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
-                val dayWidth = (maxWidth - (ACTIVITY_CHART_DAY_GAP * (ACTIVITY_CHART_VISIBLE_DAYS - 1))) /
-                    ACTIVITY_CHART_VISIBLE_DAYS
-                ActivityBarChart(
-                    days = snapshot.activityDays,
-                    dayWidth = dayWidth,
-                    listState = activityListState,
-                    muted = !hasActivity,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
         }
     }
 }
@@ -115,18 +121,6 @@ private fun AnalyticsDonutPager(
 ) {
     var currentPage by rememberSaveable { mutableIntStateOf(0) }
     Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                text = stringResource(R.string.yummy_account_segment_stats),
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-        }
         AnimatedContent(
             targetState = currentPage,
             modifier = Modifier
@@ -155,7 +149,7 @@ private fun AnalyticsDonutPager(
                 SegmentDonut(
                     segments = displayedPage.segments,
                     centerPrimary = displayedPage.centerPrimary,
-                    centerSecondary = displayedPage.centerSecondary,
+                    centerSecondary = stringResource(R.string.local_profile_library_total),
                     modifier = Modifier.size(152.dp),
                     muted = displayedPage.segments.all { it.weight <= 0f },
                 )
@@ -388,9 +382,7 @@ private fun ActivityBarChart(
 private fun buildAnalyticsPages(snapshot: LocalProfileSnapshot): List<AnalyticsPage> {
     return listOf(
         AnalyticsPage(
-            title = "Время просмотра",
             centerPrimary = snapshot.libraryTotal.toString(),
-            centerSecondary = "всего",
             segments = snapshot.libraryStatusSegments.map { segment ->
                 AnalyticsSegment(
                     label = segment.label,
@@ -405,9 +397,7 @@ private fun buildAnalyticsPages(snapshot: LocalProfileSnapshot): List<AnalyticsP
 }
 
 private data class AnalyticsPage(
-    val title: String,
     val centerPrimary: String,
-    val centerSecondary: String,
     val segments: List<AnalyticsSegment>,
     val legendColumns: Int,
 )
