@@ -144,6 +144,36 @@ class PlaybackResolverTest {
     }
 
     @Test
+    fun `searches later player links for the preferred quality before falling back`() = runBlocking {
+        fun variantsExtractor(playerName: String, quality: String) = object : StreamExtractor {
+            override fun supports(link: PlayerLink) = link.playerName == playerName
+            override suspend fun extract(link: PlayerLink) = error("Variants are used")
+            override suspend fun extractVariants(link: PlayerLink) = listOf(
+                VideoStream(
+                    url = "https://video.test/$playerName/$quality.m3u8",
+                    type = StreamType.HLS,
+                    quality = quality,
+                )
+            )
+        }
+        val resolver = PlaybackResolver(
+            extractors = listOf(
+                variantsExtractor("first", "480p"),
+                variantsExtractor("second", "720p"),
+            ),
+            validator = successfulValidator,
+        )
+
+        val resolved = resolver.resolve(
+            links = listOf(link("first"), link("second")),
+            preferredQuality = "720p",
+        )
+
+        assertEquals("second", resolved.link.playerName)
+        assertEquals("720p", resolved.stream.quality)
+    }
+
+    @Test
     fun `preserves source unavailability when every player source is unavailable`() = runBlocking {
         val resolver = PlaybackResolver(
             extractors = listOf(extractor("offline") { throw SourceUnavailableException("mirror offline") }),

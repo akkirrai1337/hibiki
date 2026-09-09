@@ -68,6 +68,7 @@ class PlaybackResolver(
 
         val failures = mutableListOf<Throwable>()
         var supportedLinkSeen = false
+        var fallbackResolution: ResolvedPlaybackStream? = null
         for (link in links) {
             val matchingExtractors = extractors.filter { it.supports(link) }
             if (matchingExtractors.isEmpty()) continue
@@ -128,7 +129,17 @@ class PlaybackResolver(
                     }
                     successful
                 }
-                if (resolved != null) return resolved
+                if (resolved != null) {
+                    val resolvedQuality = resolved.validation.quality
+                        ?: resolved.stream.quality
+                        ?: resolved.link.quality
+                    if (preferredQuality.isNullOrBlank() || resolvedQuality.matchesPreferredQuality(preferredQuality)) {
+                        return resolved
+                    }
+                    if (fallbackResolution == null) {
+                        fallbackResolution = resolved
+                    }
+                }
             } catch (error: CancellationException) {
                 throw error
             } catch (error: Throwable) {
@@ -136,6 +147,7 @@ class PlaybackResolver(
             }
         }
 
+        fallbackResolution?.let { return it }
         if (!supportedLinkSeen) throw NoSupportedExtractorException()
         throw selectFailure(failures)
     }

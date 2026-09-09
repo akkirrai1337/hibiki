@@ -1113,7 +1113,7 @@ fun PlayerScreen(
                     selectedSourceId = state.currentSourceId,
                     selectedPlayerName = state.selectedPlayerName,
                     selectedQualityLabel = state.selectedQualityLabel ?: state.playback?.qualityLabel,
-                    availableQualityLabels = state.playback?.availableQualityLabels.orEmpty(),
+                    availableQualityLabels = state.availableQualityLabels,
                     autoSkipSegments = autoSkipSegments,
                     autoPlayNextEpisode = autoPlayNextEpisode,
                     options = state.settingsOptions,

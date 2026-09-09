@@ -141,6 +141,7 @@ class PlayerViewModel(
                             pendingSeekMs = savedSeekMs ?: it.pendingSeekMs,
                             failedStreamUrls = it.failedStreamUrls - stream.streamUrl,
                             selectedQualityLabel = stream.qualityLabel ?: it.selectedQualityLabel,
+                            availableQualityLabels = stream.availableQualityLabels,
                         )
                     }
                     loadSettingsOptions()
@@ -501,6 +502,7 @@ data class PlayerUiState(
     val settingsOptionsKey: String? = null,
     val selectedPlayerName: String? = null,
     val selectedQualityLabel: String? = null,
+    val availableQualityLabels: List<String> = emptyList(),
 )
 
 private fun PlayerUiState.settingsOptionsKey(): String =
