@@ -503,8 +503,6 @@
     <string name="update_not_available">У вас установлена последняя версия</string>
     <string name="update_check_failed">Не удалось проверить наличие обновлений</string>
     <string name="nav_profile">Профиль</string>
-    <string name="local_profile_tab_overview">Обзор</string>
-    <string name="local_profile_tab_activity">Активность</string>
     <string name="local_profile_stat_total">ВСЕГО\nАНИМЕ</string>
     <string name="local_profile_stat_days">ДНИ\nПРОСМОТРА</string>
     <string name="local_profile_stat_time">ВРЕМЯ\nПРОСМОТРА</string>

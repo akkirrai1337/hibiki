@@ -26,8 +26,6 @@
     <string name="action_sign_in">Sign in</string>
     <string name="action_sign_out">Sign out</string>
     <string name="action_more">More</string>
-    <string name="local_profile_tab_overview">About</string>
-    <string name="local_profile_tab_activity">Active</string>
     <string name="local_profile_stat_total">TOTAL\nANIME</string>
     <string name="local_profile_stat_days">DAYS\nWATCHED</string>
     <string name="local_profile_stat_time">WATCH\nTIME</string>

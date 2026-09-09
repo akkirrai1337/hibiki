@@ -25,8 +25,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
@@ -39,9 +37,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -49,7 +45,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -74,7 +69,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import kotlinx.coroutines.launch
 import org.akkirrai.hibiki.R
 import coil.compose.AsyncImage
 import org.akkirrai.hibiki.app.settings.LocalAppLanguage
@@ -85,11 +79,6 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import org.akkirrai.hibiki.core.model.Anime
 import org.akkirrai.hibiki.core.design.animation.continuousRotation
-
-private enum class LocalProfileTab(val titleRes: Int) {
-    Overview(R.string.local_profile_tab_overview),
-    Activity(R.string.local_profile_tab_activity),
-}
 
 /**
  * Direct Android port of Animite's ProfileScreen layout: NestedScrollBannerLayout,
@@ -127,8 +116,6 @@ fun LocalProfileScreen(
     val snapshot = remember(localizedResources, state.data) {
         buildProfileSnapshot(localizedResources, state.data)
     }
-    val pagerState = rememberPagerState(pageCount = { LocalProfileTab.entries.size })
-    val scope = rememberCoroutineScope()
     val statusInsets = WindowInsets.statusBars.asPaddingValues()
 
     Box(
@@ -200,41 +187,11 @@ fun LocalProfileScreen(
                         )
                     }
                 }
-                PrimaryTabRow(
-                    selectedTabIndex = pagerState.currentPage,
-                    containerColor = MaterialTheme.colorScheme.surfaceContainer,
-                    divider = {},
-                ) {
-                    LocalProfileTab.entries.forEachIndexed { index, tab ->
-                        Tab(
-                            selected = pagerState.currentPage == index,
-                            onClick = { scope.launch { pagerState.animateScrollToPage(index) } },
-                            text = {
-                                Text(
-                                    text = stringResource(tab.titleRes),
-                                    overflow = TextOverflow.Ellipsis,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onBackground.copy(
-                                        alpha = if (pagerState.currentPage == index) 1f else 0.5f,
-                                    ),
-                                    maxLines = 1,
-                                )
-                            },
-                            modifier = Modifier
-                                .padding(horizontal = 1.dp, vertical = AnimiteSmallPadding)
-                                .clip(CircleShape),
-                        )
-                    }
-                }
-                HorizontalPager(
-                    state = pagerState,
-                    modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background),
-                ) { page ->
-                    when (LocalProfileTab.entries[page]) {
-                        LocalProfileTab.Overview -> LocalOverviewTab(snapshot, bottomContentPadding, onAnimeClick)
-                        LocalProfileTab.Activity -> LocalActivityTab(snapshot, bottomContentPadding)
-                    }
-                }
+                LocalProfileContent(
+                    snapshot = snapshot,
+                    bottomContentPadding = bottomContentPadding,
+                    onAnimeClick = onAnimeClick,
+                )
             }
             },
         )
@@ -424,22 +381,24 @@ private fun ProfileActionButton(
     }
 }
 
-/** Direct port of AboutTab's vertically scrolling content and StatsRow arrangement. */
+/** Single scrolling column: summary stats, analytics, genres, then recent additions. */
 @Composable
-private fun LocalOverviewTab(
+private fun LocalProfileContent(
     snapshot: LocalProfileSnapshot,
     bottomContentPadding: Dp,
     onAnimeClick: (Anime) -> Unit,
 ) {
     Column(
         modifier = Modifier
-            .fillMaxHeight()
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
             .verticalScroll(rememberScrollState())
             .padding(start = AnimiteLargePadding, top = AnimiteLargePadding, end = AnimiteLargePadding)
             .padding(bottom = bottomContentPadding + AnimiteLargePadding),
-        verticalArrangement = Arrangement.spacedBy(AnimiteMediumPadding),
+        verticalArrangement = Arrangement.spacedBy(AnimiteLargePadding),
     ) {
         LocalStatsRow(snapshot)
+        AnalyticsCard(snapshot)
         GenreBars(snapshot.genreSegments)
         RecentLibraryCard(items = snapshot.recentLibraryItems, onItemClick = { onAnimeClick(it.anime) })
     }
@@ -503,19 +462,7 @@ private fun GenreBars(items: List<DistributionSegment>) {
     }
 }
 
-@Composable
-private fun LocalActivityTab(snapshot: LocalProfileSnapshot, bottomContentPadding: Dp) {
-    Column(
-        Modifier
-            .fillMaxHeight()
-            .verticalScroll(rememberScrollState())
-            .padding(start = AnimiteLargePadding, top = AnimiteLargePadding, end = AnimiteLargePadding)
-            .padding(bottom = bottomContentPadding + AnimiteLargePadding),
-    ) { AnalyticsCard(snapshot) }
-}
-
 private val AnimiteBannerHeight = 168.dp
 private val AnimiteTinyPadding = 4.dp
 private val AnimiteSmallPadding = 8.dp
-private val AnimiteMediumPadding = 16.dp
 private val AnimiteLargePadding = 24.dp
