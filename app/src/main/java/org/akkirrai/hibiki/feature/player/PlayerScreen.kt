@@ -242,7 +242,7 @@ fun PlayerScreen(
     val isBufferingState = remember { mutableStateOf(false) }
     var isBuffering by isBufferingState
     var playbackSpeed by remember { mutableFloatStateOf(preferencesState.playbackSpeed) }
-    var showRemainingTime by remember { mutableStateOf(false) }
+    val showRemainingTime = preferencesState.playerShowRemainingTime
     val durationMsState = remember { mutableLongStateOf(0L) }
     var durationMs by durationMsState
     val positionMsState = remember { mutableLongStateOf(0L) }
@@ -935,7 +935,7 @@ fun PlayerScreen(
                     sliderPositionMs = sliderPositionMs,
                     showRemainingTime = showRemainingTime,
                     onTimeLabelClick = {
-                        showRemainingTime = !showRemainingTime
+                        appPreferences.setPlayerShowRemainingTime(!showRemainingTime)
                         keepControlsVisible()
                     },
                     onSliderValueChange = { newValue ->

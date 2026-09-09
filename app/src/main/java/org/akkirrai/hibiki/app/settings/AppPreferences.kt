@@ -59,6 +59,7 @@ data class AppPreferencesState(
     val watchedThresholdPercent: Int = AppPreferences.DEFAULT_WATCHED_THRESHOLD_PERCENT,
     val autoPlayNextEpisode: Boolean = true,
     val playbackSpeed: Float = 1f,
+    val playerShowRemainingTime: Boolean = false,
     val videoScaleMode: VideoScaleMode = VideoScaleMode.FIT,
     val discordRpcEnabled: Boolean = false,
     val discordRpcExcludedTitleIds: Set<String> = emptySet(),
@@ -94,6 +95,7 @@ class AppPreferences(context: Context) {
             KEY_WATCHED_THRESHOLD_PERCENT,
             KEY_AUTO_PLAY_NEXT_EPISODE,
             KEY_PLAYBACK_SPEED,
+            KEY_PLAYER_SHOW_REMAINING_TIME,
             KEY_VIDEO_SCALE_MODE,
             KEY_DISCORD_RPC_ENABLED,
             KEY_DISCORD_RPC_EXCLUDED_TITLE_IDS,
@@ -167,6 +169,10 @@ class AppPreferences(context: Context) {
 
     fun setPlaybackSpeed(speed: Float) {
         prefs.edit().putFloat(KEY_PLAYBACK_SPEED, normalizePlaybackSpeed(speed)).apply()
+    }
+
+    fun setPlayerShowRemainingTime(showRemaining: Boolean) {
+        prefs.edit().putBoolean(KEY_PLAYER_SHOW_REMAINING_TIME, showRemaining).apply()
     }
 
     fun setVideoScaleMode(mode: VideoScaleMode) {
@@ -257,6 +263,7 @@ class AppPreferences(context: Context) {
         const val KEY_WATCHED_THRESHOLD_PERCENT = "watched_threshold_percent"
         const val KEY_AUTO_PLAY_NEXT_EPISODE = "auto_play_next_episode"
         const val KEY_PLAYBACK_SPEED = "playback_speed"
+        const val KEY_PLAYER_SHOW_REMAINING_TIME = "player_show_remaining_time"
         const val KEY_VIDEO_SCALE_MODE = "video_scale_mode"
         const val KEY_DISCORD_RPC_ENABLED = "discord_rpc_enabled"
         const val KEY_DISCORD_RPC_EXCLUDED_TITLE_IDS = "discord_rpc_excluded_title_ids"
@@ -385,6 +392,7 @@ class AppPreferences(context: Context) {
                 ).also { cachedWatchedThresholdPercent = it },
                 autoPlayNextEpisode = prefs.getBoolean(KEY_AUTO_PLAY_NEXT_EPISODE, true),
                 playbackSpeed = normalizePlaybackSpeed(prefs.getFloat(KEY_PLAYBACK_SPEED, 1f)),
+                playerShowRemainingTime = prefs.getBoolean(KEY_PLAYER_SHOW_REMAINING_TIME, false),
                 videoScaleMode = prefs.getString(KEY_VIDEO_SCALE_MODE, VideoScaleMode.FIT.name)
                     ?.let { runCatching { VideoScaleMode.valueOf(it) }.getOrNull() }
                     ?: VideoScaleMode.FIT,
