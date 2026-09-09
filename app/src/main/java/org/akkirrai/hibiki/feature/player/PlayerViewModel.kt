@@ -105,14 +105,22 @@ class PlayerViewModel(
             val playbackResult = runCatching {
                 offlinePlayback
                     ?.takeIf { it.streamUrl !in excludedStreamUrls }
-                    ?: repository.resolveStream(
-                        sourceId = state.currentSourceId,
-                        episodeId = effectiveEpisodeId,
-                        forceRefresh = forceRefresh,
-                        excludedStreamUrls = excludedStreamUrls,
-                        preferredPlayerName = state.selectedPlayerName,
-                        preferredQuality = state.selectedQualityLabel,
-                    )
+                    ?: if (state.selectedPlayerName.isNullOrBlank() && state.selectedQualityLabel.isNullOrBlank()) {
+                        repository.resolveFastestStream(
+                            sourceId = state.currentSourceId,
+                            episodeId = effectiveEpisodeId,
+                            forceRefresh = forceRefresh,
+                        ).playback
+                    } else {
+                        repository.resolveStream(
+                            sourceId = state.currentSourceId,
+                            episodeId = effectiveEpisodeId,
+                            forceRefresh = forceRefresh,
+                            excludedStreamUrls = excludedStreamUrls,
+                            preferredPlayerName = state.selectedPlayerName,
+                            preferredQuality = state.selectedQualityLabel,
+                        )
+                    }
             }.throwIfCancelled()
             currentCoroutineContext().ensureActive()
 

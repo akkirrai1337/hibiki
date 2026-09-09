@@ -10,6 +10,9 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.supervisorScope
 import kotlinx.coroutines.sync.Mutex
@@ -313,7 +316,10 @@ class AnimeWatchRepository(
             )
         }
 
-        val (playerName, playback) = raceFirstSuccessful(playerNames) { candidate ->
+        val (playerName, playback) = raceFirstSuccessful(
+            candidates = playerNames,
+            hedgeDelayMillis = PLAYER_RACE_HEDGE_DELAY_MS,
+        ) { candidate ->
             resolveStream(
                 sourceId = sourceId,
                 episodeId = episodeId,
@@ -739,6 +745,7 @@ class AnimeWatchRepository(
         const val TAG = "AnimeWatchRepository"
         const val STREAM_CACHE_TTL_MS = 10 * 60_000L
         const val PLAYER_LINKS_CACHE_TTL_MS = 60_000L
+        const val PLAYER_RACE_HEDGE_DELAY_MS = 750L
         // BROWSER-resolved players can fall back to WebViewStreamRelay when a CDN blocks a plain
         // HTTP client, which adds real WebView round-trips (JS fetch + base64 bridge) to both
         // resolution and validation - both budgets were tuned before that path existed and are too
@@ -752,18 +759,33 @@ class AnimeWatchRepository(
 
 internal suspend fun <Candidate, Value> raceFirstSuccessful(
     candidates: List<Candidate>,
+    hedgeDelayMillis: Long = 0L,
     attempt: suspend (Candidate) -> Value,
 ): Pair<Candidate, Value> = supervisorScope {
     require(candidates.isNotEmpty())
+    require(hedgeDelayMillis >= 0L)
     val results = Channel<Result<Pair<Candidate, Value>>>(capacity = candidates.size)
-    val jobs = candidates.map { candidate ->
+    val startGates = List(candidates.size) { CompletableDeferred<Unit>() }
+    startGates.first().complete(Unit)
+    val hedgeTimers = startGates.indices.drop(1).map { index ->
         launch {
+            delay(index * hedgeDelayMillis)
+            startGates[index].complete(Unit)
+        }
+    }
+    val jobs = candidates.mapIndexed { index, candidate ->
+        launch {
+            startGates[index].await()
             val result = try {
                 Result.success(candidate to attempt(candidate))
             } catch (error: CancellationException) {
-                throw error
+                currentCoroutineContext().ensureActive()
+                Result.failure(error)
             } catch (error: Throwable) {
                 Result.failure(error)
+            }
+            if (result.isFailure) {
+                startGates.getOrNull(index + 1)?.complete(Unit)
             }
             results.send(result)
         }
@@ -774,11 +796,13 @@ internal suspend fun <Candidate, Value> raceFirstSuccessful(
         val result = results.receive()
         result.getOrNull()?.let { resolved ->
             jobs.forEach { it.cancel() }
+            hedgeTimers.forEach { it.cancel() }
             return@supervisorScope resolved
         }
         if (firstError == null) firstError = result.exceptionOrNull()
     }
 
+    hedgeTimers.forEach { it.cancel() }
     results.close()
     throw firstError ?: IllegalStateException("No candidate completed successfully")
 }

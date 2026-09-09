@@ -8,6 +8,7 @@ import org.akkirrai.beakokit.model.PlayerLink
 import org.akkirrai.beakokit.model.PlayerType
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -30,6 +31,56 @@ class AnimeWatchRepositoryTest {
 
         assertEquals("working", player)
         assertEquals("https://video.example/stream.m3u8", stream)
+    }
+
+    @Test
+    fun `failed player starts the next hedge without waiting for its timer`() = runBlocking {
+        val started = mutableListOf<String>()
+
+        val (player, stream) = withTimeout(1_000L) {
+            raceFirstSuccessful(
+                candidates = listOf("unavailable", "working"),
+                hedgeDelayMillis = 10_000L,
+            ) { candidate ->
+                started += candidate
+                if (candidate == "unavailable") error("Player is unavailable")
+                "https://video.example/stream.m3u8"
+            }
+        }
+
+        assertEquals(listOf("unavailable", "working"), started)
+        assertEquals("working", player)
+        assertEquals("https://video.example/stream.m3u8", stream)
+    }
+
+    @Test
+    fun `hedge starts while the first player is still stalled`() = runBlocking {
+        val stalledPlayer = CompletableDeferred<Unit>()
+
+        val (player, stream) = withTimeout(2_000L) {
+            raceFirstSuccessful(
+                candidates = listOf("stalled", "working"),
+                hedgeDelayMillis = 50L,
+            ) { candidate ->
+                if (candidate == "stalled") stalledPlayer.await()
+                "https://video.example/$candidate.m3u8"
+            }
+        }
+
+        assertEquals("working", player)
+        assertEquals("https://video.example/working.m3u8", stream)
+    }
+
+    @Test
+    fun `attempt timeout remains a failure instead of hanging the race`() = runBlocking {
+        val (player, _) = withTimeout(1_000L) {
+            raceFirstSuccessful(listOf("timeout", "working")) { candidate ->
+                if (candidate == "timeout") withTimeout(10L) { delay(1_000L) }
+                candidate
+            }
+        }
+
+        assertEquals("working", player)
     }
 
     @Test
