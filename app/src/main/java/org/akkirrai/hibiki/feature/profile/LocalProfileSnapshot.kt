@@ -33,6 +33,10 @@ internal fun buildProfileSnapshot(
             watchedMs = activity?.watchedMs ?: 0L,
         )
     }
+    // Achievements count every library entry, matching the desktop - including one saved but not
+    // yet filed under a status. The tracked list below is a narrower thing: what the status
+    // breakdown and its donut are about.
+    val allLibrary = localData.library
     val trackedLibrary = localData.library.filter { item ->
         item.categories.any(PROFILE_LIBRARY_CATEGORIES::contains)
     }
@@ -78,7 +82,7 @@ internal fun buildProfileSnapshot(
     // produces the same level on both. Nothing about them is stored: they are read off the library
     // and activity that already exist for the stat cards above.
     val lifetimeWatchedMs = localData.activity.sumOf { it.watchedMs }
-    val ruleEntries = trackedLibrary.map { item ->
+    val ruleEntries = allLibrary.map { item ->
         ProfileRules.Entry(
             // The desktop's library rows carry one category each; here an item can sit in several,
             // and "completed" is the only one the rules ask about.
@@ -91,11 +95,16 @@ internal fun buildProfileSnapshot(
     // telling different stories.
     val streakDays = activityDays.map { ProfileRules.ActivityDay(active = it.episodeCount > 0) }
     val streak = ProfileRules.computeStreaks(streakDays)
+    // The badge shows the run inside the visible 30-day window; the achievement asks for the best
+    // run ever, which is what the desktop feeds it. A month-long streak finished in spring has
+    // been earned, and the chart scrolling past it does not unearn it.
+    val lifetimeStreakDays = buildLifetimeActivityDays(localData, today)
+    val bestStreakEver = maxOf(ProfileRules.computeStreaks(lifetimeStreakDays).best, streak.best)
     // Ordered by how far along each family is, not by the fixed order the rules declare them in:
     // what is nearly done, or done, is what the strip should lead with, and the seven families are
     // otherwise in an order that means nothing to anyone reading them. Sorted here rather than in
     // ProfileRules, whose order is part of what the shared vectors pin.
-    val achievements = ProfileRules.computeAchievements(ruleEntries, lifetimeWatchedMs, streak.best)
+    val achievements = ProfileRules.computeAchievements(ruleEntries, lifetimeWatchedMs, bestStreakEver)
         .sortedWith(
             compareByDescending<ProfileRules.Achievement> { it.level }
                 .thenByDescending { if (it.target > 0) it.current / it.target else 0.0 }
@@ -116,6 +125,28 @@ internal fun buildProfileSnapshot(
         genreSegments = genreSegments,
         genreTrackedTitlesCount = allMetadata.count { it.genres.isNotEmpty() },
     )
+}
+
+/**
+ * Every day from the first one ever recorded to today, active or not.
+ *
+ * The gaps have to be filled in: stored activity only has rows for days something happened, and
+ * feeding those straight to the streak rules would let a year of silence read as one unbroken run.
+ */
+private fun buildLifetimeActivityDays(
+    localData: LocalProfileData,
+    today: LocalDate,
+): List<ProfileRules.ActivityDay> {
+    val active = localData.activity
+        .filter { it.completedEpisodes > 0 || it.watchedMs > 0L }
+        .map { it.date }
+        .toSet()
+    val firstDay = active.minOrNull() ?: return emptyList()
+    val span = ChronoUnit.DAYS.between(firstDay, today)
+    if (span < 0) return emptyList()
+    return (0..span).map { offset ->
+        ProfileRules.ActivityDay(active = firstDay.plusDays(offset) in active)
+    }
 }
 
 private fun Set<LibraryCategory>.primaryCategory(): LibraryCategory =

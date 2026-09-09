@@ -402,7 +402,12 @@ class WatchStateRepository(context: Context) {
 
     companion object {
         const val PREFS_NAME = "hibiki_watch_state"
-        const val ACTIVITY_RETENTION_DAYS = 90
+        // Ten years, which is to say "keep it". The profile's watch-time total and its best
+        // streak are lifetime figures on the desktop, and a 90-day window quietly turned both
+        // into three-month figures here: an hour watched in spring stopped counting in summer,
+        // and a month-long streak expired instead of standing. One long per day is nothing to
+        // store.
+        const val ACTIVITY_RETENTION_DAYS = 3650
         private const val SEPARATOR = '\u001F'
         private const val ACTIVITY_WATCHED_PREFIX = "activity_watched_"
         private const val ACTIVITY_COMPLETED_PREFIX = "activity_completed_"
