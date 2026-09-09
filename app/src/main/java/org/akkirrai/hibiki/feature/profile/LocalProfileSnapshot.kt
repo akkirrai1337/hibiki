@@ -22,11 +22,15 @@ internal fun buildProfileSnapshot(
     val today = LocalDate.now()
     val activityDays = (0 until ACTIVITY_HISTORY_DAYS).map { offset ->
         val date = today.minusDays((ACTIVITY_HISTORY_DAYS - 1 - offset).toLong())
+        val activity = activityByDate[date]
         ActivityDay(
-            date.format(ACTIVITY_DATE_FORMATTER),
-            activityByDate[date]?.let { activity ->
-                activity.completedEpisodes.takeIf { it > 0 } ?: if (activity.watchedMs > 0L) 1 else 0
+            dateLabel = date.format(ACTIVITY_DATE_FORMATTER),
+            episodeCount = activity?.let {
+                it.completedEpisodes.takeIf { count -> count > 0 } ?: if (it.watchedMs > 0L) 1 else 0
             } ?: 0,
+            // Kept alongside the count for the day's detail popup, which reports minutes the way
+            // the desktop's tooltip does. The bar height still comes from the episode count.
+            watchedMs = activity?.watchedMs ?: 0L,
         )
     }
     val trackedLibrary = localData.library.filter { item ->
@@ -87,7 +91,15 @@ internal fun buildProfileSnapshot(
     // telling different stories.
     val streakDays = activityDays.map { ProfileRules.ActivityDay(active = it.episodeCount > 0) }
     val streak = ProfileRules.computeStreaks(streakDays)
+    // Ordered by how far along each family is, not by the fixed order the rules declare them in:
+    // what is nearly done, or done, is what the strip should lead with, and the seven families are
+    // otherwise in an order that means nothing to anyone reading them. Sorted here rather than in
+    // ProfileRules, whose order is part of what the shared vectors pin.
     val achievements = ProfileRules.computeAchievements(ruleEntries, lifetimeWatchedMs, streak.best)
+        .sortedWith(
+            compareByDescending<ProfileRules.Achievement> { it.level }
+                .thenByDescending { if (it.target > 0) it.current / it.target else 0.0 }
+        )
     val level = ProfileRules.computeLevelProgress(ProfileRules.totalXpEarned(achievements, lifetimeWatchedMs))
 
     return LocalProfileSnapshot(
@@ -167,7 +179,7 @@ internal data class LocalProfileSnapshot(
     val genreTrackedTitlesCount: Int,
 )
 internal data class DistributionSegment(val label: String, val count: Int, val color: Color)
-internal data class ActivityDay(val dateLabel: String, val episodeCount: Int)
+internal data class ActivityDay(val dateLabel: String, val episodeCount: Int, val watchedMs: Long)
 internal data class RecentLibraryItem(val anime: Anime, val title: String, val posterUrl: String?, val ratingLabel: String?, val statusLabel: String, val dateLabel: String, val color: Color)
 
 private const val ACTIVITY_HISTORY_DAYS = 30

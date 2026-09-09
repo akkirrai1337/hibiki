@@ -48,6 +48,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.core.profile.ProfileRules
 
@@ -159,47 +160,54 @@ internal fun AvatarLevelRing(
     }
 }
 
-/** The one line under the name: how far into the level, and the streak when there is one. */
+/** The one line under the name: how far into the current level. */
 @Composable
-internal fun LevelSummaryLine(level: ProfileRules.LevelProgress, streak: ProfileRules.StreakInfo) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-    ) {
-        Text(
-            text = stringResource(R.string.local_profile_xp_inline, level.xpIntoLevel, level.xpForLevel),
-            style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        // Only once there is a run to show. A "0 day streak" is a reproach, not information.
-        if (streak.current > 0) {
-            Surface(
-                shape = CircleShape,
-                color = if (streak.atRisk) {
-                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
-                } else {
-                    StreakFlame.copy(alpha = 0.16f)
-                },
-            ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(5.dp),
-                ) {
-                    Icon(
-                        Icons.Filled.LocalFireDepartment,
-                        contentDescription = null,
-                        tint = if (streak.atRisk) MaterialTheme.colorScheme.onSurfaceVariant else StreakFlame,
-                        modifier = Modifier.size(15.dp),
-                    )
-                    Text(
-                        text = streak.current.toString(),
-                        style = MaterialTheme.typography.labelLarge,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurface,
-                    )
-                }
-            }
+internal fun LevelSummaryLine(level: ProfileRules.LevelProgress) {
+    Text(
+        text = stringResource(R.string.local_profile_xp_inline, level.xpIntoLevel, level.xpForLevel),
+        style = MaterialTheme.typography.labelLarge,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+}
+
+/**
+ * The run, in front of the name.
+ *
+ * Longer runs are worth more visual weight than a bigger number, so the badge reskins itself by
+ * tier the way the desktop's does, off the same thresholds. A run with today still unwatched drops
+ * to grey whatever its length: the count is not lost yet, but the badge should say so.
+ */
+@Composable
+internal fun StreakBadge(streak: ProfileRules.StreakInfo) {
+    // Nothing at all rather than a zero. A "0 day streak" is a reproach, not information.
+    if (streak.current <= 0) return
+    val tint = when {
+        streak.atRisk -> Color(0xFFA1A1AA)
+        streak.current >= 500 -> Color(0xFFE879F9)
+        streak.current >= 250 -> Color(0xFFFACC15)
+        streak.current >= 100 -> Color(0xFFC084FC)
+        streak.current >= 50 -> Color(0xFF38BDF8)
+        streak.current >= 25 -> Color(0xFFF87171)
+        else -> Color(0xFFFB923C)
+    }
+    Surface(shape = CircleShape, color = tint.copy(alpha = 0.16f)) {
+        Row(
+            modifier = Modifier.padding(start = 8.dp, end = 10.dp, top = 4.dp, bottom = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(5.dp),
+        ) {
+            Icon(
+                Icons.Filled.LocalFireDepartment,
+                contentDescription = null,
+                tint = tint,
+                modifier = Modifier.size(16.dp),
+            )
+            Text(
+                text = streak.current.toString(),
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.Bold,
+                color = tint,
+            )
         }
     }
 }
@@ -256,13 +264,16 @@ private fun AchievementTile(achievement: ProfileRules.Achievement, onClick: () -
     val fraction = achievement.fraction()
     Column(
         modifier = Modifier
-            .width(88.dp)
+            .width(112.dp)
+            .height(132.dp)
             .clip(RoundedCornerShape(16.dp))
             .background(MaterialTheme.colorScheme.surfaceContainer)
             .clickable(onClick = onClick)
             .padding(vertical = 12.dp, horizontal = 6.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+        // Centred in a fixed height rather than padded out by a reserved second line of text: the
+        // tiles still line up, but a one-line name no longer leaves a hole above its numbers.
+        verticalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterVertically),
     ) {
         Box(Modifier.size(44.dp), contentAlignment = Alignment.Center) {
             Canvas(Modifier.size(44.dp)) {
@@ -295,7 +306,7 @@ private fun AchievementTile(achievement: ProfileRules.Achievement, onClick: () -
             textAlign = TextAlign.Center,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.height(28.dp),
+            lineHeight = 14.sp,
         )
         Text(
             "${formatAmount(achievement.current)}/${formatAmount(achievement.target)}",
@@ -442,5 +453,4 @@ private fun achievementTitle(tierId: String): String = stringResource(
     },
 )
 
-private val StreakFlame = Color(0xFFFF7043)
 private val CircleShapeSmall = RoundedCornerShape(8.dp)

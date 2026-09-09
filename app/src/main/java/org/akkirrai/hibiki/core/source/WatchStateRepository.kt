@@ -241,6 +241,11 @@ class WatchStateRepository(context: Context) {
         positionMs: Long,
         durationMs: Long,
         updatedAt: Long = System.currentTimeMillis(),
+        // How much of this save actually played, when the caller knows. The player does: it counts
+        // the seconds it saw play, so a seek across half a film adds nothing. Callers that only
+        // move the position (marking an episode watched from the list) leave it null and fall back
+        // to the distance moved.
+        watchedMsDelta: Long? = null,
     ) {
         val normalizedTitleId = YummyIdMigration.normalizeTitleId(titleId)
         val previous = getEpisodeProgress(titleId, episodeId, sourceId)
@@ -266,6 +271,7 @@ class WatchStateRepository(context: Context) {
             positionMs = positionMs,
             durationMs = durationMs,
             updatedAt = updatedAt,
+            watchedMsDelta = watchedMsDelta,
         )
     }
 
@@ -448,8 +454,12 @@ class WatchStateRepository(context: Context) {
         positionMs: Long,
         durationMs: Long,
         updatedAt: Long,
+        watchedMsDelta: Long?,
     ) {
-        val deltaMs = (positionMs - previousPositionMs)
+        // The distance the position moved is only a stand-in for watched time, and a poor one: a
+        // single seek to the end of a film used to book the whole film as watched. Real playback
+        // time wins whenever the caller measured it.
+        val deltaMs = (watchedMsDelta ?: (positionMs - previousPositionMs))
             .coerceAtLeast(0L)
             .coerceAtMost(durationMs.coerceAtLeast(0L))
         val completed = isEpisodeWatched(positionMs, durationMs)

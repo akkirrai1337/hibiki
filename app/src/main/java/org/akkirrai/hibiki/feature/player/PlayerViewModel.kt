@@ -335,6 +335,15 @@ class PlayerViewModel(
         val state = _uiState.value
         val playback = state.playback ?: return
         val episode = state.episodes.firstOrNull { it.id == state.currentEpisodeId } ?: return
+        // The player hands over every second it has seen play for this episode, cumulatively, so
+        // what is new since the last save is the difference. Seeks never enter that set, which is
+        // the entire point: skipping to the end of a film is not an hour and a half of watching.
+        if (reportedWatchedSecondsEpisodeId != episode.id) {
+            reportedWatchedSecondsEpisodeId = episode.id
+            reportedWatchedSeconds = 0
+        }
+        val newWatchedSeconds = (watchedSeconds.size - reportedWatchedSeconds).coerceAtLeast(0)
+        reportedWatchedSeconds = watchedSeconds.size
         watchStateRepository.saveSelectedSource(
             titleId = titleId,
             sourceId = state.currentSourceId,
@@ -353,8 +362,13 @@ class PlayerViewModel(
             quality = playback.qualityLabel,
             positionMs = safePositionMs,
             durationMs = safeDurationMs,
+            watchedMsDelta = newWatchedSeconds * 1_000L,
         )
     }
+
+    /** Which episode [reportedWatchedSeconds] belongs to - the player's set restarts per episode. */
+    private var reportedWatchedSecondsEpisodeId: String? = null
+    private var reportedWatchedSeconds = 0
 
     private fun persistSelection() {
         val state = _uiState.value

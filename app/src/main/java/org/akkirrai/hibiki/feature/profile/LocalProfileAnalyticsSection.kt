@@ -2,6 +2,8 @@ package org.akkirrai.hibiki.feature.profile
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -36,6 +38,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -72,7 +75,7 @@ internal fun LibraryBreakdownSection(
     ) {
         buildAnalyticsPages(snapshot)
     }
-    AnalyticsDonutPager(pages = pages, snapshot = snapshot)
+    AnalyticsDonutPager(pages = pages)
 }
 
 /** The 30-day bar chart, showing a week at a time. */
@@ -90,16 +93,35 @@ internal fun ActivitySection(
     LaunchedEffect(snapshot.activityDays) {
         activityListState.scrollToItem(firstVisibleActivityDay)
     }
+    // Which day's details are showing. The desktop reveals them on hover; a touch screen has no
+    // hover, so the same three lines are a tap away instead, and tapping the day again puts them
+    // back.
+    var selectedDay by remember(snapshot.activityDays) { mutableStateOf<ActivityDay?>(null) }
     Column(
         modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Text(
-            text = stringResource(R.string.yummy_account_activity_title),
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurface,
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Text(
+                text = stringResource(R.string.yummy_account_activity_title),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+        }
+        if (!hasActivity) {
+            Text(
+                text = stringResource(R.string.local_profile_activity_empty),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        } else {
+            ActivityDayDetails(selectedDay)
+        }
         BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
             val dayWidth = (maxWidth - (ACTIVITY_CHART_DAY_GAP * (ACTIVITY_CHART_VISIBLE_DAYS - 1))) /
                 ACTIVITY_CHART_VISIBLE_DAYS
@@ -107,8 +129,51 @@ internal fun ActivitySection(
                 days = snapshot.activityDays,
                 dayWidth = dayWidth,
                 listState = activityListState,
+                selectedDay = selectedDay,
+                onDayClick = { day -> selectedDay = if (selectedDay?.dateLabel == day.dateLabel) null else day },
                 muted = !hasActivity,
                 modifier = Modifier.fillMaxWidth(),
+            )
+        }
+    }
+}
+
+/**
+ * The tapped day, spelled out the way the desktop's tooltip does: date, episodes, minutes.
+ *
+ * It holds its height whether or not a day is selected, so tapping through the chart does not make
+ * everything below it jump.
+ */
+@Composable
+private fun ActivityDayDetails(day: ActivityDay?) {
+    Box(modifier = Modifier.fillMaxWidth().height(34.dp), contentAlignment = Alignment.CenterStart) {
+        if (day == null) return@Box
+        Row(
+            modifier = Modifier
+                .clip(RoundedCornerShape(10.dp))
+                .background(MaterialTheme.colorScheme.surfaceContainer)
+                .padding(horizontal = 12.dp, vertical = 7.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Text(
+                text = day.dateLabel,
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            Text(
+                text = stringResource(R.string.local_profile_activity_episodes, day.episodeCount),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Text(
+                text = stringResource(
+                    R.string.local_profile_activity_minutes,
+                    Math.round(day.watchedMs / 60_000.0).toInt(),
+                ),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
     }
@@ -117,7 +182,6 @@ internal fun ActivitySection(
 @Composable
 private fun AnalyticsDonutPager(
     pages: List<AnalyticsPage>,
-    snapshot: LocalProfileSnapshot,
 ) {
     var currentPage by rememberSaveable { mutableIntStateOf(0) }
     Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
@@ -154,22 +218,6 @@ private fun AnalyticsDonutPager(
                     muted = displayedPage.segments.all { it.weight <= 0f },
                 )
             }
-                if (pageIndex == 0) {
-                    Column(
-                        verticalArrangement = Arrangement.spacedBy(4.dp),
-                    ) {
-                        Text(
-                            text = "${stringResource(R.string.yummy_account_stat_episodes_title)}: ${snapshot.totalEpisodes}",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        Text(
-                            text = "${stringResource(R.string.yummy_account_stat_watch_short)}: ${snapshot.watchTimeLabel}",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                }
             }
         }
     }
@@ -305,6 +353,8 @@ private fun ActivityBarChart(
     days: List<ActivityDay>,
     dayWidth: Dp,
     listState: LazyListState,
+    selectedDay: ActivityDay?,
+    onDayClick: (ActivityDay) -> Unit,
     modifier: Modifier = Modifier,
     muted: Boolean = false,
 ) {
@@ -320,7 +370,7 @@ private fun ActivityBarChart(
 
     LazyRow(
         state = listState,
-        modifier = modifier.height(142.dp),
+        modifier = modifier.height(112.dp),
         horizontalArrangement = Arrangement.spacedBy(ACTIVITY_CHART_DAY_GAP),
         verticalAlignment = Alignment.Bottom,
     ) {
@@ -329,37 +379,56 @@ private fun ActivityBarChart(
             key = ActivityDay::dateLabel,
         ) { day ->
             val barHeight = if (day.episodeCount > 0) {
-                (18 + (66 * day.episodeCount / maxEpisodes)).dp
+                (14 + (54 * day.episodeCount / maxEpisodes)).dp
             } else {
-                10.dp
+                8.dp
             }
+            val isSelected = selectedDay?.dateLabel == day.dateLabel
             Column(
-                modifier = Modifier.width(dayWidth),
+                modifier = Modifier
+                    .width(dayWidth)
+                    // The whole column, not just the bar: an empty day is a 10dp sliver, and a
+                    // target that small is one nobody can hit.
+                    .clip(RoundedCornerShape(10.dp))
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = { onDayClick(day) },
+                    ),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Box(
                     modifier = Modifier
-                        .height(114.dp)
+                        .height(86.dp)
                         .fillMaxWidth(),
                     contentAlignment = Alignment.BottomCenter,
                 ) {
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
-                        Text(
-                            text = day.episodeCount.toString(),
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            textAlign = TextAlign.Center,
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
+                        if (day.episodeCount > 0) {
+                            Text(
+                                text = day.episodeCount.toString(),
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = TextAlign.Center,
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                        }
                         Box(
                             modifier = Modifier
                                 .width(18.dp)
                                 .height(barHeight)
                                 .clip(RoundedCornerShape(7.dp))
-                                .background(if (day.episodeCount > 0) activeColor else inactiveColor),
+                                .background(
+                                    when {
+                                        isSelected && day.episodeCount > 0 -> activeColor.copy(alpha = 0.7f)
+                                        day.episodeCount > 0 -> activeColor
+                                        isSelected -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.20f)
+                                        else -> inactiveColor
+                                    },
+                                ),
                         )
                     }
                 }

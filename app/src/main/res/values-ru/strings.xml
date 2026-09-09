@@ -551,4 +551,14 @@
     <string name="local_profile_library_total">всего</string>
     <string name="local_profile_level_inline">Уровень %1$d</string>
     <string name="local_profile_xp_inline">%1$d / %2$d XP</string>
+
+    <!-- Profile: activity chart day details -->
+    <string name="local_profile_activity_episodes">%1$d эпизодов просмотрено</string>
+    <string name="local_profile_activity_minutes">%1$d мин. просмотра</string>
+
+    <!-- Profile: compact stat tiles and the empty activity window -->
+    <string name="local_profile_stat_total_short">В библиотеке</string>
+    <string name="local_profile_stat_days_short">Дней просмотра</string>
+    <string name="local_profile_stat_time_short">Время просмотра</string>
+    <string name="local_profile_activity_empty">За последние 30 дней ничего не просмотрено</string>
 </resources>

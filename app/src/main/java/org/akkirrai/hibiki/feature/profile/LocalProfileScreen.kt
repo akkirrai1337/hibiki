@@ -25,8 +25,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Person
@@ -71,9 +74,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import org.akkirrai.hibiki.R
 import coil.compose.AsyncImage
@@ -191,17 +196,38 @@ fun LocalProfileScreen(
                             onNameChange = { editedName = it },
                         )
                     } else {
-                        Text(
-                            text = state.data.profileName,
-                            color = MaterialTheme.colorScheme.onBackground,
-                            style = MaterialTheme.typography.titleLarge,
-                            overflow = TextOverflow.Ellipsis,
-                            textAlign = TextAlign.Center,
-                        )
+                        // Streak in front of the name, the way the desktop has it: a run going
+                        // is more an identity badge than a statistic, and it reads as one here.
+                        //
+                        // The badge is measured at zero width and drawn outside its own box, so
+                        // the name stays centred on the screen whether or not there is a run -
+                        // laying them out as an ordinary row would shift the name sideways the
+                        // day a streak starts.
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.Center,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .width(0.dp)
+                                    .wrapContentWidth(Alignment.End, unbounded = true),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Box(Modifier.padding(end = 10.dp)) { StreakBadge(snapshot.streak) }
+                            }
+                            Text(
+                                text = state.data.profileName,
+                                color = MaterialTheme.colorScheme.onBackground,
+                                style = MaterialTheme.typography.titleLarge,
+                                overflow = TextOverflow.Ellipsis,
+                                textAlign = TextAlign.Center,
+                            )
+                        }
                         // Bottom padding rather than arrangement spacing: what sits below is
                         // the tab row, and a line of text touching a tab strip reads as part of it.
                         Box(Modifier.padding(top = 4.dp, bottom = 16.dp)) {
-                            LevelSummaryLine(snapshot.level, snapshot.streak)
+                            LevelSummaryLine(snapshot.level)
                         }
                     }
                 }
@@ -512,24 +538,58 @@ private fun GenreSection(items: List<DistributionSegment>) {
     }
 }
 
+/**
+ * Three numbers in three tiles.
+ *
+ * They used to be bare displaySmall figures under two-line shouting capitals, which took a third of
+ * the screen to say "0, 0, 0 h". Tiles give them an edge to sit against, and one-word labels fit on
+ * one line in every language the app ships.
+ */
 @Composable
 private fun LocalStatsRow(snapshot: LocalProfileSnapshot) {
     Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceAround,
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
         modifier = Modifier.fillMaxWidth(),
     ) {
-        LocalStat(stringResource(R.string.local_profile_stat_total), snapshot.libraryTotal.toString())
-        LocalStat(stringResource(R.string.local_profile_stat_days), snapshot.activeDaysCount.toString())
-        LocalStat(stringResource(R.string.local_profile_stat_time), snapshot.watchTimeLabel)
+        LocalStat(stringResource(R.string.local_profile_stat_total_short), snapshot.libraryTotal.toString(), Modifier.weight(1f))
+        LocalStat(stringResource(R.string.local_profile_stat_days_short), snapshot.activeDaysCount.toString(), Modifier.weight(1f))
+        LocalStat(stringResource(R.string.local_profile_stat_time_short), snapshot.watchTimeLabel, Modifier.weight(1f))
     }
 }
 
 @Composable
-private fun LocalStat(label: String, value: String) {
-    Column(verticalArrangement = Arrangement.SpaceEvenly, horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(label, color = MaterialTheme.colorScheme.onBackground, style = MaterialTheme.typography.labelSmall, textAlign = TextAlign.Center)
-        Text(value, color = MaterialTheme.colorScheme.onBackground, style = MaterialTheme.typography.displaySmall, textAlign = TextAlign.Center)
+private fun LocalStat(label: String, value: String, modifier: Modifier = Modifier) {
+    Column(
+        modifier = modifier
+            .clip(RoundedCornerShape(16.dp))
+            .background(MaterialTheme.colorScheme.surfaceContainer)
+            // A fixed height with the contents centred, rather than a reserved blank line of text:
+            // the three tiles match whether a language wraps its label or not, and a one-line label
+            // sits centred instead of leaving a gap under it.
+            .height(92.dp)
+            .padding(horizontal = 8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(2.dp, Alignment.CenterVertically),
+    ) {
+        Text(
+            value,
+            color = MaterialTheme.colorScheme.onSurface,
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Bold,
+            maxLines = 1,
+            textAlign = TextAlign.Center,
+        )
+        Text(
+            label,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            style = MaterialTheme.typography.labelMedium,
+            // Two words each, and two lines' worth of room whether or not a language needs both,
+            // so the three tiles stay the same height.
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+            textAlign = TextAlign.Center,
+            lineHeight = 15.sp,
+        )
     }
 }
 

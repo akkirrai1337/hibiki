@@ -549,4 +549,14 @@
     <string name="local_profile_library_total">total</string>
     <string name="local_profile_level_inline">Level %1$d</string>
     <string name="local_profile_xp_inline">%1$d / %2$d XP</string>
+
+    <!-- Profile: activity chart day details -->
+    <string name="local_profile_activity_episodes">%1$d episodes watched</string>
+    <string name="local_profile_activity_minutes">%1$d min watched</string>
+
+    <!-- Profile: compact stat tiles and the empty activity window -->
+    <string name="local_profile_stat_total_short">In library</string>
+    <string name="local_profile_stat_days_short">Days watched</string>
+    <string name="local_profile_stat_time_short">Watch time</string>
+    <string name="local_profile_activity_empty">Nothing watched in the last 30 days</string>
 </resources>
