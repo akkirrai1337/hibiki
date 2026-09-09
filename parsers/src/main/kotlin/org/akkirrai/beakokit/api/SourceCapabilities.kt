@@ -19,6 +19,12 @@ enum class SourceCapability {
     COMMENTS,
     REVIEWS,
     LIBRARY_SYNC,
+
+    // Reports watching itself - an episode counted and the minutes actually spent in it - to the
+    // account, rather than only what is in a list. Declared by yummy-anime; the desktop acts on it
+    // and this app does not yet, but the constant has to exist either way or the manifest that
+    // names it will not decode at all.
+    ACTIVITY_SYNC,
 }
 
 /** Optional capability for sources that expose their latest updated titles. */

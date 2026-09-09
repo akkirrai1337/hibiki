@@ -26,6 +26,7 @@ data class ScriptExtensionManifest(
     val lang: String,
     /** Inline JS source implementing the `Provider` object. */
     val payload: String = "",
+    @Serializable(with = LenientCapabilitySetSerializer::class)
     val capabilities: Set<SourceCapability> = emptySet(),
     /** Host-declared, not content the script can claim for itself - drives the 18+ badge in the UI. */
     val isNsfw: Boolean = false,
@@ -37,8 +38,11 @@ data class ScriptExtensionManifest(
      * genres, types, statuses) still come from the script's `getSettings()`, since those are
      * real content that can require a network call.
      */
+    @Serializable(with = LenientSortSetSerializer::class)
     val supportedSorts: Set<AnimeSearchSort> = setOf(AnimeSearchSort.RELEVANCE),
+    @Serializable(with = LenientFilterSetSerializer::class)
     val supportedFilters: Set<AnimeSearchFilter> = emptySet(),
+    @Serializable(with = LenientSortSerializer::class)
     val fallbackSort: AnimeSearchSort = AnimeSearchSort.RELEVANCE,
 ) {
     /**
