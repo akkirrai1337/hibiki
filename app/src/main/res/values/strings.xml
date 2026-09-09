@@ -512,4 +512,32 @@
     <string name="settings_watched_threshold_hint">Episode share to mark as watched</string>
     <string name="settings_seconds_value">%1$d s</string>
     <string name="settings_percent_value">%1$d%%</string>
+
+    <!-- Profile: level, streak and achievements -->
+    <string name="local_profile_level_badge">Level %1$d</string>
+    <string name="local_profile_level_xp">%1$d / %2$d XP</string>
+    <string name="local_profile_streak_days">%1$d day streak</string>
+    <string name="local_profile_streak_best">best %1$d</string>
+    <string name="local_profile_streak_at_risk">watch today to keep it</string>
+    <string name="local_profile_achievements_title">Achievements</string>
+    <string name="local_profile_achievement_level">level %1$d of %2$d</string>
+    <string name="local_profile_achievement_first_title">First title</string>
+    <string name="local_profile_achievement_collector_10">Collector</string>
+    <string name="local_profile_achievement_collector_25">Enthusiast</string>
+    <string name="local_profile_achievement_collector_50">Curator</string>
+    <string name="local_profile_achievement_finisher">Finisher</string>
+    <string name="local_profile_achievement_marathoner_10">Marathoner</string>
+    <string name="local_profile_achievement_marathoner_50">Completionist</string>
+    <string name="local_profile_achievement_streak_7">Week streak</string>
+    <string name="local_profile_achievement_streak_14">Fortnight streak</string>
+    <string name="local_profile_achievement_streak_30">Month streak</string>
+    <string name="local_profile_achievement_watch_24h">A full day watched</string>
+    <string name="local_profile_achievement_watch_100h">Hundred hours</string>
+    <string name="local_profile_achievement_watch_500h">Five hundred hours</string>
+    <string name="local_profile_achievement_episodes_50">Fifty episodes</string>
+    <string name="local_profile_achievement_episodes_100">Hundred episodes</string>
+    <string name="local_profile_achievement_episodes_300">Three hundred episodes</string>
+    <string name="local_profile_achievement_genre_5">Explorer</string>
+    <string name="local_profile_achievement_genre_10">Connoisseur</string>
+    <string name="local_profile_achievement_genre_15">Omnivore</string>
 </resources>

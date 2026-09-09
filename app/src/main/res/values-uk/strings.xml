@@ -504,4 +504,32 @@
     <string name="settings_watched_threshold_hint">Частка серії для позначки «переглянуто»</string>
     <string name="settings_seconds_value">%1$d с</string>
     <string name="settings_percent_value">%1$d%%</string>
+
+    <!-- Profile: level, streak and achievements -->
+    <string name="local_profile_level_badge">Рівень %1$d</string>
+    <string name="local_profile_level_xp">%1$d / %2$d XP</string>
+    <string name="local_profile_streak_days">Серія %1$d дн.</string>
+    <string name="local_profile_streak_best">рекорд %1$d</string>
+    <string name="local_profile_streak_at_risk">подивіться сьогодні, щоб не перервати</string>
+    <string name="local_profile_achievements_title">Досягнення</string>
+    <string name="local_profile_achievement_level">рівень %1$d з %2$d</string>
+    <string name="local_profile_achievement_first_title">Перший тайтл</string>
+    <string name="local_profile_achievement_collector_10">Колекціонер</string>
+    <string name="local_profile_achievement_collector_25">Ентузіаст</string>
+    <string name="local_profile_achievement_collector_50">Куратор</string>
+    <string name="local_profile_achievement_finisher">Завершувач</string>
+    <string name="local_profile_achievement_marathoner_10">Марафонець</string>
+    <string name="local_profile_achievement_marathoner_50">Перфекціоніст</string>
+    <string name="local_profile_achievement_streak_7">Тиждень поспіль</string>
+    <string name="local_profile_achievement_streak_14">Два тижні поспіль</string>
+    <string name="local_profile_achievement_streak_30">Місяць поспіль</string>
+    <string name="local_profile_achievement_watch_24h">Доба перегляду</string>
+    <string name="local_profile_achievement_watch_100h">Сто годин</string>
+    <string name="local_profile_achievement_watch_500h">П\'ятсот годин</string>
+    <string name="local_profile_achievement_episodes_50">П\'ятдесят епізодів</string>
+    <string name="local_profile_achievement_episodes_100">Сто епізодів</string>
+    <string name="local_profile_achievement_episodes_300">Триста епізодів</string>
+    <string name="local_profile_achievement_genre_5">Дослідник</string>
+    <string name="local_profile_achievement_genre_10">Знавець</string>
+    <string name="local_profile_achievement_genre_15">Всеїдний</string>
 </resources>

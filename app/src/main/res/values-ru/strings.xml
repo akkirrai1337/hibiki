@@ -514,4 +514,32 @@
     <string name="settings_watched_threshold_hint">Доля серии для отметки «просмотрено»</string>
     <string name="settings_seconds_value">%1$d с</string>
     <string name="settings_percent_value">%1$d%%</string>
+
+    <!-- Profile: level, streak and achievements -->
+    <string name="local_profile_level_badge">Уровень %1$d</string>
+    <string name="local_profile_level_xp">%1$d / %2$d XP</string>
+    <string name="local_profile_streak_days">Серия %1$d дн.</string>
+    <string name="local_profile_streak_best">рекорд %1$d</string>
+    <string name="local_profile_streak_at_risk">посмотрите сегодня, чтобы не прервать</string>
+    <string name="local_profile_achievements_title">Достижения</string>
+    <string name="local_profile_achievement_level">уровень %1$d из %2$d</string>
+    <string name="local_profile_achievement_first_title">Первый тайтл</string>
+    <string name="local_profile_achievement_collector_10">Коллекционер</string>
+    <string name="local_profile_achievement_collector_25">Энтузиаст</string>
+    <string name="local_profile_achievement_collector_50">Куратор</string>
+    <string name="local_profile_achievement_finisher">Завершитель</string>
+    <string name="local_profile_achievement_marathoner_10">Марафонец</string>
+    <string name="local_profile_achievement_marathoner_50">Перфекционист</string>
+    <string name="local_profile_achievement_streak_7">Неделя подряд</string>
+    <string name="local_profile_achievement_streak_14">Две недели подряд</string>
+    <string name="local_profile_achievement_streak_30">Месяц подряд</string>
+    <string name="local_profile_achievement_watch_24h">Сутки просмотра</string>
+    <string name="local_profile_achievement_watch_100h">Сто часов</string>
+    <string name="local_profile_achievement_watch_500h">Пятьсот часов</string>
+    <string name="local_profile_achievement_episodes_50">Пятьдесят эпизодов</string>
+    <string name="local_profile_achievement_episodes_100">Сто эпизодов</string>
+    <string name="local_profile_achievement_episodes_300">Триста эпизодов</string>
+    <string name="local_profile_achievement_genre_5">Исследователь</string>
+    <string name="local_profile_achievement_genre_10">Знаток</string>
+    <string name="local_profile_achievement_genre_15">Всеядный</string>
 </resources>

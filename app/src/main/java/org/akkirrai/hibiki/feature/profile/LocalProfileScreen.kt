@@ -398,6 +398,10 @@ private fun LocalProfileContent(
         verticalArrangement = Arrangement.spacedBy(AnimiteLargePadding),
     ) {
         LocalStatsRow(snapshot)
+        // Above the analytics: level and achievements are the part of this screen that says
+        // something on day one, while the charts below need history before they mean anything.
+        LevelCard(snapshot.level, snapshot.streak)
+        AchievementsCard(snapshot.achievements)
         AnalyticsCard(snapshot)
         GenreBars(snapshot.genreSegments)
         RecentLibraryCard(items = snapshot.recentLibraryItems, onItemClick = { onAnimeClick(it.anime) })

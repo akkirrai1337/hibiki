@@ -11,6 +11,7 @@ import java.util.Locale
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.core.model.Anime
 import org.akkirrai.hibiki.core.profile.LocalProfileData
+import org.akkirrai.hibiki.core.profile.ProfileRules
 import org.akkirrai.hibiki.core.source.LibraryCategory
 
 internal fun buildProfileSnapshot(
@@ -68,8 +69,32 @@ internal fun buildProfileSnapshot(
             DistributionSegment(entry.key, entry.value, genrePalette[index % genrePalette.size])
         }
 
+    // XP, level, streak and achievements all come from ProfileRules, which is held to the same
+    // generated vectors as the desktop implementation (see ProfileRulesTest) - so a given history
+    // produces the same level on both. Nothing about them is stored: they are read off the library
+    // and activity that already exist for the stat cards above.
+    val lifetimeWatchedMs = localData.activity.sumOf { it.watchedMs }
+    val ruleEntries = trackedLibrary.map { item ->
+        ProfileRules.Entry(
+            // The desktop's library rows carry one category each; here an item can sit in several,
+            // and "completed" is the only one the rules ask about.
+            category = if (LibraryCategory.Completed in item.categories) "completed" else "other",
+            genres = item.anime.genres,
+        )
+    }
+    // The same series the activity chart draws, as plain active/inactive days - the streak rules
+    // care only whether a day happened, and reusing it keeps the badge and the chart from ever
+    // telling different stories.
+    val streakDays = activityDays.map { ProfileRules.ActivityDay(active = it.episodeCount > 0) }
+    val streak = ProfileRules.computeStreaks(streakDays)
+    val achievements = ProfileRules.computeAchievements(ruleEntries, lifetimeWatchedMs, streak.best)
+    val level = ProfileRules.computeLevelProgress(ProfileRules.totalXpEarned(achievements, lifetimeWatchedMs))
+
     return LocalProfileSnapshot(
-        watchTimeLabel = formatDurationLabel(resources, localData.activity.sumOf { it.watchedMs }),
+        level = level,
+        streak = streak,
+        achievements = achievements,
+        watchTimeLabel = formatDurationLabel(resources, lifetimeWatchedMs),
         activeDaysCount = localData.activity.count { it.completedEpisodes > 0 || it.watchedMs > 0L },
         totalEpisodes = localData.activity.sumOf { it.completedEpisodes },
         libraryTotal = trackedLibrary.size,
@@ -128,6 +153,9 @@ private fun formatRating(value: Double): String =
     if (value % 1.0 == 0.0) value.toInt().toString() else String.format(Locale.US, "%.2f", value)
 
 internal data class LocalProfileSnapshot(
+    val level: ProfileRules.LevelProgress,
+    val streak: ProfileRules.StreakInfo,
+    val achievements: List<ProfileRules.Achievement>,
     val watchTimeLabel: String,
     val activeDaysCount: Int,
     val totalEpisodes: Int,
