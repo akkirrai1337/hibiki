@@ -67,7 +67,10 @@ private object HibikiContextFactory : ContextFactory() {
         scope: Scriptable,
         thisObj: Scriptable,
         args: Array<Any?>,
-    ): Any {
+    // Nullable: a script function that returns null legitimately produces one here, and declaring
+    // it non-null turned that into a Kotlin null check firing deep inside Rhino, surfacing as
+    // "doTopCall(...) must not be null" rather than as the null it was.
+    ): Any? {
         (cx as? HibikiScriptContext)?.topCallStartedAtMillis = System.currentTimeMillis()
         return super.doTopCall(callable, cx, scope, thisObj, args)
     }

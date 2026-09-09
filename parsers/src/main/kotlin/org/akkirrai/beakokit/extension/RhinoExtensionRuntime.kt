@@ -18,6 +18,7 @@ import org.akkirrai.beakokit.api.BrowserFetchRequest
 import org.akkirrai.beakokit.api.ChallengeSessionRequest
 import org.akkirrai.beakokit.api.SourceErrorKind
 import org.akkirrai.beakokit.api.SourceException
+import org.akkirrai.beakokit.api.context.ExtensionStorage
 import org.akkirrai.beakokit.api.context.SourceContext
 import org.akkirrai.beakokit.api.context.SourceLogLevel
 import org.akkirrai.beakokit.http.decodeShiftedBase64
@@ -185,8 +186,16 @@ class RhinoExtensionRuntime(
                     kind = SourceErrorKind.PARSE,
                 )
             val jsArgs = args.map { Context.javaToJS(it, scope) }.toTypedArray()
-            val result = fn.call(cx, scope, provider, jsArgs)
-            Context.toString(NativeJSON.stringify(cx, scope, result, null, null))
+            // A function that returns null or undefined is answering "there is nothing", which is
+            // a real answer - `getAccount()` for a source nobody is signed in to, say. Rhino hands
+            // back a Java null for both, and passing that straight to JSON.stringify used to
+            // surface as an opaque "threw while running" instead of as the null the caller asked
+            // about.
+            val result: Any? = fn.call(cx, scope, provider, jsArgs)
+            result
+                ?.let { NativeJSON.stringify(cx, scope, it, null, null) }
+                ?.let(Context::toString)
+                ?: "null"
         } catch (error: SourceException) {
             throw error
         } catch (error: RhinoScriptTimeoutError) {
@@ -288,11 +297,34 @@ class RhinoExtensionRuntime(
         ScriptableObject.putProperty(scope, "fetchAll", FetchAllFunction(sourceContext, scope))
         ScriptableObject.putProperty(scope, "challenge", ChallengeFunction(sourceContext, scope))
         ScriptableObject.putProperty(scope, "browserFetch", BrowserFetchFunction(sourceContext, scope))
+        // What makes an account possible: a token survives the call that fetched it. Rhino runs
+        // in-process, so this writes straight through to the host's store rather than collecting
+        // writes the way the desktop's worker has to.
+        ScriptableObject.putProperty(
+            scope,
+            "storage",
+            Context.javaToJS(StorageBinding(sourceContext.extensionStorage), scope),
+        )
         ScriptableObject.putProperty(
             scope,
             "preferredLanguage",
             sourceContext.preferredLanguages.firstOrNull()?.tag ?: "en",
         )
+    }
+
+    /**
+     * The `storage` global: a source's own persistent key/value store.
+     *
+     * Deliberately three plain methods with string values - the same shape the desktop exposes, so
+     * one script runs against both. Reading a key that was never set gives null rather than
+     * undefined, which is what a script written for either host can check the same way.
+     */
+    class StorageBinding(private val storage: ExtensionStorage) {
+        fun get(key: String): String? = storage.get(key)
+
+        fun set(key: String, value: String) = storage.set(key, value)
+
+        fun remove(key: String) = storage.remove(key)
     }
 
     /** Curated HTML-parsing surface; only this instance (not the Jsoup class itself) is reachable from JS. */

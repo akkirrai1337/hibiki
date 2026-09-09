@@ -22,6 +22,11 @@ interface SourceContext {
         get() = BrowserFetchProvider.UNSUPPORTED
     val sourceExecutionPolicy: SourceExecutionPolicy
         get() = SourceExecutionPolicy.NONE
+
+    /** Where a scripted extension keeps what has to outlive one call - a session token, chiefly.
+     * Defaults to remembering nothing, so a host that has nowhere to persist to needs no change. */
+    val extensionStorage: ExtensionStorage
+        get() = ExtensionStorage.NONE
 }
 
 /** Source-scoped values supplied by the host; secrets are deliberately read separately. */
@@ -71,6 +76,7 @@ data class DefaultSourceContext(
     override val browserFetchProvider: BrowserFetchProvider = BrowserFetchProvider.UNSUPPORTED,
     override val sourceExecutionPolicy: SourceExecutionPolicy =
         HealthTrackingSourceExecutionPolicy(sourceHealthReporter),
+    override val extensionStorage: ExtensionStorage = ExtensionStorage.NONE,
 ) : SourceContext {
     init {
         require(preferredLanguages.isNotEmpty()) { "At least one preferred language is required" }

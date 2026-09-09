@@ -14,6 +14,7 @@ import org.akkirrai.beakokit.api.SourceInfo
 import org.akkirrai.beakokit.api.SourceLanguage
 import org.akkirrai.beakokit.api.SourceCatalogEntry
 import org.akkirrai.beakokit.api.context.DefaultSourceContext
+import org.akkirrai.hibiki.core.source.extension.AndroidExtensionStorage
 import org.akkirrai.beakokit.api.context.SourceConfig
 import org.akkirrai.beakokit.api.context.SourceLogLevel
 import org.akkirrai.beakokit.api.context.SourceLogger
@@ -148,6 +149,9 @@ object AnimeSourceRegistry {
 
     fun uninstallScriptExtension(id: SourceId) {
         scriptRepository?.uninstall(id.value)
+        // A stored token for a source that is no longer installed is only a secret nobody is
+        // watching - it goes with the source.
+        applicationContext?.let { AndroidExtensionStorage.clear(it, id.value) }
         refresh()
     }
 
@@ -312,6 +316,8 @@ object AnimeSourceRegistry {
         httpClient = client,
         preferredLanguages = listOf(catalog.require(sourceId).primaryLanguage),
         config = SourceConfig.EMPTY,
+        // Per source, so one source can never read another's session.
+        extensionStorage = AndroidExtensionStorage(context.applicationContext, sourceId.value),
         logger = SourceLogger { level, message, throwable ->
             val tag = "BeakoKit/${sourceId.value}"
             when (level) {
