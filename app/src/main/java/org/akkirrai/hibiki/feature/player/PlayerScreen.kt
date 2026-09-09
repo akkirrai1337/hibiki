@@ -1483,13 +1483,16 @@ private fun PlayerTopOverlay(
 
         AnimatedVisibility(
             visible = titleVisible,
-            modifier = Modifier.align(Alignment.TopCenter),
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .fillMaxWidth()
+                .padding(start = 64.dp, end = 64.dp),
             enter = fadeIn(animationSpec = tween(140)),
             exit = fadeOut(animationSpec = tween(140)),
         ) {
             Column(
-                modifier = Modifier.padding(horizontal = 92.dp, vertical = 10.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.padding(top = 2.dp),
+                horizontalAlignment = Alignment.Start,
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 Text(
@@ -1497,7 +1500,7 @@ private fun PlayerTopOverlay(
                     style = MaterialTheme.typography.titleMedium,
                     color = Color.White,
                     fontWeight = FontWeight.SemiBold,
-                    textAlign = TextAlign.Center,
+                    textAlign = TextAlign.Start,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
