@@ -242,6 +242,7 @@ fun PlayerScreen(
     val isBufferingState = remember { mutableStateOf(false) }
     var isBuffering by isBufferingState
     var playbackSpeed by remember { mutableFloatStateOf(preferencesState.playbackSpeed) }
+    var showRemainingTime by remember { mutableStateOf(false) }
     val durationMsState = remember { mutableLongStateOf(0L) }
     var durationMs by durationMsState
     val positionMsState = remember { mutableLongStateOf(0L) }
@@ -932,6 +933,11 @@ fun PlayerScreen(
                     durationMs = durationMs,
                     bufferedPositionMs = bufferedPositionMs,
                     sliderPositionMs = sliderPositionMs,
+                    showRemainingTime = showRemainingTime,
+                    onTimeLabelClick = {
+                        showRemainingTime = !showRemainingTime
+                        keepControlsVisible()
+                    },
                     onSliderValueChange = { newValue ->
                         keepControlsVisible()
                         isSeeking = true
@@ -1988,6 +1994,8 @@ private fun PlayerBottomOverlay(
     durationMs: Long,
     bufferedPositionMs: Long,
     sliderPositionMs: Long,
+    showRemainingTime: Boolean,
+    onTimeLabelClick: () -> Unit,
     onSliderValueChange: (Long) -> Unit,
     onSliderValueChangeFinished: () -> Unit,
     videoScaleMode: VideoScaleMode,
@@ -2044,8 +2052,15 @@ private fun PlayerBottomOverlay(
                 verticalAlignment = Alignment.Top,
             ) {
                 Text(
-                    text = "${formatPlaybackTime(sliderPositionMs)} / ${formatPlaybackTime(durationMs)}",
-                    modifier = Modifier.padding(top = 1.dp),
+                    text = if (showRemainingTime) {
+                        "-${formatPlaybackTime((durationMs - sliderPositionMs).coerceAtLeast(0L))}"
+                    } else {
+                        "${formatPlaybackTime(sliderPositionMs)} / ${formatPlaybackTime(durationMs)}"
+                    },
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .clickable(onClick = onTimeLabelClick)
+                        .padding(horizontal = 6.dp, vertical = 4.dp),
                     color = Color.White.copy(alpha = 0.78f),
                     style = MaterialTheme.typography.labelMedium
                 )
