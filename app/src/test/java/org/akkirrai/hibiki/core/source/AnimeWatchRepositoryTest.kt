@@ -2,6 +2,8 @@ package org.akkirrai.hibiki.core.source
 
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.async
 import org.akkirrai.beakokit.model.PlayerLink
 import org.akkirrai.beakokit.model.PlayerType
 import kotlinx.coroutines.delay
@@ -9,6 +11,7 @@ import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.util.concurrent.atomic.AtomicInteger
 
 class AnimeWatchRepositoryTest {
     private val repository = AnimeWatchRepository(
@@ -81,6 +84,43 @@ class AnimeWatchRepositoryTest {
     }
 
     @Test
+    fun `concurrent player link requests share one provider load`() = runBlocking {
+        val loaderStarted = CompletableDeferred<Unit>()
+        val releaseLoader = CompletableDeferred<Unit>()
+        val loadCount = AtomicInteger()
+        val expected = listOf(playerLink(playerName = "Kodik"))
+
+        val first = async {
+            repository.loadPlayerLinks("source\u0000episode") {
+                loadCount.incrementAndGet()
+                loaderStarted.complete(Unit)
+                releaseLoader.await()
+                expected
+            }
+        }
+        loaderStarted.await()
+        val second = async {
+            repository.loadPlayerLinks("source\u0000episode") {
+                loadCount.incrementAndGet()
+                expected
+            }
+        }
+
+        first.cancel()
+        releaseLoader.complete(Unit)
+
+        assertEquals(expected, second.await())
+        assertEquals(expected, repository.loadPlayerLinks("source\u0000episode") { emptyList() })
+        assertEquals(1, loadCount.get())
+
+        repository.loadPlayerLinks("source\u0000episode", forceRefresh = true) {
+            loadCount.incrementAndGet()
+            expected
+        }
+        assertEquals(2, loadCount.get())
+    }
+
+    @Test
     fun `watch source id keeps the complete scoped title id`() {
         assertEquals(
             "source:animego:mob-psiho-100-3-2131",
@@ -96,14 +136,18 @@ class AnimeWatchRepositoryTest {
         repository.cachedSources()["title"] = Any()
         repository.sourcePayloads()["source"] = Any()
         repository.cachedStreams()["stream"] = Any()
+        repository.cachedPlayerLinks()["links"] = Any()
         repository.inFlightLoads()["load"] = Any()
+        repository.inFlightPlayerLinks()["links"] = Any()
 
         repository.clearCaches()
 
         assertTrue(repository.cachedSources().isEmpty())
         assertTrue(repository.sourcePayloads().isEmpty())
         assertTrue(repository.cachedStreams().isEmpty())
+        assertTrue(repository.cachedPlayerLinks().isEmpty())
         assertTrue(repository.inFlightLoads().isEmpty())
+        assertTrue(repository.inFlightPlayerLinks().isEmpty())
     }
 
     @Suppress("UNCHECKED_CAST")
@@ -128,8 +172,22 @@ class AnimeWatchRepositoryTest {
     }
 
     @Suppress("UNCHECKED_CAST")
+    private fun AnimeWatchRepository.cachedPlayerLinks(): MutableMap<String, Any> {
+        val field = AnimeWatchRepository::class.java.getDeclaredField("cachedPlayerLinks")
+        field.isAccessible = true
+        return field.get(this) as MutableMap<String, Any>
+    }
+
+    @Suppress("UNCHECKED_CAST")
     private fun AnimeWatchRepository.inFlightLoads(): MutableMap<String, Any> {
         val field = AnimeWatchRepository::class.java.getDeclaredField("inFlightLoads")
+        field.isAccessible = true
+        return field.get(this) as MutableMap<String, Any>
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    private fun AnimeWatchRepository.inFlightPlayerLinks(): MutableMap<String, Any> {
+        val field = AnimeWatchRepository::class.java.getDeclaredField("inFlightPlayerLinks")
         field.isAccessible = true
         return field.get(this) as MutableMap<String, Any>
     }

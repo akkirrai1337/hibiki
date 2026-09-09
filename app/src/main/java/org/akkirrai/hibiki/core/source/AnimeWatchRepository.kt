@@ -4,7 +4,11 @@ import android.content.Context
 import io.ktor.client.HttpClient
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.supervisorScope
@@ -78,7 +82,9 @@ class AnimeWatchRepository(
     private val sourcePayloads = ConcurrentHashMap<String, SourcePayload>()
     private val sourcePayloadLanguages = ConcurrentHashMap<String, String>()
     private val cachedStreams = ConcurrentHashMap<String, CachedPlaybackStream>()
+    private val cachedPlayerLinks = ConcurrentHashMap<String, CachedPlayerLinks>()
     private val inFlightLoads = ConcurrentHashMap<String, CompletableDeferred<List<WatchSource>>>()
+    private val inFlightPlayerLinks = ConcurrentHashMap<String, CompletableDeferred<List<PlayerLink>>>()
     private val appContext = context?.applicationContext
     private val appPreferences = appContext?.let(::AppPreferences)
     private val sourceManager = appContext?.let { AnimeSourceRuntimeManager(it, client) }
@@ -90,6 +96,7 @@ class AnimeWatchRepository(
     @Volatile
     private var activeBrowserResolvers: List<BrowserScriptResolver> = emptyList()
     private val loadMutex = Mutex()
+    private val requestScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     fun getCachedSources(animeId: String): WatchSourcesCacheSnapshot? {
         val canonicalId = extractTitleId(animeId)
@@ -197,7 +204,7 @@ class AnimeWatchRepository(
         val episode = payload.episodes.firstOrNull { it.id == episodeId }
             ?: throw SourceException(appString(R.string.watch_error_episode_not_found))
         val links = prioritizeLinks(
-            links = getFilteredLinks(payload, episode)
+            links = getFilteredLinks(payload, episode, forceRefresh)
                 .filterNot { it.url in excludedStreamUrls },
             preferredPlayerName = preferredPlayerName,
             preferredQuality = preferredQuality,
@@ -354,11 +361,14 @@ class AnimeWatchRepository(
         sourcePayloads.clear()
         sourcePayloadLanguages.clear()
         cachedStreams.clear()
+        cachedPlayerLinks.clear()
         inFlightLoads.clear()
+        inFlightPlayerLinks.clear()
     }
 
     fun close() {
         clearCaches()
+        requestScope.cancel()
         client.close()
     }
 
@@ -416,9 +426,52 @@ class AnimeWatchRepository(
     private suspend fun getFilteredLinks(
         payload: SourcePayload,
         episode: Episode,
+        forceRefresh: Boolean = false,
     ): List<PlayerLink> {
-        return payload.runtime.getPlayerLinks(payload.title, payload.group, episode)
-            .filter(::isSupportedLink)
+        val cacheKey = "${payload.source.sourceId}\u0000${episode.id}"
+        return loadPlayerLinks(cacheKey, forceRefresh) {
+            payload.runtime.getPlayerLinks(payload.title, payload.group, episode)
+                .filter(::isSupportedLink)
+        }
+    }
+
+    /**
+     * Player controls and stream resolution ask for the same links at nearly the same time.
+     * Keep that provider request independent from either caller so cancelling the settings sheet
+     * cannot also cancel playback, and briefly reuse the result for subsequent control updates.
+     */
+    internal suspend fun loadPlayerLinks(
+        cacheKey: String,
+        forceRefresh: Boolean = false,
+        loader: suspend () -> List<PlayerLink>,
+    ): List<PlayerLink> {
+        if (forceRefresh) {
+            cachedPlayerLinks.remove(cacheKey)
+        } else {
+            cachedPlayerLinks[cacheKey]
+                ?.takeIf { System.currentTimeMillis() - it.cachedAt < PLAYER_LINKS_CACHE_TTL_MS }
+                ?.let { return it.links }
+        }
+
+        val created = CompletableDeferred<List<PlayerLink>>()
+        val existing = inFlightPlayerLinks.putIfAbsent(cacheKey, created)
+        val request = existing ?: created.also { deferred ->
+            requestScope.launch {
+                try {
+                    val links = loader()
+                    cachedPlayerLinks[cacheKey] = CachedPlayerLinks(
+                        links = links,
+                        cachedAt = System.currentTimeMillis(),
+                    )
+                    deferred.complete(links)
+                } catch (error: Throwable) {
+                    deferred.completeExceptionally(error)
+                } finally {
+                    inFlightPlayerLinks.remove(cacheKey, deferred)
+                }
+            }
+        }
+        return request.await()
     }
 
     private suspend fun resolveAnimeId(rawId: String): String {
@@ -666,6 +719,11 @@ class AnimeWatchRepository(
         val cachedAt: Long,
     )
 
+    private data class CachedPlayerLinks(
+        val links: List<PlayerLink>,
+        val cachedAt: Long,
+    )
+
     private data class SourcePayload(
         val source: WatchSource,
         val animeId: String,
@@ -678,6 +736,7 @@ class AnimeWatchRepository(
     private companion object {
         const val TAG = "AnimeWatchRepository"
         const val STREAM_CACHE_TTL_MS = 10 * 60_000L
+        const val PLAYER_LINKS_CACHE_TTL_MS = 60_000L
         // BROWSER-resolved players can fall back to WebViewStreamRelay when a CDN blocks a plain
         // HTTP client, which adds real WebView round-trips (JS fetch + base64 bridge) to both
         // resolution and validation - both budgets were tuned before that path existed and are too

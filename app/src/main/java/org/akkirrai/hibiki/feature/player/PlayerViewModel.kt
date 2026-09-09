@@ -38,6 +38,8 @@ class PlayerViewModel(
     private val titleId = watchTitleIdFromSourceId(sourceId)
     private var loadJob: Job? = null
     private var settingsLoadJob: Job? = null
+    @Volatile
+    private var settingsLoadingKey: String? = null
     private val savedSelection = watchStateRepository.getSelectedSource(titleId)
         .takeIf { it.sourceId == sourceId }
     private val _uiState = MutableStateFlow(
@@ -176,6 +178,7 @@ class PlayerViewModel(
             return
         }
         settingsLoadJob?.cancel()
+        settingsLoadingKey = null
         _uiState.update { currentState ->
             currentState.copy(
                 currentEpisodeId = episodeId,
@@ -185,6 +188,7 @@ class PlayerViewModel(
                 playback = null,
                 pendingSeekMs = resumePositionMs.coerceAtLeast(0L),
                 settingsOptionsKey = null,
+                isSettingsLoading = false,
                 failedStreamUrls = emptySet(),
                 autoRecoveryCount = 0,
             )
@@ -216,10 +220,13 @@ class PlayerViewModel(
     fun loadSettingsOptions() {
         val state = _uiState.value
         val optionsKey = state.settingsOptionsKey()
-        if (state.settingsOptionsKey == optionsKey || state.isSettingsLoading) {
+        if (state.settingsOptionsKey == optionsKey ||
+            (settingsLoadJob?.isActive == true && settingsLoadingKey == optionsKey)
+        ) {
             return
         }
         settingsLoadJob?.cancel()
+        settingsLoadingKey = optionsKey
         _uiState.update { it.copy(isSettingsLoading = true) }
         settingsLoadJob = viewModelScope.launch(Dispatchers.IO) {
             val result = runCatching {
@@ -231,10 +238,15 @@ class PlayerViewModel(
             currentCoroutineContext().ensureActive()
             val updatedState = _uiState.value
             if (updatedState.currentSourceId != state.currentSourceId || updatedState.currentEpisodeId != state.currentEpisodeId) {
+                if (settingsLoadingKey == optionsKey) {
+                    settingsLoadingKey = null
+                    _uiState.update { it.copy(isSettingsLoading = false) }
+                }
                 return@launch
             }
             result
                 .onSuccess { options ->
+                    settingsLoadingKey = null
                     _uiState.update {
                         it.copy(
                             isSettingsLoading = false,
@@ -245,6 +257,7 @@ class PlayerViewModel(
                 }
                 .onFailure { throwable ->
                     if (throwable is CancellationException) return@onFailure
+                    settingsLoadingKey = null
                     AppLogger.e(
                         PLAYBACK_LOG_TAG,
                         "[viewmodel.settings.fail] sourceId=${state.currentSourceId} episodeId=${state.currentEpisodeId} error=${throwable.javaClass.simpleName}:${throwable.message}",
@@ -260,6 +273,7 @@ class PlayerViewModel(
     fun selectVoiceover(source: WatchSource, resumePositionMs: Long = 0L) {
         val currentEpisode = _uiState.value.episodes.firstOrNull { it.id == _uiState.value.currentEpisodeId } ?: return
         settingsLoadJob?.cancel()
+        settingsLoadingKey = null
         viewModelScope.launch(Dispatchers.IO) {
             val episodes = repository.getEpisodes(source.sourceId)
             val matching = episodes.firstOrNull { it.number == currentEpisode.number } ?: episodes.firstOrNull() ?: return@launch
@@ -273,6 +287,7 @@ class PlayerViewModel(
                     selectedQualityLabel = source.qualityLabel,
                     pendingSeekMs = resumePositionMs.coerceAtLeast(0L),
                     settingsOptionsKey = null,
+                    isSettingsLoading = false,
                     failedStreamUrls = emptySet(),
                     autoRecoveryCount = 0,
                 )
@@ -286,24 +301,22 @@ class PlayerViewModel(
                 autoSelect = false,
             )
             restoreSavedSeek()
-            load(forceRefresh = true)
+            load()
         }
     }
 
     fun selectPlayer(playerName: String?, resumePositionMs: Long = 0L) {
-        settingsLoadJob?.cancel()
         _uiState.update {
             it.copy(
                 selectedPlayerName = playerName,
                 playback = null,
                 pendingSeekMs = resumePositionMs.coerceAtLeast(0L),
-                settingsOptionsKey = null,
                 failedStreamUrls = emptySet(),
                 autoRecoveryCount = 0,
             )
         }
         persistSelection()
-        load(forceRefresh = true)
+        load()
     }
 
     fun selectQuality(qualityLabel: String?, resumePositionMs: Long = 0L) {
@@ -317,7 +330,7 @@ class PlayerViewModel(
             )
         }
         persistSelection()
-        load(forceRefresh = true)
+        load()
     }
 
     fun savePlaybackProgress(
@@ -530,10 +543,6 @@ private fun PlayerUiState.settingsOptionsKey(): String =
         append(currentSourceId)
         append(':')
         append(currentEpisodeId)
-        append(':')
-        append(selectedPlayerName.orEmpty())
-        append(':')
-        append(selectedQualityLabel.orEmpty())
     }
 
 private fun <T> Result<T>.throwIfCancelled(): Result<T> {
