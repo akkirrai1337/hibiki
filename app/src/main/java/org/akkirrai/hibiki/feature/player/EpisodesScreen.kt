@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -37,8 +38,6 @@ import androidx.compose.material.icons.outlined.Pause
 import androidx.compose.material.icons.outlined.PlayArrow
 import androidx.compose.material.icons.outlined.VideoLibrary
 import androidx.compose.material.icons.rounded.Check
-import androidx.compose.material.icons.rounded.ChevronRight
-import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -52,6 +51,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -82,6 +82,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.flow.first
 import kotlin.math.roundToInt
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.app.di.hibikiDependencies
@@ -115,10 +116,6 @@ private val EpisodeNumberTileCornerRadius = 15.dp
 private val EpisodeWatchedBadgeSize = 18.dp
 private val EpisodeWatchedBadgeIconSize = 12.dp
 private val EpisodeProgressBarHeight = 3.dp
-private val EpisodeResumeCardCornerRadius = 20.dp
-private val EpisodeResumePlayTileSize = 46.dp
-private val EpisodeResumePlayTileCornerRadius = 15.dp
-private val EpisodeSectionDividerHeight = 3.dp
 private val EpisodeSwipeRevealWidth = 76.dp
 
 @Composable
@@ -152,6 +149,7 @@ fun EpisodesScreen(
     val navigationLocked = navigationLockedState.value
     var downloadStates by remember(sourceId) { mutableStateOf<Map<String, OfflineEpisodeDownloadState>>(emptyMap()) }
     val coroutineScope = rememberCoroutineScope()
+    var hasAutoScrolled by remember(sourceId) { mutableStateOf(false) }
 
     // Cached from whatever Details visit populated it (offlineTitleMetadataRepository is also
     // what saveToLibrary below reads from) -- this screen only otherwise knows about individual
@@ -249,12 +247,8 @@ fun EpisodesScreen(
                         episodeCount = result.items.size,
                     )
                 }
-                val resumeProgress = remember(savedProgress) { resolveResumeProgress(savedProgress) }
-                val resumeEpisode = remember(resumeProgress, result.items) {
-                    resumeProgress?.let { progress ->
-                        result.items.firstOrNull { it.id == progress.episodeId }
-                            ?: result.items.firstOrNull { it.number == progress.episodeNumber }
-                    }
+                val autoScrollTargetIndex = remember(savedProgress, result.items) {
+                    resolveEpisodeAutoScrollIndex(result.items, savedProgress)
                 }
                 var visibleCount by remember(result.items.size, result.items.firstOrNull()?.id) {
                     mutableIntStateOf(EPISODES_PAGE_SIZE.coerceAtMost(result.items.size))
@@ -262,48 +256,26 @@ fun EpisodesScreen(
                 val visibleEpisodes = result.items.take(visibleCount)
                 val hasMoreEpisodes = visibleCount < result.items.size
                 val itemShape = RoundedCornerShape(EpisodeRowCornerRadius)
+                val listState = rememberLazyListState()
+
+                LaunchedEffect(autoScrollTargetIndex, hasAutoScrolled, result.items.size) {
+                    val targetIndex = autoScrollTargetIndex ?: return@LaunchedEffect
+                    if (hasAutoScrolled) return@LaunchedEffect
+                    hasAutoScrolled = true
+                    visibleCount = maxOf(
+                        visibleCount,
+                        (targetIndex + EPISODES_PAGE_SIZE).coerceAtMost(result.items.size),
+                    )
+                    snapshotFlow { listState.layoutInfo.totalItemsCount }.first { it > targetIndex }
+                    listState.scrollToItem((targetIndex - 2).coerceAtLeast(0))
+                }
 
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
+                    state = listState,
                     contentPadding = contentPadding,
                     verticalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
-                    item(key = "episodes_header") {
-                        EpisodesListHeader(
-                            resumeEpisode = resumeEpisode,
-                            resumeProgress = resumeProgress,
-                            onResumeClick = resumeEpisode?.let { episode ->
-                                {
-                                    if (!navigationLocked) {
-                                        navigationLockedState.value = true
-                                        onEpisodeClick(episode)
-                                    }
-                                }
-                            },
-                            onResumeMarkWatched = resumeEpisode?.let { episode ->
-                                resumeProgress?.let { progress ->
-                                    {
-                                        coroutineScope.launch {
-                                            savedProgress = withContext(Dispatchers.IO) {
-                                                watchStateRepository.saveEpisodeProgress(
-                                                    titleId = titleId,
-                                                    episodeId = episode.id,
-                                                    episodeNumber = episode.number,
-                                                    sourceId = progress.sourceId,
-                                                    voiceoverId = progress.voiceoverId,
-                                                    sourceTitle = progress.sourceTitle,
-                                                    quality = progress.quality,
-                                                    positionMs = progress.durationMs,
-                                                    durationMs = progress.durationMs,
-                                                )
-                                                watchStateRepository.getEpisodeProgressForSource(titleId, sourceId)
-                                            }
-                                        }
-                                    }
-                                }
-                            },
-                        )
-                    }
                     itemsIndexed(visibleEpisodes, key = { _, episode -> episode.id }) { _, episode ->
                         val progress = savedProgress.firstOrNull { it.episodeId == episode.id }
                         EpisodeRow(
@@ -394,172 +366,6 @@ fun EpisodesScreen(
             }
         }
     }
-}
-
-@Composable
-private fun EpisodesListHeader(
-    resumeEpisode: WatchEpisode?,
-    resumeProgress: EpisodeWatchProgress?,
-    onResumeClick: (() -> Unit)?,
-    onResumeMarkWatched: (() -> Unit)?,
-) {
-    val isVisible = resumeEpisode != null &&
-        resumeProgress != null &&
-        resumeProgress.durationMs > 0L &&
-        onResumeClick != null &&
-        onResumeMarkWatched != null
-    AnimatedVisibility(
-        visible = isVisible,
-        enter = fadeIn(tween(180)) + expandVertically(tween(220)),
-        exit = fadeOut(tween(140)) + shrinkVertically(tween(220)),
-    ) {
-        if (resumeEpisode != null && resumeProgress != null && onResumeClick != null && onResumeMarkWatched != null) {
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            EpisodeResumeCard(
-                title = stringResource(
-                    R.string.watch_continue_episode,
-                    formatEpisodeNumber(resumeEpisode.number),
-                ),
-                position = "${formatPlaybackTime(resumeProgress.positionMs)} / ${formatPlaybackTime(resumeProgress.durationMs)}",
-                progressFraction = resumeProgress.positionMs.toFloat() / resumeProgress.durationMs.toFloat(),
-                onClick = onResumeClick,
-                onMarkWatched = onResumeMarkWatched,
-            )
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(EpisodeSectionDividerHeight)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.surfaceContainerHighest),
-            )
-        }
-        }
-    }
-}
-
-@Composable
-private fun EpisodeResumeCard(
-    title: String,
-    position: String,
-    progressFraction: Float,
-    onClick: () -> Unit,
-    onMarkWatched: () -> Unit,
-) {
-    val shape = RoundedCornerShape(EpisodeResumeCardCornerRadius)
-    val swipeOffset = remember(title) { Animatable(0f) }
-    val swipeScope = rememberCoroutineScope()
-    val hapticFeedback = LocalHapticFeedback.current
-    val revealWidthPx = with(LocalDensity.current) { EpisodeSwipeRevealWidth.toPx() }
-
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(shape),
-    ) {
-        Surface(
-            modifier = Modifier.matchParentSize(),
-            color = MaterialTheme.colorScheme.primaryContainer,
-            shape = shape,
-        ) {
-            Box(
-                modifier = Modifier.padding(end = 24.dp),
-                contentAlignment = Alignment.CenterEnd,
-            ) {
-                Icon(
-                    imageVector = Icons.Rounded.Check,
-                    contentDescription = stringResource(R.string.watch_mark_watched),
-                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                )
-            }
-        }
-        Surface(
-            modifier = Modifier
-                .offset { androidx.compose.ui.unit.IntOffset(swipeOffset.value.roundToInt(), 0) }
-                .pointerInput(Unit) {
-                    detectHorizontalDragGestures(
-                        onHorizontalDrag = { change, dragAmount ->
-                            if (dragAmount < 0f || swipeOffset.value < 0f) {
-                                change.consume()
-                                swipeScope.launch {
-                                    swipeOffset.snapTo((swipeOffset.value + dragAmount).coerceIn(-revealWidthPx, 0f))
-                                }
-                            }
-                        },
-                        onDragEnd = {
-                            val shouldMarkWatched = swipeOffset.value <= -revealWidthPx * 0.55f
-                            swipeScope.launch {
-                                if (shouldMarkWatched) {
-                                    hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
-                                    delay(110)
-                                    onMarkWatched()
-                                }
-                                swipeOffset.animateTo(0f, animationSpec = tween(180))
-                            }
-                        },
-                        onDragCancel = {
-                            swipeScope.launch { swipeOffset.animateTo(0f, animationSpec = tween(180)) }
-                        },
-                    )
-                }
-                .clickable(onClick = onClick),
-            shape = shape,
-            color = MaterialTheme.colorScheme.secondaryContainer,
-        ) {
-            Box {
-            Row(
-                modifier = Modifier.padding(14.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(EpisodeResumePlayTileSize)
-                        .clip(RoundedCornerShape(EpisodeResumePlayTileCornerRadius))
-                        .background(MaterialTheme.colorScheme.primary),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(
-                        imageVector = Icons.Rounded.PlayArrow,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onPrimary,
-                    )
-                }
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = title,
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSecondaryContainer,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                    Text(
-                        text = position,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.72f),
-                        maxLines = 1,
-                    )
-                }
-                Icon(
-                    imageVector = Icons.Rounded.ChevronRight,
-                    contentDescription = null,
-                    modifier = Modifier.size(22.dp),
-                    tint = MaterialTheme.colorScheme.onSecondaryContainer,
-                )
-            }
-            LinearProgressIndicator(
-                progress = { progressFraction.coerceIn(0f, 1f) },
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .fillMaxWidth()
-                    .height(EpisodeProgressBarHeight),
-                color = MaterialTheme.colorScheme.primary,
-                trackColor = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.12f),
-                drawStopIndicator = {},
-            )
-        }
-    }
-}
 }
 
 /**
@@ -962,12 +768,32 @@ private fun resolveEpisodeStatus(
     }
 }
 
-/** Most recently updated episode that's been started but not finished, if any. */
-private fun resolveResumeProgress(progressItems: List<EpisodeWatchProgress>): EpisodeWatchProgress? =
-    progressItems
+/** Returns the episode to reveal when the list first opens. */
+internal fun resolveEpisodeAutoScrollIndex(
+    episodes: List<WatchEpisode>,
+    progressItems: List<EpisodeWatchProgress>,
+): Int? {
+    val inProgress = progressItems
         .asSequence()
         .filter { it.positionMs > 0L && !it.isWatchedToEnd() }
         .maxByOrNull(EpisodeWatchProgress::updatedAt)
+    if (inProgress != null) {
+        return episodes.indexOfFirst { episode ->
+            episode.id == inProgress.episodeId || episode.number == inProgress.episodeNumber
+        }.takeIf { it >= 0 }
+    }
+
+    val lastWatched = progressItems
+        .asSequence()
+        .filter(EpisodeWatchProgress::isWatchedToEnd)
+        .maxByOrNull(EpisodeWatchProgress::episodeNumber)
+        ?: return null
+    val watchedIndex = episodes.indexOfFirst { episode ->
+        episode.id == lastWatched.episodeId || episode.number == lastWatched.episodeNumber
+    }
+    if (watchedIndex < 0) return null
+    return (watchedIndex + 1).coerceAtMost(episodes.lastIndex)
+}
 
 @Composable
 private fun buildEpisodeHeadline(
