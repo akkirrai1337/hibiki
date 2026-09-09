@@ -16,12 +16,23 @@ import org.akkirrai.beakokit.model.StreamType
 import org.akkirrai.beakokit.model.StreamValidationResult
 import org.akkirrai.beakokit.model.VideoStream
 import org.akkirrai.beakokit.http.resolveUrl
+import java.util.concurrent.ConcurrentHashMap
 
 class HttpStreamValidator(
     private val client: HttpClient,
 ) : StreamValidator {
-    override suspend fun validate(stream: VideoStream): StreamValidationResult =
-        try {
+    private val successfulValidations = ConcurrentHashMap<ValidationKey, CachedValidation>()
+
+    override suspend fun validate(stream: VideoStream): StreamValidationResult {
+        val cacheKey = stream.validationKey()
+        successfulValidations[cacheKey]?.let { cached ->
+            if (System.currentTimeMillis() - cached.cachedAt < SUCCESS_CACHE_TTL_MS) {
+                return cached.result
+            }
+            successfulValidations.remove(cacheKey, cached)
+        }
+
+        val result = try {
             val videoResult = when (stream.type) {
                 StreamType.HLS -> validateHls(stream)
                 StreamType.MP4 -> validateMp4(stream)
@@ -62,6 +73,30 @@ class HttpStreamValidator(
                 },
             )
         }
+        if (result.success) {
+            successfulValidations[cacheKey] = CachedValidation(result, System.currentTimeMillis())
+            trimValidationCache()
+        }
+        return result
+    }
+
+    private fun VideoStream.validationKey() = ValidationKey(
+        url = url,
+        type = type,
+        quality = quality,
+        headers = headers,
+        audioUrl = audioUrl,
+        audioHeaders = audioHeaders,
+    )
+
+    private fun trimValidationCache() {
+        val overflow = successfulValidations.size - MAX_SUCCESS_CACHE_ENTRIES
+        if (overflow <= 0) return
+        successfulValidations.entries
+            .sortedBy { it.value.cachedAt }
+            .take(overflow)
+            .forEach { (key, value) -> successfulValidations.remove(key, value) }
+    }
 
     private suspend fun validateHls(stream: VideoStream): StreamValidationResult {
         val firstResponse = client.get(stream.url) {
@@ -225,6 +260,8 @@ class HttpStreamValidator(
         )
 
     private companion object {
+        const val SUCCESS_CACHE_TTL_MS = 30_000L
+        const val MAX_SUCCESS_CACHE_ENTRIES = 100
         val BANDWIDTH = Regex("""BANDWIDTH=(\d+)""")
         val NUMBER_TEMPLATE = Regex("""\${'$'}Number(?:%0(\d+)d)?\${'$'}""")
         val DASH_REPRESENTATION = Regex("""<Representation\b([^>]*)>(.*?)</Representation>""", RegexOption.DOT_MATCHES_ALL)
@@ -245,5 +282,19 @@ class HttpStreamValidator(
         val kind: String,
         val statusCode: Int,
         val success: Boolean,
+    )
+
+    private data class ValidationKey(
+        val url: String,
+        val type: StreamType,
+        val quality: String?,
+        val headers: Map<String, String>,
+        val audioUrl: String?,
+        val audioHeaders: Map<String, String>,
+    )
+
+    private data class CachedValidation(
+        val result: StreamValidationResult,
+        val cachedAt: Long,
     )
 }

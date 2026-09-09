@@ -31,15 +31,17 @@ class HttpStreamValidatorTest {
             )
         })
 
-        val result = HttpStreamValidator(client).validate(
-            VideoStream(
-                url = "https://video.example/video.mp4",
-                type = StreamType.MP4,
-                quality = "1080p",
-            ),
+        val validator = HttpStreamValidator(client)
+        val stream = VideoStream(
+            url = "https://video.example/video.mp4",
+            type = StreamType.MP4,
+            quality = "1080p",
         )
+        val result = validator.validate(stream)
+        val cachedResult = validator.validate(stream)
 
         assertTrue(result.success, result.message)
+        assertEquals(result, cachedResult)
         assertEquals(1, requestCount)
         client.close()
     }
