@@ -18,6 +18,34 @@ import kotlin.test.assertEquals
 
 class PlayerResolverExtensionRepositoryTest {
     @Test
+    fun `installed browser resolver preserves page playback mode`() = runBlocking {
+        val directory = Files.createTempDirectory("hibiki-browser-resolvers").toFile()
+        val repository = PlayerResolverExtensionRepository(directory)
+        repository.install(
+            Json.encodeToString(
+                PlayerResolverExtensionManifest.serializer(),
+                PlayerResolverExtensionManifest(
+                    id = "page-player",
+                    name = "Page player",
+                    version = "1.0.0",
+                    hosts = setOf("example.test"),
+                    payload = "var Provider = { browserScript: function() { return ''; } };",
+                    runtime = ResolverRuntime.BROWSER,
+                    browserPlaybackMode = BrowserPlaybackMode.PAGE,
+                ),
+            ),
+            originRepositoryUrl = "repo",
+        )
+        val client = HttpClient(MockEngine { respond("", HttpStatusCode.OK) })
+        val resolver = repository.loadAll(
+            DefaultSourceContext(client, listOf(SourceLanguage.ENGLISH)),
+        ).single() as BrowserScriptResolver
+
+        assertEquals(BrowserPlaybackMode.PAGE, resolver.browserPlaybackMode)
+        client.close()
+    }
+
+    @Test
     fun `installed resolver resolves a matching embed outside the APK`() = runBlocking {
         val directory = Files.createTempDirectory("hibiki-resolvers").toFile()
         val repository = PlayerResolverExtensionRepository(directory)

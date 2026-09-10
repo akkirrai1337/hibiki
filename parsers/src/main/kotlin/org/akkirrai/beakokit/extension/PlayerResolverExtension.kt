@@ -22,7 +22,7 @@ data class PlayerResolverExtensionManifest(
     val type: String = TYPE,
     /** Browser payloads are executed by a host-provided browser runtime, never by the resolver itself. */
     val runtime: ResolverRuntime = ResolverRuntime.HTTP,
-    /** Browser resolvers only prepare ExoPlayer streams; PAGE is retained for manifest compatibility. */
+    /** Whether browser media is extracted for ExoPlayer or rendered by the host WebView. */
     val browserPlaybackMode: BrowserPlaybackMode? = BrowserPlaybackMode.EXTRACT_STREAM,
 ) {
     fun violations(): List<String> = buildList {
@@ -118,7 +118,7 @@ private class ScriptedPlayerResolver(
         manifest.runtime == ResolverRuntime.BROWSER && matchesHost(link)
 
     override val browserPlaybackMode: BrowserPlaybackMode
-        get() = BrowserPlaybackMode.EXTRACT_STREAM
+        get() = manifest.browserPlaybackMode ?: BrowserPlaybackMode.EXTRACT_STREAM
 
     override suspend fun browserScript(link: PlayerLink): String {
         check(manifest.runtime == ResolverRuntime.BROWSER) { "Resolver ${manifest.id} is not a browser resolver" }
