@@ -49,6 +49,8 @@ internal object WebViewStreamRelay {
     private const val SESSION_IDLE_TIMEOUT_MS = 3 * 60_000L
     private const val FETCH_TIMEOUT_SECONDS = 20L
     private const val JS_FETCH_TIMEOUT_MS = 12_000
+    private const val STREAM_START_TIMEOUT_SECONDS = 4L
+    private const val STREAM_JS_FETCH_TIMEOUT_MS = 3_500
 
     private class Session(
         val webView: WebView,
@@ -148,6 +150,10 @@ internal object WebViewStreamRelay {
         ensureServerStarted()
         val token = UUID.randomUUID().toString()
         sessions[token] = Session(webView, handler, headers, initialUrls, resourceHeaders, streaming)
+        // Cronet is the fallback when page JavaScript cannot read a cross-origin response body.
+        // Its provider may need a cold initialization; overlap that with the direct candidate's
+        // validation instead of making the first blocked relay request pay the whole setup cost.
+        if (streaming) ChromiumStreamTransport.warm(webView.context.applicationContext, executor)
         reapIdleSessions()
         AppLogger.d(TAG, "Session registered: token=${token.take(8)}, port=$port, sessions=${sessions.size}")
         return token
@@ -258,6 +264,10 @@ internal object WebViewStreamRelay {
             return writeStatus(out, 502, "Upstream fetch failed")
         }
 
+        if (result.status !in 200..299) {
+            return writeStatus(out, result.status, "Upstream request was rejected")
+        }
+
         val isPlaylist = result.contentType.contains("mpegurl", ignoreCase = true) ||
             result.body.decodeToString(endIndex = minOf(result.body.size, 16)).trimStart().startsWith("#EXTM3U")
         if (isPlaylist) {
@@ -291,7 +301,10 @@ internal object WebViewStreamRelay {
             return writeStatus(out, 502, "Upstream fetch failed")
         }
         val metadata = try {
-            transfer.metadata.get(FETCH_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+            // Capture and validation share a 15-second automatic-player budget. If page JS cannot
+            // read a cross-origin response, move to the already-warming Cronet transport quickly;
+            // FETCH_TIMEOUT_SECONDS still governs stalls after a stream has actually started.
+            transfer.metadata.get(STREAM_START_TIMEOUT_SECONDS, TimeUnit.SECONDS)
         } catch (error: Exception) {
             // A page can request a cross-origin video in `no-cors` mode, but JavaScript cannot
             // read that response body. This is a browser security boundary rather than an
@@ -303,6 +316,9 @@ internal object WebViewStreamRelay {
             return respondStreamingViaCronet(out, session, token, target, effectiveRange, headOnly)
         }
         try {
+            if (metadata.status !in 200..299) {
+                return writeStatus(out, metadata.status, "Upstream request was rejected")
+            }
             val isPlaylist = metadata.contentType.contains("mpegurl", ignoreCase = true) ||
                 target.substringBefore('?').endsWith(".m3u8", ignoreCase = true)
             if (isPlaylist) {
@@ -597,7 +613,7 @@ internal object WebViewStreamRelay {
                 var timer = null;
                 var arm = function(){
                   if (timer) clearTimeout(timer);
-                  timer = setTimeout(function(){ controller.abort(); }, $JS_FETCH_TIMEOUT_MS);
+                  timer = setTimeout(function(){ controller.abort(); }, $STREAM_JS_FETCH_TIMEOUT_MS);
                 };
                 var headers = $headersJson;
                 var cleanHeaders = {};
@@ -786,6 +802,14 @@ internal object WebViewStreamRelay {
      * get Chromium TLS and HTTP behaviour without asking page JavaScript to bypass CORS. */
     private object ChromiumStreamTransport {
         @Volatile private var engine: CronetEngine? = null
+
+        fun warm(context: Context, executor: java.util.concurrent.Executor) {
+            if (engine != null) return
+            executor.execute {
+                runCatching { engine(context) }
+                    .onFailure { AppLogger.w(TAG, "Cronet warm-up failed", it) }
+            }
+        }
 
         fun open(context: Context, url: String, headers: Map<String, String>, range: String?): HttpURLConnection {
             val connection = (engine(context).openConnection(URL(url)) as HttpURLConnection).apply {

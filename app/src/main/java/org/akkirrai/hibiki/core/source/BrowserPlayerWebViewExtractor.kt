@@ -125,6 +125,11 @@ class BrowserPlayerWebViewExtractor(
                     headers = resourceHeaders[ranked.first().url].orEmpty(),
                     initialUrls = resourceHeaders.keys,
                     resourceHeaders = resourceHeaders,
+                    // Browser-resolved streams are precisely the ones most likely to need the
+                    // relay for every segment. Buffering an entire segment into a base64 String
+                    // before returning a byte made startup slow and memory-sensitive; stream it
+                    // with backpressure, like the direct-stream fallback already does.
+                    streaming = true,
                 )
             }
         }
@@ -379,10 +384,13 @@ class BrowserPlayerWebViewExtractor(
     private fun qualityFromUrl(url: String): String? = QUALITY.find(url)?.groupValues?.get(1)?.let { "${it}p" }
 
     private companion object {
-        const val TIMEOUT_MS = 25_000L
-        const val AUDIO_PROBE_TIMEOUT_MS = 2_500L
+        // The repository gives an automatic browser player 15 seconds for capture, extraction and
+        // validation together. An internal 25-second capture could therefore never finish on its
+        // own slow path; leave several seconds for relay validation and the next player instead.
+        const val TIMEOUT_MS = 11_000L
+        const val AUDIO_PROBE_TIMEOUT_MS = 1_000L
         const val MAX_PROBES = 24
-        const val STREAM_SETTLE_DELAY_MS = 1_000L
+        const val STREAM_SETTLE_DELAY_MS = 600L
         const val CHROME_USER_AGENT = "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Mobile Safari/537.36"
         const val TAG = "BrowserPlayerResolver"
         val QUALITY = Regex("""(?<!\\d)(240|360|480|540|720|1080|1440|2160)(?:p|\\.m3u8|/)""")
