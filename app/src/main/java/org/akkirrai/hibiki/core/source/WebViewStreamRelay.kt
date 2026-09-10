@@ -51,7 +51,7 @@ internal object WebViewStreamRelay {
     private const val FETCH_TIMEOUT_SECONDS = 20L
     private const val JS_FETCH_TIMEOUT_MS = 12_000
     private const val STREAM_START_TIMEOUT_SECONDS = 4L
-    private const val STREAM_JS_FETCH_TIMEOUT_MS = 3_500
+    private const val STREAM_XHR_TIMEOUT_MS = 20_000
 
     private class Session(
         val webView: WebView,
@@ -723,7 +723,7 @@ internal object WebViewStreamRelay {
         """.trimIndent()
     }
 
-    private fun buildStreamingFetchScript(
+    internal fun buildStreamingFetchScript(
         reqId: String,
         url: String,
         headers: Map<String, String>,
@@ -736,65 +736,40 @@ internal object WebViewStreamRelay {
         return """
             (function(){
               try {
-                var controller = new AbortController();
-                var timer = null;
-                var arm = function(){
-                  if (timer) clearTimeout(timer);
-                  timer = setTimeout(function(){ controller.abort(); }, $STREAM_JS_FETCH_TIMEOUT_MS);
-                };
+                var xhr = new XMLHttpRequest();
+                xhr.open('GET', $urlJson, true);
+                xhr.responseType = 'arraybuffer';
                 var headers = $headersJson;
-                var cleanHeaders = {};
                 Object.keys(headers).forEach(function(name){
-                  try { var probe = new Headers(); probe.set(name, headers[name]); cleanHeaders[name] = headers[name]; } catch(e) {}
+                  try { xhr.setRequestHeader(name, headers[name]); } catch(e) {}
                 });
-                arm();
-                // HLS CDN responses commonly use Access-Control-Allow-Origin: *. Fetching with
-                // credentials would make Chromium reject that otherwise valid response by design.
-                // Authentication for these captured streams is carried by the signed URL; any
-                // explicitly supplied auth headers remain in cleanHeaders.
-                fetch($urlJson, {method:'GET', headers:cleanHeaders, credentials:'omit', cache:'no-store', signal:controller.signal}).then(function(response){
-                  arm();
+                // A Service Worker can hand fetch() a body stream already locked to its reader.
+                // XHR exposes a completed ArrayBuffer instead and, with credentials disabled,
+                // remains compatible with the wildcard CORS used by signed HLS CDNs.
+                xhr.withCredentials = false;
+                xhr.onload = function(){
+                  try {
+                  var buffer = xhr.response || new ArrayBuffer(0);
                   $BRIDGE_NAME.onStreamStart(
                     $reqIdJson,
-                    response.status,
-                    response.headers.get('content-type') || '',
-                    response.headers.get('content-range') || '',
-                    response.headers.get('content-length') || '',
-                    response.url || $urlJson
+                    xhr.status,
+                    xhr.getResponseHeader('content-type') || '',
+                    xhr.getResponseHeader('content-range') || '',
+                    xhr.getResponseHeader('content-length') || String(buffer.byteLength),
+                    xhr.responseURL || $urlJson
                   );
-                  if (!response.body || !response.body.getReader) {
-                    return response.arrayBuffer().then(function(buffer){
-                      var bytes = new Uint8Array(buffer);
-                      for (var i = 0; i < bytes.length; i += 16384) {
-                        var part = bytes.subarray(i, i + 16384);
-                        $BRIDGE_NAME.onStreamChunk($reqIdJson, btoa(String.fromCharCode.apply(null, part)));
-                      }
-                      clearTimeout(timer);
-                      $BRIDGE_NAME.onStreamComplete($reqIdJson);
-                    });
+                  var bytes = new Uint8Array(buffer);
+                  for (var i = 0; i < bytes.length; i += 16384) {
+                    var part = bytes.subarray(i, i + 16384);
+                    $BRIDGE_NAME.onStreamChunk($reqIdJson, btoa(String.fromCharCode.apply(null, part)));
                   }
-                  var reader = response.body.getReader();
-                  var pump = function(){
-                    return reader.read().then(function(result){
-                      arm();
-                      if (result.done) {
-                        clearTimeout(timer);
-                        $BRIDGE_NAME.onStreamComplete($reqIdJson);
-                        return;
-                      }
-                      var bytes = result.value;
-                      for (var i = 0; i < bytes.length; i += 16384) {
-                        var part = bytes.subarray(i, i + 16384);
-                        $BRIDGE_NAME.onStreamChunk($reqIdJson, btoa(String.fromCharCode.apply(null, part)));
-                      }
-                      return pump();
-                    });
-                  };
-                  return pump();
-                }).catch(function(error){
-                  if (timer) clearTimeout(timer);
-                  $BRIDGE_NAME.onStreamError($reqIdJson, String(error));
-                });
+                  $BRIDGE_NAME.onStreamComplete($reqIdJson);
+                  } catch(error) { $BRIDGE_NAME.onStreamError($reqIdJson, 'onload: ' + String(error)); }
+                };
+                xhr.onerror = function(){ $BRIDGE_NAME.onStreamError($reqIdJson, 'network error'); };
+                xhr.ontimeout = function(){ $BRIDGE_NAME.onStreamError($reqIdJson, 'timeout'); };
+                xhr.timeout = $STREAM_XHR_TIMEOUT_MS;
+                xhr.send();
               } catch(error) { $BRIDGE_NAME.onStreamError($reqIdJson, 'sync: ' + String(error)); }
             })();
         """.trimIndent()

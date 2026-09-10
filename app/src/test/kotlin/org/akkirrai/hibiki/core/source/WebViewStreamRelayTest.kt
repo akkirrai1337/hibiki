@@ -6,6 +6,21 @@ import org.junit.Test
 
 class WebViewStreamRelayTest {
     @Test
+    fun `stream relay avoids service worker locked readable streams and credentialed wildcard cors`() {
+        val script = WebViewStreamRelay.buildStreamingFetchScript(
+            reqId = "request",
+            url = "https://cdn.example/master.m3u8",
+            headers = emptyMap(),
+            range = null,
+        )
+
+        assertTrue(script.contains("new XMLHttpRequest()"))
+        assertTrue(script.contains("responseType = 'arraybuffer'"))
+        assertTrue(script.contains("withCredentials = false"))
+        assertTrue(!script.contains("getReader()"))
+    }
+
+    @Test
     fun `playlist rewrite covers variants segments keys audio and subtitles`() {
         val playlist = """
             #EXTM3U
