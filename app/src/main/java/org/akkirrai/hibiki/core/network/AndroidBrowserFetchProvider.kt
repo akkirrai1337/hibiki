@@ -64,7 +64,7 @@ class AndroidBrowserFetchProvider(
                 runFetch(webView, request)
             }
             if (attempt >= MAX_RETRIES || !isTransientStatus(response.status)) return response
-            if (response.status == 403 || response.status == 444) {
+            if (response.status == 403) {
                 // WAF denials are tied to the current browser page/session. Repeating the fetch in
                 // that same page only reproduces the denial; reload the real page so Chromium can
                 // obtain a fresh challenge state before the bounded retry.
@@ -82,7 +82,7 @@ class AndroidBrowserFetchProvider(
     }
 
     private fun isTransientStatus(status: Int): Boolean =
-        status == 403 || status == 408 || status == 425 || status == 429 || status == 444 || status in 500..599
+        status == 403 || status == 408 || status == 425 || status == 429 || status in 500..599
 
     private fun discardSession(pageUrl: String) {
         val current = session?.takeIf { it.pageUrl == pageUrl } ?: return
