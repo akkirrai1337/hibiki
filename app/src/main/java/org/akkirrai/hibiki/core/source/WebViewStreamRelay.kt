@@ -4,6 +4,7 @@ import android.content.Context
 import android.os.Handler
 import android.webkit.JavascriptInterface
 import android.webkit.WebView
+import android.webkit.WebViewClient
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.akkirrai.beakokit.http.hostOf
@@ -70,6 +71,7 @@ internal object WebViewStreamRelay {
                 if (safeOrigin(url) != null) put(url, value)
             }
         }
+        private val originBackends = ConcurrentHashMap<String, CompletableFuture<WebView>>()
 
         fun allows(url: String): Boolean = safeOrigin(url)?.let(allowedOrigins::contains) == true
 
@@ -80,6 +82,59 @@ internal object WebViewStreamRelay {
             headersByUrl.putIfAbsent(url, inheritedHeaders)
             true
         } == true
+
+        /**
+         * Page JavaScript cannot read a cross-origin media response even when the page's video
+         * element can play it. Keep one tiny WebView document per media origin so relay fetches are
+         * same-origin while still using Chromium's cookies and TLS fingerprint.
+         */
+        fun backendFor(url: String): WebView {
+            val origin = safeOrigin(url) ?: throw IllegalArgumentException("Relay URL has no HTTP origin")
+            val future = originBackends.computeIfAbsent(origin) {
+                CompletableFuture<WebView>().also { result ->
+                    handler.post {
+                        try {
+                            val backend = WebView(appContext).apply {
+                                settings.javaScriptEnabled = true
+                                settings.domStorageEnabled = true
+                                settings.allowFileAccess = false
+                                settings.allowContentAccess = false
+                                settings.userAgentString = headersFor(url).entries
+                                    .firstOrNull { it.key.equals("User-Agent", ignoreCase = true) }
+                                    ?.value
+                                    ?.takeIf(String::isNotBlank)
+                                    ?: webView.settings.userAgentString
+                                installBridge(this)
+                                webViewClient = object : WebViewClient() {
+                                    override fun onPageFinished(view: WebView, loadedUrl: String) {
+                                        if (!result.isDone) result.complete(view)
+                                    }
+                                }
+                                loadDataWithBaseURL(
+                                    "$origin/",
+                                    SAME_ORIGIN_RELAY_DOCUMENT,
+                                    "text/html",
+                                    "UTF-8",
+                                    null,
+                                )
+                            }
+                            result.whenComplete { _, error -> if (error != null) backend.destroyAndClearData() }
+                        } catch (error: Throwable) {
+                            result.completeExceptionally(error)
+                        }
+                    }
+                }
+            }
+            return future.get(SAME_ORIGIN_PREPARE_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+        }
+
+        fun destroy() = handler.post {
+            webView.destroyAndClearData()
+            originBackends.values.forEach { future ->
+                future.getNow(null)?.takeUnless { it === webView }?.destroyAndClearData()
+            }
+            originBackends.clear()
+        }
     }
 
     private data class FetchResult(
@@ -217,7 +272,7 @@ internal object WebViewStreamRelay {
         val now = System.currentTimeMillis()
         sessions.entries.removeIf { (_, session) ->
             val idle = now - session.lastUsed.get() > SESSION_IDLE_TIMEOUT_MS
-            if (idle) session.handler.post { session.webView.destroyAndClearData() }
+            if (idle) session.destroy()
             idle
         }
     }
@@ -313,7 +368,7 @@ internal object WebViewStreamRelay {
             pendingStreams.remove(reqId)
             transfer.events.clear()
             AppLogger.w(TAG, "WebView stream body unavailable; retrying through Cronet: host=${hostOf(target)}", error)
-            return respondStreamingViaCronet(out, session, token, target, effectiveRange, headOnly)
+            return respondStreamingViaSameOrigin(out, session, token, target, effectiveRange, headOnly)
         }
         try {
             if (metadata.status !in 200..299) {
@@ -376,6 +431,77 @@ internal object WebViewStreamRelay {
             pendingStreams.remove(reqId)
             transfer.events.clear()
             transfer.events.offer(StreamEvent.Complete)
+        }
+    }
+
+    private fun respondStreamingViaSameOrigin(
+        out: OutputStream,
+        session: Session,
+        token: String,
+        target: String,
+        range: String?,
+        headOnly: Boolean,
+    ) {
+        val backend = try {
+            session.backendFor(target)
+        } catch (error: Exception) {
+            AppLogger.w(TAG, "Same-origin WebView relay unavailable; retrying through Cronet: host=${hostOf(target)}", error)
+            return respondStreamingViaCronet(out, session, token, target, range, headOnly)
+        }
+        val (reqId, transfer) = fetchStreamingViaWebView(session, target, range, backend)
+        val metadata = try {
+            transfer.metadata.get(STREAM_START_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+        } catch (error: Exception) {
+            pendingStreams.remove(reqId)
+            transfer.events.clear()
+            AppLogger.w(TAG, "Same-origin WebView relay failed; retrying through Cronet: host=${hostOf(target)}", error)
+            return respondStreamingViaCronet(out, session, token, target, range, headOnly)
+        }
+        try {
+            if (metadata.status !in 200..299) {
+                AppLogger.w(TAG, "Same-origin WebView relay rejected: status=${metadata.status}, host=${hostOf(target)}")
+                return writeStatus(out, metadata.status, "Upstream request was rejected")
+            }
+            val isPlaylist = metadata.contentType.contains("mpegurl", ignoreCase = true) ||
+                target.substringBefore('?').endsWith(".m3u8", ignoreCase = true)
+            if (isPlaylist) {
+                val body = collectStream(transfer, MAX_PLAYLIST_BYTES)
+                val rewritten = rewritePlaylist(body.decodeToString(), metadata.finalUrl.ifBlank { target }) { resolved ->
+                    check(session.authorize(resolved, session.headersFor(target))) { "Playlist contained a non-HTTP URL" }
+                    proxyUrl(token, resolved)
+                }.encodeToByteArray()
+                writeHeaders(out, 200, "application/vnd.apple.mpegurl", rewritten.size, null)
+                if (!headOnly) out.write(rewritten)
+            } else {
+                if (headOnly) {
+                    collectStream(transfer)
+                    writeStreamingHeaders(
+                        out, metadata.status, metadata.contentType, metadata.contentLength,
+                        metadata.contentRange.takeIf(String::isNotBlank), chunked = false,
+                    )
+                } else {
+                    val chunked = metadata.contentLength == null
+                    writeStreamingHeaders(
+                        out, metadata.status, metadata.contentType, metadata.contentLength,
+                        metadata.contentRange.takeIf(String::isNotBlank), chunked,
+                    )
+                    consumeStream(transfer) { bytes ->
+                        if (chunked) {
+                            out.write(bytes.size.toString(16).toByteArray(Charsets.ISO_8859_1))
+                            out.write("\r\n".toByteArray(Charsets.ISO_8859_1))
+                        }
+                        out.write(bytes)
+                        if (chunked) out.write("\r\n".toByteArray(Charsets.ISO_8859_1))
+                        out.flush()
+                    }
+                    if (chunked) out.write("0\r\n\r\n".toByteArray(Charsets.ISO_8859_1))
+                }
+            }
+            out.flush()
+        } catch (error: Exception) {
+            AppLogger.w(TAG, "Same-origin relay transfer failed: host=${hostOf(target)}", error)
+        } finally {
+            pendingStreams.remove(reqId)
         }
     }
 
@@ -530,13 +656,14 @@ internal object WebViewStreamRelay {
         session: Session,
         url: String,
         range: String?,
+        backend: WebView = session.webView,
     ): Pair<String, StreamTransfer> {
         val reqId = UUID.randomUUID().toString()
         val transfer = StreamTransfer { session.lastUsed.set(System.currentTimeMillis()) }
         pendingStreams[reqId] = transfer
         val script = buildStreamingFetchScript(reqId, url, session.headersFor(url), range)
         session.handler.post {
-            session.webView.evaluateJavascript(script) { result ->
+            backend.evaluateJavascript(script) { result ->
                 AppLogger.d(TAG, "Streaming WebView fetch started: reqId=${reqId.take(8)}, result=$result")
             }
         }
@@ -716,6 +843,8 @@ internal object WebViewStreamRelay {
     private const val STREAM_QUEUE_CAPACITY = 32
     private const val STREAM_COPY_BUFFER_SIZE = 32 * 1024
     private const val MAX_PLAYLIST_BYTES = 4 * 1024 * 1024
+    private const val SAME_ORIGIN_PREPARE_TIMEOUT_SECONDS = 8L
+    private const val SAME_ORIGIN_RELAY_DOCUMENT = "<html><head></head><body></body></html>"
     private val URI_ATTR = Regex("URI=\"([^\"]+)\"")
 
     private object Bridge {
