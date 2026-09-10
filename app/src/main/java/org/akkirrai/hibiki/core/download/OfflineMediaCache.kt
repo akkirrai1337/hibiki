@@ -166,12 +166,16 @@ object OfflineMediaCache {
             .setReadTimeoutMs(PLAYER_READ_TIMEOUT_MS)
             .setUserAgent(PLAYER_HTTP_USER_AGENT)
             .setDefaultRequestProperties(buildPlaybackRequestHeaders(emptyMap()))
-        val headerInjectingFactory = HeaderInjectingHttpDataSourceFactory(httpFactory) { url ->
+        // The browser cookie jar must run *after* source headers. A resolver's Cookie header is
+        // only a snapshot; when a WebView challenge refreshes it, the current cookie needs to win
+        // for the manifest and every later HLS segment.
+        val browserSessionFactory = BrowserSessionCookieDataSourceFactory(httpFactory)
+        val headerInjectingFactory = HeaderInjectingHttpDataSourceFactory(browserSessionFactory) { url ->
             playbackRequestHeadersForUrl(headers, resourceHeadersByUrl, url)
         }
         return DefaultDataSource.Factory(
             context.applicationContext,
-            BrowserSessionCookieDataSourceFactory(headerInjectingFactory),
+            headerInjectingFactory,
         )
     }
 
@@ -253,6 +257,10 @@ private class BrowserSessionCookieDataSource(
         val cookies = CookieManager.getInstance().getCookie(dataSpec.uri.toString())
         if (!cookies.isNullOrBlank()) {
             delegate.setRequestProperty("Cookie", cookies)
+        } else {
+            // DataSource instances are reused for HLS children. Do not leak a cookie captured
+            // for a prior CDN origin into a following request with no matching browser cookie.
+            delegate.clearRequestProperty("Cookie")
         }
         return delegate.open(dataSpec)
     }
