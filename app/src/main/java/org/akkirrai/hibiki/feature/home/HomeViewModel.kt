@@ -61,9 +61,12 @@ class HomeViewModel(
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
             runCatching { repository.refreshHomeState() }
                 .onSuccess { state ->
-                    val preparedState = prepareHomeFeed(state)
                     val current = _uiState.value
-                    _uiState.value = preparedState.copy(
+                    // Catalog data is already ready here. Full descriptions are optional card
+                    // decoration and are loaded by enrichDescription as cards become visible;
+                    // holding the first frame for several getById calls made one slow or broken
+                    // details endpoint keep the whole Home screen behind a spinner.
+                    _uiState.value = state.copy(
                         isLoading = false,
                         errorMessage = null,
                         searchQuery = current.searchQuery,
@@ -350,9 +353,10 @@ class HomeViewModel(
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
             runCatching { repository.loadHomeState() }
                 .onSuccess { state ->
-                    val preparedState = prepareHomeFeed(state)
+                    // The source lists are sufficient for first paint. Descriptions are optional
+                    // and enrichDescription loads them as their cards become visible.
                     val current = _uiState.value
-                    _uiState.value = preparedState.copy(
+                    _uiState.value = state.copy(
                         isLoading = false,
                         errorMessage = null,
                         searchQuery = current.searchQuery,
@@ -439,27 +443,6 @@ class HomeViewModel(
         )
     }
 
-    /**
-     * The first Home frame is rendered only after its above-the-fold cards have stable metadata,
-     * so they don't visibly change height moments after appearing. Only the first
-     * [EAGER_DESCRIPTION_COUNT] trending items are awaited here -- the rest already get their
-     * description filled in lazily as they scroll into view (see [enrichDescription], wired to
-     * each card's onItemVisible). Awaiting descriptions for the *entire* page here used to block
-     * the whole loading spinner on the slowest of up to [TRENDING_PAGE_SIZE] concurrent requests
-     * for content the user hadn't even scrolled to yet.
-     */
-    private suspend fun prepareHomeFeed(state: HomeUiState): HomeUiState {
-        val eagerItems = state.trending.take(EAGER_DESCRIPTION_COUNT)
-        val enrichedEagerItems = repository.enrichDescriptions(eagerItems)
-        val descriptions = enrichedEagerItems
-            .mapNotNull { anime -> anime.description?.takeIf(String::isNotBlank)?.let { anime.id to it } }
-            .toMap()
-        return state.copy(
-            featuredAnime = state.featuredAnime.withDescriptions(descriptions),
-            trending = state.trending.withDescriptions(descriptions),
-        )
-    }
-
     private fun List<Anime>.withDescriptions(descriptions: Map<String, String>): List<Anime> = map { anime ->
         if (anime.description.isNullOrBlank()) {
             descriptions[anime.id]?.let { description -> anime.copy(description = description) } ?: anime
@@ -524,7 +507,6 @@ class HomeViewModel(
         const val RECENT_UPDATES_PAGE_SIZE = 12
         const val DESCRIPTION_UPDATE_BATCH_WINDOW_MS = 100L
         const val RANDOM_HISTORY_SIZE = 20
-        const val EAGER_DESCRIPTION_COUNT = 6
     }
 
     private fun observeSourceChanges() {

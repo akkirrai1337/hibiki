@@ -142,6 +142,9 @@ class CatalogRepository(
             order,
         )
         val entries = browsed.first
+        // A provider outage or an exhausted/unsupported feed must not become a successful empty
+        // screen. Returning null activates the existing source-catalog fallback in the ViewModel.
+        if (entries.isEmpty()) return null
         val preferEnglish = searchRepository.prefersEnglishTitles()
         return CatalogPage(
             title = "",

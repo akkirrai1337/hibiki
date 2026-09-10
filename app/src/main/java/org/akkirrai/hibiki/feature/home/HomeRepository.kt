@@ -3,7 +3,6 @@ package org.akkirrai.hibiki.feature.home
 import android.content.Context
 import io.ktor.client.HttpClient
 import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlin.random.Random
@@ -357,21 +356,6 @@ class HomeRepository(
             candidates.randomOrNull()?.let { return it }
         }
         return null
-    }
-
-    suspend fun enrichDescriptions(items: List<Anime>): List<Anime> {
-        return coroutineScope {
-            items.map { anime ->
-                async {
-                    if (!anime.description.isNullOrBlank()) {
-                        anime
-                    } else {
-                        runCatching { searchRepository.getDetails(anime.id, anime) }
-                            .getOrDefault(anime)
-                    }
-                }
-            }.awaitAll()
-        }
     }
 
     suspend fun enrichDescription(anime: Anime): Anime =
