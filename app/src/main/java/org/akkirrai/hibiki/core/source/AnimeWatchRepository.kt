@@ -88,6 +88,7 @@ class AnimeWatchRepository(
     private val sourcePayloadLanguages = ConcurrentHashMap<String, String>()
     private val cachedStreams = ConcurrentHashMap<String, CachedPlaybackStream>()
     private val cachedPlayerLinks = ConcurrentHashMap<String, CachedPlayerLinks>()
+    private val unavailablePlayerLinks = ConcurrentHashMap<String, Long>()
     private val inFlightLoads = ConcurrentHashMap<String, CompletableDeferred<List<WatchSource>>>()
     private val inFlightPlayerLinks = ConcurrentHashMap<String, CompletableDeferred<List<PlayerLink>>>()
     private val appContext = context?.applicationContext
@@ -419,6 +420,7 @@ class AnimeWatchRepository(
         sourcePayloadLanguages.clear()
         cachedStreams.clear()
         cachedPlayerLinks.clear()
+        unavailablePlayerLinks.clear()
         inFlightLoads.clear()
         inFlightPlayerLinks.clear()
     }
@@ -487,6 +489,15 @@ class AnimeWatchRepository(
         forceRefresh: Boolean = false,
     ): List<PlayerLink> {
         val cacheKey = "${payload.source.sourceId}\u0000${episode.id}"
+        if (!forceRefresh) {
+            unavailablePlayerLinks[cacheKey]
+                ?.takeIf { System.currentTimeMillis() - it < UNAVAILABLE_PROVIDER_TTL_MS }
+                ?.let {
+                    AppLogger.d(TAG, "Skipping temporarily unavailable provider: sourceId=${payload.source.sourceId}, episode=${episode.number}")
+                    return emptyList()
+                }
+        }
+        unavailablePlayerLinks.remove(cacheKey)
         return loadPlayerLinks(cacheKey, forceRefresh) {
             try {
                 payload.runtime.getPlayerLinks(payload.title, payload.group, episode)
@@ -494,6 +505,9 @@ class AnimeWatchRepository(
             } catch (error: CancellationException) {
                 throw error
             } catch (error: Throwable) {
+                if (error.message?.contains("HTTP 444") == true || error.message?.contains("HTTP 5") == true) {
+                    unavailablePlayerLinks[cacheKey] = System.currentTimeMillis()
+                }
                 AppLogger.w(
                     TAG,
                     "Selected voiceover ${payload.source.title} failed for episode ${episode.number}; " +
@@ -809,6 +823,7 @@ class AnimeWatchRepository(
         const val TAG = "AnimeWatchRepository"
         const val STREAM_CACHE_TTL_MS = 10 * 60_000L
         const val PLAYER_LINKS_CACHE_TTL_MS = 60_000L
+        const val UNAVAILABLE_PROVIDER_TTL_MS = 10 * 60_000L
         const val EPISODE_NUMBER_EPSILON = 0.001
         const val PLAYER_LINK_DISCOVERY_TIMEOUT_MS = 12_000L
         const val FALLBACK_RESOLVE_TIMEOUT_MS = 12_000L

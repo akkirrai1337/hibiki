@@ -131,6 +131,34 @@ class AnimeSearchRepository(
         )
     }
 
+    /**
+     * The source's own "latest releases" list, described exactly like a search page - same
+     * describe-then-convert path, same cache.
+     *
+     * Home used to build these cards straight from the source runtime's [AnimeTitle]s, which is why
+     * a card and its own title page could disagree: the page always merges the aggregator's entry
+     * (describe() below), and that row never did. Routing it through this one path is what keeps
+     * them equal - the row now shows the same name, year and rating its details screen does.
+     */
+    suspend fun latest(limit: Int, forceRefresh: Boolean = false): List<Anime> {
+        val cacheKey = "latest:${selectedSourceId().value}:$limit:${languageKey()}"
+        if (!forceRefresh) getCachedSearch(cacheKey)?.let { return it }
+
+        ensureInternetConnection()
+
+        val preferEnglish = preferEnglish()
+        val source = currentSource()
+        val results = describeAll(source, source.latest(limit)).map { title ->
+            getCachedDetails(detailsCacheKey(title.id)) ?: title.toAnime(preferEnglish = preferEnglish)
+        }
+        searchCache[cacheKey] = CachedSearchResults(
+            items = results,
+            cachedAt = System.currentTimeMillis(),
+        )
+        trimOldestEntries(searchCache, MAX_SEARCH_CACHE_ENTRIES) { it.cachedAt }
+        return results
+    }
+
     suspend fun getDetails(
         id: String,
         fallback: Anime,
@@ -373,22 +401,17 @@ class AnimeSearchRepository(
     }
 
     /**
-     * Replaces a title's descriptive fields with a metadata provider's, when both the source asked
-     * for that in its manifest and the user has not turned it off.
+     * Describes a whole list, card by card.
      *
-     * Failures are swallowed on purpose: a provider being unreachable, rate-limiting us, or simply
-     * not carrying this title must cost the better description and nothing else - the source's own
-     * screen still renders exactly as it did before this existed.
-     */
-    /**
-     * Describes a whole list, or none of it.
+     * Every title that already has an entry is described before the screen paints; the rest are
+     * matched in the background so the next paint describes them too. Deliberately per-card rather
+     * than "all of it or none of it": the title page always describes the title it opens, so any
+     * gate here is exactly what made a card and its own title page disagree - the card showing the
+     * source's name/poster while the page showed the provider's, and then the card silently
+     * switching once the page had been visited.
      *
-     * All at once matters: a grid where some cards carry the provider's name and poster while their
-     * neighbours carry the source's reads as a broken list, even when every entry in it is correct.
-     * So a screen is described only when every title on it is already in the store - which costs
-     * nothing - and otherwise stays entirely the source's while the missing ones are matched in the
-     * background, ready for the next visit. Describing them inline would be a request per unseen
-     * title at roughly one a second, on a screen built to be scrolled.
+     * Describing the misses inline is not an option: each provider paces its requests (~1/s), and a
+     * screen built to be scrolled asks for a screenful at a time.
      */
     private suspend fun describeAll(source: AnimeSourceRuntime, titles: List<AnimeTitle>): List<AnimeTitle> {
         val service = metadataService ?: return titles
@@ -396,11 +419,12 @@ class AnimeSearchRepository(
         if (order.isEmpty() || titles.isEmpty()) return titles
 
         val cached = titles.map { service.cachedMetadataFor(it.id, order) }
-        if (cached.all { it != null }) {
-            return titles.mapIndexed { index, title -> mergeExternalMetadata(title, cached[index]) }
+        titles.filterIndexed { index, _ -> cached[index] == null }
+            .takeIf(List<AnimeTitle>::isNotEmpty)
+            ?.let { missing -> warmMetadata(service, order, missing) }
+        return titles.mapIndexed { index, title ->
+            cached[index]?.let { external -> mergeExternalMetadata(title, external) } ?: title
         }
-        warmMetadata(service, order, titles.filterIndexed { index, _ -> cached[index] == null })
-        return titles
     }
 
     /** Matches what a list screen showed but could not describe, so the next visit can. One at a
@@ -430,6 +454,14 @@ class AnimeSearchRepository(
         )
     }
 
+    /**
+     * Replaces a title's descriptive fields with a metadata provider's, when both the source asked
+     * for that in its manifest and the user has not turned it off.
+     *
+     * Failures are swallowed on purpose: a provider being unreachable, rate-limiting us, or simply
+     * not carrying this title must cost the better description and nothing else - the source's own
+     * screen still renders exactly as it did before this existed.
+     */
     private suspend fun describe(source: AnimeSourceRuntime, title: AnimeTitle): AnimeTitle {
         val service = metadataService ?: return title
         val order = providerOrderFor(source)
@@ -459,13 +491,20 @@ class AnimeSearchRepository(
         }
     }
 
-    private fun searchCacheKey(request: AnimeSearchRequest): String {
-        val languageKey = when (appPreferences?.state?.value?.languageMode ?: LanguageMode.SYSTEM) {
+    /**
+     * The app language as it appears in cache keys - one place, so a key built for a list ("latest")
+     * can never disagree with one built for a search page.
+     */
+    private fun languageKey(): String =
+        when (appPreferences?.state?.value?.languageMode ?: LanguageMode.SYSTEM) {
             LanguageMode.UKRAINIAN -> "uk"
             LanguageMode.ENGLISH -> "en"
             LanguageMode.RUSSIAN -> "ru"
             LanguageMode.SYSTEM -> "sys"
         }
+
+    private fun searchCacheKey(request: AnimeSearchRequest): String {
+        val languageKey = languageKey()
         val types = request.typeAliases.sorted().joinToString(",")
         val statuses = request.statusAliases.sorted().joinToString(",")
         val includedGenres = request.includedGenreAliases.sorted().joinToString(",")

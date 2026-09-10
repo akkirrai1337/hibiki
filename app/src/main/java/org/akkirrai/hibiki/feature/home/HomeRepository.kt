@@ -12,14 +12,11 @@ import org.akkirrai.beakokit.api.SourceId
 import org.akkirrai.beakokit.model.AnimeSearchFilterCatalog
 import org.akkirrai.beakokit.model.AnimeSearchRequest
 import org.akkirrai.beakokit.model.AnimeSearchSort
-import org.akkirrai.beakokit.model.AnimeReleaseStatus
-import org.akkirrai.beakokit.model.AnimeTitle
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.app.settings.AppPreferences
 import org.akkirrai.hibiki.app.settings.LanguageMode
 import org.akkirrai.hibiki.core.model.Anime
 import org.akkirrai.hibiki.core.model.AnimeSearchFilters
-import org.akkirrai.hibiki.core.model.AnimeRating
 import org.akkirrai.hibiki.core.log.AppLogger
 import org.akkirrai.hibiki.core.model.MockAnimeData
 import org.akkirrai.hibiki.core.network.AndroidHttpClientFactory
@@ -31,7 +28,6 @@ import org.akkirrai.hibiki.core.source.AnimeSourceRuntimeManager
 import org.akkirrai.hibiki.core.source.LibraryRepository
 import org.akkirrai.hibiki.core.source.OfflineTitleMetadataRepository
 import org.akkirrai.hibiki.core.source.WatchStateRepository
-import org.akkirrai.hibiki.core.source.localizedDisplayName
 
 class HomeRepository(
     context: Context,
@@ -79,16 +75,16 @@ class HomeRepository(
         cachedRecentUpdates = null
         currentHomeSelectionSeed = Random.nextLong()
         AppLogger.d(TAG, "refreshHomeState: advanced home selection seed to $currentHomeSelectionSeed")
-        return loadHomeState()
+        return loadHomeState(forceRefresh = true)
     }
 
-    suspend fun loadHomeState(): HomeUiState {
+    suspend fun loadHomeState(forceRefresh: Boolean = false): HomeUiState {
         AppLogger.d(TAG, "loadHomeState: called")
         val selectionSeed = currentHomeSelectionSeed ?: Random.nextLong().also {
             currentHomeSelectionSeed = it
         }
         val languageKey = "${selectedSourceId().value}:${sourceLanguage()}"
-        cachedHomeContent?.let { cached ->
+        if (!forceRefresh) cachedHomeContent?.let { cached ->
             if (cached.selectionSeed == selectionSeed && cached.languageKey == languageKey) {
                 AppLogger.d(TAG, "loadHomeState: using cachedHomeContent — " +
                     "trending=${cached.trending.size}, recentlyUpdated=${cached.recentlyUpdated.size}, seed=$selectionSeed, lang=$languageKey")
@@ -108,7 +104,7 @@ class HomeRepository(
         return coroutineScope {
             val recentlyUpdatedDeferred = async {
                 AppLogger.d(TAG, "loadHomeState: calling loadRecentlyUpdated()")
-                runCatching { loadRecentlyUpdated() }
+                runCatching { loadRecentlyUpdated(forceRefresh) }
                     .onFailure { error ->
                         AppLogger.w(
                             TAG,
@@ -127,12 +123,14 @@ class HomeRepository(
             }
             AppLogger.d(TAG, "loadHomeState: cache miss, calling getCatalog(limit=$HOME_TRENDING_WINDOW_SIZE, offset=$trendingOffset, lang=$languageKey)")
             val catalog = retryOnColdStartNetworkFailure {
-                source.search(
+                searchRepository.search(
                     AnimeSearchRequest(
                         limit = HOME_TRENDING_WINDOW_SIZE,
                         offset = trendingOffset,
                         sort = AnimeSearchSort.RATING,
                     ),
+                    allowEmptyQuery = true,
+                    forceRefresh = forceRefresh,
                 )
             }
             AppLogger.d(TAG, "loadHomeState: getCatalog returned ${catalog.size} items")
@@ -142,7 +140,7 @@ class HomeRepository(
                 throw IllegalStateException(appContext.getString(R.string.home_error_load_failed))
             }
 
-            val homeWindow = catalog.map(::toHomeAnime)
+            val homeWindow = catalog
             val featuredAnime = homeWindow
                 .shuffled(Random(selectionSeed xor FEATURED_ROTATION_SEED_SALT))
                 .take(FEATURED_COUNT)
@@ -296,7 +294,7 @@ class HomeRepository(
     ): List<Anime> {
         val sourceId = selectedSourceId()
         val catalog = if (forceRefresh) {
-            loadRecentlyUpdatedCatalog().also {
+            loadRecentlyUpdatedCatalog(forceRefresh = true).also {
                 cachedRecentUpdates = CachedSourceAnime(sourceId, it)
             }
         } else {
@@ -310,16 +308,14 @@ class HomeRepository(
         return catalog.drop(offset.coerceAtLeast(0)).take(limit.coerceAtLeast(1))
     }
 
-    private suspend fun loadRecentlyUpdated(): List<Anime> =
+    private suspend fun loadRecentlyUpdated(forceRefresh: Boolean = false): List<Anime> =
         // Home renders only one short row. Parsing the 100-item pagination snapshot here delayed
         // first paint even though 88 entries were immediately discarded; the catalog keeps its
         // own full snapshot through loadRecentlyUpdatedPage when the user actually opens it.
-        currentSource().latest(limit = HOME_SECTION_LIMIT).map(::toHomeAnime)
+        searchRepository.latest(limit = HOME_SECTION_LIMIT, forceRefresh = forceRefresh)
 
-    private suspend fun loadRecentlyUpdatedCatalog(): List<Anime> {
-        return currentSource()
-            .latest(limit = HOME_FULL_SECTION_LIMIT)
-            .map(::toHomeAnime)
+    private suspend fun loadRecentlyUpdatedCatalog(forceRefresh: Boolean = false): List<Anime> {
+        return searchRepository.latest(limit = HOME_FULL_SECTION_LIMIT, forceRefresh = forceRefresh)
     }
 
     suspend fun loadTrendingPage(
@@ -328,30 +324,31 @@ class HomeRepository(
         filter: TrendingFilter = TrendingFilter.All,
     ): List<Anime> {
         AppLogger.d(TAG, "loadTrendingPage: offset=$offset, limit=$limit, filter=$filter")
-        val catalog = currentSource().search(
+        val catalog = searchRepository.search(
             AnimeSearchRequest(
                 limit = limit,
                 offset = offset,
                 sort = AnimeSearchSort.RATING,
                 typeAliases = listOfNotNull(filter.typeAlias),
             ),
+            allowEmptyQuery = true,
         )
         AppLogger.d(TAG, "loadTrendingPage: got ${catalog.size} items from getCatalog")
-        return catalog.map(::toHomeAnime)
+        return catalog
     }
 
     suspend fun loadRandomAnime(excludedIds: Set<String>): Anime? {
         ensureInternetConnection()
         repeat(RANDOM_CATALOG_ATTEMPTS) {
-            val catalog = currentSource().search(
+            val catalog = searchRepository.search(
                 AnimeSearchRequest(
                     limit = RANDOM_CATALOG_PAGE_SIZE,
                     offset = Random.nextInt(RANDOM_CATALOG_MAX_OFFSET),
                     sort = RANDOM_CATALOG_SORTS.random(),
                 ),
+                allowEmptyQuery = true,
             )
             val candidates = catalog
-                .map(::toHomeAnime)
                 .filterNot { it.id in excludedIds }
             candidates.randomOrNull()?.let { return it }
         }
@@ -360,58 +357,6 @@ class HomeRepository(
 
     suspend fun enrichDescription(anime: Anime): Anime =
         searchRepository.getDetails(anime.id, anime)
-
-    private fun toHomeAnime(title: AnimeTitle): Anime {
-        val subtitle = buildList {
-            title.type?.toDisplayType()?.let(::add)
-            title.year?.toString()?.let(::add)
-        }.joinToString(" · ")
-
-        val status = title.releaseStatus.localizedDisplayName(preferEnglish())
-        val isAnnouncement = status.isAnnouncementStatus()
-        return Anime(
-            id = title.id,
-            title = displayTitle(title),
-            subtitle = subtitle,
-            episodesLabel = if (isAnnouncement) {
-                announcementLabel()
-            } else {
-                (title.availableEpisodeCount
-                    ?: title.episodeCount.takeIf { title.releaseStatus == AnimeReleaseStatus.RELEASED })
-                    ?.let(::episodesCountLabel)
-                    .orEmpty()
-            },
-            status = status,
-            nextEpisodeAt = title.nextEpisodeAt,
-            posterUrl = title.posterUrl,
-            posterFallbackUrl = title.posterFallbackUrl,
-            description = title.description,
-            ratings = title.ratings.map { rating ->
-                AnimeRating(source = rating.source, value = rating.value, votes = rating.votes)
-            },
-            genres = title.genres,
-            studios = title.studios,
-        )
-    }
-
-    private fun String?.isAnnouncementStatus(): Boolean {
-        val normalized = orEmpty().trim().lowercase()
-        return normalized == "анонс" || normalized == "announcement" || normalized == "announced" || normalized == "anons"
-    }
-
-    private fun String.toDisplayType(): String {
-        return when (uppercase()) {
-            "TV" -> "TV"
-            "TV_SHORT" -> "TV Short"
-            "OVA" -> "OVA"
-            "ONA" -> "ONA"
-            "MOVIE" -> "Movie"
-            "SHORT_MOVIE", "SHORT-MOVIE" -> "Short Movie"
-            "SPECIAL" -> "Special"
-            else -> replace("_", " ").replace("-", " ")
-                .replaceFirstChar { it.uppercase() }
-        }
-    }
 
     private fun String.toSearchSort(): AnimeSearchSort {
         return when (this) {
@@ -435,29 +380,9 @@ class HomeRepository(
 
     private fun sourceLanguage(): String = if (preferEnglish()) "en" else "ru"
 
-    private fun displayTitle(title: AnimeTitle): String = title.displayName
-
     private fun selectedSourceId(): SourceId = AppPreferences.readState(appContext).animeSource
 
     private fun currentSource(): AnimeSourceRuntime = sourceManager.current()
-
-    private fun isRussianLocale(): Boolean = !preferEnglish()
-
-    private fun announcementLabel(): String = if (isRussianLocale()) "анонс" else "announcement"
-
-    private fun episodesCountLabel(count: Int): String = "$count ${episodesWord(count)}"
-
-    private fun episodesWord(count: Int): String {
-        if (!isRussianLocale()) return if (count == 1) "episode" else "episodes"
-        val mod100 = count % 100
-        val mod10 = count % 10
-        return when {
-            mod100 in 11..14 -> "серий"
-            mod10 == 1 -> "серия"
-            mod10 in 2..4 -> "серии"
-            else -> "серий"
-        }
-    }
 
     private fun trendingOffsetForSeed(selectionSeed: Long): Int {
         return Random(selectionSeed).nextInt(
