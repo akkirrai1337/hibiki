@@ -119,6 +119,81 @@ fun metadataProviderOrder(
     return listOf(preferences.provider) + MetadataProviderId.entries.filterNot { it == preferences.provider }
 }
 
+/** What an aggregator-driven catalog asks for. Deliberately small: these are the three shapes a
+ * catalog screen actually offers, not a general query language over three different APIs. */
+data class ExternalCatalogRequest(
+    val mode: Mode,
+    val offset: Int = 0,
+    val limit: Int = 24,
+    /** For [Mode.SEASON] - defaults to the season now when absent. */
+    val season: AnimeSeason? = null,
+    val seasonYear: Int? = null,
+) {
+    enum class Mode { TRENDING, POPULAR, SEASON }
+}
+
+enum class AnimeSeason { WINTER, SPRING, SUMMER, FALL;
+
+    val id: String get() = name.lowercase()
+}
+
+/** The season a date falls in, by the convention every aggregator uses: January to March is winter,
+ * and December belongs to the winter that January continues. */
+fun seasonNow(now: java.time.LocalDate = java.time.LocalDate.now()): Pair<AnimeSeason, Int> {
+    val season = when (now.monthValue) {
+        1, 2, 12 -> AnimeSeason.WINTER
+        3, 4, 5 -> AnimeSeason.SPRING
+        6, 7, 8 -> AnimeSeason.SUMMER
+        else -> AnimeSeason.FALL
+    }
+    return season to if (now.monthValue == 12) now.year + 1 else now.year
+}
+
+/** Which providers can be browsed rather than only looked up. MAL through Jikan has nothing worth
+ * calling a trending endpoint, so it stays a description provider. */
+val CATALOG_PROVIDERS = listOf(MetadataProviderId.KITSU, MetadataProviderId.ANILIST)
+
+/**
+ * Whether an aggregator-driven catalog has anything to ask, given the providers allowed for a
+ * source.
+ *
+ * Not the same question as "may this source be described": MAL can describe a title but cannot be
+ * browsed, so preferring it with the fallback turned off leaves an order that describes fine and
+ * browses not at all. A screen that asks the wrong one of these turns itself on and then reports
+ * that no provider answered.
+ */
+fun canBrowseProviders(order: List<MetadataProviderId>): Boolean = order.any { it in CATALOG_PROVIDERS }
+
+/**
+ * Which title of a source is this provider entry - the reverse of the matcher, for a catalog browsed
+ * from the aggregator and resolved to a source only when a title is opened.
+ *
+ * Harder than the forward direction, and worth knowing why: a source's *search results* carry a name
+ * and often nothing else, while the entry being resolved has a year and a type. So most of these are
+ * decided by the name alone, which is exactly the case that cannot tell a sequel from its first
+ * season - hence the same threshold, and hence a manual pick has to stay part of the normal flow
+ * rather than an error path.
+ */
+fun pickSourceTitleFor(entry: ExternalMetadata, titles: List<AnimeTitle>): Pair<String, Double>? {
+    val wanted = ComparableTitle(entry.matchableNames(), entry.year, entry.type)
+    var best: Pair<String, Double>? = null
+    for (title in titles) {
+        val confidence = scoreNames(wanted, ComparableTitle(title.matchableNames(), title.year, title.type))
+        if (confidence >= MATCH_CONFIDENCE_THRESHOLD && (best == null || confidence > best!!.second)) {
+            best = title.id to confidence
+        }
+    }
+    return best
+}
+
+/** The queries to try against a *source's* search for a provider entry, best first. A source indexes
+ * what it publishes, which is usually the romaji name and sometimes the English one. */
+fun sourceSearchQueriesFor(entry: ExternalMetadata, limit: Int = 2): List<String> =
+    listOfNotNull(entry.romajiName, entry.englishName, entry.nativeName)
+        .filter(String::isNotBlank)
+        .distinctBy(String::lowercase)
+        .take(limit)
+
 /** One provider's entry, as identified by the user rather than by the matcher. Kitsu's own web URLs
  * name a title by slug rather than by id, so a reference carries one or the other. */
 data class MetadataReference(

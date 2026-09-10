@@ -22,6 +22,19 @@ interface ExternalMetadataStore {
 
     fun clearMatches(titleId: String)
 
+    /** Every match pointing at one provider entry, within one source - the match table read
+     * backwards, which is how a catalog browsed from the aggregator finds something to play. */
+    fun matchesForEntry(sourceId: String, provider: MetadataProviderId, externalId: Int): List<MetadataMatchRecord>
+
+    /** Whether a completed search of this source found nothing for this entry, and when. Its own
+     * record because the match table is keyed by the source title id - which is precisely what a
+     * failed resolution does not have. */
+    fun readUnresolvedAt(sourceId: String, provider: MetadataProviderId, externalId: Int): Long?
+
+    fun writeUnresolved(sourceId: String, provider: MetadataProviderId, externalId: Int, attemptedAtMillis: Long)
+
+    fun clearUnresolved(sourceId: String, provider: MetadataProviderId, externalId: Int)
+
     fun readMedia(provider: MetadataProviderId, externalId: Int): CachedMetadata?
 
     fun writeMedia(media: ExternalMetadata, cachedAtMillis: Long)

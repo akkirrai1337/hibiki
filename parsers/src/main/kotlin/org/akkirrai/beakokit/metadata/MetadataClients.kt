@@ -73,6 +73,35 @@ class AniListClient(private val client: HttpClient) {
         buildJsonObject { put("idMal", malId) },
     )?.media?.toExternalMetadata()
 
+    /**
+     * A page of AniList's catalog. Its "trending" is genuinely trending - what people are watching
+     * and talking about this week - rather than a lifetime popularity ranking, which is the one
+     * thing it does better than Kitsu for a catalog.
+     */
+    suspend fun browse(request: ExternalCatalogRequest): List<ExternalMetadata>? {
+        val (nowSeason, nowYear) = seasonNow()
+        val seasonal = request.mode == ExternalCatalogRequest.Mode.SEASON
+        val sort = if (request.mode == ExternalCatalogRequest.Mode.POPULAR) "POPULARITY_DESC" else "TRENDING_DESC"
+        val data = graphql(
+            """query (${'$'}page: Int, ${'$'}perPage: Int, ${'$'}season: MediaSeason, ${'$'}seasonYear: Int) {
+              Page(page: ${'$'}page, perPage: ${'$'}perPage) {
+                media(type: ANIME, sort: $sort, season: ${'$'}season, seasonYear: ${'$'}seasonYear, isAdult: false) { $ANILIST_MEDIA_FIELDS }
+              }
+            }""",
+            buildJsonObject {
+                // AniList pages by number, not by offset, so a caller's offset has to divide evenly
+                // by the page size - which it does, since a catalog screen asks for whole pages.
+                put("page", request.offset / request.limit + 1)
+                put("perPage", request.limit)
+                if (seasonal) {
+                    put("season", (request.season ?: nowSeason).name)
+                    put("seasonYear", request.seasonYear ?: nowYear)
+                }
+            },
+        ) ?: return null
+        return data.page?.media.orEmpty().map { it.toExternalMetadata() }
+    }
+
     suspend fun search(name: String): List<ScoredEntry>? {
         val data = graphql(
             "query (\$search: String) { Page(perPage: 10) { media(search: \$search, type: ANIME) { $ANILIST_MEDIA_FIELDS } } }",
@@ -145,6 +174,34 @@ class KitsuClient(private val client: HttpClient) {
         val kitsuId = body.data.orEmpty().firstNotNullOfOrNull { it.relationships?.item?.data?.id?.toIntOrNull() }
             ?: return null
         return fetchById(kitsuId)
+    }
+
+    /**
+     * A page of Kitsu's catalog.
+     *
+     * "Trending" is its own endpoint with no paging and no filters of its own, so a request for a
+     * later page of it has nothing to return - the catalog screen stops there rather than
+     * pretending.
+     */
+    suspend fun browse(request: ExternalCatalogRequest): List<ExternalMetadata>? {
+        val paging = "page[limit]=${request.limit}&page[offset]=${request.offset}"
+        val path = when (request.mode) {
+            ExternalCatalogRequest.Mode.TRENDING ->
+                if (request.offset > 0) return emptyList()
+                else "/trending/anime?limit=${request.limit}&include=$KITSU_INCLUDE"
+            ExternalCatalogRequest.Mode.SEASON -> {
+                val (nowSeason, nowYear) = seasonNow()
+                val season = (request.season ?: nowSeason).id
+                val year = request.seasonYear ?: nowYear
+                "/anime?filter[season]=$season&filter[seasonYear]=$year&sort=-userCount&$paging&include=$KITSU_INCLUDE"
+            }
+            // Kitsu's own popularity ranking, which is a lifetime count rather than a recent one -
+            // the difference between this and "trending" above.
+            ExternalCatalogRequest.Mode.POPULAR -> "/anime?sort=-userCount&$paging&include=$KITSU_INCLUDE"
+        }
+        val body = get<KitsuListResponse>(path) ?: return null
+        val included = body.included.orEmpty()
+        return body.data.orEmpty().map { it.toExternalMetadata(included) }
     }
 
     suspend fun search(name: String): List<ScoredEntry>? {

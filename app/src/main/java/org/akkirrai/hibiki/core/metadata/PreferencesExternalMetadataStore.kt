@@ -49,6 +49,40 @@ class PreferencesExternalMetadataStore(context: Context) : ExternalMetadataStore
         editor.apply()
     }
 
+    /**
+     * The match table read backwards: which titles of this source point at one provider entry.
+     *
+     * SharedPreferences has no index, so this is a scan of one source's own match keys - a few
+     * hundred entries at most on a well-used install, and only on a click. The alternative would be
+     * a second key space kept in step with the first, which is a consistency problem in exchange for
+     * microseconds.
+     */
+    override fun matchesForEntry(
+        sourceId: String,
+        provider: MetadataProviderId,
+        externalId: Int,
+    ): List<MetadataMatchRecord> {
+        val prefix = "$MATCH_PREFIX${provider.id}_$sourceId:"
+        return prefs.all
+            .filterKeys { it.startsWith(prefix) }
+            .mapNotNull { (key, value) ->
+                val titleId = key.removePrefix("$MATCH_PREFIX${provider.id}_")
+                decodeMatch(titleId, provider, value as? String ?: return@mapNotNull null)
+            }
+            .filter { it.externalId == externalId }
+    }
+
+    override fun readUnresolvedAt(sourceId: String, provider: MetadataProviderId, externalId: Int): Long? =
+        prefs.getLong(unresolvedKey(sourceId, provider, externalId), 0L).takeIf { it > 0L }
+
+    override fun writeUnresolved(sourceId: String, provider: MetadataProviderId, externalId: Int, attemptedAtMillis: Long) {
+        prefs.edit().putLong(unresolvedKey(sourceId, provider, externalId), attemptedAtMillis).apply()
+    }
+
+    override fun clearUnresolved(sourceId: String, provider: MetadataProviderId, externalId: Int) {
+        prefs.edit().remove(unresolvedKey(sourceId, provider, externalId)).apply()
+    }
+
     override fun readMedia(provider: MetadataProviderId, externalId: Int): CachedMetadata? {
         val stored = prefs.getString(mediaKey(provider, externalId), null) ?: return null
         return runCatching {
@@ -96,12 +130,16 @@ class PreferencesExternalMetadataStore(context: Context) : ExternalMetadataStore
 
     private fun matchKey(titleId: String, provider: MetadataProviderId): String = "$MATCH_PREFIX${provider.id}_$titleId"
 
+    private fun unresolvedKey(sourceId: String, provider: MetadataProviderId, externalId: Int): String =
+        "$UNRESOLVED_PREFIX${provider.id}_${sourceId}_$externalId"
+
     private fun mediaKey(provider: MetadataProviderId, externalId: Int): String = "$MEDIA_PREFIX${provider.id}_$externalId"
 
     companion object {
         const val PREFS_NAME = "hibiki_external_metadata"
         private const val MATCH_PREFIX = "match_"
         private const val MEDIA_PREFIX = "media_"
+        private const val UNRESOLVED_PREFIX = "unresolved_"
         private const val MAX_MEDIA_ENTRIES = 500
     }
 }

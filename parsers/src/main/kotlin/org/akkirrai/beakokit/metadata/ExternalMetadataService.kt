@@ -11,6 +11,18 @@ import org.akkirrai.beakokit.model.AnimeTitle
  * in `ExternalMetadata.kt`. This class owns everything stateful in between, and mirrors the desktop
  * client's `main/metadata/externalMetadataService.ts`.
  */
+/** How a resolution was reached, so a screen can be honest about a match decided by name alone. */
+enum class ResolvedVia { RECORDED, CROSS_PROVIDER, SEARCH }
+
+/** Which title of a source a provider entry resolved to. */
+data class ResolvedSourceTitle(
+    val titleId: String,
+    /** 0..100 for a match the app made, null for one the user set by hand. */
+    val confidencePercent: Int?,
+    val manual: Boolean,
+    val via: ResolvedVia,
+)
+
 class ExternalMetadataService(
     client: HttpClient,
     private val store: ExternalMetadataStore,
@@ -72,6 +84,107 @@ class ExternalMetadataService(
         }
         if (media != null) store.writeMedia(media, nowMillis())
         return media ?: reference.externalId?.let { store.readMedia(reference.provider, it)?.media }
+    }
+
+    /**
+     * A page of a provider's catalog, from the first browsable provider in [order] that answers.
+     *
+     * Not every provider can be browsed (see [CATALOG_PROVIDERS]), and the ones that can go down
+     * independently, so this walks the same order the describing path uses and reports which one
+     * actually answered. Entries are cached on the way past, which is what makes opening one of
+     * these cards resolve without another request.
+     */
+    suspend fun browse(
+        request: ExternalCatalogRequest,
+        order: List<MetadataProviderId>,
+    ): Pair<List<ExternalMetadata>, MetadataProviderId?> {
+        for (provider in order.filter { it in CATALOG_PROVIDERS }) {
+            val results = runCatching {
+                when (provider) {
+                    MetadataProviderId.ANILIST -> anilist.browse(request)
+                    MetadataProviderId.KITSU -> kitsu.browse(request)
+                    MetadataProviderId.MAL -> null
+                }
+            }.getOrNull() ?: continue
+            for (media in results) store.writeMedia(media, nowMillis())
+            return results to provider
+        }
+        return emptyList<ExternalMetadata>() to null
+    }
+
+    /**
+     * Which title of a source is a given provider entry: the reverse direction, for a catalog
+     * browsed from the aggregator and resolved to something playable only when a title is opened.
+     *
+     * Four tiers, cheapest first, and only the third costs a request:
+     *
+     * 1. A match already recorded - everything ever opened, described on a screen, or kept in the
+     *    library is in that table already, so this is the common case by a wide margin.
+     * 2. The same, reached through another provider's id.
+     * 3. A live search of the source, scored by the same rules as the forward direction and recorded
+     *    afterwards, which makes it tier 1 from then on.
+     * 4. The user picks - this returns null and the screen offers the source's own results.
+     */
+    suspend fun resolveSourceTitle(
+        sourceId: String,
+        entry: ExternalMetadata,
+        searchSource: suspend (String) -> List<AnimeTitle>?,
+    ): ResolvedSourceTitle? {
+        recordedSourceTitle(sourceId, entry.provider, entry.externalId)?.let { return it }
+        for ((provider, externalId) in crossIdsOf(entry)) {
+            recordedSourceTitle(sourceId, provider, externalId)?.let {
+                return it.copy(via = ResolvedVia.CROSS_PROVIDER)
+            }
+        }
+
+        // A recent search of this source already came back with nothing for this entry. Re-running it
+        // on every visit to the same card is two requests to be told the same thing.
+        val unresolvedAt = store.readUnresolvedAt(sourceId, entry.provider, entry.externalId)
+        if (unresolvedAt != null && nowMillis() - unresolvedAt < TTL_UNRESOLVED_MILLIS) return null
+
+        for (query in sourceSearchQueriesFor(entry)) {
+            // Null is the source being unreachable rather than lacking the title - say nothing,
+            // record nothing, and let the screen offer to try again or pick by hand.
+            val results = runCatching { searchSource(query) }.getOrNull() ?: return null
+            val best = pickSourceTitleFor(entry, results) ?: continue
+            val confidence = (best.second * 100).toInt()
+            store.writeMedia(entry, nowMillis())
+            store.writeMatch(
+                MetadataMatchRecord(best.first, entry.provider, entry.externalId, confidence, manual = false, matchedAtMillis = nowMillis()),
+            )
+            recordCrossMatches(best.first, entry)
+            store.clearUnresolved(sourceId, entry.provider, entry.externalId)
+            return ResolvedSourceTitle(best.first, confidence, manual = false, via = ResolvedVia.SEARCH)
+        }
+        // Every query ran and none of them found it.
+        store.writeUnresolved(sourceId, entry.provider, entry.externalId, nowMillis())
+        return null
+    }
+
+    /** Binds a provider entry to a title of this source by hand, from the resolution screen. */
+    fun setManualSourceTitle(sourceId: String, titleId: String, entry: ExternalMetadata) {
+        store.writeMedia(entry, nowMillis())
+        store.writeMatch(
+            MetadataMatchRecord(titleId, entry.provider, entry.externalId, confidencePercent = null, manual = true, matchedAtMillis = nowMillis()),
+        )
+        recordCrossMatches(titleId, entry)
+        store.clearUnresolved(sourceId, entry.provider, entry.externalId)
+    }
+
+    private fun crossIdsOf(entry: ExternalMetadata): List<Pair<MetadataProviderId, Int>> = listOfNotNull(
+        entry.anilistId?.let { MetadataProviderId.ANILIST to it },
+        entry.malId?.let { MetadataProviderId.MAL to it },
+        entry.kitsuId?.let { MetadataProviderId.KITSU to it },
+    ).filterNot { it.first == entry.provider }
+
+    /** The recorded match for one entry, read backwards. A "no match" row can never be selected
+     * here, since it is keyed by a null this query never asks for. */
+    private fun recordedSourceTitle(sourceId: String, provider: MetadataProviderId, externalId: Int): ResolvedSourceTitle? {
+        val matches = store.matchesForEntry(sourceId, provider, externalId)
+        // A source can carry the same show twice (a dub entry beside a subbed one), and both may have
+        // been matched to this entry. A binding the user made by hand is the one they meant.
+        val record = matches.firstOrNull(MetadataMatchRecord::manual) ?: matches.firstOrNull() ?: return null
+        return ResolvedSourceTitle(record.titleId, record.confidencePercent, record.manual, ResolvedVia.RECORDED)
     }
 
     /** Binds a title to a provider entry by hand. Marked manual, which is what stops the automatic
@@ -234,5 +347,10 @@ class ExternalMetadataService(
         // Short enough that an entry a provider adds later is picked up within a week.
         const val TTL_NO_MATCH_MILLIS = 7L * 24 * 60 * 60 * 1_000
         const val MAX_SEARCHES_PER_PROVIDER = 3
+
+        // How long a failed *resolution* is remembered - a day, against the week a failed
+        // description gets. A source's catalog gains titles far faster than an aggregator gains
+        // entries.
+        const val TTL_UNRESOLVED_MILLIS = 24L * 60 * 60 * 1_000
     }
 }
