@@ -438,8 +438,38 @@ class AnimeWatchRepository(
     ): List<PlayerLink> {
         val cacheKey = "${payload.source.sourceId}\u0000${episode.id}"
         return loadPlayerLinks(cacheKey, forceRefresh) {
-            payload.runtime.getPlayerLinks(payload.title, payload.group, episode)
+            val selected = payload.runtime.getPlayerLinks(payload.title, payload.group, episode)
                 .filter(::isSupportedLink)
+            if (selected.isNotEmpty()) return@loadPlayerLinks selected
+
+            // Some providers advertise a language/voiceover group even when an individual episode
+            // has no servers in it. Match that episode by number in sibling groups of the same
+            // title, preserving source order, instead of failing playback immediately.
+            val siblings = sourcePayloads.values
+                .filter { candidate ->
+                    candidate.animeId == payload.animeId && candidate.source.sourceId != payload.source.sourceId
+                }
+                .sortedWith(compareByDescending<SourcePayload> { it.source.isPriority }.thenBy { it.source.sourceId })
+            for (candidate in siblings) {
+                val siblingEpisode = candidate.episodes.firstOrNull {
+                        kotlin.math.abs(it.number - episode.number) < EPISODE_NUMBER_EPSILON
+                } ?: continue
+                val fallback = runCatching {
+                    candidate.runtime.getPlayerLinks(candidate.title, candidate.group, siblingEpisode)
+                        .filter(::isSupportedLink)
+                }.onFailure { error ->
+                    AppLogger.w(TAG, "Fallback voiceover ${candidate.source.title} failed: ${error.message}")
+                }.getOrNull().orEmpty()
+                if (fallback.isNotEmpty()) {
+                    AppLogger.w(
+                        TAG,
+                        "Selected voiceover ${payload.source.title} has no players for episode ${episode.number}; " +
+                            "using ${candidate.source.title}",
+                    )
+                    return@loadPlayerLinks fallback
+                }
+            }
+            emptyList()
         }
     }
 
@@ -745,6 +775,7 @@ class AnimeWatchRepository(
         const val TAG = "AnimeWatchRepository"
         const val STREAM_CACHE_TTL_MS = 10 * 60_000L
         const val PLAYER_LINKS_CACHE_TTL_MS = 60_000L
+        const val EPISODE_NUMBER_EPSILON = 0.001
         // Start the next automatic player quickly when the first embed is still negotiating ads,
         // challenges or a dead CDN. The winner cancels the rest, so this cuts visible startup
         // latency without changing player priority or waiting for a full per-player timeout.
