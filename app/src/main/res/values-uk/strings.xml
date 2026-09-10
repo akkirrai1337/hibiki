@@ -371,6 +371,9 @@
     <string name="settings_sources">Джерело аніме</string>
     <string name="settings_sources_summary">Виберіть постачальника каталогу та метаданих</string>
     <string name="settings_hide_nsfw_sources">Приховувати джерела NSFW</string>
+    <string name="settings_external_metadata">Метадані з агрегатора</string>
+    <string name="settings_external_metadata_provider">Джерело метаданих</string>
+    <string name="settings_external_metadata_fallback">Пробувати інші агрегатори</string>
     <string name="settings_notifications">Сповіщення</string>
     <string name="settings_notifications_not_asked">Дозвіл ще не запитано</string>
     <string name="settings_notifications_enabled">Увімкнено</string>

@@ -2,6 +2,11 @@ package org.akkirrai.hibiki.core.source
 
 import android.content.Context
 import io.ktor.client.HttpClient
+import org.akkirrai.beakokit.metadata.ExternalMetadataPreferences
+import org.akkirrai.beakokit.metadata.ExternalMetadataService
+import org.akkirrai.beakokit.metadata.mergeExternalMetadata
+import org.akkirrai.beakokit.metadata.metadataProviderOrder
+import org.akkirrai.hibiki.core.metadata.PreferencesExternalMetadataStore
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
@@ -36,6 +41,9 @@ class AnimeSearchRepository(
     private val appPreferences = appContext?.let(::AppPreferences)
     private val sourceManager = sourceManager ?: appContext?.let { AnimeSourceRuntimeManager(it, client) }
     private val titleMatcher = TitleMatcher()
+    // Built here rather than injected: everything it needs (the shared client, the app's own
+    // preferences) is already on this repository, and nothing else in the app describes a title.
+    private val metadataService = appContext?.let { ExternalMetadataService(client, PreferencesExternalMetadataStore(it)) }
     private val detailsRequestSlots = Semaphore(MAX_CONCURRENT_DETAILS_REQUESTS)
 
     suspend fun search(query: String): List<Anime> {
@@ -134,9 +142,10 @@ class AnimeSearchRepository(
                                 .bestMatchFor(fallback.title)
                                 ?: throw it
                         }
-                    val trailer = title.trailer?.toAnimeTrailer()
-                    val anime = title.toAnime(
-                        canonicalId = title.id,
+                    val described = describe(source, title)
+                    val trailer = described.trailer?.toAnimeTrailer()
+                    val anime = described.toAnime(
+                        canonicalId = described.id,
                         preferEnglish = preferEnglish(),
                         fallback = fallback,
                         trailer = trailer ?: fallback.trailer,
@@ -327,6 +336,34 @@ class AnimeSearchRepository(
             .maxByOrNull { it.second }
             ?.takeIf { it.second >= LEGACY_ID_MATCH_CONFIDENCE }
             ?.first
+    }
+
+    /**
+     * Replaces a title's descriptive fields with a metadata provider's, when both the source asked
+     * for that in its manifest and the user has not turned it off.
+     *
+     * Failures are swallowed on purpose: a provider being unreachable, rate-limiting us, or simply
+     * not carrying this title must cost the better description and nothing else - the source's own
+     * screen still renders exactly as it did before this existed.
+     */
+    private suspend fun describe(source: AnimeSourceRuntime, title: AnimeTitle): AnimeTitle {
+        val service = metadataService ?: return title
+        val preferences = appPreferences?.state?.value ?: return title
+        val order = metadataProviderOrder(
+            ExternalMetadataPreferences(
+                enabled = preferences.externalMetadataEnabled,
+                overrides = preferences.externalMetadataOverrides,
+                provider = preferences.externalMetadataProvider,
+                fallbackEnabled = preferences.externalMetadataFallback,
+            ),
+            source.descriptor.id.value,
+            source.descriptor.info.useExternalMetadata,
+        )
+        if (order.isEmpty()) return title
+        val external = runCatching { service.metadataFor(title, order) }
+            .onFailure { AppLogger.w(TAG, "describe: metadata lookup failed for ${title.id}", it) }
+            .getOrNull()
+        return mergeExternalMetadata(title, external)
     }
 
     private fun preferEnglish(): Boolean {

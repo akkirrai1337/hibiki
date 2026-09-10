@@ -379,6 +379,9 @@
     <string name="settings_sources">Anime source</string>
     <string name="settings_sources_summary">Choose the catalog and metadata provider</string>
     <string name="settings_hide_nsfw_sources">Hide NSFW sources</string>
+    <string name="settings_external_metadata">Metadata from an aggregator</string>
+    <string name="settings_external_metadata_provider">Metadata source</string>
+    <string name="settings_external_metadata_fallback">Try the other aggregators</string>
     <string name="settings_notifications">Notifications</string>
     <string name="settings_notifications_not_asked">Permission has not been requested</string>
     <string name="settings_notifications_enabled">Enabled</string>

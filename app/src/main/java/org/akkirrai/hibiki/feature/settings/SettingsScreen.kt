@@ -41,6 +41,7 @@ import androidx.compose.material.icons.outlined.Timer
 import androidx.compose.material.icons.outlined.TouchApp
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.Palette
+import androidx.compose.material.icons.outlined.Public
 import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material.icons.outlined.Translate
 import androidx.compose.material3.Icon
@@ -90,6 +91,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.core.graphics.drawable.toBitmap
+import org.akkirrai.beakokit.metadata.MetadataProviderId
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.BuildConfig
 import org.akkirrai.hibiki.app.settings.AppPreferences
@@ -225,14 +227,54 @@ fun SettingsScreen(
 
         item(key = "sources") {
             SettingsSection(title = stringResource(R.string.settings_sources)) {
-                SettingsItems(count = 1) { _, shape ->
-                    SettingsSwitchItem(
-                        icon = Icons.Filled.VisibilityOff,
-                        title = stringResource(R.string.settings_hide_nsfw_sources),
-                        checked = preferences.hideNsfwSources,
-                        shape = shape,
-                        onCheckedChange = appPreferences::setHideNsfwSources,
-                    )
+                // The two aggregator rows only appear once the feature itself is on: which
+                // aggregator, and whether to try the others, mean nothing while nothing is being
+                // described.
+                SettingsItems(count = if (preferences.externalMetadataEnabled) 4 else 2) { index, shape ->
+                    when (index) {
+                        0 -> SettingsSwitchItem(
+                            icon = Icons.Filled.VisibilityOff,
+                            title = stringResource(R.string.settings_hide_nsfw_sources),
+                            checked = preferences.hideNsfwSources,
+                            shape = shape,
+                            onCheckedChange = appPreferences::setHideNsfwSources,
+                        )
+
+                        1 -> SettingsSwitchItem(
+                            icon = Icons.Outlined.Public,
+                            title = stringResource(R.string.settings_external_metadata),
+                            checked = preferences.externalMetadataEnabled,
+                            shape = shape,
+                            onCheckedChange = appPreferences::setExternalMetadataEnabled,
+                        )
+
+                        2 -> SettingsVerticalItem(
+                            icon = Icons.Outlined.Public,
+                            title = stringResource(R.string.settings_external_metadata_provider),
+                            shape = shape,
+                        ) {
+                            SettingsSegmentedControl(
+                                options = MetadataProviderId.entries,
+                                selectedOption = preferences.externalMetadataProvider,
+                                // Provider names are proper nouns, so they are not translated - and
+                                // MAL is labelled by the site people know, not by Jikan, the API it
+                                // is read through.
+                                label = { provider -> provider.ratingSource },
+                                onSelect = { provider ->
+                                    appPreferences.setExternalMetadataProvider(provider)
+                                    haptic.performHapticFeedback(HapticFeedbackType.SegmentTick)
+                                },
+                            )
+                        }
+
+                        else -> SettingsSwitchItem(
+                            icon = Icons.Outlined.Public,
+                            title = stringResource(R.string.settings_external_metadata_fallback),
+                            checked = preferences.externalMetadataFallback,
+                            shape = shape,
+                            onCheckedChange = appPreferences::setExternalMetadataFallback,
+                        )
+                    }
                 }
             }
         }

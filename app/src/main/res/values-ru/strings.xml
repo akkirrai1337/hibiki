@@ -377,6 +377,9 @@
     <string name="settings_sources">Источник аниме</string>
     <string name="settings_sources_summary">Выбор источника каталога и данных о тайтлах</string>
     <string name="settings_hide_nsfw_sources">Скрывать NSFW-источники</string>
+    <string name="settings_external_metadata">Метаданные из агрегатора</string>
+    <string name="settings_external_metadata_provider">Источник метаданных</string>
+    <string name="settings_external_metadata_fallback">Пробовать другие агрегаторы</string>
     <string name="settings_notifications">Уведомления</string>
     <string name="settings_notifications_not_asked">Разрешение ещё не запрашивалось</string>
     <string name="settings_notifications_enabled">Включены</string>
