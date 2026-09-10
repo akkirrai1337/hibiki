@@ -209,68 +209,87 @@ class AnimeWatchRepository(
         val payload = ensureSourcePayload(sourceId) ?: throw SourceException(appString(R.string.watch_error_voiceover_not_found))
         val episode = payload.episodes.firstOrNull { it.id == episodeId }
             ?: throw SourceException(appString(R.string.watch_error_episode_not_found))
-        val candidates = buildList {
-            add(payload to episode)
-            sourcePayloads.values
-                .filter { candidate ->
-                    candidate.animeId == payload.animeId && candidate.source.sourceId != payload.source.sourceId
-                }
-                // The extension published these in the order it wants them tried, so fallback
-                // follows that order rather than any opinion this app holds about source names.
-                .sortedBy(SourcePayload::order)
-                .forEach { candidate ->
-                    candidate.episodes.firstOrNull {
-                        kotlin.math.abs(it.number - episode.number) < EPISODE_NUMBER_EPSILON
-                    }?.let { siblingEpisode -> add(candidate to siblingEpisode) }
-                }
-        }
+        // A selected voiceover is an explicit user choice. Trying unrelated sibling groups made
+        // a broken provider look like an endless load while spending the entire resolution budget
+        // on streams the user did not choose.
+        val candidates = listOf(payload to episode)
         val resolver = PlaybackResolver(currentExtractors(), validator)
         var resolvedCandidate: Pair<org.akkirrai.beakokit.playback.ResolvedPlaybackStream, SourcePayload>? = null
+        var browserPageCandidate: PlaybackStream? = null
         var lastResolutionError: Throwable? = null
-        for ((candidatePayload, candidateEpisode) in candidates) {
-            val rawLinks = try {
-                withTimeout(PLAYER_LINK_DISCOVERY_TIMEOUT_MS) {
-                    getFilteredLinks(candidatePayload, candidateEpisode, forceRefresh)
-                }
-            } catch (error: CancellationException) {
-                if (error !is TimeoutCancellationException) throw error
-                AppLogger.w(TAG, "Voiceover ${candidatePayload.source.title} timed out while loading player links")
-                emptyList()
-            }
-            val links = prioritizeLinks(
-                links = rawLinks.filterNot { it.url in excludedStreamUrls },
-                preferredPlayerName = preferredPlayerName,
-                preferredQuality = preferredQuality,
-            ).filter { link ->
-                requiredPlayerName.isNullOrBlank() || matchesPreferredPlayer(link.playerName, requiredPlayerName)
-            }
-            if (links.isEmpty()) continue
-            try {
-                val candidateResolved = resolver.resolve(
-                    links = links,
-                    excludedStreamUrls = excludedStreamUrls,
-                    preferredQuality = preferredQuality,
-                    attemptTimeoutMillis = { link ->
-                        if (candidatePayload === payload) {
-                            resolveAttemptTimeoutMillis(preferredPlayerName, link.playerName, link.type)
-                        } else {
-                            FALLBACK_RESOLVE_TIMEOUT_MS
+        try {
+            withTimeout(EPISODE_RESOLUTION_TIMEOUT_MS) {
+                for ((candidateIndex, candidate) in candidates.withIndex()) {
+                    val (candidatePayload, candidateEpisode) = candidate
+                    val startedAt = System.currentTimeMillis()
+                    AppLogger.d(
+                        TAG,
+                        "Playback attempt ${candidateIndex + 1}/${candidates.size}: voiceover=${candidatePayload.source.title}, " +
+                            "sourceId=${candidatePayload.source.sourceId}, episode=${candidateEpisode.number}, " +
+                            "requiredPlayer=${requiredPlayerName.orEmpty()}",
+                    )
+                    val rawLinks = try {
+                        withTimeout(PLAYER_LINK_DISCOVERY_TIMEOUT_MS) {
+                            getFilteredLinks(candidatePayload, candidateEpisode, forceRefresh)
                         }
-                    },
-                )
-                resolvedCandidate = candidateResolved to candidatePayload
-                break
-            } catch (error: CancellationException) {
-                throw error
-            } catch (error: Throwable) {
-                lastResolutionError = error
-                AppLogger.w(
-                    TAG,
-                    "Voiceover ${candidatePayload.source.title} could not play episode ${candidateEpisode.number}; " +
-                        "trying the next voiceover: ${error.message}",
-                )
+                    } catch (error: CancellationException) {
+                        if (error !is TimeoutCancellationException) throw error
+                        AppLogger.w(TAG, "Playback attempt ${candidateIndex + 1}/${candidates.size} timed out discovering links: voiceover=${candidatePayload.source.title}")
+                        emptyList()
+                    }
+                    val links = prioritizeLinks(
+                        links = rawLinks.filterNot { it.url in excludedStreamUrls },
+                        preferredPlayerName = preferredPlayerName,
+                        preferredQuality = preferredQuality,
+                    ).filter { link ->
+                        requiredPlayerName.isNullOrBlank() || matchesPreferredPlayer(link.playerName, requiredPlayerName)
+                    }
+                    if (links.isEmpty()) {
+                        AppLogger.d(TAG, "Playback attempt ${candidateIndex + 1}/${candidates.size} skipped: voiceover=${candidatePayload.source.title}, no playable links, elapsedMs=${System.currentTimeMillis() - startedAt}")
+                        continue
+                    }
+                    // Some providers intentionally keep media inside their browser player. For
+                    // those resolvers, rendering that page is the playable result; attempting a
+                    // second HLS extraction only turns a working embed into a timeout.
+                    browserPagePlayback(links, candidatePayload, candidateEpisode)?.let { pagePlayback ->
+                        cachedStreams[cacheKey] = CachedPlaybackStream(pagePlayback, System.currentTimeMillis())
+                        AppLogger.d(TAG, "Playback attempt ${candidateIndex + 1}/${candidates.size} uses browser-page playback: voiceover=${candidatePayload.source.title}")
+                        browserPageCandidate = pagePlayback
+                        break
+                    }
+                    try {
+                        val candidateResolved = resolver.resolve(
+                            links = links,
+                            excludedStreamUrls = excludedStreamUrls,
+                            preferredQuality = preferredQuality,
+                            attemptTimeoutMillis = { link ->
+                                if (candidatePayload === payload) {
+                                    resolveAttemptTimeoutMillis(preferredPlayerName, link.playerName, link.type)
+                                } else {
+                                    FALLBACK_RESOLVE_TIMEOUT_MS
+                                }
+                            },
+                        )
+                        resolvedCandidate = candidateResolved to candidatePayload
+                        AppLogger.d(TAG, "Playback attempt ${candidateIndex + 1}/${candidates.size} succeeded: voiceover=${candidatePayload.source.title}, elapsedMs=${System.currentTimeMillis() - startedAt}")
+                        break
+                    } catch (error: CancellationException) {
+                        throw error
+                    } catch (error: Throwable) {
+                        lastResolutionError = error
+                        AppLogger.w(
+                            TAG,
+                            "Playback attempt ${candidateIndex + 1}/${candidates.size} failed: voiceover=${candidatePayload.source.title}, " +
+                                "elapsedMs=${System.currentTimeMillis() - startedAt}, error=${error.message}",
+                        )
+                    }
+                }
             }
+        } catch (error: TimeoutCancellationException) {
+            AppLogger.w(TAG, "Episode playback resolution timed out after ${EPISODE_RESOLUTION_TIMEOUT_MS}ms; attempted ${candidates.size} voiceovers")
+            lastResolutionError = SourceException("Playback resolution timed out")
         }
+        browserPageCandidate?.let { return it }
         val (resolved, resolvedPayload) = resolvedCandidate
             ?: throw lastResolutionError ?: SourceException(appString(R.string.watch_error_no_players))
         AppLogger.d(
@@ -827,6 +846,7 @@ class AnimeWatchRepository(
         const val EPISODE_NUMBER_EPSILON = 0.001
         const val PLAYER_LINK_DISCOVERY_TIMEOUT_MS = 12_000L
         const val FALLBACK_RESOLVE_TIMEOUT_MS = 12_000L
+        const val EPISODE_RESOLUTION_TIMEOUT_MS = 25_000L
         // Start the next automatic player quickly when the first embed is still negotiating ads,
         // challenges or a dead CDN. The winner cancels the rest, so this cuts visible startup
         // latency without changing player priority or waiting for a full per-player timeout.
