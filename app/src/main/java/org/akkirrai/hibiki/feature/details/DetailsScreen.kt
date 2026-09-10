@@ -142,6 +142,8 @@ import org.akkirrai.hibiki.core.design.iconOrDefault
 import org.akkirrai.hibiki.core.design.UiDimens
 import org.akkirrai.hibiki.core.design.AppMotion
 import org.akkirrai.hibiki.core.design.component.AppBackButton
+import org.akkirrai.beakokit.metadata.ExternalMetadataPreferences
+import org.akkirrai.beakokit.metadata.metadataProviderOrder
 import org.akkirrai.hibiki.core.design.component.AppModalBottomSheet
 import org.akkirrai.hibiki.core.design.component.AppTonalSurface
 import org.akkirrai.hibiki.core.design.component.anime.AnimeTitleText
@@ -243,6 +245,28 @@ fun DetailsScreen(
         onDispose { animeWatchRepository.close() }
     }
     var isResolvingWatchSources by remember(anime.id) { mutableStateOf(false) }
+    // Bumped by a manual rebind, which is a change to what describes this title - the details fetch
+    // below re-runs and the screen redraws from the entry that was just chosen.
+    var detailsReloadKey by remember(anime.id) { mutableStateOf(0) }
+    val showMetadataBinding = preferences.externalMetadataShowBinding
+    val metadataProviders = remember(
+        selectedAnimeSource,
+        preferences.externalMetadataEnabled,
+        preferences.externalMetadataProvider,
+        preferences.externalMetadataFallback,
+        preferences.externalMetadataOverrides,
+    ) {
+        metadataProviderOrder(
+            ExternalMetadataPreferences(
+                enabled = preferences.externalMetadataEnabled,
+                overrides = preferences.externalMetadataOverrides,
+                provider = preferences.externalMetadataProvider,
+                fallbackEnabled = preferences.externalMetadataFallback,
+            ),
+            selectedAnimeSource.value,
+            AnimeSourceRegistry.descriptor(selectedAnimeSource).info.useExternalMetadata,
+        )
+    }
     var currentAnime by remember(detailsStateKey) { mutableStateOf(savedScreenState?.anime ?: anime) }
     var isDetailsLoading by remember(detailsStateKey) { mutableStateOf(savedScreenState == null) }
     var titleSeedColor by remember(detailsStateKey) {
@@ -333,7 +357,7 @@ fun DetailsScreen(
         }
     }
 
-    LaunchedEffect(anime.id, selectedAnimeSource) {
+    LaunchedEffect(anime.id, selectedAnimeSource, detailsReloadKey) {
         try {
             withContext(Dispatchers.IO) {
                 offlineTitleMetadataRepository.get(anime.id)
@@ -575,6 +599,22 @@ fun DetailsScreen(
                     heroInfo = uiModel.hero,
                     isLoading = isDetailsLoading,
                 )
+            }
+
+            item {
+                // Where the description came from, and the way to correct a wrong match - under the
+                // description it explains, and only when asked for (see the Settings switch).
+                if (!isDetailsLoading && showMetadataBinding && metadataProviders.isNotEmpty()) {
+                    Column(modifier = Modifier.padding(horizontal = 16.dp)) {
+                        MetadataBindingRow(
+                            service = dependencies.externalMetadata,
+                            titleId = uiModel.anime.id,
+                            providers = metadataProviders,
+                            preferredProvider = preferences.externalMetadataProvider,
+                            onRebound = { detailsReloadKey++ },
+                        )
+                    }
+                }
             }
 
             item {

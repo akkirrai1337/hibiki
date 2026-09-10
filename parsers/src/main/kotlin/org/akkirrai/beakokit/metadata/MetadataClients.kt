@@ -130,6 +130,13 @@ class KitsuClient(private val client: HttpClient) {
         return body.data?.toExternalMetadata(body.included.orEmpty())
     }
 
+    /** Kitsu's web URLs name a title by slug, so a pasted link resolves through this rather than by
+     * id. */
+    suspend fun fetchBySlug(slug: String): ExternalMetadata? {
+        val body = get<KitsuListResponse>("/anime?filter[slug]=${slug.urlEncoded()}&include=$KITSU_INCLUDE") ?: return null
+        return body.data.orEmpty().firstOrNull()?.toExternalMetadata(body.included.orEmpty())
+    }
+
     /** Kitsu indexes the other providers' ids as first-class records, so a title already matched
      * elsewhere can be bound here exactly, with no search and no guessing. */
     suspend fun fetchByMalId(malId: Int): ExternalMetadata? {

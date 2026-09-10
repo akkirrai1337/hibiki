@@ -50,6 +50,30 @@ class ExternalMetadataService(
         return null
     }
 
+    /**
+     * What currently describes a title, for the screen's own "metadata" line - the first provider in
+     * [order] with a usable binding, and whether the user set it by hand.
+     */
+    fun bindingFor(titleId: String, order: List<MetadataProviderId>): MetadataMatchRecord? {
+        for (provider in order) {
+            val record = store.readMatch(titleId, provider) ?: continue
+            if (record.externalId != null) return record
+        }
+        return null
+    }
+
+    /** One entry by id or by Kitsu slug, for the picker's paste-a-link path - the way a title gets
+     * rebound while a provider's search is down. */
+    suspend fun entryFor(reference: MetadataReference): ExternalMetadata? {
+        val media = when {
+            reference.slug != null && reference.provider == MetadataProviderId.KITSU -> kitsu.fetchBySlug(reference.slug!!)
+            reference.externalId != null -> fetchById(reference.provider, reference.externalId!!)
+            else -> null
+        }
+        if (media != null) store.writeMedia(media, nowMillis())
+        return media ?: reference.externalId?.let { store.readMedia(reference.provider, it)?.media }
+    }
+
     /** Binds a title to a provider entry by hand. Marked manual, which is what stops the automatic
      * matcher from ever overwriting it again. */
     suspend fun setManualMatch(titleId: String, provider: MetadataProviderId, externalId: Int): ExternalMetadata? {

@@ -41,6 +41,9 @@ class AnimeSearchRepository(
     private val client: HttpClient = AndroidHttpClientFactory.create(),
     sourceManager: AnimeSourceRuntimeManager? = null,
     private val closeClientOnClose: Boolean = true,
+    /** Shared with the rest of the app when there is one - see HibikiDependencies. Constructed here
+     * only for the standalone paths that build this repository on their own. */
+    metadataService: ExternalMetadataService? = null,
 ) {
     private val searchCache = ConcurrentHashMap<String, CachedSearchResults>()
     private val appContext = context?.applicationContext
@@ -49,7 +52,8 @@ class AnimeSearchRepository(
     private val titleMatcher = TitleMatcher()
     // Built here rather than injected: everything it needs (the shared client, the app's own
     // preferences) is already on this repository, and nothing else in the app describes a title.
-    private val metadataService = appContext?.let { ExternalMetadataService(client, PreferencesExternalMetadataStore(it)) }
+    private val metadataService = metadataService
+        ?: appContext?.let { ExternalMetadataService(client, PreferencesExternalMetadataStore(it)) }
     // Background matching outlives the request that started it on purpose: the screen has painted,
     // and what this fills in is for the next visit. Cancelled with the repository.
     private val metadataScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)

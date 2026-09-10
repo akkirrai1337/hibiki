@@ -73,6 +73,10 @@ data class AppPreferencesState(
     /** Whether the other aggregators are tried when the preferred one has nothing or cannot be
      * reached. Not decorative: AniList disabled its public API outright while this was written. */
     val externalMetadataFallback: Boolean = true,
+    /** Whether the details screen prints which provider entry describes a title. Off by default: it
+     * answers a question most people never ask, and turning it on is also what makes the manual
+     * rebind reachable, since that line is what opens it. */
+    val externalMetadataShowBinding: Boolean = false,
     /** Per-source answers that win over [externalMetadataEnabled] in both directions. Sparse: an
      * absent source follows the global switch. */
     val externalMetadataOverrides: Map<String, Boolean> = emptyMap(),
@@ -115,6 +119,7 @@ class AppPreferences(context: Context) {
             KEY_EXTERNAL_METADATA_ENABLED,
             KEY_EXTERNAL_METADATA_PROVIDER,
             KEY_EXTERNAL_METADATA_FALLBACK,
+            KEY_EXTERNAL_METADATA_SHOW_BINDING,
             KEY_EXTERNAL_METADATA_OVERRIDES,
             KEY_SOURCE_LANGUAGE_FILTER_SEEDED,
             KEY_SOURCE_REPOSITORY_URLS -> {
@@ -228,6 +233,10 @@ class AppPreferences(context: Context) {
         prefs.edit().putBoolean(KEY_EXTERNAL_METADATA_FALLBACK, enabled).apply()
     }
 
+    fun setExternalMetadataShowBinding(show: Boolean) {
+        prefs.edit().putBoolean(KEY_EXTERNAL_METADATA_SHOW_BINDING, show).apply()
+    }
+
     /** null hands the source back to the global switch, which is not the same as answering "no" for
      * it - the two differ the moment the global switch is flipped. */
     fun setExternalMetadataOverride(sourceId: String, enabled: Boolean?) {
@@ -312,6 +321,7 @@ class AppPreferences(context: Context) {
         const val KEY_EXTERNAL_METADATA_ENABLED = "external_metadata_enabled"
         const val KEY_EXTERNAL_METADATA_PROVIDER = "external_metadata_provider"
         const val KEY_EXTERNAL_METADATA_FALLBACK = "external_metadata_fallback"
+        const val KEY_EXTERNAL_METADATA_SHOW_BINDING = "external_metadata_show_binding"
         const val KEY_EXTERNAL_METADATA_OVERRIDES = "external_metadata_overrides"
         const val KEY_SOURCE_LANGUAGE_FILTER_SEEDED = "source_language_filter_seeded"
         const val KEY_SOURCE_REPOSITORY_URLS = "source_repository_urls"
@@ -463,6 +473,7 @@ class AppPreferences(context: Context) {
                 externalMetadataProvider = MetadataProviderId.fromId(prefs.getString(KEY_EXTERNAL_METADATA_PROVIDER, null))
                     ?: MetadataProviderId.ANILIST,
                 externalMetadataFallback = prefs.getBoolean(KEY_EXTERNAL_METADATA_FALLBACK, true),
+                externalMetadataShowBinding = prefs.getBoolean(KEY_EXTERNAL_METADATA_SHOW_BINDING, false),
                 externalMetadataOverrides = readExternalMetadataOverrides(prefs),
                 sourceLanguageFilterSeeded = prefs.getBoolean(KEY_SOURCE_LANGUAGE_FILTER_SEEDED, false),
                 sourceRepositoryUrls = readSourceRepositoryUrls(prefs),

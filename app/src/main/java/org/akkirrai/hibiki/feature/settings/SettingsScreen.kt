@@ -230,7 +230,7 @@ fun SettingsScreen(
                 // The two aggregator rows only appear once the feature itself is on: which
                 // aggregator, and whether to try the others, mean nothing while nothing is being
                 // described.
-                SettingsItems(count = if (preferences.externalMetadataEnabled) 4 else 2) { index, shape ->
+                SettingsItems(count = if (preferences.externalMetadataEnabled) 5 else 2) { index, shape ->
                     when (index) {
                         0 -> SettingsSwitchItem(
                             icon = Icons.Filled.VisibilityOff,
@@ -267,12 +267,20 @@ fun SettingsScreen(
                             )
                         }
 
-                        else -> SettingsSwitchItem(
+                        3 -> SettingsSwitchItem(
                             icon = Icons.Outlined.Public,
                             title = stringResource(R.string.settings_external_metadata_fallback),
                             checked = preferences.externalMetadataFallback,
                             shape = shape,
                             onCheckedChange = appPreferences::setExternalMetadataFallback,
+                        )
+
+                        else -> SettingsSwitchItem(
+                            icon = Icons.Outlined.Public,
+                            title = stringResource(R.string.settings_external_metadata_show_binding),
+                            checked = preferences.externalMetadataShowBinding,
+                            shape = shape,
+                            onCheckedChange = appPreferences::setExternalMetadataShowBinding,
                         )
                     }
                 }

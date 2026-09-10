@@ -4,6 +4,8 @@ import android.content.Context
 import org.akkirrai.hibiki.HibikiApplication
 import org.akkirrai.hibiki.core.download.OfflineDownloadRepository
 import org.akkirrai.hibiki.core.profile.LocalProfileRepository
+import org.akkirrai.beakokit.metadata.ExternalMetadataService
+import org.akkirrai.hibiki.core.metadata.PreferencesExternalMetadataStore
 import org.akkirrai.hibiki.core.source.AnimeSearchRepository
 import org.akkirrai.hibiki.core.source.AnimeSourceRuntimeManager
 import org.akkirrai.hibiki.core.source.AnimeWatchRepository
@@ -22,10 +24,16 @@ class HibikiDependencies(
     private val parserClient = AndroidHttpClientFactory.create()
     private val sourceRuntimeManager = AnimeSourceRuntimeManager(appContext, parserClient)
 
+    /** One service for the whole app: it owns per-provider request queues and a cache, and two of
+     * them would pace each other's requests wrongly and race on the same store. */
+    val externalMetadata: ExternalMetadataService =
+        ExternalMetadataService(parserClient, PreferencesExternalMetadataStore(appContext))
+
     fun animeSearchRepository(): AnimeSearchRepository = AnimeSearchRepository(
         context = appContext,
         client = parserClient,
         sourceManager = sourceRuntimeManager,
+        metadataService = externalMetadata,
         closeClientOnClose = false,
     )
 

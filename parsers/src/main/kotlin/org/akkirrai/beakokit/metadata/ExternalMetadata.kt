@@ -119,6 +119,53 @@ fun metadataProviderOrder(
     return listOf(preferences.provider) + MetadataProviderId.entries.filterNot { it == preferences.provider }
 }
 
+/** One provider's entry, as identified by the user rather than by the matcher. Kitsu's own web URLs
+ * name a title by slug rather than by id, so a reference carries one or the other. */
+data class MetadataReference(
+    val provider: MetadataProviderId,
+    val externalId: Int? = null,
+    val slug: String? = null,
+)
+
+private val ANILIST_LINK = Regex("""anilist\.co/(?:anime|manga)/(\d+)""", RegexOption.IGNORE_CASE)
+private val MAL_LINK = Regex("""myanimelist\.net/anime/(\d+)""", RegexOption.IGNORE_CASE)
+private val KITSU_LINK = Regex("""kitsu\.(?:io|app)/anime/([A-Za-z0-9-]+)""", RegexOption.IGNORE_CASE)
+private val BARE_ID = Regex("""^\d+$""")
+
+/**
+ * Reads a provider entry out of whatever was pasted into the manual-rebind box: an AniList, MAL or
+ * Kitsu page URL, or a bare id belonging to [defaultProvider].
+ *
+ * A URL carries the provider with it, which is the point - pasting the page you are looking at is
+ * the one way to fix a wrong match that works even while a provider's *search* is down, which is
+ * exactly the state AniList's was in when this was written.
+ */
+fun parseMetadataReference(input: String, defaultProvider: MetadataProviderId): MetadataReference? {
+    val text = input.trim()
+    if (text.isEmpty()) return null
+    ANILIST_LINK.find(text)?.let { return MetadataReference(MetadataProviderId.ANILIST, it.groupValues[1].toIntOrNull()) }
+    MAL_LINK.find(text)?.let { return MetadataReference(MetadataProviderId.MAL, it.groupValues[1].toIntOrNull()) }
+    KITSU_LINK.find(text)?.let { match ->
+        val id = match.groupValues[1]
+        return if (BARE_ID.matches(id)) {
+            MetadataReference(MetadataProviderId.KITSU, id.toIntOrNull())
+        } else {
+            MetadataReference(MetadataProviderId.KITSU, slug = id)
+        }
+    }
+    // A bare number is an id for whichever provider is currently in charge - the ids are unrelated
+    // between them, so guessing another would bind the title to a different show entirely.
+    if (BARE_ID.matches(text)) return MetadataReference(defaultProvider, text.toIntOrNull())
+    return null
+}
+
+/** Where to send someone who wants to look at the entry a title is bound to. */
+fun metadataEntryUrl(provider: MetadataProviderId, externalId: Int): String = when (provider) {
+    MetadataProviderId.ANILIST -> "https://anilist.co/anime/$externalId"
+    MetadataProviderId.MAL -> "https://myanimelist.net/anime/$externalId"
+    MetadataProviderId.KITSU -> "https://kitsu.app/anime/$externalId"
+}
+
 /** Below this a match is treated as no match at all. A prefix-only name hit that also contradicts
  * the year lands under it; anything with an exact name and no contradiction clears it. */
 const val MATCH_CONFIDENCE_THRESHOLD = 0.6
