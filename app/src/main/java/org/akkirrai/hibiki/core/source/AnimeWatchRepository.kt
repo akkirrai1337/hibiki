@@ -208,27 +208,68 @@ class AnimeWatchRepository(
         val payload = ensureSourcePayload(sourceId) ?: throw SourceException(appString(R.string.watch_error_voiceover_not_found))
         val episode = payload.episodes.firstOrNull { it.id == episodeId }
             ?: throw SourceException(appString(R.string.watch_error_episode_not_found))
-        val links = prioritizeLinks(
-            links = getFilteredLinks(payload, episode, forceRefresh)
-                .filterNot { it.url in excludedStreamUrls },
-            preferredPlayerName = preferredPlayerName,
-            preferredQuality = preferredQuality,
-        ).filter { link ->
-            requiredPlayerName.isNullOrBlank() || matchesPreferredPlayer(link.playerName, requiredPlayerName)
+        val candidates = buildList {
+            add(payload to episode)
+            sourcePayloads.values
+                .filter { candidate ->
+                    candidate.animeId == payload.animeId && candidate.source.sourceId != payload.source.sourceId
+                }
+                .sortedWith(compareBy<SourcePayload> { playbackSourcePriority(it.source.title) }.thenBy { it.source.sourceId })
+                .forEach { candidate ->
+                    candidate.episodes.firstOrNull {
+                        kotlin.math.abs(it.number - episode.number) < EPISODE_NUMBER_EPSILON
+                    }?.let { siblingEpisode -> add(candidate to siblingEpisode) }
+                }
         }
-
-        if (links.isEmpty()) {
-            throw SourceException(appString(R.string.watch_error_no_players))
+        val resolver = PlaybackResolver(currentExtractors(), validator)
+        var resolvedCandidate: Pair<org.akkirrai.beakokit.playback.ResolvedPlaybackStream, SourcePayload>? = null
+        var lastResolutionError: Throwable? = null
+        for ((candidatePayload, candidateEpisode) in candidates) {
+            val rawLinks = try {
+                withTimeout(PLAYER_LINK_DISCOVERY_TIMEOUT_MS) {
+                    getFilteredLinks(candidatePayload, candidateEpisode, forceRefresh)
+                }
+            } catch (error: CancellationException) {
+                if (error !is TimeoutCancellationException) throw error
+                AppLogger.w(TAG, "Voiceover ${candidatePayload.source.title} timed out while loading player links")
+                emptyList()
+            }
+            val links = prioritizeLinks(
+                links = rawLinks.filterNot { it.url in excludedStreamUrls },
+                preferredPlayerName = preferredPlayerName,
+                preferredQuality = preferredQuality,
+            ).filter { link ->
+                requiredPlayerName.isNullOrBlank() || matchesPreferredPlayer(link.playerName, requiredPlayerName)
+            }
+            if (links.isEmpty()) continue
+            try {
+                val candidateResolved = resolver.resolve(
+                    links = links,
+                    excludedStreamUrls = excludedStreamUrls,
+                    preferredQuality = preferredQuality,
+                    attemptTimeoutMillis = { link ->
+                        if (candidatePayload === payload) {
+                            resolveAttemptTimeoutMillis(preferredPlayerName, link.playerName, link.type)
+                        } else {
+                            FALLBACK_RESOLVE_TIMEOUT_MS
+                        }
+                    },
+                )
+                resolvedCandidate = candidateResolved to candidatePayload
+                break
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Throwable) {
+                lastResolutionError = error
+                AppLogger.w(
+                    TAG,
+                    "Voiceover ${candidatePayload.source.title} could not play episode ${candidateEpisode.number}; " +
+                        "trying the next voiceover: ${error.message}",
+                )
+            }
         }
-
-        val resolved = PlaybackResolver(currentExtractors(), validator).resolve(
-            links = links,
-            excludedStreamUrls = excludedStreamUrls,
-            preferredQuality = preferredQuality,
-            attemptTimeoutMillis = { link ->
-                resolveAttemptTimeoutMillis(preferredPlayerName, link.playerName, link.type)
-            },
-        )
+        val (resolved, resolvedPayload) = resolvedCandidate
+            ?: throw lastResolutionError ?: SourceException(appString(R.string.watch_error_no_players))
         AppLogger.d(
             TAG,
             "validated stream: player=${resolved.link.playerName}, type=${resolved.validation.streamType}, " +
@@ -238,7 +279,7 @@ class AnimeWatchRepository(
         )
         val playback = PlaybackStream(
             animeTitle = payload.title.displayName,
-            sourceTitle = payload.source.title,
+            sourceTitle = resolvedPayload.source.title,
             episodeTitle = episode.title?.takeIf(String::isNotBlank)
                 ?: appString(R.string.watch_episode_fallback_title, episode.number.formatEpisodeNumber()),
             streamUrl = resolved.validation.finalUrl,
@@ -438,7 +479,7 @@ class AnimeWatchRepository(
     ): List<PlayerLink> {
         val cacheKey = "${payload.source.sourceId}\u0000${episode.id}"
         return loadPlayerLinks(cacheKey, forceRefresh) {
-            val selected = try {
+            try {
                 payload.runtime.getPlayerLinks(payload.title, payload.group, episode)
                     .filter(::isSupportedLink)
             } catch (error: CancellationException) {
@@ -451,39 +492,6 @@ class AnimeWatchRepository(
                 )
                 emptyList()
             }
-            if (selected.isNotEmpty()) return@loadPlayerLinks selected
-
-            // Some providers advertise a language/voiceover group even when an individual episode
-            // has no servers in it. Match that episode by number in sibling groups of the same
-            // title, preserving source order, instead of failing playback immediately.
-            val siblings = sourcePayloads.values
-                .filter { candidate ->
-                    candidate.animeId == payload.animeId && candidate.source.sourceId != payload.source.sourceId
-                }
-                .sortedWith(compareByDescending<SourcePayload> { it.source.isPriority }.thenBy { it.source.sourceId })
-            for (candidate in siblings) {
-                val siblingEpisode = candidate.episodes.firstOrNull {
-                        kotlin.math.abs(it.number - episode.number) < EPISODE_NUMBER_EPSILON
-                } ?: continue
-                val fallback = try {
-                    candidate.runtime.getPlayerLinks(candidate.title, candidate.group, siblingEpisode)
-                        .filter(::isSupportedLink)
-                } catch (error: CancellationException) {
-                    throw error
-                } catch (error: Throwable) {
-                    AppLogger.w(TAG, "Fallback voiceover ${candidate.source.title} failed: ${error.message}")
-                    emptyList()
-                }
-                if (fallback.isNotEmpty()) {
-                    AppLogger.w(
-                        TAG,
-                        "Selected voiceover ${payload.source.title} has no players for episode ${episode.number}; " +
-                            "using ${candidate.source.title}",
-                    )
-                    return@loadPlayerLinks fallback
-                }
-            }
-            emptyList()
         }
     }
 
@@ -586,6 +594,17 @@ class AnimeWatchRepository(
         name.containsPlayerToken("vk") -> 5
         name.containsPlayerToken("aniboom") -> 6
         else -> 10
+    }
+
+    private fun playbackSourcePriority(title: String): Int = when {
+        title.contains("animepahe", ignoreCase = true) -> 0
+        title.contains("kickass", ignoreCase = true) -> 1
+        title.contains("animegg", ignoreCase = true) -> 2
+        title.contains("anikoto", ignoreCase = true) -> 3
+        title.contains("allanime", ignoreCase = true) -> 4
+        title.contains("animedao", ignoreCase = true) -> 8
+        title.contains("animedb", ignoreCase = true) -> 9
+        else -> 5
     }
 
     private fun currentLanguageKey(): String = when (appPreferences?.state?.value?.languageMode ?: LanguageMode.SYSTEM) {
@@ -790,6 +809,8 @@ class AnimeWatchRepository(
         const val STREAM_CACHE_TTL_MS = 10 * 60_000L
         const val PLAYER_LINKS_CACHE_TTL_MS = 60_000L
         const val EPISODE_NUMBER_EPSILON = 0.001
+        const val PLAYER_LINK_DISCOVERY_TIMEOUT_MS = 12_000L
+        const val FALLBACK_RESOLVE_TIMEOUT_MS = 12_000L
         // Start the next automatic player quickly when the first embed is still negotiating ads,
         // challenges or a dead CDN. The winner cancels the rest, so this cuts visible startup
         // latency without changing player priority or waiting for a full per-player timeout.
