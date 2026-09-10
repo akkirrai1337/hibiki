@@ -6,7 +6,7 @@ import org.junit.Test
 
 class WebViewStreamRelayTest {
     @Test
-    fun `stream relay avoids service worker locked readable streams and credentialed wildcard cors`() {
+    fun `stream relay starts on headers, survives a locked body, and omits credentials`() {
         val script = WebViewStreamRelay.buildStreamingFetchScript(
             reqId = "request",
             url = "https://cdn.example/master.m3u8",
@@ -14,10 +14,17 @@ class WebViewStreamRelayTest {
             range = null,
         )
 
-        assertTrue(script.contains("new XMLHttpRequest()"))
-        assertTrue(script.contains("responseType = 'arraybuffer'"))
-        assertTrue(script.contains("withCredentials = false"))
-        assertTrue(!script.contains("getReader()"))
+        // Headers are reported before the body is touched, so a slow segment is not mistaken for a
+        // transport that cannot answer at all.
+        val startCall = script.indexOf("onStreamStart")
+        val bodyRead = script.indexOf("getReader()")
+        assertTrue(startCall in 1..<bodyRead)
+        // A Service Worker can hand back a body already locked to another reader; that throws
+        // rather than failing the request, so the whole-response path has to remain reachable.
+        assertTrue(script.contains("catch(e) { reader = null; }"))
+        assertTrue(script.contains("response.arrayBuffer()"))
+        // Signed HLS CDNs answer with a wildcard CORS header, which a credentialed request cannot use.
+        assertTrue(script.contains("credentials:'omit'"))
     }
 
     @Test

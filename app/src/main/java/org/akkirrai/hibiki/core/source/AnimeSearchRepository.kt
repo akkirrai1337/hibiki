@@ -313,16 +313,20 @@ class AnimeSearchRepository(
         fallbackLabel: String?,
         preferEnglish: Boolean,
     ): String {
-        // The available count is the most useful number while a show is airing; when a source does
-        // not publish it, the announced total (including one supplied by the metadata aggregator)
-        // is still real information and must not be rendered as "unknown" merely because the show
-        // is ongoing or announced.
-        val releasedCount = availableEpisodeCount ?: episodeCount
-        return when (val count = releasedCount) {
-            null -> fallbackLabel.orEmpty().ifBlank {
+        // The count of what is actually playable is the number a viewer is deciding on, so it wins
+        // whenever the source publishes one. The announced total is still real information when it
+        // does not - "unknown" helps nobody - but a show that has not finished airing has fewer
+        // episodes up than that total, so it is labelled as a total rather than left to be read as
+        // a promise.
+        availableEpisodeCount?.let { count -> return "$count ${episodesWord(count, preferEnglish)}" }
+        val total = episodeCount
+        return when {
+            total == null -> fallbackLabel.orEmpty().ifBlank {
                 if (preferEnglish) "Episodes unknown" else "Количество серий неизвестно"
             }
-            else -> "$count ${episodesWord(count, preferEnglish)}"
+            releaseStatus == AnimeReleaseStatus.RELEASED -> "$total ${episodesWord(total, preferEnglish)}"
+            preferEnglish -> "$total ${episodesWord(total, true)} total"
+            else -> "Всего $total ${episodesWord(total, false)}"
         }
     }
 

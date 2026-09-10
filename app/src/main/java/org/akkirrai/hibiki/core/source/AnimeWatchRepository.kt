@@ -214,7 +214,9 @@ class AnimeWatchRepository(
                 .filter { candidate ->
                     candidate.animeId == payload.animeId && candidate.source.sourceId != payload.source.sourceId
                 }
-                .sortedWith(compareBy<SourcePayload> { playbackSourcePriority(it.source.title) }.thenBy { it.source.sourceId })
+                // The extension published these in the order it wants them tried, so fallback
+                // follows that order rather than any opinion this app holds about source names.
+                .sortedBy(SourcePayload::order)
                 .forEach { candidate ->
                     candidate.episodes.firstOrNull {
                         kotlin.math.abs(it.number - episode.number) < EPISODE_NUMBER_EPSILON
@@ -442,6 +444,7 @@ class AnimeWatchRepository(
             )
             sourcePayloads[source.sourceId] = SourcePayload(
                 source = source,
+                order = index,
                 animeId = animeId,
                 title = title,
                 group = group,
@@ -594,17 +597,6 @@ class AnimeWatchRepository(
         name.containsPlayerToken("vk") -> 5
         name.containsPlayerToken("aniboom") -> 6
         else -> 10
-    }
-
-    private fun playbackSourcePriority(title: String): Int = when {
-        title.contains("animepahe", ignoreCase = true) -> 0
-        title.contains("kickass", ignoreCase = true) -> 1
-        title.contains("animegg", ignoreCase = true) -> 2
-        title.contains("anikoto", ignoreCase = true) -> 3
-        title.contains("allanime", ignoreCase = true) -> 4
-        title.contains("animedao", ignoreCase = true) -> 8
-        title.contains("animedb", ignoreCase = true) -> 9
-        else -> 5
     }
 
     private fun currentLanguageKey(): String = when (appPreferences?.state?.value?.languageMode ?: LanguageMode.SYSTEM) {
@@ -797,6 +789,9 @@ class AnimeWatchRepository(
 
     private data class SourcePayload(
         val source: WatchSource,
+        /** The source's own position in the list the extension published, which is the order
+         * playback falls back through. */
+        val order: Int,
         val animeId: String,
         val title: AnimeTitle,
         val group: PlaybackGroup,

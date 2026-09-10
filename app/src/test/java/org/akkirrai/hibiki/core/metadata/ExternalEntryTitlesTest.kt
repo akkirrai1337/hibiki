@@ -35,7 +35,7 @@ class ExternalEntryTitlesTest {
 
         assertEquals("Frieren: Beyond Journey's End", anime.title)
         assertEquals("2023 · TV", anime.subtitle)
-        assertEquals("28 episodes", anime.episodesLabel)
+        assertEquals("28 episodes total", anime.episodesLabel)
         assertEquals("AniList", anime.ratings.single().source)
         assertEquals(8.9, anime.ratings.single().value, 0.0)
     }

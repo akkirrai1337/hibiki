@@ -50,8 +50,9 @@ internal object WebViewStreamRelay {
     private const val SESSION_IDLE_TIMEOUT_MS = 3 * 60_000L
     private const val FETCH_TIMEOUT_SECONDS = 20L
     private const val JS_FETCH_TIMEOUT_MS = 12_000
-    private const val STREAM_START_TIMEOUT_SECONDS = 4L
-    private const val STREAM_XHR_TIMEOUT_MS = 20_000
+    private const val STREAM_START_TIMEOUT_SECONDS = 6L
+    // Guards a stalled transfer, not a slow one: rearmed on every chunk that arrives.
+    private const val STREAM_IDLE_TIMEOUT_MS = 10_000
 
     private class Session(
         val webView: WebView,
@@ -118,14 +119,26 @@ internal object WebViewStreamRelay {
                                     null,
                                 )
                             }
-                            result.whenComplete { _, error -> if (error != null) backend.destroyAndClearData() }
+                            result.whenComplete { ready, error ->
+                                if (error != null || ready == null) handler.post { backend.destroyAndClearData() }
+                            }
                         } catch (error: Throwable) {
                             result.completeExceptionally(error)
                         }
                     }
                 }
             }
-            return future.get(SAME_ORIGIN_PREPARE_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+            return try {
+                future.get(SAME_ORIGIN_PREPARE_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+            } catch (error: Exception) {
+                // A backend that never finished loading must not be left behind: it would make
+                // every later request for this origin wait out the same timeout again, and its
+                // WebView would live until the session went idle. Drop it and let the next
+                // request build a fresh one.
+                originBackends.remove(origin, future)
+                future.completeExceptionally(error)
+                throw error
+            }
         }
 
         fun destroy() = handler.post {
@@ -340,38 +353,47 @@ internal object WebViewStreamRelay {
         out.flush()
     }
 
-    private fun respondStreaming(
+    /**
+     * Serves one relay request from a WebView backend, streaming the body through as it arrives.
+     *
+     * There are two WebView backends and they behave identically once a transfer has started, so
+     * this is the one implementation both use. The first attempt runs on the page's own WebView.
+     * When that page cannot read the response - a cross-origin body fetched in `no-cors` mode is a
+     * browser security boundary, not an upstream failure - [nextTransport] takes over: the
+     * same-origin backend document, and after that Cronet, Chromium's native transport, which keeps
+     * the browser-like TLS stack without being subject to page CORS.
+     */
+    private fun respondStreamingVia(
         out: OutputStream,
         session: Session,
         token: String,
         target: String,
         range: String?,
         headOnly: Boolean,
+        backend: WebView,
+        transportName: String,
+        nextTransport: () -> Unit,
     ) {
-        val effectiveRange = range ?: if (headOnly) "bytes=0-0" else null
         val (reqId, transfer) = try {
-            fetchStreamingViaWebView(session, target, effectiveRange)
+            fetchStreamingViaWebView(session, target, range, backend)
         } catch (error: Exception) {
-            AppLogger.w(TAG, "Streaming relay dispatch failed: host=${hostOf(target)}", error)
-            return writeStatus(out, 502, "Upstream fetch failed")
+            AppLogger.w(TAG, "$transportName relay dispatch failed: host=${hostOf(target)}", error)
+            return nextTransport()
         }
         val metadata = try {
-            // Capture and validation share a 15-second automatic-player budget. If page JS cannot
-            // read a cross-origin response, move to the already-warming Cronet transport quickly;
-            // FETCH_TIMEOUT_SECONDS still governs stalls after a stream has actually started.
+            // Capture and validation share a 15-second automatic-player budget, so a transport that
+            // cannot answer at all has to give way quickly. This waits for response headers only;
+            // a slow body is governed by the idle timeout inside the fetch script.
             transfer.metadata.get(STREAM_START_TIMEOUT_SECONDS, TimeUnit.SECONDS)
         } catch (error: Exception) {
-            // A page can request a cross-origin video in `no-cors` mode, but JavaScript cannot
-            // read that response body. This is a browser security boundary rather than an
-            // upstream playback failure. Re-fetch it through Cronet, Chromium's native transport,
-            // which preserves the browser-like TLS stack without being subject to page CORS.
             pendingStreams.remove(reqId)
             transfer.events.clear()
-            AppLogger.w(TAG, "WebView stream body unavailable; retrying through Cronet: host=${hostOf(target)}", error)
-            return respondStreamingViaSameOrigin(out, session, token, target, effectiveRange, headOnly)
+            AppLogger.w(TAG, "$transportName relay could not start; trying the next transport: host=${hostOf(target)}", error)
+            return nextTransport()
         }
         try {
             if (metadata.status !in 200..299) {
+                AppLogger.w(TAG, "$transportName relay rejected: status=${metadata.status}, host=${hostOf(target)}")
                 return writeStatus(out, metadata.status, "Upstream request was rejected")
             }
             val isPlaylist = metadata.contentType.contains("mpegurl", ignoreCase = true) ||
@@ -381,10 +403,9 @@ internal object WebViewStreamRelay {
                 val rewritten = rewritePlaylist(body.decodeToString(), metadata.finalUrl.ifBlank { target }) { resolved ->
                     check(session.authorize(resolved, session.headersFor(target))) { "Playlist contained a non-HTTP URL" }
                     proxyUrl(token, resolved)
-                }
-                val bytes = rewritten.encodeToByteArray()
-                writeHeaders(out, 200, "application/vnd.apple.mpegurl", bytes.size, null)
-                if (!headOnly) out.write(bytes)
+                }.encodeToByteArray()
+                writeHeaders(out, 200, "application/vnd.apple.mpegurl", rewritten.size, null)
+                if (!headOnly) out.write(rewritten)
                 out.flush()
                 return
             }
@@ -415,18 +436,18 @@ internal object WebViewStreamRelay {
             consumeStream(transfer) { bytes ->
                 if (chunked) {
                     out.write(bytes.size.toString(16).toByteArray(Charsets.ISO_8859_1))
-                    out.write("\r\n".toByteArray(Charsets.ISO_8859_1))
+                    out.write(CHUNK_DELIMITER)
                     out.write(bytes)
-                    out.write("\r\n".toByteArray(Charsets.ISO_8859_1))
+                    out.write(CHUNK_DELIMITER)
                 } else {
                     out.write(bytes)
                 }
                 out.flush()
             }
-            if (chunked) out.write("0\r\n\r\n".toByteArray(Charsets.ISO_8859_1))
+            if (chunked) out.write(CHUNK_TERMINATOR)
             out.flush()
         } catch (error: Exception) {
-            AppLogger.w(TAG, "Streaming relay failed: host=${hostOf(target)}", error)
+            AppLogger.w(TAG, "$transportName relay transfer failed: host=${hostOf(target)}", error)
         } finally {
             pendingStreams.remove(reqId)
             transfer.events.clear()
@@ -434,7 +455,8 @@ internal object WebViewStreamRelay {
         }
     }
 
-    private fun respondStreamingViaSameOrigin(
+    /** The transport chain for a streaming request: page WebView, same-origin WebView, Cronet. */
+    private fun respondStreaming(
         out: OutputStream,
         session: Session,
         token: String,
@@ -442,66 +464,27 @@ internal object WebViewStreamRelay {
         range: String?,
         headOnly: Boolean,
     ) {
-        val backend = try {
-            session.backendFor(target)
-        } catch (error: Exception) {
-            AppLogger.w(TAG, "Same-origin WebView relay unavailable; retrying through Cronet: host=${hostOf(target)}", error)
-            return respondStreamingViaCronet(out, session, token, target, range, headOnly)
-        }
-        val (reqId, transfer) = fetchStreamingViaWebView(session, target, range, backend)
-        val metadata = try {
-            transfer.metadata.get(STREAM_START_TIMEOUT_SECONDS, TimeUnit.SECONDS)
-        } catch (error: Exception) {
-            pendingStreams.remove(reqId)
-            transfer.events.clear()
-            AppLogger.w(TAG, "Same-origin WebView relay failed; retrying through Cronet: host=${hostOf(target)}", error)
-            return respondStreamingViaCronet(out, session, token, target, range, headOnly)
-        }
-        try {
-            if (metadata.status !in 200..299) {
-                AppLogger.w(TAG, "Same-origin WebView relay rejected: status=${metadata.status}, host=${hostOf(target)}")
-                return writeStatus(out, metadata.status, "Upstream request was rejected")
+        val effectiveRange = range ?: if (headOnly) "bytes=0-0" else null
+        respondStreamingVia(
+            out, session, token, target, effectiveRange, headOnly,
+            backend = session.webView,
+            transportName = "WebView stream",
+        ) {
+            val sameOrigin = try {
+                session.backendFor(target)
+            } catch (error: Exception) {
+                AppLogger.w(TAG, "Same-origin WebView relay unavailable: host=${hostOf(target)}", error)
+                null
             }
-            val isPlaylist = metadata.contentType.contains("mpegurl", ignoreCase = true) ||
-                target.substringBefore('?').endsWith(".m3u8", ignoreCase = true)
-            if (isPlaylist) {
-                val body = collectStream(transfer, MAX_PLAYLIST_BYTES)
-                val rewritten = rewritePlaylist(body.decodeToString(), metadata.finalUrl.ifBlank { target }) { resolved ->
-                    check(session.authorize(resolved, session.headersFor(target))) { "Playlist contained a non-HTTP URL" }
-                    proxyUrl(token, resolved)
-                }.encodeToByteArray()
-                writeHeaders(out, 200, "application/vnd.apple.mpegurl", rewritten.size, null)
-                if (!headOnly) out.write(rewritten)
+            if (sameOrigin == null) {
+                respondStreamingViaCronet(out, session, token, target, effectiveRange, headOnly)
             } else {
-                if (headOnly) {
-                    collectStream(transfer)
-                    writeStreamingHeaders(
-                        out, metadata.status, metadata.contentType, metadata.contentLength,
-                        metadata.contentRange.takeIf(String::isNotBlank), chunked = false,
-                    )
-                } else {
-                    val chunked = metadata.contentLength == null
-                    writeStreamingHeaders(
-                        out, metadata.status, metadata.contentType, metadata.contentLength,
-                        metadata.contentRange.takeIf(String::isNotBlank), chunked,
-                    )
-                    consumeStream(transfer) { bytes ->
-                        if (chunked) {
-                            out.write(bytes.size.toString(16).toByteArray(Charsets.ISO_8859_1))
-                            out.write("\r\n".toByteArray(Charsets.ISO_8859_1))
-                        }
-                        out.write(bytes)
-                        if (chunked) out.write("\r\n".toByteArray(Charsets.ISO_8859_1))
-                        out.flush()
-                    }
-                    if (chunked) out.write("0\r\n\r\n".toByteArray(Charsets.ISO_8859_1))
-                }
+                respondStreamingVia(
+                    out, session, token, target, effectiveRange, headOnly,
+                    backend = sameOrigin,
+                    transportName = "Same-origin WebView",
+                ) { respondStreamingViaCronet(out, session, token, target, effectiveRange, headOnly) }
             }
-            out.flush()
-        } catch (error: Exception) {
-            AppLogger.w(TAG, "Same-origin relay transfer failed: host=${hostOf(target)}", error)
-        } finally {
-            pendingStreams.remove(reqId)
         }
     }
 
@@ -558,13 +541,13 @@ internal object WebViewStreamRelay {
                     session.lastUsed.set(System.currentTimeMillis())
                     if (chunked) {
                         out.write(count.toString(16).toByteArray(Charsets.ISO_8859_1))
-                        out.write("\r\n".toByteArray(Charsets.ISO_8859_1))
+                        out.write(CHUNK_DELIMITER)
                     }
                     out.write(buffer, 0, count)
-                    if (chunked) out.write("\r\n".toByteArray(Charsets.ISO_8859_1))
+                    if (chunked) out.write(CHUNK_DELIMITER)
                     out.flush()
                 }
-                if (chunked) out.write("0\r\n\r\n".toByteArray(Charsets.ISO_8859_1))
+                if (chunked) out.write(CHUNK_TERMINATOR)
                 out.flush()
             }
         } catch (error: Exception) {
@@ -723,6 +706,23 @@ internal object WebViewStreamRelay {
         """.trimIndent()
     }
 
+    /**
+     * The streaming fetch, as it runs inside the WebView.
+     *
+     * Two things it has to get right, both learned the hard way:
+     *
+     * - Status and headers are reported the moment they arrive, before a single body byte is read.
+     *   Reporting them only once the body finished turned every segment slower than
+     *   [STREAM_START_TIMEOUT_SECONDS] into a needless fallback, and buffered whole progressive
+     *   files in memory before playback could begin.
+     * - A Service Worker may hand back a response whose body stream is already locked to another
+     *   reader. That throws on `getReader()` rather than failing the request, so the reader path is
+     *   guarded and falls back to reading the response whole.
+     *
+     * Credentials are omitted deliberately: signed HLS CDNs answer with `Access-Control-Allow-Origin:
+     * *`, which Chromium rejects for a credentialed request. The signature in the URL is the
+     * authentication, and any explicit auth header is still sent.
+     */
     internal fun buildStreamingFetchScript(
         reqId: String,
         url: String,
@@ -736,40 +736,61 @@ internal object WebViewStreamRelay {
         return """
             (function(){
               try {
-                var xhr = new XMLHttpRequest();
-                xhr.open('GET', $urlJson, true);
-                xhr.responseType = 'arraybuffer';
+                var controller = new AbortController();
+                var timer = null;
+                var arm = function(){
+                  if (timer) clearTimeout(timer);
+                  timer = setTimeout(function(){ controller.abort(); }, $STREAM_IDLE_TIMEOUT_MS);
+                };
+                var done = function(){ if (timer) clearTimeout(timer); };
                 var headers = $headersJson;
+                var cleanHeaders = {};
                 Object.keys(headers).forEach(function(name){
-                  try { xhr.setRequestHeader(name, headers[name]); } catch(e) {}
+                  try { var probe = new Headers(); probe.set(name, headers[name]); cleanHeaders[name] = headers[name]; } catch(e) {}
                 });
-                // A Service Worker can hand fetch() a body stream already locked to its reader.
-                // XHR exposes a completed ArrayBuffer instead and, with credentials disabled,
-                // remains compatible with the wildcard CORS used by signed HLS CDNs.
-                xhr.withCredentials = false;
-                xhr.onload = function(){
-                  try {
-                  var buffer = xhr.response || new ArrayBuffer(0);
-                  $BRIDGE_NAME.onStreamStart(
-                    $reqIdJson,
-                    xhr.status,
-                    xhr.getResponseHeader('content-type') || '',
-                    xhr.getResponseHeader('content-range') || '',
-                    xhr.getResponseHeader('content-length') || String(buffer.byteLength),
-                    xhr.responseURL || $urlJson
-                  );
-                  var bytes = new Uint8Array(buffer);
+                var push = function(bytes){
                   for (var i = 0; i < bytes.length; i += 16384) {
                     var part = bytes.subarray(i, i + 16384);
                     $BRIDGE_NAME.onStreamChunk($reqIdJson, btoa(String.fromCharCode.apply(null, part)));
                   }
-                  $BRIDGE_NAME.onStreamComplete($reqIdJson);
-                  } catch(error) { $BRIDGE_NAME.onStreamError($reqIdJson, 'onload: ' + String(error)); }
                 };
-                xhr.onerror = function(){ $BRIDGE_NAME.onStreamError($reqIdJson, 'network error'); };
-                xhr.ontimeout = function(){ $BRIDGE_NAME.onStreamError($reqIdJson, 'timeout'); };
-                xhr.timeout = $STREAM_XHR_TIMEOUT_MS;
-                xhr.send();
+                arm();
+                fetch($urlJson, {method:'GET', headers:cleanHeaders, credentials:'omit', cache:'no-store', signal:controller.signal}).then(function(response){
+                  arm();
+                  $BRIDGE_NAME.onStreamStart(
+                    $reqIdJson,
+                    response.status,
+                    response.headers.get('content-type') || '',
+                    response.headers.get('content-range') || '',
+                    response.headers.get('content-length') || '',
+                    response.url || $urlJson
+                  );
+                  var reader = null;
+                  try { if (response.body && response.body.getReader) reader = response.body.getReader(); } catch(e) { reader = null; }
+                  if (!reader) {
+                    return response.arrayBuffer().then(function(buffer){
+                      push(new Uint8Array(buffer));
+                      done();
+                      $BRIDGE_NAME.onStreamComplete($reqIdJson);
+                    });
+                  }
+                  var pump = function(){
+                    return reader.read().then(function(result){
+                      arm();
+                      if (result.done) {
+                        done();
+                        $BRIDGE_NAME.onStreamComplete($reqIdJson);
+                        return;
+                      }
+                      push(result.value);
+                      return pump();
+                    });
+                  };
+                  return pump();
+                }).catch(function(error){
+                  done();
+                  $BRIDGE_NAME.onStreamError($reqIdJson, String(error));
+                });
               } catch(error) { $BRIDGE_NAME.onStreamError($reqIdJson, 'sync: ' + String(error)); }
             })();
         """.trimIndent()
@@ -822,6 +843,9 @@ internal object WebViewStreamRelay {
     private const val STREAM_QUEUE_CAPACITY = 32
     private const val STREAM_COPY_BUFFER_SIZE = 32 * 1024
     private const val MAX_PLAYLIST_BYTES = 4 * 1024 * 1024
+    // Chunked-transfer framing, written between and after body chunks.
+    private val CHUNK_DELIMITER = "\r\n".toByteArray(Charsets.ISO_8859_1)
+    private val CHUNK_TERMINATOR = "0\r\n\r\n".toByteArray(Charsets.ISO_8859_1)
     private const val SAME_ORIGIN_PREPARE_TIMEOUT_SECONDS = 8L
     private const val SAME_ORIGIN_RELAY_DOCUMENT = "<html><head></head><body></body></html>"
     private val URI_ATTR = Regex("URI=\"([^\"]+)\"")

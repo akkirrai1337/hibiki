@@ -43,12 +43,12 @@ fun ExternalMetadata.toCatalogAnime(preferEnglish: Boolean): Anime {
         id = externalEntryId(provider, externalId),
         title = title,
         subtitle = listOfNotNull(year?.toString(), type?.uppercase()).joinToString(" · "),
-        // This is the provider's announced total, not a promise that every episode is already
-        // playable on the selected source. It is nevertheless better title metadata than
-        // "unknown", and the source's available count takes precedence after resolution.
+        // The provider's announced total, not a promise that every episode is already playable on
+        // the selected source - so it is labelled as a total. Better title metadata than
+        // "unknown", and the source's available count replaces it once the entry is resolved.
         episodesLabel = episodeCount?.let { count ->
-            if (preferEnglish) "$count ${if (count == 1) "episode" else "episodes"}"
-            else "$count ${russianEpisodesWord(count)}"
+            if (preferEnglish) "$count ${if (count == 1) "episode" else "episodes"} total"
+            else "Всего $count ${russianEpisodesWord(count)}"
         }.orEmpty(),
         status = status.orEmpty(),
         posterUrl = posterUrl,
