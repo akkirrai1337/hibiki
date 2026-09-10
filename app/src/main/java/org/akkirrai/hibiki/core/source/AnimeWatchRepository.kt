@@ -745,7 +745,10 @@ class AnimeWatchRepository(
         const val TAG = "AnimeWatchRepository"
         const val STREAM_CACHE_TTL_MS = 10 * 60_000L
         const val PLAYER_LINKS_CACHE_TTL_MS = 60_000L
-        const val PLAYER_RACE_HEDGE_DELAY_MS = 750L
+        // Start the next automatic player quickly when the first embed is still negotiating ads,
+        // challenges or a dead CDN. The winner cancels the rest, so this cuts visible startup
+        // latency without changing player priority or waiting for a full per-player timeout.
+        const val PLAYER_RACE_HEDGE_DELAY_MS = 250L
         // BROWSER-resolved players can fall back to WebViewStreamRelay when a CDN blocks a plain
         // HTTP client, which adds real WebView round-trips (JS fetch + base64 bridge) to both
         // resolution and validation - both budgets were tuned before that path existed and are too

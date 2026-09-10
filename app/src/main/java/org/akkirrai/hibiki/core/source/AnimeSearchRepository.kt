@@ -46,6 +46,7 @@ class AnimeSearchRepository(
     metadataService: ExternalMetadataService? = null,
 ) {
     private val searchCache = ConcurrentHashMap<String, CachedSearchResults>()
+    private val filterCatalogCache = ConcurrentHashMap<String, AnimeSearchFilterCatalog>()
     private val appContext = context?.applicationContext
     private val appPreferences = appContext?.let(::AppPreferences)
     private val sourceManager = sourceManager ?: appContext?.let { AnimeSourceRuntimeManager(it, client) }
@@ -108,7 +109,11 @@ class AnimeSearchRepository(
     }
 
     suspend fun getSearchFilterCatalog(): AnimeSearchFilterCatalog {
-        return currentSource().filterCatalog(preferEnglish())
+        val source = currentSource()
+        val preferEnglish = preferEnglish()
+        val key = "${source.descriptor.id.value}:$preferEnglish"
+        return filterCatalogCache[key]
+            ?: source.filterCatalog(preferEnglish).also { filterCatalogCache[key] = it }
     }
 
     suspend fun search(
@@ -185,12 +190,14 @@ class AnimeSearchRepository(
 
     fun clearCaches() {
         searchCache.clear()
+        filterCatalogCache.clear()
         detailsCache.clear()
         detailsMutexes.clear()
     }
 
     fun close() {
         searchCache.clear()
+        filterCatalogCache.clear()
         metadataScope.cancel()
         if (closeClientOnClose) client.close()
     }

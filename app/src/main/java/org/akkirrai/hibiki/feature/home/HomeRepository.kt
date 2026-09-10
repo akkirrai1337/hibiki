@@ -312,7 +312,10 @@ class HomeRepository(
     }
 
     private suspend fun loadRecentlyUpdated(): List<Anime> =
-        loadRecentlyUpdatedPage(offset = 0)
+        // Home renders only one short row. Parsing the 100-item pagination snapshot here delayed
+        // first paint even though 88 entries were immediately discarded; the catalog keeps its
+        // own full snapshot through loadRecentlyUpdatedPage when the user actually opens it.
+        currentSource().latest(limit = HOME_SECTION_LIMIT).map(::toHomeAnime)
 
     private suspend fun loadRecentlyUpdatedCatalog(): List<Anime> {
         return currentSource()
