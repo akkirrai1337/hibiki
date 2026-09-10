@@ -48,3 +48,4 @@ parsers/src/test/resources/beakokit/resolvers/
 # repo either.
 parsers/src/test/resources/beakokit/miruro/
 .reasonix/
+*.toml
