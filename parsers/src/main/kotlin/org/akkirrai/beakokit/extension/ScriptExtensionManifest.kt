@@ -30,6 +30,18 @@ data class ScriptExtensionManifest(
     val capabilities: Set<SourceCapability> = emptySet(),
     /** Host-declared, not content the script can claim for itself - drives the 18+ badge in the UI. */
     val isNsfw: Boolean = false,
+    /**
+     * The source's own metadata is the weaker half of what it returns, and the host should describe
+     * its titles from AniList instead (see
+     * [org.akkirrai.beakokit.metadata.mergeExternalMetadata]).
+     *
+     * A plain top-level key rather than a new [SourceCapability] on purpose: unknown *keys* have
+     * always been ignored by every build (`ignoreUnknownKeys`), while an unknown capability *value*
+     * is only skipped by builds carrying [LenientCapabilitySetSerializer] - which most installed
+     * copies do not have yet. Declaring this as a capability today would make the whole manifest
+     * invalid for them.
+     */
+    val useExternalMetadata: Boolean = false,
     /** Hosts this extension's playback links are allowed to return over cleartext HTTP. */
     val cleartextPlaybackHosts: Set<String> = emptySet(),
     /**
@@ -80,6 +92,7 @@ data class ScriptExtensionManifest(
         website = website,
         iconUrl = iconUrl,
         capabilities = capabilities,
+        useExternalMetadata = useExternalMetadata,
         networkRequirements = SourceNetworkRequirements(cleartextPlaybackHosts = cleartextPlaybackHosts),
     )
 

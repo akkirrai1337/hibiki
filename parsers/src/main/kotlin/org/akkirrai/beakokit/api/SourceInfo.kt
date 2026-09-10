@@ -46,6 +46,13 @@ data class SourceInfo(
     /** HTTPS URL of an icon hosted by the source website. */
     val iconUrl: String? = null,
     val capabilities: Set<SourceCapability> = emptySet(),
+    /**
+     * The source admits its own metadata is the weaker half of what it returns, and asks the host
+     * to describe its titles from AniList instead (see
+     * [org.akkirrai.beakokit.metadata.mergeExternalMetadata] for exactly which fields that covers
+     * - never the episode list, which only the source knows).
+     */
+    val useExternalMetadata: Boolean = false,
     val networkRequirements: SourceNetworkRequirements = SourceNetworkRequirements(),
 ) {
     init {
