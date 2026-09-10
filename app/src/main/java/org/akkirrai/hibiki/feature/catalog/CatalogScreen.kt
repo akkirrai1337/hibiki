@@ -126,6 +126,9 @@ fun CatalogScreen(
     val uiState = viewModel.uiState.collectAsState()
     val state = uiState.value
     val noSourcesInstalled = AnimeSourceRegistry.sources.isEmpty()
+    // A card from an aggregator catalog names an entry, not a title of this source, so opening one
+    // resolves it first - see rememberEntryOpener. An ordinary card goes straight through.
+    val openAnime = rememberEntryOpener(repository = viewModel.repository, onOpen = onAnimeClick)
     // Groups the fields the anime list actually renders behind one structurally-compared
     // snapshot, so pagination/list-affecting changes don't force LazyColumn to recompose
     // when unrelated fields (query, filters, selectedSort, filterCatalog) change instead.
@@ -245,7 +248,7 @@ fun CatalogScreen(
                         bottomContentPadding = bottomContentPadding,
                         announcementLabel = announcementLabel,
                         movieLabel = movieLabel,
-                        onAnimeClick = onAnimeClick,
+                        onAnimeClick = openAnime,
                         libraryStatusByAnimeId = libraryStatusByAnimeId,
                         onRetryLoadMore = viewModel::loadMore,
                     sharedCardModifier = sharedCardModifier,
@@ -660,7 +663,7 @@ private val CatalogSort.icon: ImageVector
     }
 
 class CatalogViewModel(
-    private val repository: CatalogRepository,
+    internal val repository: CatalogRepository,
     private val errorContext: android.content.Context,
 ) : ViewModel() {
     private var activeSource = AppPreferences.readState(errorContext).animeSource
@@ -718,13 +721,17 @@ class CatalogViewModel(
             val refreshStartedAt = if (forceRefresh) SystemClock.elapsedRealtime() else 0L
             val result = runCatching {
                 ensureInternetConnection()
-                repository.loadPage(
-                    page = 1,
-                    filters = filters,
-                    query = query,
-                    sort = sort,
-                    forceRefresh = forceRefresh,
-                )
+                // The aggregator's own catalog when the user asked for it and this source takes
+                // part; otherwise, and for a sort no aggregator can offer, the source's own.
+                repository.loadAggregatorPage(page = 1, sort = sort)
+                    ?.takeIf { query.isBlank() }
+                    ?: repository.loadPage(
+                        page = 1,
+                        filters = filters,
+                        query = query,
+                        sort = sort,
+                        forceRefresh = forceRefresh,
+                    )
             }
             if (forceRefresh) {
                 delay((CATALOG_PULL_REFRESH_MIN_DURATION_MS -
@@ -818,12 +825,14 @@ class CatalogViewModel(
             }
             runCatching {
                 ensureInternetConnection()
-                repository.loadPage(
-                    page = nextPage,
-                    filters = state.filters,
-                    query = state.query,
-                    sort = state.selectedSort,
-                )
+                repository.loadAggregatorPage(page = nextPage, sort = state.selectedSort)
+                    ?.takeIf { state.query.isBlank() }
+                    ?: repository.loadPage(
+                        page = nextPage,
+                        filters = state.filters,
+                        query = state.query,
+                        sort = state.selectedSort,
+                    )
             }.onSuccess { page ->
                 _uiState.update { current ->
                     val merged = (current.items + page.items).distinctBy { it.anime.id }

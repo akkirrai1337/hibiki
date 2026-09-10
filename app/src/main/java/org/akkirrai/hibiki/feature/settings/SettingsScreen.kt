@@ -104,6 +104,7 @@ import org.akkirrai.hibiki.app.settings.NotificationPermissionState
 import org.akkirrai.hibiki.app.settings.ThemeMode
 import org.akkirrai.hibiki.core.log.AppLogger
 import org.akkirrai.hibiki.core.log.PerfLogger
+import org.akkirrai.hibiki.core.source.AnimeSourceRegistry
 import org.akkirrai.hibiki.core.discord.DiscordAuthActivity
 import org.akkirrai.hibiki.core.discord.DiscordRpcConnectionStatus
 import org.akkirrai.hibiki.core.discord.DiscordRpcManager
@@ -123,6 +124,9 @@ fun SettingsScreen(
     val haptic = LocalHapticFeedback.current
     val appPreferences = LocalAppPreferences.current
     val preferences = LocalAppPreferencesState.current
+    val externalMetadataSources = AnimeSourceRegistry.sources.filter { source ->
+        source.info.useExternalMetadata
+    }
     var isLanguageDialogOpen by rememberSaveable { mutableStateOf(false) }
     val discordRpcManager = remember(context) { DiscordRpcManager.get(context) }
     var isDiscordAuthDialogOpen by remember { mutableStateOf(false) }
@@ -281,6 +285,31 @@ fun SettingsScreen(
                             checked = preferences.externalMetadataShowBinding,
                             shape = shape,
                             onCheckedChange = appPreferences::setExternalMetadataShowBinding,
+                        )
+                    }
+                }
+                if (externalMetadataSources.isNotEmpty()) {
+                    Text(
+                        text = stringResource(R.string.settings_external_metadata_per_source),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 4.dp),
+                    )
+                    SettingsItems(count = externalMetadataSources.size) { index, shape ->
+                        val source = externalMetadataSources[index]
+                        val override = preferences.externalMetadataOverrides[source.id.value]
+                        val enabled = override ?: preferences.externalMetadataEnabled
+                        SettingsSwitchItem(
+                            icon = Icons.Outlined.Public,
+                            title = source.name,
+                            checked = enabled,
+                            shape = shape,
+                            onCheckedChange = { next ->
+                                appPreferences.setExternalMetadataOverride(
+                                    source.id.value,
+                                    next.takeIf { it != preferences.externalMetadataEnabled },
+                                )
+                            },
                         )
                     }
                 }

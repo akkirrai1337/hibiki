@@ -7,6 +7,16 @@ import kotlinx.coroutines.coroutineScope
 import org.akkirrai.beakokit.model.AnimeSearchRequest
 import org.akkirrai.beakokit.model.AnimeSearchFilterCatalog
 import org.akkirrai.beakokit.model.AnimeSearchSort
+import org.akkirrai.beakokit.metadata.ExternalCatalogRequest
+import org.akkirrai.beakokit.metadata.ExternalMetadataService
+import org.akkirrai.hibiki.app.settings.AppPreferences
+import org.akkirrai.beakokit.metadata.ExternalMetadataPreferences
+import org.akkirrai.beakokit.metadata.MetadataProviderId
+import org.akkirrai.beakokit.metadata.MetadataReference
+import org.akkirrai.beakokit.metadata.canBrowseProviders
+import org.akkirrai.beakokit.metadata.metadataProviderOrder
+import org.akkirrai.hibiki.core.metadata.decodeExternalEntryId
+import org.akkirrai.hibiki.core.metadata.toCatalogAnime
 import org.akkirrai.hibiki.core.model.Anime
 import org.akkirrai.hibiki.core.model.AnimeSearchFilters
 import org.akkirrai.hibiki.core.network.AndroidHttpClientFactory
@@ -19,8 +29,12 @@ class CatalogRepository(
     private val client: HttpClient = AndroidHttpClientFactory.create(),
     sourceManager: AnimeSourceRuntimeManager? = null,
     private val closeClientOnClose: Boolean = true,
+    /** Shared with the rest of the app - see HibikiDependencies. Absent only on the standalone paths
+     * that build this repository on their own, where an aggregator catalog is simply not offered. */
+    private val metadataService: ExternalMetadataService? = null,
 ) {
     private val appContext = context.applicationContext
+    private val appPreferences = AppPreferences(appContext)
     private val sourceManager = sourceManager ?: AnimeSourceRuntimeManager(appContext, client)
     private val searchRepository = AnimeSearchRepository(
         context = appContext,
@@ -95,6 +109,97 @@ class CatalogRepository(
             currentPage = pageIndex,
             canLoadMore = anime.size >= CATALOG_PAGE_SIZE,
         )
+    }
+
+    /**
+     * A page of the aggregator's own catalog, when the user has asked to browse that instead of the
+     * source's.
+     *
+     * Cards here name provider entries, not titles of a source, so nothing is resolved while
+     * browsing: a resolution is a search against the source, and doing one per visible card would
+     * spend two dozen requests to answer a question about the one card that gets clicked. Opening
+     * one goes through [resolveEntry].
+     *
+     * Alphabetical has no aggregator equivalent - none of them sorts a catalog by name - so that
+     * mode keeps the source's own catalog and this returns null for it.
+     */
+    suspend fun loadAggregatorPage(page: Int, sort: CatalogSort): CatalogPage? {
+        val service = metadataService ?: return null
+        val order = providerOrder() ?: return null
+        if (!canBrowseProviders(order)) return null
+        val mode = when (sort) {
+            CatalogSort.Popular -> ExternalCatalogRequest.Mode.POPULAR
+            CatalogSort.Updated -> ExternalCatalogRequest.Mode.TRENDING
+            CatalogSort.Alphabetical -> return null
+        }
+        val pageIndex = page.coerceAtLeast(1)
+        val browsed = service.browse(
+            ExternalCatalogRequest(
+                mode = mode,
+                offset = (pageIndex - 1) * CATALOG_PAGE_SIZE,
+                limit = CATALOG_PAGE_SIZE,
+            ),
+            order,
+        )
+        val entries = browsed.first
+        val preferEnglish = searchRepository.prefersEnglishTitles()
+        return CatalogPage(
+            title = "",
+            description = null,
+            // An aggregator has no per-source filter options to offer, and the screen
+            // hides its filter controls when the lists are empty.
+            filterCatalog = AnimeSearchFilterCatalog(),
+            items = entries.map { CatalogAnimeCard(it.toCatalogAnime(preferEnglish)) },
+            currentPage = pageIndex,
+            canLoadMore = entries.size >= CATALOG_PAGE_SIZE,
+        )
+    }
+
+    /**
+     * Turns a card from that catalog into something playable: the source's own title for this entry.
+     *
+     * Null means the source does not have it, as far as its own search can tell - the screen says so
+     * and offers to look for it by hand, rather than opening a title page that has no episodes.
+     */
+    suspend fun resolveEntry(anime: Anime): Anime? {
+        val service = metadataService ?: return null
+        val (provider, externalId) = decodeExternalEntryId(anime.id) ?: return anime
+        val entry = service.entryFor(MetadataReference(provider, externalId)) ?: return null
+        val sourceId = sourceManager.selectedId
+        val resolved = service.resolveSourceTitle(sourceId.value, entry) { query ->
+            runCatching { sourceManager.current().search(query) }.getOrNull()
+        } ?: return null
+        return searchRepository.getDetails(resolved.titleId, anime.copy(id = resolved.titleId))
+    }
+
+    /** Binds an entry to a title of this source by hand, from the resolution sheet, and opens it. */
+    suspend fun bindEntry(anime: Anime, titleId: String): Anime? {
+        val service = metadataService ?: return null
+        val (provider, externalId) = decodeExternalEntryId(anime.id) ?: return null
+        val entry = service.entryFor(MetadataReference(provider, externalId)) ?: return null
+        service.setManualSourceTitle(sourceManager.selectedId.value, titleId, entry)
+        return searchRepository.getDetails(titleId, anime.copy(id = titleId))
+    }
+
+    /** The source's own results for a query, for that sheet to choose from. */
+    suspend fun searchSourceTitles(query: String): List<Anime> =
+        searchRepository.search(AnimeSearchRequest(query = query, limit = 20))
+
+    /** Which providers may answer for the current source, or null when none may. */
+    private fun providerOrder(): List<MetadataProviderId>? {
+        val preferences = appPreferences.state.value
+        val descriptor = sourceManager.current().descriptor
+        val order = metadataProviderOrder(
+            ExternalMetadataPreferences(
+                enabled = preferences.externalMetadataEnabled,
+                overrides = preferences.externalMetadataOverrides,
+                provider = preferences.externalMetadataProvider,
+                fallbackEnabled = preferences.externalMetadataFallback,
+            ),
+            descriptor.id.value,
+            descriptor.info.useExternalMetadata,
+        )
+        return order.takeIf { it.isNotEmpty() }
     }
 
     suspend fun enrichDescription(anime: Anime): Anime =

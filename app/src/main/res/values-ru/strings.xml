@@ -378,6 +378,7 @@
     <string name="settings_sources_summary">Выбор источника каталога и данных о тайтлах</string>
     <string name="settings_hide_nsfw_sources">Скрывать NSFW-источники</string>
     <string name="settings_external_metadata">Метаданные из агрегатора</string>
+    <string name="settings_external_metadata_per_source">Для отдельных источников</string>
     <string name="settings_external_metadata_provider">Источник метаданных</string>
     <string name="settings_external_metadata_fallback">Пробовать другие агрегаторы</string>
     <string name="details_metadata_described">Метаданные из %1$s</string>
@@ -392,6 +393,11 @@
     <string name="details_metadata_picker_nothing">Ничего не найдено.</string>
     <string name="details_metadata_picker_reset">Сопоставить автоматически заново</string>
     <string name="settings_external_metadata_show_binding">Показывать запись метаданных</string>
+    <string name="catalog_entry_resolving">Ищу в этом источнике…</string>
+    <string name="catalog_entry_not_on_source">%1$s нет в этом источнике</string>
+    <string name="catalog_entry_not_on_source_hint">Название здесь может быть написано иначе, а может тайтла и вовсе нет. Найдите его сами, выбор запомнится.</string>
+    <string name="catalog_entry_search">Искать в источнике</string>
+    <string name="catalog_entry_searching">Ищу…</string>
     <string name="settings_notifications">Уведомления</string>
     <string name="settings_notifications_not_asked">Разрешение ещё не запрашивалось</string>
     <string name="settings_notifications_enabled">Включены</string>

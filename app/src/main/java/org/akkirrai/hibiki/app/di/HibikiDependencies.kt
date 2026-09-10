@@ -52,6 +52,7 @@ class HibikiDependencies(
     )
 
     fun catalogRepository(): CatalogRepository = CatalogRepository(
+        metadataService = externalMetadata,
         context = appContext,
         client = parserClient,
         sourceManager = sourceRuntimeManager,

@@ -372,6 +372,7 @@
     <string name="settings_sources_summary">Виберіть постачальника каталогу та метаданих</string>
     <string name="settings_hide_nsfw_sources">Приховувати джерела NSFW</string>
     <string name="settings_external_metadata">Метадані з агрегатора</string>
+    <string name="settings_external_metadata_per_source">Для окремих джерел</string>
     <string name="settings_external_metadata_provider">Джерело метаданих</string>
     <string name="settings_external_metadata_fallback">Пробувати інші агрегатори</string>
     <string name="details_metadata_described">Метадані з %1$s</string>
@@ -386,6 +387,11 @@
     <string name="details_metadata_picker_nothing">Нічого не знайдено.</string>
     <string name="details_metadata_picker_reset">Зіставити автоматично знову</string>
     <string name="settings_external_metadata_show_binding">Показувати запис метаданих</string>
+    <string name="catalog_entry_resolving">Шукаю в цьому джерелі…</string>
+    <string name="catalog_entry_not_on_source">%1$s немає в цьому джерелі</string>
+    <string name="catalog_entry_not_on_source_hint">Назва тут може бути написана інакше, а може тайтла й зовсім немає. Знайдіть його самі, вибір запамʼятається.</string>
+    <string name="catalog_entry_search">Шукати в джерелі</string>
+    <string name="catalog_entry_searching">Шукаю…</string>
     <string name="settings_notifications">Сповіщення</string>
     <string name="settings_notifications_not_asked">Дозвіл ще не запитано</string>
     <string name="settings_notifications_enabled">Увімкнено</string>

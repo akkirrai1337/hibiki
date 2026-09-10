@@ -380,6 +380,7 @@
     <string name="settings_sources_summary">Choose the catalog and metadata provider</string>
     <string name="settings_hide_nsfw_sources">Hide NSFW sources</string>
     <string name="settings_external_metadata">Metadata from an aggregator</string>
+    <string name="settings_external_metadata_per_source">Per source</string>
     <string name="settings_external_metadata_provider">Metadata source</string>
     <string name="settings_external_metadata_fallback">Try the other aggregators</string>
     <string name="details_metadata_described">Described from %1$s</string>
@@ -394,6 +395,11 @@
     <string name="details_metadata_picker_nothing">Nothing found.</string>
     <string name="details_metadata_picker_reset">Match automatically again</string>
     <string name="settings_external_metadata_show_binding">Show the metadata entry on a title</string>
+    <string name="catalog_entry_resolving">Looking for it on this source…</string>
+    <string name="catalog_entry_not_on_source">%1$s is not on this source</string>
+    <string name="catalog_entry_not_on_source_hint">Its name here may be spelled differently, or it may not be uploaded at all. Find it yourself and the choice is remembered.</string>
+    <string name="catalog_entry_search">Search this source</string>
+    <string name="catalog_entry_searching">Looking…</string>
     <string name="settings_notifications">Notifications</string>
     <string name="settings_notifications_not_asked">Permission has not been requested</string>
     <string name="settings_notifications_enabled">Enabled</string>

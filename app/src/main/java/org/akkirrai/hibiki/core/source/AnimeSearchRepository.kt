@@ -421,6 +421,10 @@ class AnimeSearchRepository(
         return mergeExternalMetadata(title, external)
     }
 
+    /** Whether titles should read in English for the current language setting - the catalog asks so
+     * an aggregator entry is named the same way a source title on the same screen would be. */
+    fun prefersEnglishTitles(): Boolean = preferEnglish()
+
     private fun preferEnglish(): Boolean {
         return when (appPreferences?.state?.value?.languageMode ?: LanguageMode.SYSTEM) {
             LanguageMode.ENGLISH, LanguageMode.UKRAINIAN -> true
