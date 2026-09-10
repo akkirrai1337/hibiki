@@ -748,7 +748,11 @@ internal object WebViewStreamRelay {
                   try { var probe = new Headers(); probe.set(name, headers[name]); cleanHeaders[name] = headers[name]; } catch(e) {}
                 });
                 arm();
-                fetch($urlJson, {method:'GET', headers:cleanHeaders, credentials:'include', cache:'no-store', signal:controller.signal}).then(function(response){
+                // HLS CDN responses commonly use Access-Control-Allow-Origin: *. Fetching with
+                // credentials would make Chromium reject that otherwise valid response by design.
+                // Authentication for these captured streams is carried by the signed URL; any
+                // explicitly supplied auth headers remain in cleanHeaders.
+                fetch($urlJson, {method:'GET', headers:cleanHeaders, credentials:'omit', cache:'no-store', signal:controller.signal}).then(function(response){
                   arm();
                   $BRIDGE_NAME.onStreamStart(
                     $reqIdJson,
