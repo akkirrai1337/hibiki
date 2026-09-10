@@ -75,8 +75,14 @@ class AniListMetadataProvider(
             .distinct()
             .take(2)
 
+        var searched = false
         for (name in searchNames) {
-            val candidates = searchCandidates(name)
+            // Null means the request itself failed - AniList unreachable, rate-limiting us, or (as
+            // it happens, currently) disabled outright. Give up for now and leave no record: a
+            // remembered "no match" is a seven-day statement about the *title*, and writing one
+            // because of an outage would keep the screen thin long after AniList is back.
+            val candidates = searchCandidates(name) ?: break
+            searched = true
             val best = pickBestMatch(anime, candidates.map(ScoredCandidate::candidate)) ?: continue
             val found = candidates.firstOrNull { it.candidate.anilistId == best.anilistId }?.media ?: continue
             store.writeMedia(found, nowMillis())
@@ -92,15 +98,17 @@ class AniListMetadataProvider(
             return found
         }
 
-        store.writeMatch(
-            MetadataMatchRecord(
-                titleId = anime.id,
-                anilistId = null,
-                confidencePercent = null,
-                manual = false,
-                matchedAtMillis = nowMillis(),
-            ),
-        )
+        if (searched) {
+            store.writeMatch(
+                MetadataMatchRecord(
+                    titleId = anime.id,
+                    anilistId = null,
+                    confidencePercent = null,
+                    manual = false,
+                    matchedAtMillis = nowMillis(),
+                ),
+            )
+        }
         return null
     }
 
@@ -133,7 +141,7 @@ class AniListMetadataProvider(
 
     /** Candidates for the details screen's manual picker, in AniList's own relevance order. */
     suspend fun search(query: String): List<ExternalMetadata> =
-        searchCandidates(query).map(ScoredCandidate::media)
+        searchCandidates(query).orEmpty().map(ScoredCandidate::media)
 
     private fun ttlFor(media: ExternalMetadata): Long =
         if (media.status == "released") TTL_SETTLED_MILLIS else TTL_AIRING_MILLIS
@@ -146,11 +154,13 @@ class AniListMetadataProvider(
         return data.media?.toExternalMetadata()
     }
 
-    private suspend fun searchCandidates(name: String): List<ScoredCandidate> {
+    /** Null when the request itself failed - distinct from an empty list, which is AniList
+     * genuinely not carrying this title. */
+    private suspend fun searchCandidates(name: String): List<ScoredCandidate>? {
         val data = graphql(
             query = "query (\$search: String) { Page(perPage: 10) { media(search: \$search, type: ANIME) { $MEDIA_FIELDS } } }",
             variables = buildJsonObject { put("search", name) },
-        ) ?: return emptyList()
+        ) ?: return null
         return data.page?.media.orEmpty().map { raw ->
             val media = raw.toExternalMetadata()
             ScoredCandidate(
