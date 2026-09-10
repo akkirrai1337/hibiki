@@ -392,6 +392,15 @@ internal object WebViewStreamRelay {
             return nextTransport()
         }
         try {
+            if (metadata.status in 500..599) {
+                // An origin fault, not a decision about this request: the same URL commonly answers
+                // a differently-shaped request, so this is worth one more transport rather than a
+                // 5xx handed to the player, which reads it as the stream being dead.
+                pendingStreams.remove(reqId)
+                transfer.events.clear()
+                AppLogger.w(TAG, "$transportName relay got ${metadata.status} upstream; trying the next transport: host=${hostOf(target)}")
+                return nextTransport()
+            }
             if (metadata.status !in 200..299) {
                 AppLogger.w(TAG, "$transportName relay rejected: status=${metadata.status}, host=${hostOf(target)}")
                 return writeStatus(out, metadata.status, "Upstream request was rejected")

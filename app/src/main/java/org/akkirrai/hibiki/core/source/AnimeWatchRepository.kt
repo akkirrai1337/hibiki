@@ -315,6 +315,9 @@ class AnimeWatchRepository(
         sourceId: String,
         episodeId: String,
         forceRefresh: Boolean = false,
+        /** Streams already known to be unplayable, so an automatic retry reaches a different
+         * candidate instead of resolving its way back to the one that just failed. */
+        excludedStreamUrls: Set<String> = emptySet(),
         preferredPlayerName: String? = null,
         preferredQuality: String? = null,
     ): ResolvedPlayerStream {
@@ -333,6 +336,7 @@ class AnimeWatchRepository(
                         sourceId = sourceId,
                         episodeId = episodeId,
                         forceRefresh = forceRefresh,
+                        excludedStreamUrls = excludedStreamUrls,
                         preferredQuality = preferredQuality,
                         requiredPlayerName = rememberedPlayer,
                     ),
@@ -352,6 +356,7 @@ class AnimeWatchRepository(
                     sourceId = sourceId,
                     episodeId = episodeId,
                     forceRefresh = forceRefresh,
+                    excludedStreamUrls = excludedStreamUrls,
                     preferredPlayerName = playerName,
                     preferredQuality = preferredQuality,
                     requiredPlayerName = playerName,
@@ -367,6 +372,7 @@ class AnimeWatchRepository(
                 sourceId = sourceId,
                 episodeId = episodeId,
                 forceRefresh = forceRefresh,
+                excludedStreamUrls = excludedStreamUrls,
                 preferredPlayerName = candidate,
                 preferredQuality = preferredQuality,
                 requiredPlayerName = candidate,

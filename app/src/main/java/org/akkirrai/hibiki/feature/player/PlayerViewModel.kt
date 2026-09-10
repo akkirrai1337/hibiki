@@ -102,21 +102,27 @@ class PlayerViewModel(
                     sourceId = state.currentSourceId,
                     episodeId = effectiveEpisodeId,
                 )
+            // Every stream this episode has already failed on, not only the one that failed last:
+            // a second attempt that remembers only the newest failure can resolve straight back to
+            // the first one, and the retry cap then spends itself alternating between two dead
+            // candidates.
+            val unplayable = _uiState.value.failedStreamUrls + excludedStreamUrls
             val playbackResult = runCatching {
                 offlinePlayback
-                    ?.takeIf { it.streamUrl !in excludedStreamUrls }
+                    ?.takeIf { it.streamUrl !in unplayable }
                     ?: if (state.selectedPlayerName.isNullOrBlank() && state.selectedQualityLabel.isNullOrBlank()) {
                         repository.resolveFastestStream(
                             sourceId = state.currentSourceId,
                             episodeId = effectiveEpisodeId,
                             forceRefresh = forceRefresh,
+                            excludedStreamUrls = unplayable,
                         ).playback
                     } else {
                         repository.resolveStream(
                             sourceId = state.currentSourceId,
                             episodeId = effectiveEpisodeId,
                             forceRefresh = forceRefresh,
-                            excludedStreamUrls = excludedStreamUrls,
+                            excludedStreamUrls = unplayable,
                             preferredPlayerName = state.selectedPlayerName,
                             preferredQuality = state.selectedQualityLabel,
                         )
@@ -222,7 +228,15 @@ class PlayerViewModel(
             return
         }
         val excluded = streamUrl?.takeIf(String::isNotBlank)?.let { setOf(it) } ?: emptySet()
-        load(forceRefresh = true, excludedStreamUrls = excluded)
+        // Deliberately not a forced refresh on the first try. A browser-resolved link offers two
+        // candidates - the direct CDN URL and the same stream relayed through the WebView that
+        // resolved it, which is the one that gets past bot management on TLS fingerprint - and the
+        // point of this retry is to reach the second. Forcing a refresh instead throws away the
+        // resolution that produced both, discards the relay session behind the second, and can mint
+        // a fresh direct URL that the exclusion above no longer matches, so the player fails on the
+        // same kind of stream until the cap is spent. A refresh is what a second failure means: the
+        // resolution itself has gone stale.
+        load(forceRefresh = state.autoRecoveryCount > 0, excludedStreamUrls = excluded)
     }
 
     fun loadSettingsOptions() {
@@ -562,4 +576,6 @@ private fun <T> Result<T>.throwIfCancelled(): Result<T> {
 private const val PLAYBACK_LOG_TAG = "HibikiPlayback"
 private const val PLAYBACK_END_WINDOW_MS = 30_000L
 private const val PLAYBACK_END_PERCENT = 5L
-private const val MAX_AUTO_RECOVERY_ATTEMPTS = 2
+// Enough for the two candidates a browser-resolved link offers - the direct URL and the relayed
+// one - plus a move to another player after both fail.
+private const val MAX_AUTO_RECOVERY_ATTEMPTS = 3
