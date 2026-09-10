@@ -124,11 +124,27 @@ class HttpStreamValidator(
             playlist = mediaResponse.bodyAsText()
         }
 
-        val hasSegments = playlist.lineSequence()
+        val firstSegment = playlist.lineSequence()
             .map(String::trim)
-            .any { it.isNotEmpty() && !it.startsWith("#") }
-        if (!hasSegments) {
+            .firstOrNull { it.isNotEmpty() && !it.startsWith("#") }
+        if (firstSegment == null) {
             return failure(stream, 200, "В media playlist нет сегментов")
+        }
+
+        // A manifest may be public while its media objects require a cookie, Referer, or a URL
+        // signature that has already expired. The player would otherwise discover the 403 only
+        // after selecting this candidate, too late for PlaybackResolver to try its relay fallback.
+        val segmentResponse = client.get(resolveUrl(playlistUrl, firstSegment)) {
+            stream.headers.forEach { (name, value) -> header(name, value) }
+            header(HttpHeaders.Range, "bytes=0-1023")
+        }
+        val segmentBytes = segmentResponse.bodyAsBytes()
+        if (!segmentResponse.status.isSuccess() || segmentBytes.isEmpty()) {
+            return failure(
+                stream,
+                segmentResponse.status.value,
+                "Первый HLS-сегмент не отдаёт данные (HTTP ${segmentResponse.status.value})",
+            )
         }
 
         return StreamValidationResult(
@@ -137,7 +153,7 @@ class HttpStreamValidator(
             quality = stream.quality,
             finalUrl = playlistUrl,
             statusCode = 200,
-            message = "m3u8 загружен, media playlist содержит сегменты",
+            message = "m3u8 и первый media segment отдают данные",
         )
     }
 

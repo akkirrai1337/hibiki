@@ -56,6 +56,10 @@ class HttpStreamValidatorTest {
                     content = "#EXTM3U\n#EXTINF:6,\nvideo-1.ts",
                     status = HttpStatusCode.OK,
                 )
+                "/video-1.ts" -> respond(
+                    content = byteArrayOf(0, 1, 2, 3),
+                    status = HttpStatusCode.PartialContent,
+                )
                 "/audio.m3u8" -> respond(
                     content = "blocked",
                     status = HttpStatusCode.Forbidden,
@@ -99,7 +103,7 @@ class HttpStreamValidatorTest {
     }
 
     @Test
-    fun `master playlist selects highest bandwidth without fetching segment`() = runBlocking {
+    fun `master playlist selects highest bandwidth and validates its first segment`() = runBlocking {
         val requestedUrls = mutableListOf<String>()
         val engine = MockEngine { request ->
             requestedUrls += request.url.toString()
@@ -124,6 +128,11 @@ class HttpStreamValidatorTest {
                     headers = headersOf(HttpHeaders.ContentType, "application/vnd.apple.mpegurl"),
                 )
 
+                "/high/segment-1.ts" -> {
+                    assertEquals("bytes=0-1023", request.headers[HttpHeaders.Range])
+                    respond(content = byteArrayOf(0, 1, 2, 3), status = HttpStatusCode.PartialContent)
+                }
+
                 else -> error("Unexpected URL: ${request.url}")
             }
         }
@@ -142,6 +151,7 @@ class HttpStreamValidatorTest {
             listOf(
                 "https://video.example/master.m3u8",
                 "https://video.example/high/index.m3u8",
+                "https://video.example/high/segment-1.ts",
             ),
             requestedUrls,
         )
@@ -149,7 +159,7 @@ class HttpStreamValidatorTest {
     }
 
     @Test
-    fun `direct media playlist succeeds when it contains at least one segment`() = runBlocking {
+    fun `direct media playlist succeeds when its first segment is readable`() = runBlocking {
         val requestedUrls = mutableListOf<String>()
         val engine = MockEngine { request ->
             requestedUrls += request.url.toString()
@@ -163,7 +173,10 @@ class HttpStreamValidatorTest {
                     headers = headersOf(HttpHeaders.ContentType, "application/vnd.apple.mpegurl"),
                 )
 
-                "/segment-1.ts" -> error("Validator should not fetch HLS segments")
+                "/segment-1.ts" -> {
+                    assertEquals("bytes=0-1023", request.headers[HttpHeaders.Range])
+                    respond(content = byteArrayOf(0, 1, 2, 3), status = HttpStatusCode.PartialContent)
+                }
 
                 else -> error("Unexpected URL: ${request.url}")
             }
@@ -179,7 +192,33 @@ class HttpStreamValidatorTest {
         )
 
         assertTrue(result.success, result.message)
-        assertEquals(listOf("https://video.example/media.m3u8"), requestedUrls)
+        assertEquals(
+            listOf(
+                "https://video.example/media.m3u8",
+                "https://video.example/segment-1.ts",
+            ),
+            requestedUrls,
+        )
+        client.close()
+    }
+
+    @Test
+    fun `hls validation fails when its media segment is forbidden`() = runBlocking {
+        val client = HttpClient(MockEngine { request ->
+            when (request.url.encodedPath) {
+                "/media.m3u8" -> respond("#EXTM3U\n#EXTINF:5,\nsegment-1.ts")
+                "/segment-1.ts" -> respond("blocked", HttpStatusCode.Forbidden)
+                else -> error("Unexpected URL: ${request.url}")
+            }
+        })
+
+        val result = HttpStreamValidator(client).validate(
+            VideoStream(url = "https://video.example/media.m3u8", type = StreamType.HLS, quality = "720p"),
+        )
+
+        assertFalse(result.success)
+        assertEquals(HttpStatusCode.Forbidden.value, result.statusCode)
+        assertTrue(result.message.contains("Первый HLS-сегмент"))
         client.close()
     }
 
