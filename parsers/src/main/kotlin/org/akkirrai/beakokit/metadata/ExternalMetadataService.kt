@@ -35,6 +35,21 @@ class ExternalMetadataService(
         return null
     }
 
+    /**
+     * What is already stored for a title, with no request at all - the first provider in [order]
+     * that has a usable binding and a cached entry for it.
+     *
+     * A list screen asks this: describing a screenful over the network would be a request per title
+     * at roughly one a second, and the screen would finish painting long before they returned.
+     */
+    fun cachedMetadataFor(titleId: String, order: List<MetadataProviderId>): ExternalMetadata? {
+        for (provider in order) {
+            val externalId = store.readMatch(titleId, provider)?.externalId ?: continue
+            store.readMedia(provider, externalId)?.media?.let { return it }
+        }
+        return null
+    }
+
     /** Binds a title to a provider entry by hand. Marked manual, which is what stops the automatic
      * matcher from ever overwriting it again. */
     suspend fun setManualMatch(titleId: String, provider: MetadataProviderId, externalId: Int): ExternalMetadata? {

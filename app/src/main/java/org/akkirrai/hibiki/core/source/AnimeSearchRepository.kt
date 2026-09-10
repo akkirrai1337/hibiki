@@ -2,7 +2,13 @@ package org.akkirrai.hibiki.core.source
 
 import android.content.Context
 import io.ktor.client.HttpClient
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
 import org.akkirrai.beakokit.metadata.ExternalMetadataPreferences
+import org.akkirrai.beakokit.metadata.MetadataProviderId
 import org.akkirrai.beakokit.metadata.ExternalMetadataService
 import org.akkirrai.beakokit.metadata.mergeExternalMetadata
 import org.akkirrai.beakokit.metadata.metadataProviderOrder
@@ -44,6 +50,9 @@ class AnimeSearchRepository(
     // Built here rather than injected: everything it needs (the shared client, the app's own
     // preferences) is already on this repository, and nothing else in the app describes a title.
     private val metadataService = appContext?.let { ExternalMetadataService(client, PreferencesExternalMetadataStore(it)) }
+    // Background matching outlives the request that started it on purpose: the screen has painted,
+    // and what this fills in is for the next visit. Cancelled with the repository.
+    private val metadataScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val detailsRequestSlots = Semaphore(MAX_CONCURRENT_DETAILS_REQUESTS)
 
     suspend fun search(query: String): List<Anime> {
@@ -79,7 +88,8 @@ class AnimeSearchRepository(
         ensureInternetConnection()
 
         val preferEnglish = preferEnglish()
-        val results = currentSource().search(normalizedRequest)
+        val source = currentSource()
+        val results = describeAll(source, source.search(normalizedRequest))
             .map { title ->
                 getCachedDetails(detailsCacheKey(title.id))
                     ?: title.toAnime(preferEnglish = preferEnglish)
@@ -172,6 +182,7 @@ class AnimeSearchRepository(
 
     fun close() {
         searchCache.clear()
+        metadataScope.cancel()
         if (closeClientOnClose) client.close()
     }
 
@@ -346,10 +357,45 @@ class AnimeSearchRepository(
      * not carrying this title must cost the better description and nothing else - the source's own
      * screen still renders exactly as it did before this existed.
      */
-    private suspend fun describe(source: AnimeSourceRuntime, title: AnimeTitle): AnimeTitle {
-        val service = metadataService ?: return title
-        val preferences = appPreferences?.state?.value ?: return title
-        val order = metadataProviderOrder(
+    /**
+     * Describes a whole list, or none of it.
+     *
+     * All at once matters: a grid where some cards carry the provider's name and poster while their
+     * neighbours carry the source's reads as a broken list, even when every entry in it is correct.
+     * So a screen is described only when every title on it is already in the store - which costs
+     * nothing - and otherwise stays entirely the source's while the missing ones are matched in the
+     * background, ready for the next visit. Describing them inline would be a request per unseen
+     * title at roughly one a second, on a screen built to be scrolled.
+     */
+    private suspend fun describeAll(source: AnimeSourceRuntime, titles: List<AnimeTitle>): List<AnimeTitle> {
+        val service = metadataService ?: return titles
+        val order = providerOrderFor(source)
+        if (order.isEmpty() || titles.isEmpty()) return titles
+
+        val cached = titles.map { service.cachedMetadataFor(it.id, order) }
+        if (cached.all { it != null }) {
+            return titles.mapIndexed { index, title -> mergeExternalMetadata(title, cached[index]) }
+        }
+        warmMetadata(service, order, titles.filterIndexed { index, _ -> cached[index] == null })
+        return titles
+    }
+
+    /** Matches what a list screen showed but could not describe, so the next visit can. One at a
+     * time and off the caller's coroutine: the queues inside the service pace these anyway, and the
+     * screen that asked has already painted. */
+    private fun warmMetadata(service: ExternalMetadataService, order: List<MetadataProviderId>, titles: List<AnimeTitle>) {
+        if (titles.isEmpty()) return
+        metadataScope.launch {
+            for (title in titles) {
+                runCatching { service.metadataFor(title, order) }
+                    .onFailure { AppLogger.w(TAG, "warmMetadata: ${title.id} not described", it) }
+            }
+        }
+    }
+
+    private fun providerOrderFor(source: AnimeSourceRuntime): List<MetadataProviderId> {
+        val preferences = appPreferences?.state?.value ?: return emptyList()
+        return metadataProviderOrder(
             ExternalMetadataPreferences(
                 enabled = preferences.externalMetadataEnabled,
                 overrides = preferences.externalMetadataOverrides,
@@ -359,6 +405,11 @@ class AnimeSearchRepository(
             source.descriptor.id.value,
             source.descriptor.info.useExternalMetadata,
         )
+    }
+
+    private suspend fun describe(source: AnimeSourceRuntime, title: AnimeTitle): AnimeTitle {
+        val service = metadataService ?: return title
+        val order = providerOrderFor(source)
         if (order.isEmpty()) return title
         val external = runCatching { service.metadataFor(title, order) }
             .onFailure { AppLogger.w(TAG, "describe: metadata lookup failed for ${title.id}", it) }
