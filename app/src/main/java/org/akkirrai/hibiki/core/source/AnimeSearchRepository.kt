@@ -126,7 +126,11 @@ class AnimeSearchRepository(
         )
     }
 
-    suspend fun getDetails(id: String, fallback: Anime): Anime {
+    suspend fun getDetails(
+        id: String,
+        fallback: Anime,
+        requireSourceDetails: Boolean = false,
+    ): Anime {
         AppLogger.d(TAG, "getDetails(id=$id, fallback.title=${fallback.title.take(50)})")
         val cacheKey = detailsCacheKey(id)
         getCachedDetails(cacheKey)?.let {
@@ -147,6 +151,7 @@ class AnimeSearchRepository(
                     val source = sourceManager?.forTitle(id) ?: currentSource()
                     val title = runCatching { source.details(id) }
                         .getOrElse {
+                        if (requireSourceDetails) throw it
                         // A source.details() failure here is otherwise completely silent: the
                         // fallback below quietly serves sparse search-card data (no status,
                         // description, or episode count) instead of surfacing an error, which
@@ -301,8 +306,11 @@ class AnimeSearchRepository(
         fallbackLabel: String?,
         preferEnglish: Boolean,
     ): String {
-        val releasedCount = availableEpisodeCount
-            ?: episodeCount.takeIf { releaseStatus == AnimeReleaseStatus.RELEASED }
+        // The available count is the most useful number while a show is airing; when a source does
+        // not publish it, the announced total (including one supplied by the metadata aggregator)
+        // is still real information and must not be rendered as "unknown" merely because the show
+        // is ongoing or announced.
+        val releasedCount = availableEpisodeCount ?: episodeCount
         return when (val count = releasedCount) {
             null -> fallbackLabel.orEmpty().ifBlank {
                 if (preferEnglish) "Episodes unknown" else "Количество серий неизвестно"

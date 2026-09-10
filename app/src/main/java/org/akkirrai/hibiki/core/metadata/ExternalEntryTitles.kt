@@ -43,13 +43,28 @@ fun ExternalMetadata.toCatalogAnime(preferEnglish: Boolean): Anime {
         id = externalEntryId(provider, externalId),
         title = title,
         subtitle = listOfNotNull(year?.toString(), type?.uppercase()).joinToString(" · "),
-        // Blank rather than invented: an entry says nothing about what a source has uploaded, and a
-        // count here would read as a promise this card cannot keep until it is resolved.
-        episodesLabel = "",
+        // This is the provider's announced total, not a promise that every episode is already
+        // playable on the selected source. It is nevertheless better title metadata than
+        // "unknown", and the source's available count takes precedence after resolution.
+        episodesLabel = episodeCount?.let { count ->
+            if (preferEnglish) "$count ${if (count == 1) "episode" else "episodes"}"
+            else "$count ${russianEpisodesWord(count)}"
+        }.orEmpty(),
         status = status.orEmpty(),
         posterUrl = posterUrl,
         description = description,
         genres = genres,
         ratings = score?.let { listOf(AnimeRating(source = provider.ratingSource, value = it, votes = scoreVotes)) }.orEmpty(),
     )
+}
+
+private fun russianEpisodesWord(count: Int): String {
+    val mod100 = count % 100
+    val mod10 = count % 10
+    return when {
+        mod100 in 11..14 -> "серий"
+        mod10 == 1 -> "серия"
+        mod10 in 2..4 -> "серии"
+        else -> "серий"
+    }
 }

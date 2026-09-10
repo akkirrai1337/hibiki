@@ -13,6 +13,13 @@ import org.junit.Test
 
 class BrowserPlayerWebViewExtractorTest {
     @Test
+    fun `browser lifecycle pseudo url is safe to log`() {
+        assertEquals("about", browserLogHost("about:blank"))
+        assertEquals("example.com", browserLogHost("https://example.com/player"))
+        assertEquals("unknown", browserLogHost(""))
+    }
+
+    @Test
     fun `routing is generic and delegates host knowledge to resolver`() {
         val resolver = object : BrowserScriptResolver {
             override fun supportsBrowser(link: PlayerLink) = link.url.contains("player.example")

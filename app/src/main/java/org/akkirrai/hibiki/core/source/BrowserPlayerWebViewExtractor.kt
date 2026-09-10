@@ -321,7 +321,10 @@ class BrowserPlayerWebViewExtractor(
                         return null
                     }
                     override fun onPageFinished(view: WebView, url: String) {
-                        AppLogger.d(TAG, "Page finished: host=${hostOf(url)}")
+                        // WebView emits one last about:blank completion while it is being torn
+                        // down. Ktor's host parser treats that pseudo-URL as a malformed HTTPS
+                        // address, so logging lifecycle noise must never be able to crash playback.
+                        AppLogger.d(TAG, "Page finished: host=${browserLogHost(url)}")
                         probe(view)
                     }
                     override fun onReceivedError(view: WebView, request: WebResourceRequest, error: android.webkit.WebResourceError) {
@@ -398,6 +401,13 @@ class BrowserPlayerWebViewExtractor(
         val VTT_URL = Regex("https?://.+\\.vtt(?:[?#].*)?", RegexOption.IGNORE_CASE)
         const val VIDEO_ELEMENT_PROBE = """;(function(){try{var v=document.querySelector('video');if(!v)return;var r=function(){var u=v.currentSrc||v.src||'';if(/\\.m3u8(?:[?#]|$)/i.test(u))HibikiResolver.stream(u)};r();v.addEventListener('loadedmetadata',r,{once:true});v.addEventListener('canplay',r,{once:true});v.addEventListener('playing',r,{once:true})}catch(e){}})();"""
     }
+}
+
+/** Host-shaped text for diagnostics; accepts WebView pseudo-URLs such as about:blank. */
+internal fun browserLogHost(url: String): String {
+    if (url.isBlank()) return "unknown"
+    return runCatching { hostOf(url) }.getOrNull()?.takeIf(String::isNotBlank)
+        ?: url.substringBefore(':').ifBlank { "unknown" }
 }
 
 internal object BrowserResolverRouting {

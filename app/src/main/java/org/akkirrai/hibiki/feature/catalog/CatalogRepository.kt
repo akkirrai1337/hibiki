@@ -169,7 +169,11 @@ class CatalogRepository(
         val resolved = service.resolveSourceTitle(sourceId.value, entry) { query ->
             runCatching { sourceManager.current().search(query) }.getOrNull()
         } ?: return null
-        return searchRepository.getDetails(resolved.titleId, anime.copy(id = resolved.titleId))
+        return searchRepository.getDetails(
+            resolved.titleId,
+            anime.copy(id = resolved.titleId),
+            requireSourceDetails = true,
+        )
     }
 
     /** Binds an entry to a title of this source by hand, from the resolution sheet, and opens it. */
@@ -178,7 +182,11 @@ class CatalogRepository(
         val (provider, externalId) = decodeExternalEntryId(anime.id) ?: return null
         val entry = service.entryFor(MetadataReference(provider, externalId)) ?: return null
         service.setManualSourceTitle(sourceManager.selectedId.value, titleId, entry)
-        return searchRepository.getDetails(titleId, anime.copy(id = titleId))
+        return searchRepository.getDetails(
+            titleId,
+            anime.copy(id = titleId),
+            requireSourceDetails = true,
+        )
     }
 
     /** The source's own results for a query, for that sheet to choose from. */
