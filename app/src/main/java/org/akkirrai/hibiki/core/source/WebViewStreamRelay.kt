@@ -391,15 +391,16 @@ internal object WebViewStreamRelay {
             AppLogger.w(TAG, "$transportName relay could not start; trying the next transport: host=${hostOf(target)}", error)
             return nextTransport()
         }
+        var responseCommitted = false
         try {
             if (metadata.status in 500..599) {
-                // An origin fault, not a decision about this request: the same URL commonly answers
-                // a differently-shaped request, so this is worth one more transport rather than a
-                // 5xx handed to the player, which reads it as the stream being dead.
+                // A server 5xx is deterministic enough to fail this candidate immediately. The
+                // old WebView -> same-origin -> Cronet cascade spent several seconds repeating
+                // the same upstream error, delaying the resolver from trying the next link.
                 pendingStreams.remove(reqId)
                 transfer.events.clear()
-                AppLogger.w(TAG, "$transportName relay got ${metadata.status} upstream; trying the next transport: host=${hostOf(target)}")
-                return nextTransport()
+                AppLogger.w(TAG, "$transportName relay rejected: status=${metadata.status}, host=${hostOf(target)}")
+                return writeStatus(out, metadata.status, "Upstream request failed")
             }
             if (metadata.status !in 200..299) {
                 AppLogger.w(TAG, "$transportName relay rejected: status=${metadata.status}, host=${hostOf(target)}")
@@ -413,6 +414,7 @@ internal object WebViewStreamRelay {
                     check(session.authorize(resolved, session.headersFor(target))) { "Playlist contained a non-HTTP URL" }
                     proxyUrl(token, resolved)
                 }.encodeToByteArray()
+                responseCommitted = true
                 writeHeaders(out, 200, "application/vnd.apple.mpegurl", rewritten.size, null)
                 if (!headOnly) out.write(rewritten)
                 out.flush()
@@ -421,6 +423,7 @@ internal object WebViewStreamRelay {
 
             if (headOnly) {
                 collectStream(transfer)
+                responseCommitted = true
                 writeStreamingHeaders(
                     out = out,
                     status = metadata.status,
@@ -434,6 +437,7 @@ internal object WebViewStreamRelay {
             }
 
             val chunked = metadata.contentLength == null
+            responseCommitted = true
             writeStreamingHeaders(
                 out = out,
                 status = metadata.status,
@@ -456,6 +460,20 @@ internal object WebViewStreamRelay {
             if (chunked) out.write(CHUNK_TERMINATOR)
             out.flush()
         } catch (error: Exception) {
+            if (responseCommitted && error is java.net.SocketException && error.message?.contains("Broken pipe", ignoreCase = true) == true) {
+                // ExoPlayer's validator may close the loopback socket as soon as it has read the
+                // playlist or requested range. The upstream response was already accepted and
+                // headers were sent, so this is ordinary client cancellation, not a bad stream.
+                AppLogger.d(TAG, "$transportName relay client closed after response started: host=${hostOf(target)}")
+                return
+            }
+            if (!responseCommitted) {
+                // Playlist validation happens before any bytes are committed to ExoPlayer. A
+                // locked Service-Worker response is therefore recoverable: give the same-origin
+                // WebView (and then Cronet) a chance instead of returning an empty loopback body.
+                AppLogger.w(TAG, "$transportName relay transfer failed before response; trying the next transport: host=${hostOf(target)}", error)
+                return nextTransport()
+            }
             AppLogger.w(TAG, "$transportName relay transfer failed: host=${hostOf(target)}", error)
         } finally {
             pendingStreams.remove(reqId)
@@ -653,7 +671,12 @@ internal object WebViewStreamRelay {
         val reqId = UUID.randomUUID().toString()
         val transfer = StreamTransfer { session.lastUsed.set(System.currentTimeMillis()) }
         pendingStreams[reqId] = transfer
-        val script = buildStreamingFetchScript(reqId, url, session.headersFor(url), range)
+        // Playlists are short control documents, not media payloads. XHR gives the page's own
+        // browser context an independent response body for them, avoiding a page-patched fetch()
+        // or Service Worker handing relay a body that has already been consumed. Media segments
+        // retain the streaming fetch path so a long video never has to sit in one ArrayBuffer.
+        val preferXhr = url.substringBefore('?').endsWith(".m3u8", ignoreCase = true)
+        val script = buildStreamingFetchScript(reqId, url, session.headersFor(url), range, preferXhr)
         session.handler.post {
             backend.evaluateJavascript(script) { result ->
                 AppLogger.d(TAG, "Streaming WebView fetch started: reqId=${reqId.take(8)}, result=$result")
@@ -728,20 +751,23 @@ internal object WebViewStreamRelay {
      *   reader. That throws on `getReader()` rather than failing the request, so the reader path is
      *   guarded and falls back to reading the response whole.
      *
-     * Credentials are omitted deliberately: signed HLS CDNs answer with `Access-Control-Allow-Origin:
-     * *`, which Chromium rejects for a credentialed request. The signature in the URL is the
-     * authentication, and any explicit auth header is still sent.
+     * `same-origin` keeps the first, cross-origin page-WebView attempt compatible with CDNs that
+     * answer `Access-Control-Allow-Origin: *`, while allowing the same-origin fallback WebView to
+     * send its real browser cookies. `omit` used to suppress those cookies on both attempts, so a
+     * stream that needed a browser session still received a 403 after falling back.
      */
     internal fun buildStreamingFetchScript(
         reqId: String,
         url: String,
         headers: Map<String, String>,
         range: String?,
+        preferXhr: Boolean = false,
     ): String {
         val headerEntries = if (range != null) headers + ("Range" to range) else headers
         val urlJson = json.encodeToString(url)
         val headersJson = json.encodeToString(headerEntries)
         val reqIdJson = json.encodeToString(reqId)
+        val preferXhrJson = if (preferXhr) "true" else "false"
         return """
             (function(){
               try {
@@ -763,9 +789,50 @@ internal object WebViewStreamRelay {
                     $BRIDGE_NAME.onStreamChunk($reqIdJson, btoa(String.fromCharCode.apply(null, part)));
                   }
                 };
+                var sendXhr = function(){
+                  var xhr = new XMLHttpRequest();
+                  xhr.open('GET', $urlJson, true);
+                  xhr.responseType = 'arraybuffer';
+                  xhr.timeout = $JS_FETCH_TIMEOUT_MS;
+                  Object.keys(cleanHeaders).forEach(function(name){
+                    try { xhr.setRequestHeader(name, cleanHeaders[name]); } catch(e) {}
+                  });
+                  xhr.onload = function(){
+                    var responseState = 'transport=xhr, status=' + xhr.status + ', responseURL=' + (xhr.responseURL || '');
+                    $BRIDGE_NAME.onStreamDiagnostic($reqIdJson, responseState);
+                    $BRIDGE_NAME.onStreamStart(
+                      $reqIdJson,
+                      xhr.status,
+                      xhr.getResponseHeader('content-type') || '',
+                      xhr.getResponseHeader('content-range') || '',
+                      xhr.getResponseHeader('content-length') || '',
+                      xhr.responseURL || $urlJson
+                    );
+                    try {
+                      var bytes = new Uint8Array(xhr.response || new ArrayBuffer(0));
+                      push(bytes);
+                      done();
+                      $BRIDGE_NAME.onStreamComplete($reqIdJson);
+                    } catch(error) {
+                      done();
+                      $BRIDGE_NAME.onStreamError($reqIdJson, 'XHR body: ' + String(error) + '; ' + responseState);
+                    }
+                  };
+                  xhr.onerror = function(){ done(); $BRIDGE_NAME.onStreamError($reqIdJson, 'XHR network error'); };
+                  xhr.ontimeout = function(){ done(); $BRIDGE_NAME.onStreamError($reqIdJson, 'XHR timeout'); };
+                  xhr.send();
+                };
                 arm();
-                fetch($urlJson, {method:'GET', headers:cleanHeaders, credentials:'omit', cache:'no-store', signal:controller.signal}).then(function(response){
+                if ($preferXhrJson) {
+                  sendXhr();
+                  return;
+                }
+                fetch($urlJson, {method:'GET', headers:cleanHeaders, credentials:'same-origin', cache:'no-store', signal:controller.signal}).then(function(response){
                   arm();
+                  var body = response.body;
+                  var bodyLocked = !!(body && body.locked);
+                  var responseState = 'transport=fetch, status=' + response.status + ', type=' + response.type + ', bodyUsed=' + response.bodyUsed + ', bodyLocked=' + bodyLocked;
+                  $BRIDGE_NAME.onStreamDiagnostic($reqIdJson, responseState);
                   $BRIDGE_NAME.onStreamStart(
                     $reqIdJson,
                     response.status,
@@ -774,8 +841,16 @@ internal object WebViewStreamRelay {
                     response.headers.get('content-length') || '',
                     response.url || $urlJson
                   );
+                  // A Service Worker can return a Response whose body another reader already
+                  // owns. Do not fall through to arrayBuffer(): it would throw "body stream
+                  // already read" and leave ExoPlayer with an unexpected end of stream. The
+                  // native side sees this failure before writing a response and tries the next
+                  // relay transport instead.
+                  if (response.bodyUsed || bodyLocked) {
+                    throw new Error('Response body is unavailable: ' + responseState);
+                  }
                   var reader = null;
-                  try { if (response.body && response.body.getReader) reader = response.body.getReader(); } catch(e) { reader = null; }
+                  try { if (body && body.getReader) reader = body.getReader(); } catch(e) { throw new Error('Could not acquire response reader: ' + responseState + '; ' + String(e)); }
                   if (!reader) {
                     return response.arrayBuffer().then(function(buffer){
                       push(new Uint8Array(buffer));
@@ -898,6 +973,11 @@ internal object WebViewStreamRelay {
             pendingStreams[reqId]?.metadata?.complete(
                 StreamMetadata(status, contentType, contentRange, contentLength.toLongOrNull(), finalUrl),
             )
+        }
+
+        @JavascriptInterface
+        fun onStreamDiagnostic(reqId: String, message: String) {
+            AppLogger.d(TAG, "WebView stream response: reqId=${reqId.take(8)}, $message")
         }
 
         @JavascriptInterface

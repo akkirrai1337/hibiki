@@ -6,12 +6,13 @@ import org.junit.Test
 
 class WebViewStreamRelayTest {
     @Test
-    fun `stream relay starts on headers, survives a locked body, and omits credentials`() {
+    fun `stream relay uses XHR for playlists and keeps fetch streaming for media`() {
         val script = WebViewStreamRelay.buildStreamingFetchScript(
             reqId = "request",
             url = "https://cdn.example/master.m3u8",
             headers = emptyMap(),
             range = null,
+            preferXhr = true,
         )
 
         // Headers are reported before the body is touched, so a slow segment is not mistaken for a
@@ -19,12 +20,18 @@ class WebViewStreamRelayTest {
         val startCall = script.indexOf("onStreamStart")
         val bodyRead = script.indexOf("getReader()")
         assertTrue(startCall in 1..<bodyRead)
-        // A Service Worker can hand back a body already locked to another reader; that throws
-        // rather than failing the request, so the whole-response path has to remain reachable.
-        assertTrue(script.contains("catch(e) { reader = null; }"))
+        assertTrue(script.contains("if (true)"))
+        assertTrue(script.contains("var sendXhr = function()"))
+        assertTrue(script.contains("xhr.responseType = 'arraybuffer'"))
+        // A Service Worker can hand back a body already owned by another reader. Detect that
+        // before attempting arrayBuffer(), so native code can move to the next relay transport.
+        assertTrue(script.contains("response.bodyUsed || bodyLocked"))
+        assertTrue(script.contains("Response body is unavailable:"))
+        assertTrue(script.contains("onStreamDiagnostic"))
         assertTrue(script.contains("response.arrayBuffer()"))
-        // Signed HLS CDNs answer with a wildcard CORS header, which a credentialed request cannot use.
-        assertTrue(script.contains("credentials:'omit'"))
+        // The first cross-origin attempt remains anonymous for wildcard-CORS CDNs, but the
+        // same-origin fallback carries the WebView's session cookies.
+        assertTrue(script.contains("credentials:'same-origin'"))
     }
 
     @Test

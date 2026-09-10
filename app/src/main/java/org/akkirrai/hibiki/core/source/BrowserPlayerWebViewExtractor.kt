@@ -273,11 +273,14 @@ class BrowserPlayerWebViewExtractor(
             fun probe(view: WebView) {
                 if (delivered || webView !== view || probes++ >= MAX_PROBES) return
                 AppLogger.d(TAG, "Run resolver script: attempt=$probes")
-                view.evaluateJavascript("$resolverScript\n$VIDEO_ELEMENT_PROBE") { result ->
-                    if (result.contains("no-player") || result.contains("error")) {
-                        AppLogger.d(TAG, "Resolver script result: $result")
-                    }
+                // Keep the resolver invocation separate from the generic video-element probe.
+                // Appending the latter made evaluateJavascript always report its undefined result,
+                // hiding useful states such as a site-specific decoder failure from diagnostics.
+                view.evaluateJavascript(resolverScript) { result ->
+                    AppLogger.d(TAG, "Resolver script result: $result")
                 }
+                view.evaluateJavascript(VIDEO_ELEMENT_PROBE, null)
+                view.evaluateJavascript(MEDIA_SILENCE_SCRIPT, null)
                 retry = Runnable { probe(view) }.also { handler.postDelayed(it, nextProbeDelayMs(probes)) }
             }
 
@@ -400,6 +403,34 @@ class BrowserPlayerWebViewExtractor(
         val AUDIO_MEDIA_URI = Regex("#EXT-X-MEDIA:[^\\n]*TYPE=AUDIO[^\\n]*URI=\"([^\"]+)\"", RegexOption.IGNORE_CASE)
         val VTT_URL = Regex("https?://.+\\.vtt(?:[?#].*)?", RegexOption.IGNORE_CASE)
         const val VIDEO_ELEMENT_PROBE = """;(function(){try{var v=document.querySelector('video');if(!v)return;var r=function(){var u=v.currentSrc||v.src||'';if(/\\.m3u8(?:[?#]|$)/i.test(u))HibikiResolver.stream(u)};r();v.addEventListener('loadedmetadata',r,{once:true});v.addEventListener('canplay',r,{once:true});v.addEventListener('playing',r,{once:true})}catch(e){}})();"""
+
+        /**
+         * Keeps every media element in a resolver page silent, in the page rather than per source.
+         *
+         * Getting a browser-resolved stream means letting the site's own player start: an embed that
+         * never plays never requests its manifest. That page then keeps playing, and the WebView
+         * hosting it outlives the screen that asked for it - it stays alive as the relay backend
+         * until the relay goes idle (three minutes), so the user hears a second audio track that
+         * ignores the app's own pause and exit entirely (seen live on Mikai's Moon player).
+         *
+         * Muting is re-asserted rather than applied once: players set `muted` and `volume` back from
+         * their own state on every load and quality switch, so a one-shot mute leaks. The prototype
+         * patch is what makes it stick for anything that starts playing after this runs, the event
+         * listeners cover the player's own changes, and the interval is the backstop for a player
+         * that does neither. It runs in the top frame only, which is where these players live.
+         */
+        const val MEDIA_SILENCE_SCRIPT = """;(function(){try{
+        var force=function(el){try{if(!el)return;if('muted' in el)el.muted=true;if('volume' in el)el.volume=0}catch(e){}};
+        var all=document.querySelectorAll('video,audio');for(var i=0;i<all.length;i++)force(all[i]);
+        if(window.__hibikiMediaSilenced)return;window.__hibikiMediaSilenced=true;
+        var proto=window.HTMLMediaElement&&window.HTMLMediaElement.prototype;
+        if(proto&&proto.play){var play=proto.play;proto.play=function(){force(this);return play.apply(this,arguments)}}
+        var onEvent=function(event){force(event&&event.target)};
+        document.addEventListener('play',onEvent,true);
+        document.addEventListener('volumechange',onEvent,true);
+        document.addEventListener('loadedmetadata',onEvent,true);
+        setInterval(function(){var list=document.querySelectorAll('video,audio');for(var i=0;i<list.length;i++)force(list[i])},500);
+        }catch(e){}})();"""
     }
 }
 
