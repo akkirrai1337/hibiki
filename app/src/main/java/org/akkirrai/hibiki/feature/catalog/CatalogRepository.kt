@@ -149,9 +149,14 @@ class CatalogRepository(
         return CatalogPage(
             title = "",
             description = null,
-            // An aggregator has no per-source filter options to offer, and the screen
-            // hides its filter controls when the lists are empty.
-            filterCatalog = AnimeSearchFilterCatalog(),
+            // No capability opinion at all - deliberately, not an empty catalog. `AnimeSearchFilterCatalog()`
+            // defaults to CatalogCapabilities.FULL, so answering with one told the screen "this catalog
+            // supports every sort and every filter" while the source's own page answered with the two
+            // sorts and no filters it really has. The screen corrects a selected sort that its catalog
+            // does not offer, so each page flipped that correction to the other catalog's fallback,
+            // which loaded the other catalog, which flipped it back: an endless reload (seen live on
+            // Anichi with Kitsu metadata). Null instead keeps whatever the source's own page said.
+            filterCatalog = null,
             items = entries.map { CatalogAnimeCard(it.toCatalogAnime(preferEnglish)) },
             currentPage = pageIndex,
             canLoadMore = entries.size >= CATALOG_PAGE_SIZE,
@@ -230,7 +235,9 @@ class CatalogRepository(
 data class CatalogPage(
     val title: String,
     val description: String?,
-    val filterCatalog: AnimeSearchFilterCatalog,
+    /** Null when the page's producer has no capability opinion of its own - an aggregator page, whose
+     * caller keeps whatever the source's own page reported. See loadAggregatorPage. */
+    val filterCatalog: AnimeSearchFilterCatalog?,
     val items: List<CatalogAnimeCard>,
     val currentPage: Int,
     val canLoadMore: Boolean,

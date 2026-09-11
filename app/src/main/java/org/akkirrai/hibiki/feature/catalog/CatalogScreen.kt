@@ -97,6 +97,7 @@ import org.akkirrai.hibiki.core.design.component.anime.animeDetailsSharedCardMod
 import org.akkirrai.hibiki.core.design.component.anime.animeDetailsSharedPosterModifier
 import org.akkirrai.hibiki.core.design.component.anime.LibraryStatusPosterFooter
 import org.akkirrai.hibiki.core.design.component.anime.rememberLibraryStatusByAnimeId
+import org.akkirrai.hibiki.core.log.AppLogger
 import org.akkirrai.hibiki.core.model.Anime
 import org.akkirrai.hibiki.core.model.AnimeSearchFilters
 import org.akkirrai.hibiki.core.model.buildCardMeta
@@ -184,7 +185,10 @@ fun CatalogScreen(
             val capabilities = state.filterCatalog?.capabilities
             val fallback = availableSorts.firstOrNull { it.searchSort == capabilities?.fallbackSort }
                 ?: availableSorts.firstOrNull()
-            fallback?.let(viewModel::selectSort)
+            // keepItems: this is the screen correcting a sort the catalog does not offer, not a pick
+            // the user made. Wiping the list here is what turned "this sort isn't available" into a
+            // catalog that paints its cards and immediately throws them away.
+            fallback?.let { viewModel.selectSort(it, keepItems = true) }
         }
     }
 
@@ -662,6 +666,10 @@ private val CatalogSort.icon: ImageVector
         CatalogSort.Updated -> Icons.Outlined.Update
     }
 
+/** Log tag for the catalog's own state machine - it had none, which is why a reload loop could only
+ * be seen as "the cards disappear" on screen rather than read out of a device log. */
+private const val CATALOG_TAG = "CatalogViewModel"
+
 class CatalogViewModel(
     internal val repository: CatalogRepository,
     private val errorContext: android.content.Context,
@@ -678,9 +686,10 @@ class CatalogViewModel(
     private var searchJob: kotlinx.coroutines.Job? = null
 
     init {
-        load()
+        load(reason = "init")
         viewModelScope.launch {
             AppPreferences.animeSourceChanges.collect { source ->
+                AppLogger.d(CATALOG_TAG, "source changed -> ${source.value}")
                 AppPreferences.saveCatalogSort(
                     context = errorContext,
                     source = activeSource,
@@ -697,16 +706,26 @@ class CatalogViewModel(
                         canLoadMore = false,
                     )
                 }
-                load()
+                load(reason = "source-change")
             }
         }
     }
 
-    fun load(forceRefresh: Boolean = false) {
+    /**
+     * [reason] exists only for the log line: the catalog paints its cards and then wipes them back
+     * to a spinner when something reloads it a moment later, and telling "the screen asked again"
+     * apart from "the capability correction reloaded it" from a device log otherwise means guessing.
+     */
+    fun load(forceRefresh: Boolean = false, reason: String = "screen") {
         val currentState = _uiState.value
         val filters = currentState.filters
         val query = currentState.query
         val sort = currentState.selectedSort
+        AppLogger.d(
+            CATALOG_TAG,
+            "load reason=$reason forceRefresh=$forceRefresh sort=$sort query='$query' " +
+                "items=${currentState.items.size} caps=${currentState.filterCatalog?.capabilities}",
+        )
         // PullToRefreshBox needs this state in the same UI turn as onRefresh. Setting it only
         // from the IO coroutine lets the indicator finish its release animation before it learns
         // that a refresh has begun, which makes it look as though the gesture was ignored.
@@ -751,13 +770,23 @@ class CatalogViewModel(
                         isLoading = false,
                         title = "",
                         description = page.description,
-                        filterCatalog = page.filterCatalog,
+                        // Keep what the source's own page reported when this page has no opinion of
+                        // its own (an aggregator page): the screen corrects the selected sort against
+                        // these capabilities, so letting a page drop them turns the two catalogs into
+                        // a loop that reloads each other's fallback sort forever.
+                        filterCatalog = page.filterCatalog ?: state.filterCatalog,
                         items = withKnownDescriptions,
                         currentPage = page.currentPage,
                         canLoadMore = page.canLoadMore,
                     )
                 }
+                AppLogger.d(
+                    CATALOG_TAG,
+                    "load ok reason=$reason page=${page.currentPage} items=${withKnownDescriptions.size} " +
+                        "canLoadMore=${page.canLoadMore} caps=${page.filterCatalog?.capabilities}",
+                )
             }.onFailure { throwable ->
+                AppLogger.w(CATALOG_TAG, "load failed reason=$reason: ${throwable.message}")
                 _uiState.update {
                     it.copy(
                         isLoading = false,
@@ -774,23 +803,33 @@ class CatalogViewModel(
         searchJob?.cancel()
         searchJob = viewModelScope.launch {
             delay(350)
-            load()
+            load(reason = "query")
         }
     }
 
-    fun selectSort(sort: CatalogSort) {
+    fun selectSort(sort: CatalogSort, keepItems: Boolean = false) {
         if (_uiState.value.selectedSort == sort) return
+        AppLogger.d(CATALOG_TAG, "selectSort -> $sort keepItems=$keepItems")
         AppPreferences.saveCatalogSort(
             context = errorContext,
             source = activeSource,
             sort = sort.name,
         )
-        _uiState.update { it.copy(selectedSort = sort, items = emptyList(), currentPage = 0, canLoadMore = false) }
-        load()
+        _uiState.update {
+            // [keepItems] is for the capability correction in the screen, which is not a user pick:
+            // clearing the visible list for it is what made the catalog paint its cards and then
+            // wipe them back to a spinner. A sort the user chose still starts a clean page.
+            if (keepItems) {
+                it.copy(selectedSort = sort)
+            } else {
+                it.copy(selectedSort = sort, items = emptyList(), currentPage = 0, canLoadMore = false)
+            }
+        }
+        load(reason = "sort")
     }
 
     fun refresh() {
-        if (!_uiState.value.isLoading) load(forceRefresh = true)
+        if (!_uiState.value.isLoading) load(forceRefresh = true, reason = "pull")
     }
 
     private fun catalogSortFor(source: org.akkirrai.beakokit.api.SourceId): CatalogSort {
@@ -808,7 +847,7 @@ class CatalogViewModel(
                 canLoadMore = false,
             )
         }
-        load()
+        load(reason = "filters")
     }
 
     fun loadMore() {
