@@ -194,6 +194,8 @@
     <string name="watch_player_playlist">Список відтворення</string>
     <string name="watch_player_error_title">Помилка відтворення</string>
     <string name="watch_player_retry">Спробувати ще раз</string>
+    <string name="watch_player_downloaded_error_message">Завантажений епізод не вдалося відтворити. Завантажте його знову, щоб дивитися офлайн.</string>
+    <string name="watch_player_redownload">Завантажити знову</string>
     <string name="watch_episode_number">Серія %1$s</string>
     <string name="watch_player_settings">Налаштування плеєра</string>
     <string name="watch_player_subtitles_enable">Увімкнути субтитри</string>

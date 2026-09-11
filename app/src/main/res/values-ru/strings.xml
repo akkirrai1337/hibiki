@@ -196,6 +196,8 @@
     <string name="watch_player_playlist">Список серий</string>
     <string name="watch_player_error_title">Ошибка воспроизведения</string>
     <string name="watch_player_retry">Повторить</string>
+    <string name="watch_player_downloaded_error_message">Скачанный эпизод не удалось воспроизвести. Скачайте его заново, чтобы смотреть офлайн.</string>
+    <string name="watch_player_redownload">Скачать заново</string>
     <string name="watch_episode_number">Серия %1$s</string>
     <string name="watch_player_settings">Настройки плеера</string>
     <string name="watch_player_subtitles_enable">Включить субтитры</string>

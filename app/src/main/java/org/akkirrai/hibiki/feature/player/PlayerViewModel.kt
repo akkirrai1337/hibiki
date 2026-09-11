@@ -21,6 +21,7 @@ import org.akkirrai.hibiki.core.model.WatchEpisode
 import org.akkirrai.hibiki.core.model.WatchSource
 import org.akkirrai.hibiki.core.download.OfflineDownloadRepository
 import org.akkirrai.hibiki.core.log.AppLogger
+import org.akkirrai.hibiki.core.network.NoInternetConnectionException
 import org.akkirrai.hibiki.core.source.AnimeWatchRepository
 import org.akkirrai.hibiki.core.source.OfflineTitleMetadataRepository
 import org.akkirrai.hibiki.core.source.WatchStateRepository
@@ -151,6 +152,7 @@ class PlayerViewModel(
                             animeTitle = stream.animeTitle.trim().takeIf(String::isNotBlank)
                                 ?: it.animeTitle,
                             errorMessage = null,
+                            offlinePlaybackFailed = false,
                             episodes = episodes,
                             currentEpisodeId = effectiveEpisodeId,
                             currentEpisodeNumber = effectiveEpisodeNumber,
@@ -169,11 +171,20 @@ class PlayerViewModel(
                         "[viewmodel.load.fail] sourceId=${state.currentSourceId} episodeId=${state.currentEpisodeId} error=${throwable.javaClass.simpleName}:${throwable.message}",
                         throwable
                     )
+                    // The episode is downloaded and it was the local file that just failed, so a
+                    // failed fallback resolution says nothing about the connection - the file is on
+                    // the device either way. Reporting the network message here is what made a
+                    // broken download look like "no internet"; the screen shows a downloaded-file
+                    // error and offers a re-download for this case instead.
+                    val downloadedFileOffline = offlinePlayback != null &&
+                        offlinePlayback.streamUrl in unplayable &&
+                        throwable is NoInternetConnectionException
                     _uiState.update {
                         it.copy(
                             isLoading = false,
                             playback = null,
-                            errorMessage = throwable.toUiMessage(),
+                            errorMessage = if (downloadedFileOffline) null else throwable.toUiMessage(),
+                            offlinePlaybackFailed = downloadedFileOffline,
                             episodes = episodes,
                             currentEpisodeId = effectiveEpisodeId,
                             currentEpisodeNumber = effectiveEpisodeNumber,
@@ -237,6 +248,55 @@ class PlayerViewModel(
         // same kind of stream until the cap is spent. A refresh is what a second failure means: the
         // resolution itself has gone stale.
         load(forceRefresh = state.autoRecoveryCount > 0, excludedStreamUrls = excluded)
+    }
+
+    /**
+     * Re-downloads the episode whose local file could not be played (see
+     * [PlayerUiState.offlinePlaybackFailed]). The download queue resolves a fresh stream for the
+     * episode, so this needs a connection - offline it reports that, which is the accurate reason
+     * rather than a wrong "no internet" for a file that is already on the device.
+     */
+    fun redownloadCurrentEpisode() {
+        val state = _uiState.value
+        if (state.isLoading) return
+        val episode = state.episodes.firstOrNull { it.id == state.currentEpisodeId } ?: return
+        val source = WatchSource(
+            sourceId = state.currentSourceId,
+            title = savedSelection?.sourceTitle.orEmpty(),
+            episodeCount = state.episodes.size,
+            qualityLabel = savedSelection?.quality,
+        )
+        _uiState.update {
+            it.copy(
+                isLoading = true,
+                errorMessage = null,
+                offlinePlaybackFailed = false,
+                failedStreamUrls = emptySet(),
+                autoRecoveryCount = 0,
+            )
+        }
+        viewModelScope.launch(Dispatchers.IO) {
+            runCatching {
+                offlineDownloadRepository.redownloadEpisode(source = source, episode = episode)
+            }.onSuccess {
+                AppLogger.d(
+                    PLAYBACK_LOG_TAG,
+                    "[viewmodel.redownload] replacement scheduled sourceId=${source.sourceId} episodeId=${episode.id}",
+                )
+                _uiState.update { it.copy(isLoading = false) }
+            }.onFailure { throwable ->
+                if (throwable is CancellationException) return@onFailure
+                AppLogger.e(
+                    PLAYBACK_LOG_TAG,
+                    "[viewmodel.redownload.fail] sourceId=${source.sourceId} episodeId=${episode.id} " +
+                        "error=${throwable.javaClass.simpleName}:${throwable.message}",
+                    throwable,
+                )
+                _uiState.update {
+                    it.copy(isLoading = false, errorMessage = throwable.toUiMessage())
+                }
+            }
+        }
     }
 
     fun loadSettingsOptions() {
@@ -550,6 +610,12 @@ data class PlayerUiState(
     val currentEpisodeNumber: Double? = null,
     val pendingSeekMs: Long = 0L,
     val errorMessage: String? = null,
+    /**
+     * The episode's local (downloaded) file failed to play and the only thing the fallback
+     * resolution could report was the missing connection. The screen renders a downloaded-file
+     * error with a re-download action for this state instead of the network message.
+     */
+    val offlinePlaybackFailed: Boolean = false,
     val failedStreamUrls: Set<String> = emptySet(),
     val autoRecoveryCount: Int = 0,
     val isSettingsLoading: Boolean = false,

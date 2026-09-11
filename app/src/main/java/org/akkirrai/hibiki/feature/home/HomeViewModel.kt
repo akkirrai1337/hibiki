@@ -28,6 +28,7 @@ import org.akkirrai.hibiki.core.log.PerfLogger
 import org.akkirrai.hibiki.core.model.Anime
 import org.akkirrai.hibiki.core.model.AnimeSearchFilters
 import org.akkirrai.hibiki.core.model.SearchUiState
+import org.akkirrai.hibiki.core.network.NoInternetConnectionException
 
 class HomeViewModel(
     private val repository: HomeRepository,
@@ -81,6 +82,14 @@ class HomeViewModel(
                     )
                 }
                 .onFailure { throwable ->
+                    if (applyOfflineFallback(throwable)) {
+                        PerfLogger.mark(
+                            event = "Home refresh offline",
+                            details = "duration=${System.currentTimeMillis() - startedAt}ms, " +
+                                "error=${throwable::class.java.simpleName}:${throwable.message}",
+                        )
+                        return@onFailure
+                    }
                     _uiState.update {
                         it.copy(
                             isLoading = false,
@@ -371,6 +380,14 @@ class HomeViewModel(
                     )
                 }
                 .onFailure { throwable ->
+                    if (applyOfflineFallback(throwable)) {
+                        PerfLogger.mark(
+                            event = "Home load offline",
+                            details = "duration=${System.currentTimeMillis() - startedAt}ms, " +
+                                "error=${throwable::class.java.simpleName}:${throwable.message}",
+                        )
+                        return@onFailure
+                    }
                     _uiState.update {
                         it.copy(
                             isLoading = false,
@@ -430,6 +447,51 @@ class HomeViewModel(
             )
         }
     }
+
+    /**
+     * A lost connection is not an error state on Home: the app has rows of its own to show
+     * (continue watching, recently watched) that live entirely on the device, and there is no
+     * reason to replace them with a "no internet" screen. Anything already on screen is kept
+     * untouched (a failed pull-to-refresh must not blank the feed); otherwise the stored rows are
+     * rendered in place of the error. Only when the device has no stored rows either does the
+     * offline message stay, so an empty feed still explains itself. Returns true when the failure
+     * was handled here.
+     *
+     * Every other failure (a source that is broken or returns nothing) keeps its error screen.
+     */
+    private fun applyOfflineFallback(throwable: Throwable): Boolean {
+        if (throwable !is NoInternetConnectionException) return false
+        val current = _uiState.value
+        if (current.hasLoadableContent()) {
+            // A failed pull-to-refresh must not blank a feed that is already on screen.
+            _uiState.value = current.copy(isLoading = false, errorMessage = null)
+            return true
+        }
+        val stored = repository.fallbackHomeState()
+        _uiState.value = if (stored.hasLoadableContent()) {
+            stored.copy(
+                isLoading = false,
+                errorMessage = null,
+                searchQuery = current.searchQuery,
+                searchResult = current.searchResult,
+                searchFilterCatalog = current.searchFilterCatalog,
+                isSearchFilterCatalogLoading = current.isSearchFilterCatalogLoading,
+                searchFilters = current.searchFilters,
+            ).preserveLoadedDescriptions(current)
+        } else {
+            // Nothing is stored on the device either: a blank feed with no explanation is worse
+            // than the message, so that case keeps the error state.
+            current.copy(isLoading = false, errorMessage = throwable.message)
+        }
+        return true
+    }
+
+    /**
+     * Mirrors the condition the screen uses to choose between the feed and the error state.
+     */
+    private fun HomeUiState.hasLoadableContent(): Boolean =
+        featuredAnime.isNotEmpty() || continueAnime != null || recentlyWatched.isNotEmpty() ||
+            trending.isNotEmpty() || recentlyUpdated.isNotEmpty()
 
     private fun HomeUiState.preserveLoadedDescriptions(previous: HomeUiState): HomeUiState {
         val descriptions = (previous.featuredAnime + previous.trending + previous.recentlyUpdated)

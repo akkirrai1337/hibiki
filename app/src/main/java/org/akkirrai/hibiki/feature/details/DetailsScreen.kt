@@ -241,6 +241,7 @@ fun DetailsScreen(
     val watchStateRepository = remember(dependencies) { dependencies.watchStateRepository() }
     val resumeFrameRepository = remember(dependencies) { dependencies.resumeFrameRepository() }
     val animeWatchRepository = remember(dependencies) { dependencies.animeWatchRepository() }
+    val offlineDownloadRepository = remember(dependencies) { dependencies.offlineDownloadRepository() }
     DisposableEffect(animeWatchRepository) {
         onDispose { animeWatchRepository.close() }
     }
@@ -322,6 +323,22 @@ fun DetailsScreen(
         if (isResolvingWatchSources) return
         isResolvingWatchSources = true
         screenScope.launch {
+            val offlineSources = withContext(Dispatchers.IO) {
+                offlineDownloadRepository.getOfflineSources(currentAnimeState.id)
+            }
+            when {
+                offlineSources.size == 1 -> {
+                    isResolvingWatchSources = false
+                    onOpenSingleSource(currentAnimeState, offlineSources.single())
+                    return@launch
+                }
+
+                offlineSources.isNotEmpty() -> {
+                    isResolvingWatchSources = false
+                    onOpenSources(currentAnimeState)
+                    return@launch
+                }
+            }
             val sources = try {
                 withContext(Dispatchers.IO) {
                     animeWatchRepository.loadSources(animeId = currentAnimeState.id) {}

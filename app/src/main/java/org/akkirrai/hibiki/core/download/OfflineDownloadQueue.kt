@@ -24,6 +24,7 @@ import org.akkirrai.hibiki.core.log.AppLogger
 import org.akkirrai.hibiki.core.source.AnimeWatchRepository
 import org.akkirrai.hibiki.app.di.hibikiDependencies
 import org.akkirrai.hibiki.core.source.OfflineTitleMetadataRepository
+import org.akkirrai.hibiki.core.source.watchTitleIdFromSourceId
 import org.json.JSONArray
 import org.json.JSONObject
 import java.util.UUID
@@ -41,6 +42,7 @@ object OfflineDownloadQueue {
     private const val SESSION_DOWNLOAD_IDS_KEY = "session_download_ids"
     private const val MAX_ACTIVE_DOWNLOADS = 2
     private const val STOP_REASON_PAUSED_BY_USER = 1
+    private const val DEFAULT_SOURCE_TITLE = "Озвучка"
     private val RESOLVE_RETRY_DELAYS_MS = longArrayOf(0L, 1_000L, 3_000L)
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -48,6 +50,7 @@ object OfflineDownloadQueue {
     private val requestLock = Any()
     private val installedManagers = mutableSetOf<Int>()
     private val downloadsBeingRemoved = mutableSetOf<String>()
+    private val pendingRedownloads = mutableMapOf<String, RedownloadRequest>()
     private val successfulDownloadPlayers = ConcurrentHashMap<String, String>()
 
     /**
@@ -111,8 +114,21 @@ object OfflineDownloadQueue {
                     }
 
                     override fun onDownloadRemoved(downloadManager: DownloadManager, download: Download) {
-                        synchronized(requestLock) {
+                        val redownload = synchronized(requestLock) {
                             downloadsBeingRemoved.remove(download.request.id)
+                            pendingRedownloads.remove(download.request.id)
+                        }
+                        if (redownload != null) {
+                            // Media3 removes cached bytes asynchronously. Only enqueue the replacement
+                            // after this callback, otherwise a request with the same id can retain the
+                            // completed (and potentially corrupt) download it is supposed to replace.
+                            scope.launch {
+                                enqueue(
+                                    context = context.applicationContext,
+                                    source = redownload.source,
+                                    episodes = listOf(redownload.episode),
+                                )
+                            }
                         }
                         drain(context.applicationContext, downloadManager)
                     }
@@ -137,7 +153,7 @@ object OfflineDownloadQueue {
         val appContext = context.applicationContext
         if (episodes.isEmpty()) return 0
         val animeTitle = OfflineTitleMetadataRepository(appContext)
-            .get(source.sourceId.substringBefore(':'))
+            .get(watchTitleIdFromSourceId(source.sourceId))
             ?.title
             ?.trim()
             ?.takeIf(String::isNotBlank)
@@ -281,6 +297,31 @@ object OfflineDownloadQueue {
         drain(appContext, manager)
     }
 
+    /**
+     * Replaces an existing Media3 download only after its cache entry has been removed. Keeping
+     * this sequencing in the queue avoids racing a same-id add against asynchronous removal.
+     */
+    fun redownloadEpisode(
+        context: Context,
+        source: WatchSource,
+        episode: WatchEpisode,
+    ) {
+        val appContext = context.applicationContext
+        val id = downloadId(source.sourceId, episode.id)
+        val manager = OfflineMediaCache.getDownloadManager(appContext)
+        install(appContext, manager)
+        val hasExistingDownload = manager.currentDownloads.any { it.request.id == id } ||
+            runCatching { manager.downloadIndex.getDownload(id) != null }.getOrDefault(false)
+        if (!hasExistingDownload) {
+            enqueue(appContext, source, listOf(episode))
+            return
+        }
+        synchronized(requestLock) {
+            pendingRedownloads[id] = RedownloadRequest(source, episode)
+        }
+        removeEpisode(appContext, source.sourceId, episode.id)
+    }
+
     fun getOfflinePlayback(
         context: Context,
         sourceId: String,
@@ -294,13 +335,73 @@ object OfflineDownloadQueue {
         if (state != OfflineEpisodeDownloadState.Completed) {
             return null
         }
-        val encoded = prefs(context).getString(playbackKey(sourceId, episodeId), null) ?: return null
-        return runCatching { decodePlayback(JSONObject(encoded)) }.getOrNull()
+        val encoded = prefs(context).getString(playbackKey(sourceId, episodeId), null)
+        if (encoded != null) {
+            runCatching { decodePlayback(JSONObject(encoded)) }.getOrNull()?.let { return it }
+        }
+        // The episode file is on the device, so playing it must not depend on that stored snapshot
+        // still being readable - a download whose snapshot failed to write, or one written by an
+        // older build, would otherwise send the player to the network and report "no internet"
+        // while the episode sits in the local cache. The download index still knows which URL was
+        // downloaded, and Media3's CacheDataSource (see OfflineMediaCache) replays that URL from
+        // the local file, so rebuild the minimal description from the index instead.
+        return storedDownloadPlayback(context = context, sourceId = sourceId, episodeId = episodeId)
+            ?.also { rebuilt ->
+                AppLogger.w(
+                    TAG,
+                    "getOfflinePlayback: rebuilt playback for a downloaded episode without a stored " +
+                        "snapshot (sourceId=$sourceId, episodeId=$episodeId, url=${rebuilt.streamUrl})",
+                )
+            }
     }
+
+    /**
+     * Minimal [PlaybackStream] for an episode whose file is already downloaded, taken from the
+     * download index rather than from the stored snapshot. Quality labels and skip segments are
+     * not part of a download request, so the rebuilt stream carries only what the player needs to
+     * open the local file: the downloaded URL, its type, its headers and the titles.
+     */
+    private fun storedDownloadPlayback(
+        context: Context,
+        sourceId: String,
+        episodeId: String,
+    ): PlaybackStream? {
+        val manager = OfflineMediaCache.getDownloadManager(context)
+        install(context, manager)
+        val download = runCatching {
+            manager.downloadIndex.getDownload(downloadId(sourceId, episodeId))
+        }.getOrNull() ?: return null
+        val url = download.request.uri.toString()
+        if (url.isBlank()) return null
+        val data = download.request.data
+            ?.toString(Charsets.UTF_8)
+            ?.takeIf(String::isNotBlank)
+            ?.let { encoded -> runCatching { JSONObject(encoded) }.getOrNull() }
+        return PlaybackStream(
+            animeTitle = data?.optString("animeTitle").orEmpty(),
+            sourceTitle = data?.optString("sourceTitle").takeIf { !it.isNullOrBlank() } ?: DEFAULT_SOURCE_TITLE,
+            episodeTitle = data?.optString("episodeTitle").orEmpty(),
+            streamUrl = url,
+            streamType = download.request.mimeType.toDownloadedStreamType(),
+            headers = OfflineStreamHeaders.get(context, url),
+        )
+    }
+
+    private fun String?.toDownloadedStreamType(): PlaybackStreamType = when (this) {
+        MimeTypes.APPLICATION_M3U8 -> PlaybackStreamType.HLS
+        MimeTypes.VIDEO_MP4 -> PlaybackStreamType.MP4
+        MimeTypes.APPLICATION_MPD -> PlaybackStreamType.DASH
+        else -> PlaybackStreamType.HLS
+    }
+
+    private data class RedownloadRequest(
+        val source: WatchSource,
+        val episode: WatchEpisode,
+    )
 
     fun getOfflineTitleIds(context: Context): List<String> {
         return visibleStoredEntries(context)
-            .map { entry -> entry.sourceId.substringBefore(':') }
+            .map { entry -> watchTitleIdFromSourceId(entry.sourceId) }
             .filter(String::isNotBlank)
             .distinct()
     }
@@ -310,7 +411,7 @@ object OfflineDownloadQueue {
         titleId: String,
     ): List<WatchSource> {
         val entries = visibleStoredEntries(context)
-            .filter { it.sourceId.substringBefore(':') == titleId }
+            .filter { watchTitleIdFromSourceId(it.sourceId) == titleId }
         return entries
             .groupBy { it.sourceId }
             .values
@@ -646,7 +747,7 @@ object OfflineDownloadQueue {
     private fun decodePlayback(json: JSONObject): PlaybackStream {
         return PlaybackStream(
             animeTitle = json.optString("animeTitle").ifBlank { "" },
-            sourceTitle = json.optString("sourceTitle").ifBlank { "Озвучка" },
+            sourceTitle = json.optString("sourceTitle").ifBlank { DEFAULT_SOURCE_TITLE },
             episodeTitle = json.optString("episodeTitle").ifBlank { "" },
             streamUrl = json.getString("streamUrl"),
             streamType = runCatching { PlaybackStreamType.valueOf(json.getString("streamType")) }

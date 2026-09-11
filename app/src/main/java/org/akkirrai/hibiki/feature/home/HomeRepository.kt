@@ -18,7 +18,6 @@ import org.akkirrai.hibiki.app.settings.LanguageMode
 import org.akkirrai.hibiki.core.model.Anime
 import org.akkirrai.hibiki.core.model.AnimeSearchFilters
 import org.akkirrai.hibiki.core.log.AppLogger
-import org.akkirrai.hibiki.core.model.MockAnimeData
 import org.akkirrai.hibiki.core.network.AndroidHttpClientFactory
 import org.akkirrai.hibiki.core.network.NoInternetConnectionException
 import org.akkirrai.hibiki.core.network.hasActiveInternetConnection
@@ -57,14 +56,21 @@ class HomeRepository(
     private val offlineTitleMetadataRepository = OfflineTitleMetadataRepository(appContext)
     private val libraryRepository = LibraryRepository(appContext)
 
+    /**
+     * Home content that survives a lost connection: only the rows the device already stores
+     * locally (continue watching, recently watched, both resolved through the offline title
+     * metadata and the library). The catalog rows are deliberately left empty - featured,
+     * trending and recently updated only exist once a source request has succeeded, and filling
+     * them with placeholders would show the user titles that are not in any source.
+     */
     fun fallbackHomeState(): HomeUiState {
         return HomeUiState(
-            featuredAnime = MockAnimeData.trending.take(FEATURED_COUNT),
+            featuredAnime = emptyList(),
             continueAnime = loadStoredContinueAnime(),
             recentlyWatched = loadRecentlyWatchedAnime().drop(1).take(RECENTLY_WATCHED_LIMIT),
             popular = emptyList(),
-            trending = MockAnimeData.trending,
-            recentlyUpdated = MockAnimeData.recent,
+            trending = emptyList(),
+            recentlyUpdated = emptyList(),
         )
     }
 

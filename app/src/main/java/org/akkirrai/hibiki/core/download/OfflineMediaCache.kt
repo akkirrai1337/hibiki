@@ -144,14 +144,27 @@ object OfflineMediaCache {
         ).also { streamingCache = it }
     }
 
+    /**
+     * Playback reads through two caches, in this order: the streaming cache (LRU, written while
+     * watching) and then the cache [getDownloadManager] stores downloaded episodes in. Reading
+     * only the streaming cache used to let a downloaded episode play offline only while its bytes
+     * happened to still be in that 64 MB cache as well - once they were evicted, the request fell
+     * through to the network and a downloaded episode reported a connection failure instead of
+     * playing. Nothing is written into the download cache here; the download queue owns it.
+     */
     fun buildPlaybackDataSourceFactory(
         context: Context,
         headers: Map<String, String>,
         resourceHeadersByUrl: Map<String, Map<String, String>> = emptyMap(),
     ): DataSource.Factory {
+        val upstreamFactory = buildUpstreamDataSourceFactory(context, headers, resourceHeadersByUrl)
+        val downloadedContentFactory = CacheDataSource.Factory()
+            .setCache(getDownloadCache(context))
+            .setUpstreamDataSourceFactory(upstreamFactory)
+            .setCacheWriteDataSinkFactory(null)
         return CacheDataSource.Factory()
             .setCache(getStreamingCache(context))
-            .setUpstreamDataSourceFactory(buildUpstreamDataSourceFactory(context, headers, resourceHeadersByUrl))
+            .setUpstreamDataSourceFactory(downloadedContentFactory)
             .setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
     }
 

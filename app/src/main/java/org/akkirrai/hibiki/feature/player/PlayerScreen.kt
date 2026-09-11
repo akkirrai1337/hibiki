@@ -1040,7 +1040,11 @@ fun PlayerScreen(
             }
         }
 
-        state.errorMessage?.let { message ->
+        // A downloaded episode whose local file will not open gets its own message and action: the
+        // network is not the problem there, and "Retry" would resolve the same broken download.
+        // Re-downloading the episode is what can actually fix it.
+        if (state.errorMessage != null || state.offlinePlaybackFailed) {
+            val downloadedFileError = state.offlinePlaybackFailed
             Box(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center
@@ -1063,15 +1067,28 @@ fun PlayerScreen(
                             style = MaterialTheme.typography.titleMedium
                         )
                         Text(
-                            text = message,
+                            text = state.errorMessage
+                                ?: stringResource(R.string.watch_player_downloaded_error_message),
                             color = Color.White.copy(alpha = 0.78f),
                             style = MaterialTheme.typography.bodyMedium
                         )
                         Text(
-                            text = stringResource(R.string.watch_player_retry),
+                            text = stringResource(
+                                if (downloadedFileError) {
+                                    R.string.watch_player_redownload
+                                } else {
+                                    R.string.watch_player_retry
+                                }
+                            ),
                             modifier = Modifier
                                 .alpha(0.92f)
-                                .clickable { viewModel.load(forceRefresh = true) },
+                                .clickable {
+                                    if (downloadedFileError) {
+                                        viewModel.redownloadCurrentEpisode()
+                                    } else {
+                                        viewModel.load(forceRefresh = true)
+                                    }
+                                },
                             color = Color.White,
                             style = MaterialTheme.typography.labelLarge
                         )
@@ -3366,6 +3383,21 @@ private fun PlayerPlaybackListenerEffect(
                         append(error.message)
                     },
                     error
+                )
+                // ExoPlayer's own message is just "Source error", and the fields above can be lost
+                // to log redaction (the message embeds a source id containing '|', and a redacted
+                // stream URL swallows the rest of the line). The underlying cause is therefore also
+                // written as its own short line, so a downloaded file that will not open can be
+                // told apart from a genuinely unreachable network.
+                AppLogger.e(
+                    PLAYBACK_LOG_TAG,
+                    "[player.error.cause] code=" + error.errorCodeName + " chain=" +
+                        generateSequence(error.cause) { cause -> cause.cause }
+                            .take(5)
+                            .joinToString(" <- ") { cause ->
+                                cause.javaClass.simpleName + ":" + cause.message
+                            },
+                    error,
                 )
                 viewModel.recoverFromPlaybackError(currentState.playback?.streamUrl)
             }

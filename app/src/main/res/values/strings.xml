@@ -198,6 +198,8 @@
     <string name="watch_player_playlist">Playlist</string>
     <string name="watch_player_error_title">Playback error</string>
     <string name="watch_player_retry">Retry</string>
+    <string name="watch_player_downloaded_error_message">The downloaded episode could not be played. Download it again to watch offline.</string>
+    <string name="watch_player_redownload">Download again</string>
     <string name="watch_episode_number">Episode %1$s</string>
     <string name="watch_player_settings">Player settings</string>
     <string name="watch_player_subtitles_enable">Enable subtitles</string>

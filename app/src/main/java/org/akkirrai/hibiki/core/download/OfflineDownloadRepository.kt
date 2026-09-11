@@ -78,4 +78,12 @@ class OfflineDownloadRepository(
     fun removeEpisode(sourceId: String, episodeId: String) {
         OfflineDownloadQueue.removeEpisode(appContext, sourceId, episodeId)
     }
+
+    fun redownloadEpisode(source: WatchSource, episode: WatchEpisode) {
+        OfflineDownloadQueue.redownloadEpisode(
+            context = appContext,
+            source = source,
+            episode = episode,
+        )
+    }
 }
