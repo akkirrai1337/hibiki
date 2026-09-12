@@ -7,6 +7,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
 import org.akkirrai.beakokit.metadata.ExternalMetadataPreferences
 import org.akkirrai.beakokit.metadata.MetadataProviderId
 import org.akkirrai.beakokit.metadata.ExternalMetadataService
@@ -66,6 +71,18 @@ class AnimeSearchRepository(
     private val metadataScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val detailsRequestSlots = Semaphore(MAX_CONCURRENT_DETAILS_REQUESTS)
 
+    init {
+        // Changing whether/which/how external metadata is fetched can only be seen by the user
+        // once already-cached (possibly stale, differently merged) lists and details are dropped.
+        // The initial value is skipped: the cache is already empty right after construction.
+        appPreferences?.state
+            ?.map { RelevantMetadataSettings(it) }
+            ?.distinctUntilChanged()
+            ?.drop(1)
+            ?.onEach { clearCaches() }
+            ?.launchIn(metadataScope)
+    }
+
     suspend fun search(query: String): List<Anime> {
         return search(query = query, limit = SEARCH_PAGE_SIZE, offset = 0)
     }
@@ -102,8 +119,12 @@ class AnimeSearchRepository(
         val source = currentSource()
         val results = describeAll(source, source.search(normalizedRequest))
             .map { title ->
-                getCachedDetails(detailsCacheKey(title.id))
+                val anime = getCachedDetails(detailsCacheKey(title.id))
                     ?: title.toAnime(preferEnglish = preferEnglish)
+                // The cached entry may be the details page's fully merged Anime, whose title comes
+                // from the aggregator. This list only ever shows the source's own title (see
+                // describeAll's doc), so that field is re-applied here even on a cache hit.
+                anime.copy(title = title.displayName)
             }
 
         searchCache[cacheKey] = CachedSearchResults(
@@ -141,10 +162,11 @@ class AnimeSearchRepository(
      * The source's own "latest releases" list, described exactly like a search page - same
      * describe-then-convert path, same cache.
      *
-     * Home used to build these cards straight from the source runtime's [AnimeTitle]s, which is why
-     * a card and its own title page could disagree: the page always merges the aggregator's entry
-     * (describe() below), and that row never did. Routing it through this one path is what keeps
-     * them equal - the row now shows the same name, year and rating its details screen does.
+     * Home used to build these cards straight from the source runtime's [AnimeTitle]s, without
+     * running them through [describeAll] at all, so fields like year and rating could be missing or
+     * stale compared to the title page. Routing it through this one path fixes that - but the name
+     * stays deliberately different: this row keeps the source's own title, while its details screen
+     * shows the aggregator's, exactly as [describeAll]'s doc explains.
      */
     suspend fun latest(limit: Int, forceRefresh: Boolean = false): List<Anime> {
         val cacheKey = "latest:${selectedSourceId().value}:$limit:${languageKey()}"
@@ -155,7 +177,10 @@ class AnimeSearchRepository(
         val preferEnglish = preferEnglish()
         val source = currentSource()
         val results = describeAll(source, source.latest(limit)).map { title ->
-            getCachedDetails(detailsCacheKey(title.id)) ?: title.toAnime(preferEnglish = preferEnglish)
+            val anime = getCachedDetails(detailsCacheKey(title.id)) ?: title.toAnime(preferEnglish = preferEnglish)
+            // See search(): a details-cache hit carries the aggregator-merged title, but this list
+            // always shows the source's own title, so it is re-applied here too.
+            anime.copy(title = title.displayName)
         }
         searchCache[cacheKey] = CachedSearchResults(
             items = results,
@@ -409,15 +434,18 @@ class AnimeSearchRepository(
     /**
      * Describes a whole list, card by card.
      *
-     * Every title that already has an entry is described before the screen paints; the rest are
-     * matched in the background so the next paint describes them too. Deliberately per-card rather
-     * than "all of it or none of it": the title page always describes the title it opens, so any
-     * gate here is exactly what made a card and its own title page disagree - the card showing the
-     * source's name/poster while the page showed the provider's, and then the card silently
-     * switching once the page had been visited.
+     * The name on a list card is deliberately kept as the source's own, never the aggregator's,
+     * even once a match has been found - this list, unlike the title page, is not enriched with the
+     * provider's title. That is on purpose: it keeps parity with desktop, and it keeps cards stable
+     * while scrolling and paginating instead of a card's name changing mid-list once a background
+     * match lands or a details cache warms it. The title page (describe() below) still merges the
+     * aggregator's entry in full, so a card and its own title page are expected to show different
+     * names - that disagreement is intentional, not a bug to chase.
      *
      * Describing the misses inline is not an option: each provider paces its requests (~1/s), and a
-     * screen built to be scrolled asks for a screenful at a time.
+     * screen built to be scrolled asks for a screenful at a time. So every title that already has an
+     * entry is applied (poster, rating, etc., but not the name) before the screen paints, and the
+     * rest are matched in the background so a later load of this same list picks them up.
      */
     private suspend fun describeAll(source: AnimeSourceRuntime, titles: List<AnimeTitle>): List<AnimeTitle> {
         val service = metadataService ?: return titles
@@ -446,7 +474,17 @@ class AnimeSearchRepository(
         missing.takeIf(List<AnimeTitle>::isNotEmpty)
             ?.let { warmMetadata(service, order, it) }
         return titles.mapIndexed { index, title ->
-            cached[index]?.let { external -> mergeExternalMetadata(title, external) } ?: title
+            cached[index]?.let { external ->
+                // Cards, unlike the title page, keep the source's own name. Merging the aggregator's
+                // name in here would actually make a card agree with its own title page - but that
+                // is not the goal: list screens deliberately do not adopt the aggregator's title, for
+                // parity with desktop and so a card's name does not change under the user mid-scroll
+                // as background matches land.
+                mergeExternalMetadata(title, external).copy(
+                    englishName = title.englishName,
+                    originalName = title.originalName,
+                )
+            } ?: title
         }
     }
 
@@ -628,6 +666,23 @@ class AnimeSearchRepository(
             else -> replace("_", " ").replace("-", " ")
                 .replaceFirstChar { it.uppercase() }
         }
+    }
+
+    /** The subset of [org.akkirrai.hibiki.app.settings.AppPreferencesState] that affects how
+     * external metadata is fetched and merged - a change to any of these invalidates the caches
+     * above, since they may now hold results produced under the old settings. */
+    private data class RelevantMetadataSettings(
+        val enabled: Boolean,
+        val provider: MetadataProviderId,
+        val fallback: Boolean,
+        val overrides: Map<String, Boolean>,
+    ) {
+        constructor(state: org.akkirrai.hibiki.app.settings.AppPreferencesState) : this(
+            enabled = state.externalMetadataEnabled,
+            provider = state.externalMetadataProvider,
+            fallback = state.externalMetadataFallback,
+            overrides = state.externalMetadataOverrides,
+        )
     }
 
     private data class CachedSearchResults(

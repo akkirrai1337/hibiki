@@ -628,7 +628,10 @@ fun DetailsScreen(
                             titleId = uiModel.anime.id,
                             providers = metadataProviders,
                             preferredProvider = preferences.externalMetadataProvider,
-                            onRebound = { detailsReloadKey++ },
+                            onRebound = {
+                                searchRepository.clearCaches()
+                                detailsReloadKey++
+                            },
                         )
                     }
                 }

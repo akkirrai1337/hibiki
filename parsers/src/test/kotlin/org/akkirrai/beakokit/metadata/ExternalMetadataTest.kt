@@ -228,13 +228,14 @@ class ExternalMetadataTest {
     }
 
     @Test
-    fun `keeps a Russian name no provider can supply`() {
+    fun `keeps the source's Russian name but merges english and original names, matching desktop`() {
         val merged = mergeExternalMetadata(
             title { copy(russianName = "Провожающая в последний путь Фрирен") },
-            external { copy(englishName = "Frieren") },
+            external { copy(englishName = "Frieren", romajiName = "Sousou no Frieren!!") },
         )
         assertEquals("Провожающая в последний путь Фрирен", merged.russianName)
         assertEquals("Frieren", merged.englishName)
+        assertEquals("Sousou no Frieren!!", merged.originalName)
     }
 
     @Test
