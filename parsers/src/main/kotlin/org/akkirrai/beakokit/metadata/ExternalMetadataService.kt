@@ -274,17 +274,17 @@ class ExternalMetadataService(
             // record: a remembered "no match" is a week-long statement about the *title*.
             val results = searchProvider(provider, query)
             if (results == null) {
-                log("metadataFromProvider: '$label' provider=$provider search request failed (query='$query'), leaving no record")
+                log("metadataFromProvider: '$label' provider=$provider search request failed for '$query' - leaving no record")
                 return null
             }
             searched = true
             val best = pickBestMatch(anime, results.map(ScoredEntry::candidate))
             if (best == null) {
-                log("metadataFromProvider: '$label' provider=$provider query='$query' returned ${results.size} candidate(s), none cleared the match threshold")
+                log("metadataFromProvider: '$label' provider=$provider search for '$query' returned ${results.size} candidate(s) - none cleared the match threshold")
                 continue
             }
             val found = results.firstOrNull { it.media.externalId == best.externalId }?.media ?: continue
-            log("metadataFromProvider: '$label' provider=$provider query='$query' matched externalId=${best.externalId} confidence=${(best.confidence * 100).toInt()}%")
+            log("metadataFromProvider: '$label' provider=$provider search for '$query' matched externalId=${best.externalId} confidence=${(best.confidence * 100).toInt()}%")
             store.writeMedia(found, nowMillis())
             store.writeMatch(
                 MetadataMatchRecord(
