@@ -108,9 +108,9 @@ class PlayerViewModel(
             // the first one, and the retry cap then spends itself alternating between two dead
             // candidates.
             val unplayable = _uiState.value.failedStreamUrls + excludedStreamUrls
+            val offlineCandidate = offlinePlayback?.takeIf { it.streamUrl !in unplayable }
             val playbackResult = runCatching {
-                offlinePlayback
-                    ?.takeIf { it.streamUrl !in unplayable }
+                offlineCandidate
                     ?: if (state.selectedPlayerName.isNullOrBlank() && state.selectedQualityLabel.isNullOrBlank()) {
                         repository.resolveFastestStream(
                             sourceId = state.currentSourceId,
@@ -133,7 +133,7 @@ class PlayerViewModel(
 
             playbackResult
                 .onSuccess { resolvedStream ->
-                    val stream = if (offlinePlayback != null) {
+                    val stream = if (offlineCandidate != null) {
                         offlineTitleMetadataRepository.get(titleId)?.title
                             ?.takeIf(String::isNotBlank)
                             ?.let { resolvedStream.copy(animeTitle = it) }
@@ -149,6 +149,7 @@ class PlayerViewModel(
                         it.copy(
                             isLoading = false,
                             playback = stream,
+                            isPlayingOffline = offlineCandidate != null,
                             animeTitle = stream.animeTitle.trim().takeIf(String::isNotBlank)
                                 ?: it.animeTitle,
                             errorMessage = null,
@@ -183,6 +184,7 @@ class PlayerViewModel(
                         it.copy(
                             isLoading = false,
                             playback = null,
+                            isPlayingOffline = false,
                             errorMessage = if (downloadedFileOffline) null else throwable.toUiMessage(),
                             offlinePlaybackFailed = downloadedFileOffline,
                             episodes = episodes,
@@ -603,6 +605,12 @@ internal fun resumablePlaybackPositionMs(positionMs: Long, durationMs: Long): Lo
 data class PlayerUiState(
     val isLoading: Boolean = true,
     val playback: PlaybackStream? = null,
+    /**
+     * [playback] came from the local download cache. The screen builds a local-only data source for
+     * it so a downloaded episode never falls through to the network (see
+     * [org.akkirrai.hibiki.core.download.OfflineMediaCache.buildDownloadedPlaybackDataSourceFactory]).
+     */
+    val isPlayingOffline: Boolean = false,
     val animeTitle: String = "",
     val episodes: List<WatchEpisode> = emptyList(),
     val currentSourceId: String = "",

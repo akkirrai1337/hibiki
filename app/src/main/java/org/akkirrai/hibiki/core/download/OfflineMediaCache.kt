@@ -114,7 +114,11 @@ object OfflineMediaCache {
             .setReadTimeoutMs(PLAYER_READ_TIMEOUT_MS)
             .setUserAgent(PLAYER_HTTP_USER_AGENT)
             .setDefaultRequestProperties(buildPlaybackRequestHeaders(emptyMap()))
-        val headerInjectingFactory = HeaderInjectingHttpDataSourceFactory(httpFactory) { url ->
+        // Same ordering as live playback: source headers first, then the WebView's current
+        // browser cookies, so a download keeps the session a resolver's challenge refreshed
+        // instead of reusing a stale Cookie snapshot or failing the segment outright.
+        val browserSessionFactory = BrowserSessionCookieDataSourceFactory(httpFactory)
+        val headerInjectingFactory = HeaderInjectingHttpDataSourceFactory(browserSessionFactory) { url ->
             OfflineStreamHeaders.get(appContext, url)
         }
         return DefaultDataSource.Factory(appContext, headerInjectingFactory)
@@ -166,6 +170,21 @@ object OfflineMediaCache {
             .setCache(getStreamingCache(context))
             .setUpstreamDataSourceFactory(downloadedContentFactory)
             .setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
+    }
+
+    /**
+     * Playback data source for an episode whose file is already downloaded: it reads the download
+     * cache and nothing else. There is deliberately no upstream, so a cache miss fails instead of
+     * silently falling through to the network. That is what stops a downloaded episode from
+     * reporting "no internet" (or playing the opening from the streaming cache and then dying)
+     * when the local file is incomplete - it either plays fully offline or surfaces the
+     * downloaded-file error that [org.akkirrai.hibiki.feature.player.PlayerViewModel] already
+     * translates into a re-download action.
+     */
+    fun buildDownloadedPlaybackDataSourceFactory(context: Context): DataSource.Factory {
+        return CacheDataSource.Factory()
+            .setCache(getDownloadCache(context))
+            .setCacheWriteDataSinkFactory(null)
     }
 
     fun buildUpstreamDataSourceFactory(

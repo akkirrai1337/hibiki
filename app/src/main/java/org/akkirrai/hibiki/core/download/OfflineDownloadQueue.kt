@@ -336,23 +336,43 @@ object OfflineDownloadQueue {
             return null
         }
         val encoded = prefs(context).getString(playbackKey(sourceId, episodeId), null)
-        if (encoded != null) {
-            runCatching { decodePlayback(JSONObject(encoded)) }.getOrNull()?.let { return it }
+        val snapshot = encoded
+            ?.let { raw -> runCatching { decodePlayback(JSONObject(raw)) }.getOrNull() }
+        // The download index is the authoritative record of what actually sits in the download
+        // cache: it knows the downloaded URL, its type and its headers. The stored snapshot can be
+        // older, missing, or point at a different URL (a stale/relayed link, or another variant),
+        // and playing that URL would miss the local cache and fall through to the network. Rebuild
+        // from the index and only carry over the snapshot's descriptive fields.
+        val downloaded = storedDownloadPlayback(
+            context = context,
+            sourceId = sourceId,
+            episodeId = episodeId,
+        )
+        if (downloaded == null) return snapshot
+        if (snapshot == null) {
+            AppLogger.w(
+                TAG,
+                "getOfflinePlayback: rebuilt playback for a downloaded episode without a stored " +
+                    "snapshot (sourceId=$sourceId, episodeId=$episodeId, url=${downloaded.streamUrl})",
+            )
+            return downloaded
         }
-        // The episode file is on the device, so playing it must not depend on that stored snapshot
-        // still being readable - a download whose snapshot failed to write, or one written by an
-        // older build, would otherwise send the player to the network and report "no internet"
-        // while the episode sits in the local cache. The download index still knows which URL was
-        // downloaded, and Media3's CacheDataSource (see OfflineMediaCache) replays that URL from
-        // the local file, so rebuild the minimal description from the index instead.
-        return storedDownloadPlayback(context = context, sourceId = sourceId, episodeId = episodeId)
-            ?.also { rebuilt ->
-                AppLogger.w(
-                    TAG,
-                    "getOfflinePlayback: rebuilt playback for a downloaded episode without a stored " +
-                        "snapshot (sourceId=$sourceId, episodeId=$episodeId, url=${rebuilt.streamUrl})",
-                )
-            }
+        if (snapshot.streamUrl != downloaded.streamUrl) {
+            AppLogger.w(
+                TAG,
+                "getOfflinePlayback: stored snapshot url differs from the download index; using the " +
+                    "index url (sourceId=$sourceId, episodeId=$episodeId, snapshot=${snapshot.streamUrl}, " +
+                    "index=${downloaded.streamUrl})",
+            )
+        }
+        return downloaded.copy(
+            animeTitle = downloaded.animeTitle.ifBlank { snapshot.animeTitle },
+            episodeTitle = downloaded.episodeTitle.ifBlank { snapshot.episodeTitle },
+            qualityLabel = snapshot.qualityLabel,
+            availableQualityLabels = snapshot.availableQualityLabels,
+            segments = snapshot.segments,
+            videoId = snapshot.videoId,
+        )
     }
 
     /**

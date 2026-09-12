@@ -151,6 +151,7 @@ import androidx.media3.common.PlaybackParameters
 import androidx.media3.common.Player
 import androidx.media3.common.VideoSize
 import androidx.media3.common.text.CueGroup
+import androidx.media3.datasource.DataSource
 import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.exoplayer.DefaultLoadControl
@@ -2984,7 +2985,7 @@ private fun PlayerMediaPreparationEffect(
         keepControlsVisible()
         exoPlayer.stop()
         exoPlayer.clearMediaItems()
-        exoPlayer.setMediaSource(playback.toMediaSource(context))
+        exoPlayer.setMediaSource(playback.toMediaSource(context, offline = state.isPlayingOffline))
         exoPlayer.playbackParameters = PlaybackParameters(playbackSpeed)
         exoPlayer.prepare()
         exoPlayer.playWhenReady = true
@@ -3006,9 +3007,25 @@ private class LegacyTextRenderersFactory(context: Context) : DefaultRenderersFac
     }
 }
 
-private fun PlaybackStream.toMediaSource(context: Context): MediaSource {
-    val dataSourceFactory = OfflineMediaCache.buildPlaybackDataSourceFactory(
+/**
+ * Data source for one playback source. A downloaded episode is read from the download cache only;
+ * streamed playback keeps the streaming-cache-then-download-cache-then-network chain.
+ */
+private fun playbackDataSourceFactory(
+    context: Context,
+    offline: Boolean,
+    headers: Map<String, String>,
+    resourceHeadersByUrl: Map<String, Map<String, String>> = emptyMap(),
+): DataSource.Factory = if (offline) {
+    OfflineMediaCache.buildDownloadedPlaybackDataSourceFactory(context)
+} else {
+    OfflineMediaCache.buildPlaybackDataSourceFactory(context, headers, resourceHeadersByUrl)
+}
+
+private fun PlaybackStream.toMediaSource(context: Context, offline: Boolean = false): MediaSource {
+    val dataSourceFactory = playbackDataSourceFactory(
         context = context,
+        offline = offline,
         headers = headers,
         resourceHeadersByUrl = subtitles.associate { subtitle -> subtitle.url to subtitle.headers },
     )
@@ -3037,7 +3054,7 @@ private fun PlaybackStream.toMediaSource(context: Context): MediaSource {
         audioStreamUrl?.let { audioUrl ->
             add(
                 HlsMediaSource.Factory(
-                    OfflineMediaCache.buildPlaybackDataSourceFactory(context, audioHeaders.ifEmpty { headers }),
+                    playbackDataSourceFactory(context, offline, audioHeaders.ifEmpty { headers }),
                 ).setAllowChunklessPreparation(true).createMediaSource(
                     MediaItem.Builder().setUri(audioUrl.toUri()).setMimeType(MimeTypes.APPLICATION_M3U8).build(),
                 ),
@@ -3062,7 +3079,7 @@ private fun PlaybackStream.toMediaSource(context: Context): MediaSource {
                 .build()
             add(
                 SingleSampleMediaSource.Factory(
-                    OfflineMediaCache.buildPlaybackDataSourceFactory(context, subtitle.headers.ifEmpty { headers }),
+                    playbackDataSourceFactory(context, offline, subtitle.headers.ifEmpty { headers }),
                 ).createMediaSource(configuration, C.TIME_UNSET),
             )
         }
