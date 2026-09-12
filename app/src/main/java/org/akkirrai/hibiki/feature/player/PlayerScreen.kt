@@ -3023,16 +3023,26 @@ private fun playbackDataSourceFactory(
 }
 
 private fun PlaybackStream.toMediaSource(context: Context, offline: Boolean = false): MediaSource {
+    // Download requests contain the primary stream only. Never attach separately resolved audio
+    // or subtitle URLs while offline: they are not guaranteed to be in the download cache and a
+    // missing optional track must not make the saved video unplayable.
+    val playback = if (offline) copy(
+        audioStreamUrl = null,
+        audioHeaders = emptyMap(),
+        subtitles = emptyList(),
+    ) else {
+        this
+    }
     val dataSourceFactory = playbackDataSourceFactory(
         context = context,
         offline = offline,
-        headers = headers,
-        resourceHeadersByUrl = subtitles.associate { subtitle -> subtitle.url to subtitle.headers },
+        headers = playback.headers,
+        resourceHeadersByUrl = playback.subtitles.associate { subtitle -> subtitle.url to subtitle.headers },
     )
     val mediaItem = MediaItem.Builder()
-        .setUri(streamUrl.toUri())
+        .setUri(playback.streamUrl.toUri())
         .setMimeType(
-            when (streamType) {
+            when (playback.streamType) {
                 PlaybackStreamType.HLS -> MimeTypes.APPLICATION_M3U8
                 PlaybackStreamType.MP4 -> MimeTypes.VIDEO_MP4
                 PlaybackStreamType.DASH -> MimeTypes.APPLICATION_MPD
@@ -3041,7 +3051,7 @@ private fun PlaybackStream.toMediaSource(context: Context, offline: Boolean = fa
         )
         .build()
 
-    val videoSource = when (streamType) {
+    val videoSource = when (playback.streamType) {
         PlaybackStreamType.HLS -> HlsMediaSource.Factory(dataSourceFactory)
             .setAllowChunklessPreparation(true)
             .createMediaSource(mediaItem)
@@ -3051,16 +3061,16 @@ private fun PlaybackStream.toMediaSource(context: Context, offline: Boolean = fa
     }
     val sources = buildList<MediaSource> {
         add(videoSource)
-        audioStreamUrl?.let { audioUrl ->
+        playback.audioStreamUrl?.let { audioUrl ->
             add(
                 HlsMediaSource.Factory(
-                    playbackDataSourceFactory(context, offline, audioHeaders.ifEmpty { headers }),
+                    playbackDataSourceFactory(context, offline, playback.audioHeaders.ifEmpty { playback.headers }),
                 ).setAllowChunklessPreparation(true).createMediaSource(
                     MediaItem.Builder().setUri(audioUrl.toUri()).setMimeType(MimeTypes.APPLICATION_M3U8).build(),
                 ),
             )
         }
-        subtitles.forEach { subtitle ->
+        playback.subtitles.forEach { subtitle ->
             val configuration = MediaItem.SubtitleConfiguration.Builder(subtitle.url.toUri())
                 .setMimeType(TEXT_VTT)
                 .setLabel(subtitle.label)
@@ -3079,7 +3089,7 @@ private fun PlaybackStream.toMediaSource(context: Context, offline: Boolean = fa
                 .build()
             add(
                 SingleSampleMediaSource.Factory(
-                    playbackDataSourceFactory(context, offline, subtitle.headers.ifEmpty { headers }),
+                    playbackDataSourceFactory(context, offline, subtitle.headers.ifEmpty { playback.headers }),
                 ).createMediaSource(configuration, C.TIME_UNSET),
             )
         }

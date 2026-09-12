@@ -20,6 +20,7 @@ import org.akkirrai.hibiki.core.model.PlaybackSettingsOptions
 import org.akkirrai.hibiki.core.model.WatchEpisode
 import org.akkirrai.hibiki.core.model.WatchSource
 import org.akkirrai.hibiki.core.download.OfflineDownloadRepository
+import org.akkirrai.hibiki.core.download.OfflineEpisodeDownloadState
 import org.akkirrai.hibiki.core.log.AppLogger
 import org.akkirrai.hibiki.core.network.NoInternetConnectionException
 import org.akkirrai.hibiki.core.source.AnimeWatchRepository
@@ -79,7 +80,6 @@ class PlayerViewModel(
                 autoRecoveryCount = if (excludedStreamUrls.isNotEmpty()) it.autoRecoveryCount + 1 else 0,
             )
         }
-        loadSettingsOptions()
         loadJob = viewModelScope.launch(Dispatchers.IO) {
             val episodesResult = runCatching {
                 offlineDownloadRepository.getOfflineEpisodes(state.currentSourceId)
@@ -103,6 +103,30 @@ class PlayerViewModel(
                     sourceId = state.currentSourceId,
                     episodeId = effectiveEpisodeId,
                 )
+            // A completed Media3 download is a promise to play locally. If its index can no
+            // longer be reconstructed, do not resolve the episode again over the network: that
+            // silently changes a saved episode into live playback. Surface the same repair path
+            // as a cache read failure instead.
+            val hasBrokenOfflineDownload = offlinePlayback == null &&
+                offlineDownloadRepository.getEpisodeStates(
+                    sourceId = state.currentSourceId,
+                    episodeIds = listOf(effectiveEpisodeId),
+                )[effectiveEpisodeId] == OfflineEpisodeDownloadState.Completed
+            if (hasBrokenOfflineDownload) {
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        playback = null,
+                        isPlayingOffline = false,
+                        errorMessage = null,
+                        offlinePlaybackFailed = true,
+                        episodes = episodes,
+                        currentEpisodeId = effectiveEpisodeId,
+                        currentEpisodeNumber = effectiveEpisodeNumber,
+                    )
+                }
+                return@launch
+            }
             // Every stream this episode has already failed on, not only the one that failed last:
             // a second attempt that remembers only the newest failure can resolve straight back to
             // the first one, and the retry cap then spends itself alternating between two dead
@@ -163,7 +187,9 @@ class PlayerViewModel(
                             availableQualityLabels = stream.availableQualityLabels,
                         )
                     }
-                    loadSettingsOptions()
+                    if (offlineCandidate == null) {
+                        loadSettingsOptions()
+                    }
                 }
                 .onFailure { throwable ->
                     if (throwable is CancellationException) return@onFailure
@@ -234,6 +260,19 @@ class PlayerViewModel(
     fun recoverFromPlaybackError(streamUrl: String?) {
         val state = _uiState.value
         if (state.isLoading) return
+        if (state.isPlayingOffline) {
+            // Local playback is deliberately cache-only. Retrying its URL through the resolver
+            // would turn a corrupt saved file into unannounced network playback.
+            _uiState.update {
+                it.copy(
+                    playback = null,
+                    isPlayingOffline = false,
+                    errorMessage = null,
+                    offlinePlaybackFailed = true,
+                )
+            }
+            return
+        }
         if (state.autoRecoveryCount >= MAX_AUTO_RECOVERY_ATTEMPTS) {
             _uiState.update {
                 it.copy(errorMessage = "Не удалось воспроизвести поток после нескольких попыток")
@@ -304,6 +343,19 @@ class PlayerViewModel(
     fun loadSettingsOptions() {
         val state = _uiState.value
         val optionsKey = state.settingsOptionsKey()
+        if (state.isPlayingOffline) {
+            // Player/quality alternatives require a resolver request. A downloaded episode is
+            // intentionally self-contained, so its settings stay local (speed and display
+            // options) instead of waking the network just because the sheet was opened.
+            _uiState.update {
+                it.copy(
+                    isSettingsLoading = false,
+                    settingsOptions = PlaybackSettingsOptions(),
+                    settingsOptionsKey = optionsKey,
+                )
+            }
+            return
+        }
         if (state.settingsOptionsKey == optionsKey ||
             (settingsLoadJob?.isActive == true && settingsLoadingKey == optionsKey)
         ) {

@@ -348,7 +348,18 @@ object OfflineDownloadQueue {
             sourceId = sourceId,
             episodeId = episodeId,
         )
-        if (downloaded == null) return snapshot
+        // A completed entry without a readable index is not safe to play. The snapshot is only
+        // descriptive metadata; its URL can be stale and it is not proof that matching bytes are
+        // still in Media3's cache. Returning it here used to make the player open a cache-only
+        // data source with an unverified URL and report a misleading playback failure.
+        if (downloaded == null) {
+            AppLogger.w(
+                TAG,
+                "getOfflinePlayback: completed download has no readable index entry " +
+                    "(sourceId=$sourceId, episodeId=$episodeId)",
+            )
+            return null
+        }
         if (snapshot == null) {
             AppLogger.w(
                 TAG,
