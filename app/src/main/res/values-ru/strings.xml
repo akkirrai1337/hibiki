@@ -81,6 +81,13 @@
     <string name="library_empty_favorite">Любимые тайтлы будут здесь.</string>
     <string name="library_empty_saved">Тайтлы со скачанными сериями будут здесь.</string>
 
+    <string name="downloads_title">Загрузки</string>
+    <string name="downloads_entry_content_description">Загрузки</string>
+    <string name="downloads_empty_title">Пока нет загрузок</string>
+    <string name="downloads_empty_body">Скачанные серии появятся здесь.</string>
+    <string name="downloads_episode_count">%1$d скачано</string>
+    <string name="downloads_active_count">%1$d загружается</string>
+
     <string name="search_placeholder">Поиск аниме</string>
     <string name="search_filters_title">Фильтры</string>
     <string name="search_filters_unavailable">Фильтры временно недоступны.</string>

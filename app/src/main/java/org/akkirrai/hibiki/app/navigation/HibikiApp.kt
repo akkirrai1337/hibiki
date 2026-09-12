@@ -67,6 +67,7 @@ import org.akkirrai.hibiki.feature.profile.LocalProfileScreen
 import org.akkirrai.hibiki.feature.profile.LocalProfileViewModel
 import org.akkirrai.hibiki.feature.catalog.CatalogScreen
 import org.akkirrai.hibiki.feature.details.DetailsScreen
+import org.akkirrai.hibiki.feature.downloads.DownloadsScreen
 import org.akkirrai.hibiki.feature.home.HomeScreen
 import org.akkirrai.hibiki.feature.home.HomeViewModel
 import org.akkirrai.hibiki.feature.home.RecentUpdatesScreen
@@ -292,6 +293,11 @@ private fun HibikiNavHost(
                             navController.navigate(AnimeNavType.createDetailsRoute(anime))
                         }
                     },
+                    onOpenDownloads = {
+                        navController.runIfCurrent(backStackEntry) {
+                            navController.navigate(AnimeNavType.DOWNLOADS_ROUTE)
+                        }
+                    },
                     isActive = isTopLevelDestination && currentTopLevel == TopLevelDestination.Library,
                     bottomContentPadding = topLevelBottomContentPadding,
                     sharedTransitionScope = sharedTransitionScope,
@@ -358,6 +364,29 @@ private fun HibikiNavHost(
                         navController.runIfCurrent(backStackEntry, onCheckForUpdates)
                     },
                     onConfigureNotifications = onConfigureNotifications,
+                )
+            }
+        }
+        composable(
+            route = AnimeNavType.DOWNLOADS_ROUTE,
+            enterTransition = { appScreenEnterTransition() },
+            exitTransition = { appScreenExitTransition() },
+            popEnterTransition = { appScreenPopEnterTransition() },
+            popExitTransition = { appScreenPopExitTransition() },
+        ) { backStackEntry ->
+            DestinationScreenContainer {
+                DownloadsScreen(
+                    onBackClick = {
+                        navController.runIfCurrent(backStackEntry) { navController.navigateUp() }
+                    },
+                    onOpenSource = { source ->
+                        navController.runIfCurrent(backStackEntry) {
+                            navController.navigateSingleTopTo(
+                                AnimeNavType.createEpisodesRoute(source, downloadMode = true)
+                            )
+                        }
+                    },
+                    modifier = screenModifier,
                 )
             }
         }

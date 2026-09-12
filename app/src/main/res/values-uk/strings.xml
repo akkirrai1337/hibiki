@@ -81,6 +81,13 @@
     <string name="library_empty_on_hold">Тут з’являться відкладені аніме.</string>
     <string name="library_empty_favorite">Тут з’являться улюблені аніме.</string>
     <string name="library_empty_saved">Тут з’являться аніме із завантаженими серіями.</string>
+
+    <string name="downloads_title">Завантаження</string>
+    <string name="downloads_entry_content_description">Завантаження</string>
+    <string name="downloads_empty_title">Поки немає завантажень</string>
+    <string name="downloads_empty_body">Завантажені серії з’являться тут.</string>
+    <string name="downloads_episode_count">%1$d завантажено</string>
+    <string name="downloads_active_count">%1$d завантажується</string>
     <string name="search_placeholder">Пошук аніме</string>
     <string name="search_filters_title">Фільтри</string>
     <string name="search_filters_unavailable">Фільтри тимчасово недоступні.</string>

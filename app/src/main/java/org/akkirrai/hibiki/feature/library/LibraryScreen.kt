@@ -96,6 +96,7 @@ import org.akkirrai.hibiki.core.source.LibraryEntry
 fun LibraryScreen(
     onAnimeClick: (Anime) -> Unit,
     isActive: Boolean,
+    onOpenDownloads: () -> Unit = {},
     modifier: Modifier = Modifier,
     bottomContentPadding: Dp = UiDimens.ScreenPadding,
     sharedTransitionScope: SharedTransitionScope? = null,
@@ -144,17 +145,31 @@ fun LibraryScreen(
                 modifier = Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                AppSearchTopBar(
-                    query = state.searchQuery,
-                    onQueryChange = viewModel::onSearchQueryChange,
-                    onClear = viewModel::clearSearch,
-                    showFilter = false,
-                    modifier = Modifier.padding(
-                        top = UiDimens.SearchBarTopPadding,
-                        start = UiDimens.ScreenPadding,
-                        end = UiDimens.ScreenPadding,
-                    ),
-                )
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(
+                            top = UiDimens.SearchBarTopPadding,
+                            start = UiDimens.ScreenPadding,
+                            end = UiDimens.ScreenPadding,
+                        ),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    AppSearchTopBar(
+                        query = state.searchQuery,
+                        onQueryChange = viewModel::onSearchQueryChange,
+                        onClear = viewModel::clearSearch,
+                        showFilter = false,
+                        modifier = Modifier.weight(1f),
+                    )
+                    IconButton(onClick = onOpenDownloads) {
+                        Icon(
+                            imageVector = Icons.Outlined.Download,
+                            contentDescription = stringResource(R.string.downloads_entry_content_description),
+                        )
+                    }
+                }
                 LibraryCategoryChips(
                     selectedCategory = state.selectedCategory,
                     categories = state.orderedCategories,

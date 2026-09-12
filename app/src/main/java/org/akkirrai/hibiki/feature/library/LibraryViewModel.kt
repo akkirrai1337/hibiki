@@ -259,12 +259,12 @@ data class LibraryUiState(
 
 }
 
-private fun orderedLibraryCategories(entries: List<LibraryEntry>): List<LibraryCategory> {
-    return if (entries.any { it.category == LibraryCategory.Saved }) {
-        listOf(LibraryCategory.Saved) + LibraryCategory.entries.filter { it != LibraryCategory.Saved }
-    } else {
-        LibraryCategory.entries.toList()
-    }
+/**
+ * "Saved" is a download marker, not a status the user picks -- see the dedicated Downloads
+ * screen for that. It stays out of the Library filter chips entirely.
+ */
+private fun orderedLibraryCategories(@Suppress("UNUSED_PARAMETER") entries: List<LibraryEntry>): List<LibraryCategory> {
+    return LibraryCategory.entries.filter { it != LibraryCategory.Saved }
 }
 
 private const val LOCAL_SYNC_THROTTLE_MS = 2_000L

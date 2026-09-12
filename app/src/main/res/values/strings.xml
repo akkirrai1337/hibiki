@@ -85,6 +85,13 @@
     <string name="library_empty_favorite">Favorite titles will appear here.</string>
     <string name="library_empty_saved">Titles with downloaded episodes will appear here.</string>
 
+    <string name="downloads_title">Downloads</string>
+    <string name="downloads_entry_content_description">Downloads</string>
+    <string name="downloads_empty_title">No downloads yet</string>
+    <string name="downloads_empty_body">Episodes you download will appear here.</string>
+    <string name="downloads_episode_count">%1$d downloaded</string>
+    <string name="downloads_active_count">%1$d loading</string>
+
     <string name="search_placeholder">Search anime</string>
     <string name="search_filters_title">Filters</string>
     <string name="search_filters_unavailable">Filters are temporarily unavailable.</string>
