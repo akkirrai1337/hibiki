@@ -3,6 +3,7 @@ package org.akkirrai.hibiki.app.di
 import android.content.Context
 import org.akkirrai.hibiki.HibikiApplication
 import org.akkirrai.hibiki.core.download.OfflineDownloadRepository
+import org.akkirrai.hibiki.core.log.AppLogger
 import org.akkirrai.hibiki.core.profile.LocalProfileRepository
 import org.akkirrai.beakokit.metadata.ExternalMetadataService
 import org.akkirrai.hibiki.core.metadata.PreferencesExternalMetadataStore
@@ -27,7 +28,11 @@ class HibikiDependencies(
     /** One service for the whole app: it owns per-provider request queues and a cache, and two of
      * them would pace each other's requests wrongly and race on the same store. */
     val externalMetadata: ExternalMetadataService =
-        ExternalMetadataService(parserClient, PreferencesExternalMetadataStore(appContext))
+        ExternalMetadataService(
+            parserClient,
+            PreferencesExternalMetadataStore(appContext),
+            log = { message -> AppLogger.d("ExternalMetadata", message) },
+        )
 
     fun animeSearchRepository(): AnimeSearchRepository = AnimeSearchRepository(
         context = appContext,

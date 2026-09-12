@@ -54,7 +54,13 @@ class AnimeSearchRepository(
     // Built here rather than injected: everything it needs (the shared client, the app's own
     // preferences) is already on this repository, and nothing else in the app describes a title.
     private val metadataService = metadataService
-        ?: appContext?.let { ExternalMetadataService(client, PreferencesExternalMetadataStore(it)) }
+        ?: appContext?.let {
+            ExternalMetadataService(
+                client,
+                PreferencesExternalMetadataStore(it),
+                log = { message -> AppLogger.d("ExternalMetadata", message) },
+            )
+        }
     // Background matching outlives the request that started it on purpose: the screen has painted,
     // and what this fills in is for the next visit. Cancelled with the repository.
     private val metadataScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -416,12 +422,29 @@ class AnimeSearchRepository(
     private suspend fun describeAll(source: AnimeSourceRuntime, titles: List<AnimeTitle>): List<AnimeTitle> {
         val service = metadataService ?: return titles
         val order = providerOrderFor(source)
-        if (order.isEmpty() || titles.isEmpty()) return titles
+        if (order.isEmpty()) {
+            if (titles.isNotEmpty()) {
+                AppLogger.d(
+                    TAG,
+                    "describeAll: source=${source.descriptor.id.value} skipped, provider order is empty " +
+                        "(useExternalMetadata=${source.descriptor.info.useExternalMetadata}, " +
+                        "userEnabled=${appPreferences?.state?.value?.externalMetadataEnabled})",
+                )
+            }
+            return titles
+        }
+        if (titles.isEmpty()) return titles
 
         val cached = titles.map { service.cachedMetadataFor(it.id, order) }
-        titles.filterIndexed { index, _ -> cached[index] == null }
-            .takeIf(List<AnimeTitle>::isNotEmpty)
-            ?.let { missing -> warmMetadata(service, order, missing) }
+        val missing = titles.filterIndexed { index, _ -> cached[index] == null }
+        AppLogger.d(
+            TAG,
+            "describeAll: source=${source.descriptor.id.value} order=$order titles=${titles.size} " +
+                "alreadyDescribed=${titles.size - missing.size} warmingInBackground=${missing.size} " +
+                "(warmed cards only take effect on a later load of this same list)",
+        )
+        missing.takeIf(List<AnimeTitle>::isNotEmpty)
+            ?.let { warmMetadata(service, order, it) }
         return titles.mapIndexed { index, title ->
             cached[index]?.let { external -> mergeExternalMetadata(title, external) } ?: title
         }
@@ -435,6 +458,11 @@ class AnimeSearchRepository(
         metadataScope.launch {
             for (title in titles) {
                 runCatching { service.metadataFor(title, order) }
+                    .onSuccess { described ->
+                        if (described == null) {
+                            AppLogger.d(TAG, "warmMetadata: '${title.englishName ?: title.originalName}' — no provider had a match")
+                        }
+                    }
                     .onFailure { AppLogger.w(TAG, "warmMetadata: ${title.id} not described", it) }
             }
         }
