@@ -54,6 +54,7 @@ class HibikiDependencies(
         client = parserClient,
         sourceManager = sourceRuntimeManager,
         closeClientOnClose = false,
+        metadataService = externalMetadata,
     )
 
     fun catalogRepository(): CatalogRepository = CatalogRepository(

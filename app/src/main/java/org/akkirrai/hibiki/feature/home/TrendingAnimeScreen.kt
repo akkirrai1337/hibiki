@@ -62,6 +62,7 @@ import org.akkirrai.hibiki.core.design.component.anime.LibraryStatusPosterFooter
 import org.akkirrai.hibiki.core.design.component.anime.rememberLibraryStatusByAnimeId
 import org.akkirrai.hibiki.core.model.Anime
 import org.akkirrai.hibiki.core.model.buildCardMeta
+import org.akkirrai.hibiki.feature.catalog.rememberEntryOpener
 
 @Composable
 fun TrendingAnimeScreen(
@@ -90,6 +91,9 @@ fun TrendingAnimeScreen(
     }
     val listState = rememberLazyListState()
     val libraryStatusByAnimeId = rememberLibraryStatusByAnimeId()
+    // A card here may name an aggregator entry rather than a real source title (see
+    // rememberEntryOpener) -- resolve it before opening, same as Catalog/Home.
+    val openAnime = rememberEntryOpener(repository = viewModel.repository, onOpen = onAnimeClick)
 
     LaunchedEffect(listState) {
         snapshotFlow {
@@ -126,7 +130,7 @@ fun TrendingAnimeScreen(
                 TrendingAnimeList(
                     listState = listState,
                     listUiState = listUiState,
-                    onAnimeClick = onAnimeClick,
+                    onAnimeClick = openAnime,
                     libraryStatusByAnimeId = libraryStatusByAnimeId,
                     onRetryLoadMore = viewModel::loadMore,
                 )
@@ -306,7 +310,7 @@ private fun TrendingErrorState(
 }
 
 class TrendingAnimeViewModel(
-    private val repository: HomeRepository,
+    internal val repository: HomeRepository,
     private val context: Context,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(TrendingAnimeUiState(isLoading = true))

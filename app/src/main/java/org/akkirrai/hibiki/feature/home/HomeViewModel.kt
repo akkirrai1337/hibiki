@@ -31,7 +31,7 @@ import org.akkirrai.hibiki.core.model.SearchUiState
 import org.akkirrai.hibiki.core.network.NoInternetConnectionException
 
 class HomeViewModel(
-    private val repository: HomeRepository,
+    internal val repository: HomeRepository,
     context: Context,
 ) : ViewModel() {
     private val appContext = context.applicationContext

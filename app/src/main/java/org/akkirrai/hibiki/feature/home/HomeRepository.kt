@@ -9,12 +9,18 @@ import kotlin.random.Random
 import org.akkirrai.beakokit.api.SourceErrorKind
 import org.akkirrai.beakokit.api.SourceException
 import org.akkirrai.beakokit.api.SourceId
+import org.akkirrai.beakokit.metadata.ExternalCatalogRequest
+import org.akkirrai.beakokit.metadata.ExternalMetadataService
+import org.akkirrai.beakokit.metadata.MetadataReference
 import org.akkirrai.beakokit.model.AnimeSearchFilterCatalog
 import org.akkirrai.beakokit.model.AnimeSearchRequest
 import org.akkirrai.beakokit.model.AnimeSearchSort
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.app.settings.AppPreferences
 import org.akkirrai.hibiki.app.settings.LanguageMode
+import org.akkirrai.hibiki.core.metadata.AggregatorCatalogBrowser
+import org.akkirrai.hibiki.core.metadata.AggregatorEntryResolver
+import org.akkirrai.hibiki.core.metadata.decodeExternalEntryId
 import org.akkirrai.hibiki.core.model.Anime
 import org.akkirrai.hibiki.core.model.AnimeSearchFilters
 import org.akkirrai.hibiki.core.log.AppLogger
@@ -33,7 +39,10 @@ class HomeRepository(
     private val client: HttpClient = AndroidHttpClientFactory.create(),
     sourceManager: AnimeSourceRuntimeManager? = null,
     closeClientOnClose: Boolean = true,
-) {
+    /** Shared with the rest of the app - see HibikiDependencies. Absent only on the standalone paths
+     * that build this repository on their own, where an aggregator catalog is simply not offered. */
+    private val metadataService: ExternalMetadataService? = null,
+) : AggregatorEntryResolver {
     @Volatile
     private var cachedHomeContent: CachedHomeContent? = null
 
@@ -128,7 +137,15 @@ class HomeRepository(
                 0
             }
             AppLogger.d(TAG, "loadHomeState: cache miss, calling getCatalog(limit=$HOME_TRENDING_WINDOW_SIZE, offset=$trendingOffset, lang=$languageKey)")
-            val catalog = retryOnColdStartNetworkFailure {
+            val aggregatorCatalog = AggregatorCatalogBrowser.browse(
+                service = metadataService,
+                order = AggregatorCatalogBrowser.providerOrder(appPreferences, source.descriptor),
+                mode = ExternalCatalogRequest.Mode.POPULAR,
+                offset = aggregatorTrendingOffsetForSeed(selectionSeed),
+                limit = HOME_TRENDING_WINDOW_SIZE,
+                preferEnglish = preferEnglish(),
+            )
+            val catalog = aggregatorCatalog ?: retryOnColdStartNetworkFailure {
                 searchRepository.search(
                     AnimeSearchRequest(
                         limit = HOME_TRENDING_WINDOW_SIZE,
@@ -330,6 +347,20 @@ class HomeRepository(
         filter: TrendingFilter = TrendingFilter.All,
     ): List<Anime> {
         AppLogger.d(TAG, "loadTrendingPage: offset=$offset, limit=$limit, filter=$filter")
+        if (filter == TrendingFilter.All) {
+            val aggregatorCatalog = AggregatorCatalogBrowser.browse(
+                service = metadataService,
+                order = AggregatorCatalogBrowser.providerOrder(appPreferences, currentSource().descriptor),
+                mode = ExternalCatalogRequest.Mode.POPULAR,
+                offset = offset,
+                limit = limit,
+                preferEnglish = preferEnglish(),
+            )
+            if (aggregatorCatalog != null) {
+                AppLogger.d(TAG, "loadTrendingPage: got ${aggregatorCatalog.size} items from aggregator")
+                return aggregatorCatalog
+            }
+        }
         val catalog = searchRepository.search(
             AnimeSearchRequest(
                 limit = limit,
@@ -364,6 +395,42 @@ class HomeRepository(
     suspend fun enrichDescription(anime: Anime): Anime =
         searchRepository.getDetails(anime.id, anime)
 
+    /**
+     * Turns a card from the aggregator catalog into something playable: the source's own title for
+     * this entry. Null means the source does not have it, as far as its own search can tell.
+     */
+    override suspend fun resolveEntry(anime: Anime): Anime? {
+        val service = metadataService ?: return null
+        val (provider, externalId) = decodeExternalEntryId(anime.id) ?: return anime
+        val entry = service.entryFor(MetadataReference(provider, externalId)) ?: return null
+        val sourceId = sourceManager.selectedId
+        val resolved = service.resolveSourceTitle(sourceId.value, entry) { query ->
+            runCatching { sourceManager.current().search(query) }.getOrNull()
+        } ?: return null
+        return searchRepository.getDetails(
+            resolved.titleId,
+            anime.copy(id = resolved.titleId),
+            requireSourceDetails = true,
+        )
+    }
+
+    /** Binds an entry to a title of this source by hand, from the resolution sheet, and opens it. */
+    override suspend fun bindEntry(anime: Anime, titleId: String): Anime? {
+        val service = metadataService ?: return null
+        val (provider, externalId) = decodeExternalEntryId(anime.id) ?: return null
+        val entry = service.entryFor(MetadataReference(provider, externalId)) ?: return null
+        service.setManualSourceTitle(sourceManager.selectedId.value, titleId, entry)
+        return searchRepository.getDetails(
+            titleId,
+            anime.copy(id = titleId),
+            requireSourceDetails = true,
+        )
+    }
+
+    /** The source's own results for a query, for that sheet to choose from. */
+    override suspend fun searchSourceTitles(query: String): List<Anime> =
+        searchRepository.search(AnimeSearchRequest(query = query, limit = 20))
+
     private fun String.toSearchSort(): AnimeSearchSort {
         return when (this) {
             "top" -> AnimeSearchSort.RATING
@@ -397,6 +464,9 @@ class HomeRepository(
         )
     }
 
+    private fun aggregatorTrendingOffsetForSeed(selectionSeed: Long): Int =
+        Random(selectionSeed).nextInt(0, AGGREGATOR_TOP_N - HOME_TRENDING_WINDOW_SIZE + 1)
+
     private companion object {
         const val TAG = "HomeRepository"
         const val HOME_SECTION_LIMIT = 12
@@ -404,6 +474,7 @@ class HomeRepository(
         const val HOME_FULL_SECTION_LIMIT = 100
         const val HOME_TRENDING_WINDOW_SIZE = 24
         const val HOME_TRENDING_MAX_OFFSET_EXCLUSIVE = 201
+        const val AGGREGATOR_TOP_N = 100
         const val FEATURED_COUNT = 5
         const val FEATURED_ROTATION_SEED_SALT = 0x51A7L
         const val TRENDING_ROTATION_SEED_SALT = 0x7E4DL

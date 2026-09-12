@@ -38,6 +38,7 @@ import kotlinx.coroutines.launch
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.core.design.component.AppModalBottomSheet
 import org.akkirrai.hibiki.core.design.component.anime.PosterImage
+import org.akkirrai.hibiki.core.metadata.AggregatorEntryResolver
 import org.akkirrai.hibiki.core.metadata.decodeExternalEntryId
 import org.akkirrai.hibiki.core.model.Anime
 
@@ -56,7 +57,7 @@ import org.akkirrai.hibiki.core.model.Anime
  */
 @Composable
 internal fun rememberEntryOpener(
-    repository: CatalogRepository,
+    repository: AggregatorEntryResolver,
     onOpen: (Anime) -> Unit,
 ): (Anime) -> Unit {
     var resolving by remember { mutableStateOf<Anime?>(null) }
@@ -117,7 +118,7 @@ private fun ResolvingDialog() {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ManualResolutionSheet(
-    repository: CatalogRepository,
+    repository: AggregatorEntryResolver,
     entry: Anime,
     onDismiss: () -> Unit,
     onPicked: (Anime) -> Unit,

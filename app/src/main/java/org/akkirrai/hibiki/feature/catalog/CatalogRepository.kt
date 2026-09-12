@@ -10,13 +10,11 @@ import org.akkirrai.beakokit.model.AnimeSearchSort
 import org.akkirrai.beakokit.metadata.ExternalCatalogRequest
 import org.akkirrai.beakokit.metadata.ExternalMetadataService
 import org.akkirrai.hibiki.app.settings.AppPreferences
-import org.akkirrai.beakokit.metadata.ExternalMetadataPreferences
 import org.akkirrai.beakokit.metadata.MetadataProviderId
 import org.akkirrai.beakokit.metadata.MetadataReference
-import org.akkirrai.beakokit.metadata.canBrowseProviders
-import org.akkirrai.beakokit.metadata.metadataProviderOrder
+import org.akkirrai.hibiki.core.metadata.AggregatorCatalogBrowser
+import org.akkirrai.hibiki.core.metadata.AggregatorEntryResolver
 import org.akkirrai.hibiki.core.metadata.decodeExternalEntryId
-import org.akkirrai.hibiki.core.metadata.toCatalogAnime
 import org.akkirrai.hibiki.core.model.Anime
 import org.akkirrai.hibiki.core.model.AnimeSearchFilters
 import org.akkirrai.hibiki.core.network.AndroidHttpClientFactory
@@ -32,7 +30,7 @@ class CatalogRepository(
     /** Shared with the rest of the app - see HibikiDependencies. Absent only on the standalone paths
      * that build this repository on their own, where an aggregator catalog is simply not offered. */
     private val metadataService: ExternalMetadataService? = null,
-) {
+) : AggregatorEntryResolver {
     private val appContext = context.applicationContext
     private val appPreferences = AppPreferences(appContext)
     private val sourceManager = sourceManager ?: AnimeSourceRuntimeManager(appContext, client)
@@ -124,28 +122,24 @@ class CatalogRepository(
      * mode keeps the source's own catalog and this returns null for it.
      */
     suspend fun loadAggregatorPage(page: Int, sort: CatalogSort): CatalogPage? {
-        val service = metadataService ?: return null
         val order = providerOrder() ?: return null
-        if (!canBrowseProviders(order)) return null
         val mode = when (sort) {
             CatalogSort.Popular -> ExternalCatalogRequest.Mode.POPULAR
             CatalogSort.Updated -> ExternalCatalogRequest.Mode.TRENDING
             CatalogSort.Alphabetical -> return null
         }
         val pageIndex = page.coerceAtLeast(1)
-        val browsed = service.browse(
-            ExternalCatalogRequest(
-                mode = mode,
-                offset = (pageIndex - 1) * CATALOG_PAGE_SIZE,
-                limit = CATALOG_PAGE_SIZE,
-            ),
-            order,
-        )
-        val entries = browsed.first
+        val preferEnglish = searchRepository.prefersEnglishTitles()
         // A provider outage or an exhausted/unsupported feed must not become a successful empty
         // screen. Returning null activates the existing source-catalog fallback in the ViewModel.
-        if (entries.isEmpty()) return null
-        val preferEnglish = searchRepository.prefersEnglishTitles()
+        val entries = AggregatorCatalogBrowser.browse(
+            service = metadataService,
+            order = order,
+            mode = mode,
+            offset = (pageIndex - 1) * CATALOG_PAGE_SIZE,
+            limit = CATALOG_PAGE_SIZE,
+            preferEnglish = preferEnglish,
+        ) ?: return null
         return CatalogPage(
             title = "",
             description = null,
@@ -157,7 +151,7 @@ class CatalogRepository(
             // which loaded the other catalog, which flipped it back: an endless reload (seen live on
             // Anichi with Kitsu metadata). Null instead keeps whatever the source's own page said.
             filterCatalog = null,
-            items = entries.map { CatalogAnimeCard(it.toCatalogAnime(preferEnglish)) },
+            items = entries.map { CatalogAnimeCard(it) },
             currentPage = pageIndex,
             canLoadMore = entries.size >= CATALOG_PAGE_SIZE,
         )
@@ -169,7 +163,7 @@ class CatalogRepository(
      * Null means the source does not have it, as far as its own search can tell - the screen says so
      * and offers to look for it by hand, rather than opening a title page that has no episodes.
      */
-    suspend fun resolveEntry(anime: Anime): Anime? {
+    override suspend fun resolveEntry(anime: Anime): Anime? {
         val service = metadataService ?: return null
         val (provider, externalId) = decodeExternalEntryId(anime.id) ?: return anime
         val entry = service.entryFor(MetadataReference(provider, externalId)) ?: return null
@@ -185,7 +179,7 @@ class CatalogRepository(
     }
 
     /** Binds an entry to a title of this source by hand, from the resolution sheet, and opens it. */
-    suspend fun bindEntry(anime: Anime, titleId: String): Anime? {
+    override suspend fun bindEntry(anime: Anime, titleId: String): Anime? {
         val service = metadataService ?: return null
         val (provider, externalId) = decodeExternalEntryId(anime.id) ?: return null
         val entry = service.entryFor(MetadataReference(provider, externalId)) ?: return null
@@ -198,25 +192,12 @@ class CatalogRepository(
     }
 
     /** The source's own results for a query, for that sheet to choose from. */
-    suspend fun searchSourceTitles(query: String): List<Anime> =
+    override suspend fun searchSourceTitles(query: String): List<Anime> =
         searchRepository.search(AnimeSearchRequest(query = query, limit = 20))
 
     /** Which providers may answer for the current source, or null when none may. */
-    private fun providerOrder(): List<MetadataProviderId>? {
-        val preferences = appPreferences.state.value
-        val descriptor = sourceManager.current().descriptor
-        val order = metadataProviderOrder(
-            ExternalMetadataPreferences(
-                enabled = preferences.externalMetadataEnabled,
-                overrides = preferences.externalMetadataOverrides,
-                provider = preferences.externalMetadataProvider,
-                fallbackEnabled = preferences.externalMetadataFallback,
-            ),
-            descriptor.id.value,
-            descriptor.info.useExternalMetadata,
-        )
-        return order.takeIf { it.isNotEmpty() }
-    }
+    private fun providerOrder(): List<MetadataProviderId>? =
+        AggregatorCatalogBrowser.providerOrder(appPreferences, sourceManager.current().descriptor)
 
     suspend fun enrichDescription(anime: Anime): Anime =
         searchRepository.getDetails(anime.id, anime)

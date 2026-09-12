@@ -139,6 +139,7 @@ import org.akkirrai.hibiki.core.model.SearchUiState
 import org.akkirrai.hibiki.core.source.AnimeSourceRegistry
 import org.akkirrai.hibiki.core.model.buildCardMeta
 import org.akkirrai.hibiki.app.settings.LocalAppPreferencesState
+import org.akkirrai.hibiki.feature.catalog.rememberEntryOpener
 
 @OptIn(
     ExperimentalMaterial3Api::class,
@@ -189,6 +190,10 @@ fun HomeScreen(
     // tab and back) -- rememberSaveable keeps it, while still resetting to the top when the
     // active source (and so the whole feed) changes.
     val homeListState = rememberSaveable(selectedSourceId, saver = LazyListState.Saver) { LazyListState() }
+    // Featured/trending cards may name an aggregator entry rather than a real source title (see
+    // rememberEntryOpener) -- resolve it before opening. Continue-watching/recently-watched
+    // never carry aggregator ids, so they keep using onAnimeClick directly.
+    val openAggregatorEntry = rememberEntryOpener(repository = viewModel.repository, onOpen = onAnimeClick)
 
     LaunchedEffect(
         homeListState,
@@ -307,6 +312,7 @@ fun HomeScreen(
                                 isTrendingLoadingMore = state.isTrendingLoadingMore,
                                 isActive = isActive,
                                 onAnimeClick = onAnimeClick,
+                                onEntryClick = openAggregatorEntry,
                                 metaText = { anime -> buildHomeMeta(anime, announcementLabel, movieLabel) },
                                 posterFooterContent = { anime ->
                                     libraryStatusByAnimeId[anime.id]?.let { category ->
@@ -364,6 +370,7 @@ private fun LazyListScope.homeFeedContent(
     isTrendingLoadingMore: Boolean,
     isActive: Boolean,
     onAnimeClick: (Anime) -> Unit,
+    onEntryClick: (Anime) -> Unit,
     metaText: @Composable (Anime) -> String,
     posterFooterContent: @Composable (Anime) -> Unit,
     sharedCardModifier: @Composable (Anime) -> Modifier,
@@ -373,7 +380,7 @@ private fun LazyListScope.homeFeedContent(
         if (featuredAnime.isNotEmpty()) {
             FeaturedCarousel(
                 items = featuredAnime,
-                onAnimeClick = onAnimeClick,
+                onAnimeClick = onEntryClick,
                 autoAdvanceEnabled = isActive,
             )
         }
@@ -400,7 +407,7 @@ private fun LazyListScope.homeFeedContent(
     verticalAnimeListContent(
         items = trending,
         metaText = metaText,
-        onAnimeClick = onAnimeClick,
+        onAnimeClick = onEntryClick,
         modifier = Modifier.padding(horizontal = UiDimens.ScreenPadding),
         posterFooterContent = posterFooterContent,
         sharedCardModifier = sharedCardModifier,
