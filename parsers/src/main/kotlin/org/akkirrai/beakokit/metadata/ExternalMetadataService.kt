@@ -51,10 +51,11 @@ class ExternalMetadataService(
      * source's own metadata.
      */
     suspend fun metadataFor(anime: AnimeTitle, order: List<MetadataProviderId>): ExternalMetadata? {
+        val effectiveOrder = displayOrder(anime.id, order)
         // A provider that already has *anything* on record for this title - a match, or a still-fresh
         // "no match" - is settled and must not be re-guessed by a live search in the second pass below.
         val settled = mutableSetOf<MetadataProviderId>()
-        for (provider in order) {
+        for (provider in effectiveOrder) {
             val recorded = runCatching { recordedMetadataFor(anime, provider) }
                 .onFailure { log("metadataFor: provider=$provider threw for '${anime.englishName ?: anime.originalName}': ${it.message}") }
                 .getOrNull() ?: RecordedResult.Unrecorded
@@ -62,7 +63,7 @@ class ExternalMetadataService(
             settled += provider
             (recorded as? RecordedResult.Found)?.let { return it.media }
         }
-        for (provider in order) {
+        for (provider in effectiveOrder) {
             if (provider in settled) continue
             val media = runCatching { liveSearchMetadataFor(anime, provider) }
                 .onFailure { log("metadataFor: provider=$provider threw for '${anime.englishName ?: anime.originalName}': ${it.message}") }
@@ -91,7 +92,7 @@ class ExternalMetadataService(
      * at roughly one a second, and the screen would finish painting long before they returned.
      */
     fun cachedMetadataFor(titleId: String, order: List<MetadataProviderId>): ExternalMetadata? {
-        for (provider in order) {
+        for (provider in displayOrder(titleId, order)) {
             val externalId = store.readMatch(titleId, provider)?.externalId ?: continue
             store.readMedia(provider, externalId)?.media?.let { return it }
         }
@@ -103,7 +104,7 @@ class ExternalMetadataService(
      * [order] with a usable binding, and whether the user set it by hand.
      */
     fun bindingFor(titleId: String, order: List<MetadataProviderId>): MetadataMatchRecord? {
-        for (provider in order) {
+        for (provider in displayOrder(titleId, order)) {
             val record = store.readMatch(titleId, provider) ?: continue
             if (record.externalId != null) return record
         }
@@ -169,10 +170,10 @@ class ExternalMetadataService(
         entry: ExternalMetadata,
         searchSource: suspend (String) -> List<AnimeTitle>?,
     ): ResolvedSourceTitle? {
-        recordedSourceTitle(sourceId, entry.provider, entry.externalId)?.let { return it }
+        recordedSourceTitle(sourceId, entry.provider, entry.externalId)?.let { return it.displayedAs(entry) }
         for ((provider, externalId) in crossIdsOf(entry)) {
             recordedSourceTitle(sourceId, provider, externalId)?.let {
-                return it.copy(via = ResolvedVia.CROSS_PROVIDER)
+                return it.copy(via = ResolvedVia.CROSS_PROVIDER).displayedAs(entry)
             }
         }
 
@@ -193,7 +194,7 @@ class ExternalMetadataService(
             )
             recordCrossMatches(best.first, entry)
             store.clearUnresolved(sourceId, entry.provider, entry.externalId)
-            return ResolvedSourceTitle(best.first, confidence, manual = false, via = ResolvedVia.SEARCH)
+            return ResolvedSourceTitle(best.first, confidence, manual = false, via = ResolvedVia.SEARCH).displayedAs(entry)
         }
         // Every query ran and none of them found it.
         store.writeUnresolved(sourceId, entry.provider, entry.externalId, nowMillis())
@@ -208,6 +209,30 @@ class ExternalMetadataService(
         )
         recordCrossMatches(titleId, entry)
         store.clearUnresolved(sourceId, entry.provider, entry.externalId)
+        store.writeDisplayProvider(titleId, entry.provider)
+    }
+
+    /**
+     * Pins [entry]'s provider as the one this title is described by from now on: the card that was just
+     * opened is what the title page has to show. Without it the title page asks the preferred provider
+     * first, and a match already recorded there for the same show - Kitsu's, when the card came from
+     * AniList - brings a different poster than the one that was tapped. The entry itself is recorded as
+     * that provider's match too, so the title page reads it straight from the store.
+     */
+    private fun ResolvedSourceTitle.displayedAs(entry: ExternalMetadata): ResolvedSourceTitle {
+        store.writeMedia(entry, nowMillis())
+        store.writeMatch(
+            MetadataMatchRecord(titleId, entry.provider, entry.externalId, confidencePercent, manual = false, matchedAtMillis = nowMillis()),
+        )
+        store.writeDisplayProvider(titleId, entry.provider)
+        return this
+    }
+
+    /** [order] with the provider this title was last opened through moved to the front - see
+     * [displayedAs]. Only reorders: a provider the user has not allowed stays out. */
+    private fun displayOrder(titleId: String, order: List<MetadataProviderId>): List<MetadataProviderId> {
+        val pinned = store.readDisplayProvider(titleId)?.takeIf { it in order } ?: return order
+        return listOf(pinned) + order.filterNot { it == pinned }
     }
 
     private fun crossIdsOf(entry: ExternalMetadata): List<Pair<MetadataProviderId, Int>> = listOfNotNull(
@@ -234,6 +259,7 @@ class ExternalMetadataService(
         store.writeMatch(
             MetadataMatchRecord(titleId, provider, externalId, confidencePercent = null, manual = true, matchedAtMillis = nowMillis()),
         )
+        store.writeDisplayProvider(titleId, provider)
         return media
     }
 

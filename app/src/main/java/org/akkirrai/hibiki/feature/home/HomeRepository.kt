@@ -453,6 +453,7 @@ class HomeRepository(
             resolved.titleId,
             anime.copy(id = resolved.titleId),
             requireSourceDetails = true,
+            bypassCache = true,
         )
     }
 
@@ -466,6 +467,7 @@ class HomeRepository(
             titleId,
             anime.copy(id = titleId),
             requireSourceDetails = true,
+            bypassCache = true,
         )
     }
 

@@ -216,10 +216,13 @@ class AnimeSearchRepository(
         id: String,
         fallback: Anime,
         requireSourceDetails: Boolean = false,
+        /** Skips a cached copy - for a title just opened from an aggregator card, which may now be
+         * described by a different provider than the copy that was cached. */
+        bypassCache: Boolean = false,
     ): Anime {
         AppLogger.d(TAG, "getDetails(id=$id, fallback.title=${fallback.title.take(50)})")
         val cacheKey = detailsCacheKey(id)
-        getCachedDetails(cacheKey)?.let {
+        if (!bypassCache) getCachedDetails(cacheKey)?.let {
             AppLogger.d(TAG, "getDetails: cache hit for $cacheKey")
             return it
         }
@@ -227,10 +230,10 @@ class AnimeSearchRepository(
         val detailsMutex = detailsMutexes.computeIfAbsent(cacheKey) { Mutex() }
         return try {
             detailsMutex.withLock {
-                getCachedDetails(cacheKey)?.let { return@withLock it }
+                if (!bypassCache) getCachedDetails(cacheKey)?.let { return@withLock it }
 
                 detailsRequestSlots.withPermit {
-                    getCachedDetails(cacheKey)?.let { return@withPermit it }
+                    if (!bypassCache) getCachedDetails(cacheKey)?.let { return@withPermit it }
 
                     ensureInternetConnection()
 

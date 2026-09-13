@@ -22,6 +22,11 @@ interface ExternalMetadataStore {
 
     fun clearMatches(titleId: String)
 
+    /** The provider a title was last opened through - see [ExternalMetadataService.resolveSourceTitle]. */
+    fun readDisplayProvider(titleId: String): MetadataProviderId?
+
+    fun writeDisplayProvider(titleId: String, provider: MetadataProviderId)
+
     /** Every match pointing at one provider entry, within one source - the match table read
      * backwards, which is how a catalog browsed from the aggregator finds something to play. */
     fun matchesForEntry(sourceId: String, provider: MetadataProviderId, externalId: Int): List<MetadataMatchRecord>

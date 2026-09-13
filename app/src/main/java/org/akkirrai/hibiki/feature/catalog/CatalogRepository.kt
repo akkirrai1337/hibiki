@@ -182,6 +182,7 @@ class CatalogRepository(
             resolved.titleId,
             anime.copy(id = resolved.titleId),
             requireSourceDetails = true,
+            bypassCache = true,
         )
     }
 
@@ -195,6 +196,7 @@ class CatalogRepository(
             titleId,
             anime.copy(id = titleId),
             requireSourceDetails = true,
+            bypassCache = true,
         )
     }
 

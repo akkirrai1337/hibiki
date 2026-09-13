@@ -46,7 +46,15 @@ class PreferencesExternalMetadataStore(context: Context) : ExternalMetadataStore
     override fun clearMatches(titleId: String) {
         val editor = prefs.edit()
         MetadataProviderId.entries.forEach { provider -> editor.remove(matchKey(titleId, provider)) }
+        editor.remove(displayKey(titleId))
         editor.apply()
+    }
+
+    override fun readDisplayProvider(titleId: String): MetadataProviderId? =
+        prefs.getString(displayKey(titleId), null)?.let(MetadataProviderId::fromId)
+
+    override fun writeDisplayProvider(titleId: String, provider: MetadataProviderId) {
+        prefs.edit().putString(displayKey(titleId), provider.id).apply()
     }
 
     /**
@@ -135,11 +143,14 @@ class PreferencesExternalMetadataStore(context: Context) : ExternalMetadataStore
 
     private fun mediaKey(provider: MetadataProviderId, externalId: Int): String = "$MEDIA_PREFIX${provider.id}_$externalId"
 
+    private fun displayKey(titleId: String): String = "$DISPLAY_PREFIX$titleId"
+
     companion object {
         const val PREFS_NAME = "hibiki_external_metadata"
         private const val MATCH_PREFIX = "match_"
         private const val MEDIA_PREFIX = "media_"
         private const val UNRESOLVED_PREFIX = "unresolved_"
+        private const val DISPLAY_PREFIX = "display_"
         private const val MAX_MEDIA_ENTRIES = 500
     }
 }
