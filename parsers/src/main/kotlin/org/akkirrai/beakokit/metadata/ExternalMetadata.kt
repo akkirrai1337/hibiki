@@ -128,9 +128,38 @@ data class ExternalCatalogRequest(
     /** For [Mode.SEASON] - defaults to the season now when absent. */
     val season: AnimeSeason? = null,
     val seasonYear: Int? = null,
+    /** AniList genre names - see [ANILIST_GENRES]. */
+    val genres: List<String> = emptyList(),
+    val excludedGenres: List<String> = emptyList(),
+    /** The app's own type aliases ("tv", "movie", ...), not a provider's formats. */
+    val types: List<String> = emptyList(),
+    val excludedTypes: List<String> = emptyList(),
+    /** The app's own status aliases ("ongoing", "released", "announced"). */
+    val statuses: List<String> = emptyList(),
+    val excludedStatuses: List<String> = emptyList(),
+    val yearFrom: Int? = null,
+    val yearTo: Int? = null,
 ) {
     enum class Mode { TRENDING, POPULAR, SEASON }
+
+    val hasFilters: Boolean
+        get() = genres.isNotEmpty() || excludedGenres.isNotEmpty() || types.isNotEmpty() || excludedTypes.isNotEmpty() ||
+            statuses.isNotEmpty() || excludedStatuses.isNotEmpty() || yearFrom != null || yearTo != null
 }
+
+/** The providers whose catalog can be narrowed by genre, type, status and year. Kitsu's categories are
+ * a vocabulary of their own rather than AniList's genres, so a filtered catalog is AniList's alone
+ * instead of one whose genre filter quietly means something else on a fallback. */
+val FILTERABLE_CATALOG_PROVIDERS = listOf(MetadataProviderId.ANILIST)
+
+/** AniList's genre set, fixed on its side, minus Hentai - the catalog only ever asks for non-adult
+ * titles. Hardcoded rather than fetched: it has not changed in years, and a request per filter sheet
+ * would be one more thing that can fail before the sheet can open. */
+val ANILIST_GENRES = listOf(
+    "Action", "Adventure", "Comedy", "Drama", "Ecchi", "Fantasy", "Horror", "Mahou Shoujo", "Mecha",
+    "Music", "Mystery", "Psychological", "Romance", "Sci-Fi", "Slice of Life", "Sports", "Supernatural",
+    "Thriller",
+)
 
 enum class AnimeSeason { WINTER, SPRING, SUMMER, FALL;
 

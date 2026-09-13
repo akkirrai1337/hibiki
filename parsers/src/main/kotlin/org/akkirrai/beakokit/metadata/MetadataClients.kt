@@ -12,6 +12,8 @@ import io.ktor.http.HttpHeaders
 import io.ktor.http.contentType
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 
@@ -83,9 +85,9 @@ class AniListClient(private val client: HttpClient) {
         val seasonal = request.mode == ExternalCatalogRequest.Mode.SEASON
         val sort = if (request.mode == ExternalCatalogRequest.Mode.POPULAR) "POPULARITY_DESC" else "TRENDING_DESC"
         val data = graphql(
-            """query (${'$'}page: Int, ${'$'}perPage: Int, ${'$'}season: MediaSeason, ${'$'}seasonYear: Int) {
+            """query (${'$'}page: Int, ${'$'}perPage: Int, ${'$'}season: MediaSeason, ${'$'}seasonYear: Int, ${'$'}genreIn: [String], ${'$'}genreNotIn: [String], ${'$'}formatIn: [MediaFormat], ${'$'}formatNotIn: [MediaFormat], ${'$'}statusIn: [MediaStatus], ${'$'}statusNotIn: [MediaStatus], ${'$'}startAfter: FuzzyDateInt, ${'$'}startBefore: FuzzyDateInt) {
               Page(page: ${'$'}page, perPage: ${'$'}perPage) {
-                media(type: ANIME, sort: $sort, season: ${'$'}season, seasonYear: ${'$'}seasonYear, isAdult: false) { $ANILIST_MEDIA_FIELDS }
+                media(type: ANIME, sort: $sort, season: ${'$'}season, seasonYear: ${'$'}seasonYear, genre_in: ${'$'}genreIn, genre_not_in: ${'$'}genreNotIn, format_in: ${'$'}formatIn, format_not_in: ${'$'}formatNotIn, status_in: ${'$'}statusIn, status_not_in: ${'$'}statusNotIn, startDate_greater: ${'$'}startAfter, startDate_lesser: ${'$'}startBefore, isAdult: false) { $ANILIST_MEDIA_FIELDS }
               }
             }""",
             buildJsonObject {
@@ -97,6 +99,19 @@ class AniListClient(private val client: HttpClient) {
                     put("season", (request.season ?: nowSeason).name)
                     put("seasonYear", request.seasonYear ?: nowYear)
                 }
+                // Each of these is sent only when set, never as null: AniList answers a null
+                // `*_not_in` with a 500 and an all-null set with "Illegal operator and value
+                // combination", either of which would take down the unfiltered catalog too.
+                if (request.genres.isNotEmpty()) put("genreIn", JsonArray(request.genres.map(::JsonPrimitive)))
+                if (request.excludedGenres.isNotEmpty()) put("genreNotIn", JsonArray(request.excludedGenres.map(::JsonPrimitive)))
+                putEnumList("formatIn", request.types.flatMap(::aniListFormatsForType))
+                putEnumList("formatNotIn", request.excludedTypes.flatMap(::aniListFormatsForType))
+                putEnumList("statusIn", request.statuses.mapNotNull(::aniListStatusFor))
+                putEnumList("statusNotIn", request.excludedStatuses.mapNotNull(::aniListStatusFor))
+                // Start dates are YYYYMMDD integers, and one known only to the year is stored with a
+                // zero month and day - so the bounds sit just outside the range, not on its first day.
+                request.yearFrom?.let { put("startAfter", (it - 1) * 10_000 + 9_999) }
+                request.yearTo?.let { put("startBefore", (it + 1) * 10_000) }
             },
         ) ?: return null
         return data.page?.media.orEmpty().map { it.toExternalMetadata() }
@@ -214,6 +229,11 @@ class KitsuClient(private val client: HttpClient) {
     private companion object {
         const val BASE_URL = "https://kitsu.io/api/edge"
     }
+}
+
+/** Adds a list variable only when it has anything in it - see [AniListClient.browse] for why an unset one is left out rather than sent as null. */
+private fun kotlinx.serialization.json.JsonObjectBuilder.putEnumList(name: String, values: List<String>) {
+    if (values.isNotEmpty()) put(name, JsonArray(values.distinct().map(::JsonPrimitive)))
 }
 
 /** One search result: what the matcher compares, and what the merge would use if it is chosen. */

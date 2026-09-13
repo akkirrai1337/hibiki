@@ -8,6 +8,7 @@ import org.akkirrai.beakokit.metadata.canBrowseProviders
 import org.akkirrai.beakokit.metadata.metadataProviderOrder
 import org.akkirrai.hibiki.app.settings.AppPreferences
 import org.akkirrai.hibiki.core.model.Anime
+import org.akkirrai.hibiki.core.model.AnimeSearchFilters
 import org.akkirrai.hibiki.core.source.AnimeSourceDescriptor
 
 /**
@@ -39,13 +40,29 @@ object AggregatorCatalogBrowser {
         offset: Int,
         limit: Int,
         preferEnglish: Boolean,
+        filters: AnimeSearchFilters = AnimeSearchFilters(),
     ): List<Anime>? {
         val svc = service ?: return null
         val resolvedOrder = order ?: return null
         if (!canBrowseProviders(resolvedOrder)) return null
-        val entries = runCatching { svc.browse(ExternalCatalogRequest(mode, offset, limit), resolvedOrder) }
-            .getOrNull()?.first ?: return null
-        if (entries.isEmpty()) return null
+        val request = ExternalCatalogRequest(
+            mode = mode,
+            offset = offset,
+            limit = limit,
+            genres = filters.includedGenreAliases.toList(),
+            excludedGenres = filters.excludedGenreAliases.toList(),
+            types = listOfNotNull(filters.typeAlias),
+            statuses = listOfNotNull(filters.statusAlias),
+            yearFrom = filters.yearFrom,
+            yearTo = filters.yearTo,
+        )
+        val (entries, provider) = runCatching { svc.browse(request, resolvedOrder) }.getOrNull() ?: return null
+        // No provider answered at all: an outage, or none of the allowed ones can apply these filters.
+        if (provider == null) return null
+        // An empty unfiltered feed is a provider with nothing to page through, and the caller falls back
+        // to the source's own catalog. An empty filtered one is a real answer - nothing matches - and
+        // falling back there would show unfiltered titles as if they did.
+        if (entries.isEmpty() && !request.hasFilters) return null
         return entries.map { it.toCatalogAnime(preferEnglish) }
     }
 }

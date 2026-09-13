@@ -101,6 +101,12 @@ fun mapAniListFormat(format: String?): String? = format?.let(FORMAT_TO_TYPE::get
 
 fun mapAniListStatus(status: String?): String? = status?.let(MEDIA_STATUS_TO_STATUS::get)
 
+/** The reverse of [mapAniListFormat], for filtering: every AniList format the app files under [type]. */
+fun aniListFormatsForType(type: String): List<String> = FORMAT_TO_TYPE.filterValues { it == type }.keys.toList()
+
+/** The reverse of [mapAniListStatus], for filtering. */
+fun aniListStatusFor(status: String): String? = MEDIA_STATUS_TO_STATUS.entries.firstOrNull { it.value == status }?.key
+
 fun AniListMedia.toExternalMetadata() = ExternalMetadata(
     provider = MetadataProviderId.ANILIST,
     externalId = id,

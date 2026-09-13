@@ -745,7 +745,7 @@ class CatalogViewModel(
                 ensureInternetConnection()
                 // The aggregator's own catalog when the user asked for it and this source takes
                 // part; otherwise, and for a sort no aggregator can offer, the source's own.
-                repository.loadAggregatorPage(page = 1, sort = sort)
+                repository.loadAggregatorPage(page = 1, sort = sort, filters = filters)
                     ?.takeIf { query.isBlank() }
                     ?: repository.loadPage(
                         page = 1,
@@ -867,7 +867,7 @@ class CatalogViewModel(
             }
             runCatching {
                 ensureInternetConnection()
-                repository.loadAggregatorPage(page = nextPage, sort = state.selectedSort)
+                repository.loadAggregatorPage(page = nextPage, sort = state.selectedSort, filters = state.filters)
                     ?.takeIf { state.query.isBlank() }
                     ?: repository.loadPage(
                         page = nextPage,

@@ -134,7 +134,10 @@ class ExternalMetadataService(
         request: ExternalCatalogRequest,
         order: List<MetadataProviderId>,
     ): Pair<List<ExternalMetadata>, MetadataProviderId?> {
-        for (provider in order.filter { it in CATALOG_PROVIDERS }) {
+        val eligible = order.filter { provider ->
+            provider in CATALOG_PROVIDERS && (!request.hasFilters || provider in FILTERABLE_CATALOG_PROVIDERS)
+        }
+        for (provider in eligible) {
             val results = runCatching {
                 when (provider) {
                     MetadataProviderId.ANILIST -> anilist.browse(request)

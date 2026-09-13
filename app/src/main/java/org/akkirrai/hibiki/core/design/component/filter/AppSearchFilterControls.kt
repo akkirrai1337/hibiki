@@ -71,7 +71,7 @@ private val russianFilterOptionLabels = mapOf(
     "magic" to "Магия", "martial arts" to "Боевые искусства", "detective" to "Детектив", "isekai" to "Исекай",
     "seinen" to "Сэйнэн", "shounen" to "Сёнэн", "shoujo" to "Сёдзё", "josei" to "Дзёсэй",
     "kids" to "Детское", "parody" to "Пародия", "vampire" to "Вампиры", "demons" to "Демоны",
-    "game" to "Игры", "harem" to "Гарем", "reverse harem" to "Обратный гарем", "ecchi" to "Этти",
+    "game" to "Игры", "harem" to "Гарем", "reverse harem" to "Обратный гарем", "ecchi" to "Этти", "mahou shoujo" to "Махо-сёдзё",
 )
 
 @Composable

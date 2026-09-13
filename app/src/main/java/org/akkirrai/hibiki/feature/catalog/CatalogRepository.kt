@@ -8,6 +8,12 @@ import org.akkirrai.beakokit.model.AnimeSearchRequest
 import org.akkirrai.beakokit.model.AnimeSearchFilterCatalog
 import org.akkirrai.beakokit.model.AnimeSearchSort
 import org.akkirrai.beakokit.metadata.ExternalCatalogRequest
+import org.akkirrai.beakokit.metadata.ANILIST_GENRES
+import org.akkirrai.beakokit.metadata.FILTERABLE_CATALOG_PROVIDERS
+import org.akkirrai.beakokit.model.AnimeSearchFilter
+import org.akkirrai.beakokit.model.CatalogCapabilities
+import org.akkirrai.beakokit.model.CatalogFeature
+import org.akkirrai.beakokit.model.SearchFilterOption
 import org.akkirrai.beakokit.metadata.ExternalMetadataService
 import org.akkirrai.hibiki.app.settings.AppPreferences
 import org.akkirrai.beakokit.metadata.MetadataProviderId
@@ -121,7 +127,11 @@ class CatalogRepository(
      * Alphabetical has no aggregator equivalent - none of them sorts a catalog by name - so that
      * mode keeps the source's own catalog and this returns null for it.
      */
-    suspend fun loadAggregatorPage(page: Int, sort: CatalogSort): CatalogPage? {
+    suspend fun loadAggregatorPage(
+        page: Int,
+        sort: CatalogSort,
+        filters: AnimeSearchFilters = AnimeSearchFilters(),
+    ): CatalogPage? {
         val order = providerOrder() ?: return null
         val mode = when (sort) {
             CatalogSort.Popular -> ExternalCatalogRequest.Mode.POPULAR
@@ -139,18 +149,19 @@ class CatalogRepository(
             offset = (pageIndex - 1) * CATALOG_PAGE_SIZE,
             limit = CATALOG_PAGE_SIZE,
             preferEnglish = preferEnglish,
+            filters = filters,
         ) ?: return null
         return CatalogPage(
             title = "",
             description = null,
-            // No capability opinion at all - deliberately, not an empty catalog. `AnimeSearchFilterCatalog()`
-            // defaults to CatalogCapabilities.FULL, so answering with one told the screen "this catalog
-            // supports every sort and every filter" while the source's own page answered with the two
-            // sorts and no filters it really has. The screen corrects a selected sort that its catalog
-            // does not offer, so each page flipped that correction to the other catalog's fallback,
-            // which loaded the other catalog, which flipped it back: an endless reload (seen live on
-            // Anichi with Kitsu metadata). Null instead keeps whatever the source's own page said.
-            filterCatalog = null,
+            // Never `AnimeSearchFilterCatalog()`: that defaults to CatalogCapabilities.FULL, which told
+            // the screen this catalog offered every sort, while the source's own page offered fewer.
+            // The screen corrects a selected sort its catalog does not offer, so each page flipped the
+            // correction to the other catalog's fallback and loaded it, which flipped it back - an
+            // endless reload (seen live on Anichi with Kitsu metadata). The catalog below declares
+            // exactly the two modes this page can serve instead. Without a provider that can filter,
+            // there is no opinion to give, and null keeps whatever the source's own page said.
+            filterCatalog = aggregatorFilterCatalog().takeIf { order.any { it in FILTERABLE_CATALOG_PROVIDERS } },
             items = entries.map { CatalogAnimeCard(it) },
             currentPage = pageIndex,
             canLoadMore = entries.size >= CATALOG_PAGE_SIZE,
@@ -212,6 +223,30 @@ class CatalogRepository(
         const val CATALOG_PAGE_SIZE = 24
     }
 }
+
+/**
+ * What the aggregator's catalog can be narrowed by: AniList's own vocabulary, the same on every
+ * source, since it is AniList's list being filtered and not the source's. Sorts and features are
+ * exactly the two modes [CatalogRepository.loadAggregatorPage] serves - Popular and Updated.
+ */
+private fun aggregatorFilterCatalog(): AnimeSearchFilterCatalog = AnimeSearchFilterCatalog(
+    typeOptions = listOf("tv", "movie", "ova", "ona", "special").map { SearchFilterOption(it, it) },
+    statusOptions = listOf("ongoing" to "Ongoing", "released" to "Released", "announced" to "Announced")
+        .map { (id, title) -> SearchFilterOption(id, title) },
+    genreOptions = ANILIST_GENRES.map { SearchFilterOption(it, it) },
+    capabilities = CatalogCapabilities(
+        supportedSorts = setOf(AnimeSearchSort.RATING),
+        supportedFilters = setOf(
+            AnimeSearchFilter.TYPE,
+            AnimeSearchFilter.STATUS,
+            AnimeSearchFilter.INCLUDED_GENRES,
+            AnimeSearchFilter.EXCLUDED_GENRES,
+            AnimeSearchFilter.YEAR_RANGE,
+        ),
+        features = setOf(CatalogFeature.LATEST_RELEASES),
+        fallbackSort = AnimeSearchSort.RATING,
+    ),
+)
 
 data class CatalogPage(
     val title: String,
