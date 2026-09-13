@@ -26,4 +26,5 @@ data class HomeUiState(
     val searchFilterCatalog: AnimeSearchFilterCatalog? = null,
     val isSearchFilterCatalogLoading: Boolean = false,
     val searchFilters: AnimeSearchFilters = AnimeSearchFilters(),
+    val pendingCardMetadata: Set<String> = emptySet(),
 )

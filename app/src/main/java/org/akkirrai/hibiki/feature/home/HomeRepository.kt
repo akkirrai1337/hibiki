@@ -5,11 +5,11 @@ import io.ktor.client.HttpClient
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.StateFlow
 import kotlin.random.Random
 import org.akkirrai.beakokit.api.SourceErrorKind
 import org.akkirrai.beakokit.api.SourceException
 import org.akkirrai.beakokit.api.SourceId
-import org.akkirrai.beakokit.metadata.ExternalCatalogRequest
 import org.akkirrai.beakokit.metadata.ExternalMetadataService
 import org.akkirrai.beakokit.metadata.MetadataReference
 import org.akkirrai.beakokit.model.AnimeSearchFilterCatalog
@@ -18,7 +18,6 @@ import org.akkirrai.beakokit.model.AnimeSearchSort
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.app.settings.AppPreferences
 import org.akkirrai.hibiki.app.settings.LanguageMode
-import org.akkirrai.hibiki.core.metadata.AggregatorCatalogBrowser
 import org.akkirrai.hibiki.core.metadata.AggregatorEntryResolver
 import org.akkirrai.hibiki.core.metadata.decodeExternalEntryId
 import org.akkirrai.hibiki.core.model.Anime
@@ -60,28 +59,13 @@ class HomeRepository(
         client = client,
         sourceManager = this.sourceManager,
         closeClientOnClose = closeClientOnClose,
+        metadataService = metadataService,
     )
+    val cardMetadata: StateFlow<Map<String, Anime>> = searchRepository.cardMetadata
+    val pendingCardMetadata: StateFlow<Set<String>> = searchRepository.pendingCardMetadata
     private val watchStateRepository = WatchStateRepository(appContext)
     private val offlineTitleMetadataRepository = OfflineTitleMetadataRepository(appContext)
     private val libraryRepository = LibraryRepository(appContext)
-
-    /**
-     * Home content that survives a lost connection: only the rows the device already stores
-     * locally (continue watching, recently watched, both resolved through the offline title
-     * metadata and the library). The catalog rows are deliberately left empty - featured,
-     * trending and recently updated only exist once a source request has succeeded, and filling
-     * them with placeholders would show the user titles that are not in any source.
-     */
-    fun fallbackHomeState(): HomeUiState {
-        return HomeUiState(
-            featuredAnime = emptyList(),
-            continueAnime = loadStoredContinueAnime(),
-            recentlyWatched = loadRecentlyWatchedAnime().drop(1).take(RECENTLY_WATCHED_LIMIT),
-            popular = emptyList(),
-            trending = emptyList(),
-            recentlyUpdated = emptyList(),
-        )
-    }
 
     suspend fun refreshHomeState(): HomeUiState {
         AppLogger.d(TAG, "refreshHomeState: clearing cache")
@@ -137,15 +121,7 @@ class HomeRepository(
                 0
             }
             AppLogger.d(TAG, "loadHomeState: cache miss, calling getCatalog(limit=$HOME_TRENDING_WINDOW_SIZE, offset=$trendingOffset, lang=$languageKey)")
-            val aggregatorCatalog = AggregatorCatalogBrowser.browse(
-                service = metadataService,
-                order = AggregatorCatalogBrowser.providerOrder(appPreferences, source.descriptor),
-                mode = ExternalCatalogRequest.Mode.POPULAR,
-                offset = aggregatorTrendingOffsetForSeed(selectionSeed),
-                limit = HOME_TRENDING_WINDOW_SIZE,
-                preferEnglish = preferEnglish(),
-            )
-            val catalog = aggregatorCatalog ?: retryOnColdStartNetworkFailure {
+            val catalog = retryOnColdStartNetworkFailure {
                 searchRepository.search(
                     AnimeSearchRequest(
                         limit = HOME_TRENDING_WINDOW_SIZE,
@@ -216,7 +192,6 @@ class HomeRepository(
     ): List<Anime> {
         AppLogger.d(TAG, "search(query=$query, filters=$filters, limit=$limit, offset=$offset)")
         ensureInternetConnection()
-        aggregatorSearch(query, filters, limit, offset)?.let { return it }
         return searchRepository.search(
             AnimeSearchRequest(
                 query = query,
@@ -234,39 +209,7 @@ class HomeRepository(
     }
 
     suspend fun getSearchFilterCatalog(): AnimeSearchFilterCatalog {
-        // Search goes through the aggregator whenever this source is browsed from one (see
-        // aggregatorSearch), so the filters it offers have to be the aggregator's too.
-        val order = AggregatorCatalogBrowser.providerOrder(appPreferences, currentSource().descriptor)
-        if (order != null && AggregatorCatalogBrowser.canFilter(order)) return AggregatorCatalogBrowser.filterCatalog()
         return searchRepository.getSearchFilterCatalog()
-    }
-
-    /**
-     * Search through the aggregator when this source is browsed from one: the same entries, titles
-     * and posters as the aggregator catalog, each resolved to the source's own title only once it is
-     * opened. Null hands the search back to the source - no provider may answer for it, or none did
-     * (an outage) - so a search that cannot go through the aggregator still finds something.
-     */
-    private suspend fun aggregatorSearch(
-        query: String,
-        filters: AnimeSearchFilters,
-        limit: Int,
-        offset: Int,
-    ): List<Anime>? {
-        val order = AggregatorCatalogBrowser.providerOrder(appPreferences, currentSource().descriptor) ?: return null
-        // With no provider that can filter, the sheet was the source's, and its aliases mean nothing
-        // to an aggregator - that search stays with the source.
-        if (filters.hasActiveFilters() && !AggregatorCatalogBrowser.canFilter(order)) return null
-        return AggregatorCatalogBrowser.browseRange(
-            service = metadataService,
-            order = order,
-            mode = ExternalCatalogRequest.Mode.POPULAR,
-            offset = offset,
-            limit = limit,
-            preferEnglish = preferEnglish(),
-            filters = filters,
-            query = query,
-        )
     }
 
     fun close() {
@@ -290,11 +233,6 @@ class HomeRepository(
             AppLogger.w(TAG, "Continue title ${progress.titleId} is unavailable: ${error.message}")
             storedAnime
         }
-    }
-
-    private fun loadStoredContinueAnime(): Anime? {
-        val progress = watchStateRepository.getRecentTitleWatchState() ?: return null
-        return findStoredAnime(progress.titleId)
     }
 
     /** Mirrors the previous Home feed: the active title is featured above, not duplicated here. */
@@ -386,20 +324,6 @@ class HomeRepository(
         filter: TrendingFilter = TrendingFilter.All,
     ): List<Anime> {
         AppLogger.d(TAG, "loadTrendingPage: offset=$offset, limit=$limit, filter=$filter")
-        if (filter == TrendingFilter.All) {
-            val aggregatorCatalog = AggregatorCatalogBrowser.browse(
-                service = metadataService,
-                order = AggregatorCatalogBrowser.providerOrder(appPreferences, currentSource().descriptor),
-                mode = ExternalCatalogRequest.Mode.POPULAR,
-                offset = offset,
-                limit = limit,
-                preferEnglish = preferEnglish(),
-            )
-            if (aggregatorCatalog != null) {
-                AppLogger.d(TAG, "loadTrendingPage: got ${aggregatorCatalog.size} items from aggregator")
-                return aggregatorCatalog
-            }
-        }
         val catalog = searchRepository.search(
             AnimeSearchRequest(
                 limit = limit,
@@ -429,12 +353,6 @@ class HomeRepository(
             candidates.randomOrNull()?.let { return it }
         }
         return null
-    }
-
-    suspend fun enrichDescription(anime: Anime): Anime {
-        // An aggregator entry is not a title of the source yet, and already carries its description.
-        if (decodeExternalEntryId(anime.id) != null) return anime
-        return searchRepository.getDetails(anime.id, anime)
     }
 
     /**

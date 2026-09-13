@@ -79,9 +79,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.akkirrai.hibiki.R
+import org.akkirrai.hibiki.core.download.OfflineDownloadRepository
 import org.akkirrai.hibiki.app.di.hibikiDependencies
 import org.akkirrai.hibiki.core.network.NoInternetConnectionException
 import org.akkirrai.hibiki.core.network.hasActiveInternetConnection
@@ -116,6 +118,7 @@ import me.saket.cascade.rememberCascadeState
 fun CatalogScreen(
     onAnimeClick: (Anime) -> Unit,
     onOpenSources: () -> Unit = {},
+    onOpenDownloads: () -> Unit = {},
     modifier: Modifier = Modifier,
     bottomContentPadding: androidx.compose.ui.unit.Dp = 0.dp,
     sharedTransitionScope: SharedTransitionScope? = null,
@@ -127,8 +130,14 @@ fun CatalogScreen(
     val uiState = viewModel.uiState.collectAsState()
     val state = uiState.value
     val noSourcesInstalled = AnimeSourceRegistry.sources.isEmpty()
-    // A card from an aggregator catalog names an entry, not a title of this source, so opening one
-    // resolves it first - see rememberEntryOpener. An ordinary card goes straight through.
+    val context = LocalContext.current
+    val isOffline = state.errorMessage != null &&
+        state.errorMessage == stringResource(R.string.home_error_no_internet)
+    val hasOfflineDownloads = remember(isOffline) {
+        isOffline && OfflineDownloadRepository(context.applicationContext).getOfflineTitleIds().isNotEmpty()
+    }
+    // Current catalog pages are source-owned. The opener only supports a legacy in-memory
+    // aggregator entry while a screen is being recreated; new cards open directly.
     val openAnime = rememberEntryOpener(repository = viewModel.repository, onOpen = onAnimeClick)
     // Groups the fields the anime list actually renders behind one structurally-compared
     // snapshot, so pagination/list-affecting changes don't force LazyColumn to recompose
@@ -139,6 +148,7 @@ fun CatalogScreen(
             CatalogAnimeListUiState(
                 items = current.items.map { it.anime },
                 description = current.description,
+                pendingCardMetadata = current.pendingCardMetadata,
                 isLoadingMore = current.isLoadingMore,
                 loadMoreError = current.loadMoreError,
             )
@@ -178,9 +188,8 @@ fun CatalogScreen(
     // Default to showing the filter control while capabilities are still loading (unknown), so
     // it doesn't visibly pop in a moment after the screen appears -- only hide it once we
     // actually know the source has nothing to filter by.
-    // Hidden until the source has actually said it has filters. An aggregator page never reports
-    // capabilities (see CatalogRepository.loadAggregatorPage), so a catalog opened in that mode stays
-    // null for good - defaulting to shown offered a button whose sheet could only say "unavailable".
+    // Hidden until the source has actually said it has filters; otherwise the sheet could only say
+    // "unavailable".
     val showFilterControl = state.filterCatalog?.capabilities?.supportedFilters?.isNotEmpty() ?: false
 
     LaunchedEffect(availableSorts, state.selectedSort) {
@@ -221,6 +230,12 @@ fun CatalogScreen(
                         if (noSourcesInstalled) R.string.action_open_sources else R.string.search_retry,
                     ),
                     onActionClick = if (noSourcesInstalled) onOpenSources else { { viewModel.load() } },
+                    secondaryActionLabel = if (hasOfflineDownloads) {
+                        stringResource(R.string.action_open_downloads)
+                    } else {
+                        null
+                    },
+                    onSecondaryActionClick = onOpenDownloads.takeIf { hasOfflineDownloads },
                     icon = Icons.Outlined.WarningAmber,
                     iconTint = MaterialTheme.colorScheme.error,
                 )
@@ -258,9 +273,9 @@ fun CatalogScreen(
                         onAnimeClick = openAnime,
                         libraryStatusByAnimeId = libraryStatusByAnimeId,
                         onRetryLoadMore = viewModel::loadMore,
-                    sharedCardModifier = sharedCardModifier,
-                    sharedPosterModifier = sharedPosterModifier,
-                )
+                        sharedCardModifier = sharedCardModifier,
+                        sharedPosterModifier = sharedPosterModifier,
+                    )
                 }
             }
         }
@@ -335,6 +350,7 @@ fun CatalogScreen(
 private data class CatalogAnimeListUiState(
     val items: List<Anime>,
     val description: String?,
+    val pendingCardMetadata: Set<String>,
     val isLoadingMore: Boolean,
     val loadMoreError: String?,
 )
@@ -384,6 +400,7 @@ private fun CatalogAnimeListContent(
                     separator = " • ",
             ) },
             onAnimeClick = onAnimeClick,
+            metadataLoadingIds = listUiState.pendingCardMetadata,
             posterFooterContent = { anime ->
                 libraryStatusByAnimeId[anime.id]?.let { category ->
                     LibraryStatusPosterFooter(category)
@@ -689,6 +706,9 @@ class CatalogViewModel(
     private var searchJob: kotlinx.coroutines.Job? = null
 
     init {
+        observeCardMetadata(repository.cardMetadata)
+        observeCardMetadata(repository.recentCardMetadata)
+        observePendingCardMetadata()
         load(reason = "init")
         viewModelScope.launch {
             AppPreferences.animeSourceChanges.collect { source ->
@@ -710,6 +730,32 @@ class CatalogViewModel(
                     )
                 }
                 load(reason = "source-change")
+            }
+        }
+    }
+
+    private fun observePendingCardMetadata() {
+        viewModelScope.launch {
+            combine(repository.pendingCardMetadata, repository.pendingRecentCardMetadata) { catalog, recent ->
+                catalog + recent
+            }.collect { pending ->
+                _uiState.update { it.copy(pendingCardMetadata = pending) }
+            }
+        }
+    }
+
+    private fun observeCardMetadata(metadata: kotlinx.coroutines.flow.StateFlow<Map<String, Anime>>) {
+        viewModelScope.launch {
+            metadata.collect { updates ->
+                _uiState.update { state ->
+                    state.copy(
+                        items = state.items.map { card ->
+                            updates[card.anime.id]?.let { update ->
+                                card.copy(anime = update.copy(title = card.anime.title))
+                            } ?: card
+                        },
+                    )
+                }
             }
         }
     }
@@ -743,16 +789,13 @@ class CatalogViewModel(
             val refreshStartedAt = if (forceRefresh) SystemClock.elapsedRealtime() else 0L
             val result = runCatching {
                 ensureInternetConnection()
-                // The aggregator's own catalog when the user asked for it and this source takes
-                // part; otherwise, and for a sort no aggregator can offer, the source's own.
-                repository.loadAggregatorPage(page = 1, sort = sort, filters = filters, query = query)
-                    ?: repository.loadPage(
-                        page = 1,
-                        filters = filters,
-                        query = query,
-                        sort = sort,
-                        forceRefresh = forceRefresh,
-                    )
+                repository.loadPage(
+                    page = 1,
+                    filters = filters,
+                    query = query,
+                    sort = sort,
+                    forceRefresh = forceRefresh,
+                )
             }
             if (forceRefresh) {
                 delay((CATALOG_PULL_REFRESH_MIN_DURATION_MS -
@@ -767,6 +810,8 @@ class CatalogViewModel(
                     val known = knownDescriptions[card.anime.id] ?: return@map card
                     CatalogAnimeCard(card.anime.copy(description = known))
                 }
+                val metadata = repository.cardMetadata.value + repository.recentCardMetadata.value
+                val readyCards = withKnownDescriptions.withCardMetadata(metadata)
                 _uiState.update { state ->
                     state.copy(
                         isLoading = false,
@@ -777,14 +822,14 @@ class CatalogViewModel(
                         // these capabilities, so letting a page drop them turns the two catalogs into
                         // a loop that reloads each other's fallback sort forever.
                         filterCatalog = page.filterCatalog ?: state.filterCatalog,
-                        items = withKnownDescriptions,
+                        items = readyCards,
                         currentPage = page.currentPage,
                         canLoadMore = page.canLoadMore,
                     )
                 }
                 AppLogger.d(
                     CATALOG_TAG,
-                    "load ok reason=$reason page=${page.currentPage} items=${withKnownDescriptions.size} " +
+                    "load ok reason=$reason page=${page.currentPage} items=${readyCards.size} " +
                         "canLoadMore=${page.canLoadMore} caps=${page.filterCatalog?.capabilities}",
                 )
             }.onFailure { throwable ->
@@ -866,16 +911,18 @@ class CatalogViewModel(
             }
             runCatching {
                 ensureInternetConnection()
-                repository.loadAggregatorPage(page = nextPage, sort = state.selectedSort, filters = state.filters, query = state.query)
-                    ?: repository.loadPage(
-                        page = nextPage,
-                        filters = state.filters,
-                        query = state.query,
-                        sort = state.selectedSort,
-                    )
+                repository.loadPage(
+                    page = nextPage,
+                    filters = state.filters,
+                    query = state.query,
+                    sort = state.selectedSort,
+                )
             }.onSuccess { page ->
                 _uiState.update { current ->
-                    val merged = (current.items + page.items).distinctBy { it.anime.id }
+                    val metadata = repository.cardMetadata.value + repository.recentCardMetadata.value
+                    val merged = (current.items + page.items)
+                        .distinctBy { it.anime.id }
+                        .withCardMetadata(metadata)
                     current.copy(
                         isLoadingMore = false,
                         title = current.title,
@@ -895,6 +942,10 @@ class CatalogViewModel(
                 }
             }
         }
+    }
+
+    private fun List<CatalogAnimeCard>.withCardMetadata(metadata: Map<String, Anime>): List<CatalogAnimeCard> = map { card ->
+        metadata[card.anime.id]?.let { update -> card.copy(anime = update.copy(title = card.anime.title)) } ?: card
     }
 
     override fun onCleared() {
@@ -939,6 +990,7 @@ data class CatalogUiState(
     val isLoadingMore: Boolean = false,
     val errorMessage: String? = null,
     val loadMoreError: String? = null,
+    val pendingCardMetadata: Set<String> = emptySet(),
 )
 
 enum class CatalogSort(@androidx.annotation.StringRes val labelRes: Int) {

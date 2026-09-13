@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
@@ -49,6 +50,7 @@ import org.akkirrai.hibiki.core.model.buildCardMeta
 fun VerticalAnimeListItem(
     anime: Anime,
     metaText: String = anime.buildCardMeta(announcementLabel = ""),
+    metadataLoading: Boolean = false,
     onClick: () -> Unit,
     /** Only rows that own something removable pass this (the library's Saved category deletes a
      * title's downloads) - everywhere else a long press keeps doing nothing. */
@@ -87,27 +89,31 @@ fun VerticalAnimeListItem(
                 .clip(RoundedCornerShape(12.dp))
                 .background(MaterialTheme.colorScheme.surfaceContainer),
         ) {
-            PosterImage(
-                primaryUrl = anime.posterUrl,
-                fallbackUrl = anime.posterFallbackUrl,
-                contentDescription = anime.title,
-                modifier = Modifier.fillMaxWidth(),
-                placeholder = {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .aspectRatio(2f / 3f)
-                            .background(MaterialTheme.colorScheme.surfaceContainer),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Icon(
-                            imageVector = Icons.Outlined.Image,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                },
-            )
+            if (metadataLoading) {
+                AppCenteredLoading(modifier = Modifier.fillMaxSize())
+            } else {
+                PosterImage(
+                    primaryUrl = anime.posterUrl,
+                    fallbackUrl = anime.posterFallbackUrl,
+                    contentDescription = anime.title,
+                    modifier = Modifier.fillMaxWidth(),
+                    placeholder = {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .aspectRatio(2f / 3f)
+                                .background(MaterialTheme.colorScheme.surfaceContainer),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.Image,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    },
+                )
+            }
             posterFooterContent?.let { content ->
                 Box(
                     modifier = Modifier
@@ -169,7 +175,9 @@ fun VerticalAnimeListItem(
                 }
             }
 
-            if (metaContent != null) {
+            if (metadataLoading) {
+                AppCenteredLoading(modifier = Modifier.fillMaxWidth().height(42.dp))
+            } else if (metaContent != null) {
                 metaContent()
             } else if (metaText.isNotBlank()) {
                 Text(
@@ -181,7 +189,7 @@ fun VerticalAnimeListItem(
                 )
             }
 
-            anime.description?.takeIf(String::isNotBlank)?.let { description ->
+            anime.description?.takeIf(String::isNotBlank)?.takeUnless { metadataLoading }?.let { description ->
                 Text(
                     text = description,
                     style = MaterialTheme.typography.bodySmall,
@@ -218,6 +226,7 @@ fun LazyListScope.searchStateVerticalListContent(
     onErrorActionClick: (() -> Unit)? = null,
     loadMoreLoadingLabel: String? = null,
     loadMoreModifier: Modifier = Modifier,
+    metadataLoadingIds: Set<String> = emptySet(),
     posterFooterContent: (@Composable (Anime) -> Unit)? = null,
     onItemVisible: ((Anime) -> Unit)? = null,
     sharedCardModifier: @Composable (Anime) -> Modifier = { Modifier },
@@ -275,6 +284,7 @@ fun LazyListScope.searchStateVerticalListContent(
                 VerticalAnimeListItem(
                     anime = anime,
                     metaText = metaText(anime),
+                    metadataLoading = anime.id in metadataLoadingIds,
                     onClick = { onAnimeClick(anime) },
                     modifier = Modifier.fillMaxWidth(),
                     posterFooterContent = posterFooterContent?.let { footer -> { footer(anime) } },
@@ -304,6 +314,7 @@ fun LazyListScope.verticalAnimeListContent(
     metaText: @Composable (Anime) -> String,
     onAnimeClick: (Anime) -> Unit,
     modifier: Modifier = Modifier,
+    metadataLoadingIds: Set<String> = emptySet(),
     posterFooterContent: (@Composable (Anime) -> Unit)? = null,
     onItemVisible: ((Anime) -> Unit)? = null,
     sharedCardModifier: @Composable (Anime) -> Modifier = { Modifier },
@@ -316,6 +327,7 @@ fun LazyListScope.verticalAnimeListContent(
         VerticalAnimeListItem(
             anime = anime,
             metaText = metaText(anime),
+            metadataLoading = anime.id in metadataLoadingIds,
             onClick = { onAnimeClick(anime) },
             modifier = modifier.fillMaxWidth(),
             posterFooterContent = posterFooterContent?.let { footer -> { footer(anime) } },

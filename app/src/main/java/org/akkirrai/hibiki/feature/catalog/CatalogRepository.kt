@@ -4,15 +4,12 @@ import android.content.Context
 import io.ktor.client.HttpClient
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.flow.StateFlow
 import org.akkirrai.beakokit.model.AnimeSearchRequest
 import org.akkirrai.beakokit.model.AnimeSearchFilterCatalog
 import org.akkirrai.beakokit.model.AnimeSearchSort
-import org.akkirrai.beakokit.metadata.ExternalCatalogRequest
 import org.akkirrai.beakokit.metadata.ExternalMetadataService
-import org.akkirrai.hibiki.app.settings.AppPreferences
-import org.akkirrai.beakokit.metadata.MetadataProviderId
 import org.akkirrai.beakokit.metadata.MetadataReference
-import org.akkirrai.hibiki.core.metadata.AggregatorCatalogBrowser
 import org.akkirrai.hibiki.core.metadata.AggregatorEntryResolver
 import org.akkirrai.hibiki.core.metadata.decodeExternalEntryId
 import org.akkirrai.hibiki.core.model.Anime
@@ -32,20 +29,25 @@ class CatalogRepository(
     private val metadataService: ExternalMetadataService? = null,
 ) : AggregatorEntryResolver {
     private val appContext = context.applicationContext
-    private val appPreferences = AppPreferences(appContext)
     private val sourceManager = sourceManager ?: AnimeSourceRuntimeManager(appContext, client)
     private val searchRepository = AnimeSearchRepository(
         context = appContext,
         client = client,
         sourceManager = this.sourceManager,
         closeClientOnClose = false,
+        metadataService = metadataService,
     )
     private val homeRepository = HomeRepository(
         context = appContext,
         client = client,
         sourceManager = this.sourceManager,
         closeClientOnClose = false,
+        metadataService = metadataService,
     )
+    val cardMetadata: StateFlow<Map<String, Anime>> = searchRepository.cardMetadata
+    val recentCardMetadata: StateFlow<Map<String, Anime>> = homeRepository.cardMetadata
+    val pendingCardMetadata: StateFlow<Set<String>> = searchRepository.pendingCardMetadata
+    val pendingRecentCardMetadata: StateFlow<Set<String>> = homeRepository.pendingCardMetadata
 
     suspend fun loadPage(
         page: Int = 1,
@@ -110,61 +112,6 @@ class CatalogRepository(
     }
 
     /**
-     * A page of the aggregator's own catalog, when the user has asked to browse that instead of the
-     * source's.
-     *
-     * Cards here name provider entries, not titles of a source, so nothing is resolved while
-     * browsing: a resolution is a search against the source, and doing one per visible card would
-     * spend two dozen requests to answer a question about the one card that gets clicked. Opening
-     * one goes through [resolveEntry].
-     *
-     * Alphabetical has no aggregator equivalent - none of them sorts a catalog by name - so that
-     * mode keeps the source's own catalog and this returns null for it.
-     */
-    suspend fun loadAggregatorPage(
-        page: Int,
-        sort: CatalogSort,
-        filters: AnimeSearchFilters = AnimeSearchFilters(),
-        query: String = "",
-    ): CatalogPage? {
-        val order = providerOrder() ?: return null
-        val mode = when (sort) {
-            CatalogSort.Popular -> ExternalCatalogRequest.Mode.POPULAR
-            CatalogSort.Updated -> ExternalCatalogRequest.Mode.TRENDING
-            CatalogSort.Alphabetical -> return null
-        }
-        val pageIndex = page.coerceAtLeast(1)
-        val preferEnglish = searchRepository.prefersEnglishTitles()
-        // A provider outage or an exhausted/unsupported feed must not become a successful empty
-        // screen. Returning null activates the existing source-catalog fallback in the ViewModel.
-        val entries = AggregatorCatalogBrowser.browse(
-            service = metadataService,
-            order = order,
-            mode = mode,
-            offset = (pageIndex - 1) * CATALOG_PAGE_SIZE,
-            limit = CATALOG_PAGE_SIZE,
-            preferEnglish = preferEnglish,
-            filters = filters,
-            query = query,
-        ) ?: return null
-        return CatalogPage(
-            title = "",
-            description = null,
-            // Never `AnimeSearchFilterCatalog()`: that defaults to CatalogCapabilities.FULL, which told
-            // the screen this catalog offered every sort, while the source's own page offered fewer.
-            // The screen corrects a selected sort its catalog does not offer, so each page flipped the
-            // correction to the other catalog's fallback and loaded it, which flipped it back - an
-            // endless reload (seen live on Anichi with Kitsu metadata). The catalog below declares
-            // exactly the two modes this page can serve instead. Without a provider that can filter,
-            // there is no opinion to give, and null keeps whatever the source's own page said.
-            filterCatalog = AggregatorCatalogBrowser.filterCatalog().takeIf { AggregatorCatalogBrowser.canFilter(order) },
-            items = entries.map { CatalogAnimeCard(it) },
-            currentPage = pageIndex,
-            canLoadMore = entries.size >= CATALOG_PAGE_SIZE,
-        )
-    }
-
-    /**
      * Turns a card from that catalog into something playable: the source's own title for this entry.
      *
      * Null means the source does not have it, as far as its own search can tell - the screen says so
@@ -204,13 +151,6 @@ class CatalogRepository(
     override suspend fun searchSourceTitles(query: String): List<Anime> =
         searchRepository.search(AnimeSearchRequest(query = query, limit = 20))
 
-    /** Which providers may answer for the current source, or null when none may. */
-    private fun providerOrder(): List<MetadataProviderId>? =
-        AggregatorCatalogBrowser.providerOrder(appPreferences, sourceManager.current().descriptor)
-
-    suspend fun enrichDescription(anime: Anime): Anime =
-        searchRepository.getDetails(anime.id, anime)
-
     fun close() {
         searchRepository.close()
         homeRepository.close()
@@ -225,8 +165,7 @@ class CatalogRepository(
 data class CatalogPage(
     val title: String,
     val description: String?,
-    /** Null when the page's producer has no capability opinion of its own - an aggregator page, whose
-     * caller keeps whatever the source's own page reported. See loadAggregatorPage. */
+    /** Filter capabilities reported by the source that produced this page. */
     val filterCatalog: AnimeSearchFilterCatalog?,
     val items: List<CatalogAnimeCard>,
     val currentPage: Int,

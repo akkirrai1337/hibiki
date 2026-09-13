@@ -520,8 +520,9 @@ private fun preferExternal(external: List<String>, own: List<String>): List<Stri
  * Not replaced, on purpose:
  * - `id`, [AnimeTitle.availableEpisodeCount], and everything playback-related: the source is the
  *   only thing that knows what it has actually uploaded.
- * - [AnimeTitle.russianName]: neither provider has Russian titles, and dropping the source's would
- *   make a Russian source's page worse, not better.
+ * - all title names: the source owns the identifier that playback opens, so its wording remains
+ *   on every card and details page. Replacing it with an aggregator title can create a card that
+ *   looks playable even when that provider entry has no counterpart at the source.
  * - [AnimeTitle.relatedAnime]/[AnimeTitle.franchiseAnime]/[AnimeTitle.similarAnime]: their ids
  *   address *this source's* catalog, and a provider's ids would make every one of those cards a dead
  *   link.
@@ -529,10 +530,6 @@ private fun preferExternal(external: List<String>, own: List<String>): List<Stri
 fun mergeExternalMetadata(anime: AnimeTitle, external: ExternalMetadata?): AnimeTitle {
     if (external == null) return anime
     return anime.copy(
-        englishName = preferExternal(external.englishName, anime.englishName),
-        originalName = (external.romajiName ?: external.nativeName) ?: anime.originalName,
-        japaneseName = preferExternal(external.nativeName, anime.japaneseName),
-        synonyms = preferExternal(external.synonyms, anime.synonyms),
         description = preferExternal(external.description, anime.description),
         posterUrl = preferExternal(external.posterUrl, anime.posterUrl),
         genres = preferExternal(external.genres, anime.genres),

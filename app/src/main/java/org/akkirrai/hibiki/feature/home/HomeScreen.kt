@@ -117,6 +117,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.launch
 import org.akkirrai.hibiki.R
+import org.akkirrai.hibiki.core.download.OfflineDownloadRepository
 import org.akkirrai.hibiki.core.design.UiDimens
 import org.akkirrai.hibiki.core.design.component.AppCenteredLoading
 import org.akkirrai.hibiki.core.design.component.AppFilledIconButton
@@ -155,6 +156,7 @@ fun HomeScreen(
     viewModel: HomeViewModel = viewModel(factory = HomeViewModel.Factory(LocalContext.current)),
     onAnimeClick: (Anime) -> Unit,
     onOpenSources: () -> Unit = {},
+    onOpenDownloads: () -> Unit = {},
     isActive: Boolean = true,
     bottomContentPadding: Dp = 96.dp,
     sharedTransitionScope: SharedTransitionScope? = null,
@@ -193,14 +195,18 @@ fun HomeScreen(
     val libraryStatusByAnimeId = rememberLibraryStatusByAnimeId()
     val selectedSourceId = LocalAppPreferencesState.current.animeSource
     val noSourcesInstalled = AnimeSourceRegistry.sources.isEmpty()
+    val context = LocalContext.current
+    val isOffline = errorMessage != null && errorMessage == stringResource(R.string.home_error_no_internet)
+    val hasOfflineDownloads = remember(isOffline) {
+        isOffline && OfflineDownloadRepository(context.applicationContext).getOfflineTitleIds().isNotEmpty()
+    }
     // A plain remember() here would lose scroll position across configuration changes and
     // whenever this composable is disposed and recomposed (e.g. switching to another bottom-nav
     // tab and back) -- rememberSaveable keeps it, while still resetting to the top when the
     // active source (and so the whole feed) changes.
     val homeListState = rememberSaveable(selectedSourceId, saver = LazyListState.Saver) { LazyListState() }
-    // Featured/trending cards may name an aggregator entry rather than a real source title (see
-    // rememberEntryOpener) -- resolve it before opening. Continue-watching/recently-watched
-    // never carry aggregator ids, so they keep using onAnimeClick directly.
+    // New cards are source-owned and open directly. The opener only retains support for a legacy
+    // in-memory aggregator entry while a screen is being recreated.
     val openAggregatorEntry = rememberEntryOpener(repository = viewModel.repository, onOpen = onAnimeClick)
 
     LaunchedEffect(
@@ -244,6 +250,12 @@ fun HomeScreen(
                         if (noSourcesInstalled) R.string.action_open_sources else R.string.search_retry,
                     ),
                     onActionClick = if (noSourcesInstalled) onOpenSources else viewModel::load,
+                    secondaryActionLabel = if (hasOfflineDownloads) {
+                        stringResource(R.string.action_open_downloads)
+                    } else {
+                        null
+                    },
+                    onSecondaryActionClick = onOpenDownloads.takeIf { hasOfflineDownloads },
                     modifier = Modifier.fillMaxSize(),
                 )
             }
@@ -266,12 +278,11 @@ fun HomeScreen(
                     ) {
                         searchStateVerticalListContent(
                             state = state.searchResult,
-                            // Results can be aggregator entries (see HomeRepository.aggregatorSearch),
-                            // which have to be resolved to a source title before they open.
                             onAnimeClick = openAggregatorEntry,
                             metaText = { anime -> buildHomeMeta(anime, announcementLabel, movieLabel) },
                             onLoadMore = viewModel::loadMoreSearchResults,
                             loadMoreLabel = searchLoadMoreLabel,
+                            metadataLoadingIds = state.pendingCardMetadata,
                             resultsCountLabel = { count ->
                                 pluralStringResource(R.plurals.search_results_count, count, count)
                             },
@@ -285,7 +296,6 @@ fun HomeScreen(
                             },
                             sharedCardModifier = sharedCardModifier,
                             sharedPosterModifier = sharedPosterModifier,
-                            onItemVisible = viewModel::enrichDescription,
                         )
                     }
                 } else {
@@ -319,6 +329,7 @@ fun HomeScreen(
                                 continueAnime = continueAnime,
                                 recentlyWatched = recentlyWatched,
                                 trending = state.trending,
+                                metadataLoadingIds = state.pendingCardMetadata,
                                 isTrendingLoadingMore = state.isTrendingLoadingMore,
                                 isActive = isActive,
                                 onAnimeClick = onAnimeClick,
@@ -405,6 +416,7 @@ private fun LazyListScope.homeFeedContent(
     continueAnime: Anime?,
     recentlyWatched: List<Anime>,
     trending: List<Anime>,
+    metadataLoadingIds: Set<String>,
     isTrendingLoadingMore: Boolean,
     isActive: Boolean,
     onAnimeClick: (Anime) -> Unit,
@@ -453,6 +465,7 @@ private fun LazyListScope.homeFeedContent(
         metaText = metaText,
         onAnimeClick = onEntryClick,
         modifier = Modifier.padding(horizontal = UiDimens.ScreenPadding),
+        metadataLoadingIds = metadataLoadingIds,
         posterFooterContent = posterFooterContent,
         sharedCardModifier = sharedCardModifier,
         sharedPosterModifier = sharedPosterModifier,
@@ -504,6 +517,8 @@ private fun HomeErrorState(
     actionLabel: String,
     onActionClick: () -> Unit,
     modifier: Modifier = Modifier,
+    secondaryActionLabel: String? = null,
+    onSecondaryActionClick: (() -> Unit)? = null,
 ) {
     AppMessageState(
         title = stringResource(R.string.home_error_title),
@@ -513,6 +528,8 @@ private fun HomeErrorState(
             .padding(UiDimens.ScreenPadding),
         actionLabel = actionLabel,
         onActionClick = onActionClick,
+        secondaryActionLabel = secondaryActionLabel,
+        onSecondaryActionClick = onSecondaryActionClick,
         icon = Icons.Outlined.WarningAmber,
         iconTint = MaterialTheme.colorScheme.error,
     )

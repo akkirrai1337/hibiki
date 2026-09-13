@@ -228,14 +228,24 @@ class ExternalMetadataTest {
     }
 
     @Test
-    fun `keeps the source's Russian name but merges english and original names, matching desktop`() {
+    fun `keeps every source title name while merging descriptive metadata`() {
         val merged = mergeExternalMetadata(
-            title { copy(russianName = "Провожающая в последний путь Фрирен") },
+            title {
+                copy(
+                    russianName = "Провожающая в последний путь Фрирен",
+                    englishName = "Frieren: Beyond Journey's End",
+                    originalName = "Sousou no Frieren",
+                    japaneseName = "葬送のフリーレン",
+                    synonyms = listOf("Frieren"),
+                )
+            },
             external { copy(englishName = "Frieren", romajiName = "Sousou no Frieren!!") },
         )
         assertEquals("Провожающая в последний путь Фрирен", merged.russianName)
-        assertEquals("Frieren", merged.englishName)
-        assertEquals("Sousou no Frieren!!", merged.originalName)
+        assertEquals("Frieren: Beyond Journey's End", merged.englishName)
+        assertEquals("Sousou no Frieren", merged.originalName)
+        assertEquals("葬送のフリーレン", merged.japaneseName)
+        assertEquals(listOf("Frieren"), merged.synonyms)
     }
 
     @Test

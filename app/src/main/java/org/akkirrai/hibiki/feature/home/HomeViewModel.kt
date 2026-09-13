@@ -17,9 +17,8 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.channels.Channel
-import java.util.concurrent.ConcurrentHashMap
 import org.akkirrai.beakokit.api.SourceException
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.app.di.hibikiDependencies
@@ -29,7 +28,6 @@ import org.akkirrai.hibiki.core.log.PerfLogger
 import org.akkirrai.hibiki.core.model.Anime
 import org.akkirrai.hibiki.core.model.AnimeSearchFilters
 import org.akkirrai.hibiki.core.model.SearchUiState
-import org.akkirrai.hibiki.core.network.NoInternetConnectionException
 
 class HomeViewModel(
     internal val repository: HomeRepository,
@@ -41,11 +39,11 @@ class HomeViewModel(
         HomeUiState(isLoading = true)
     )
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
-    private val descriptionUpdates = Channel<Pair<String, String>>(Channel.UNLIMITED)
 
     init {
         PerfLogger.mark("HomeViewModel created")
-        observeDescriptionUpdates()
+        observeCardMetadata()
+        observePendingCardMetadata()
         load()
         loadSearchFilterCatalog()
         observeLanguageChanges()
@@ -64,10 +62,8 @@ class HomeViewModel(
             runCatching { repository.refreshHomeState() }
                 .onSuccess { state ->
                     val current = _uiState.value
-                    // Catalog data is already ready here. Full descriptions are optional card
-                    // decoration and are loaded by enrichDescription as cards become visible;
-                    // holding the first frame for several getById calls made one slow or broken
-                    // details endpoint keep the whole Home screen behind a spinner.
+                    // Source cards arrive immediately; aggregator decoration is delivered through
+                    // the durable card overlay, so no source-details call blocks the feed.
                     _uiState.value = state.copy(
                         isLoading = false,
                         errorMessage = null,
@@ -76,21 +72,13 @@ class HomeViewModel(
                         searchFilterCatalog = current.searchFilterCatalog,
                         isSearchFilterCatalogLoading = current.isSearchFilterCatalogLoading,
                         searchFilters = current.searchFilters,
-                    ).preserveLoadedDescriptions(current)
+                    ).withCardMetadata(repository.cardMetadata.value)
                     PerfLogger.mark(
                         event = "Home refresh finished",
                         details = "duration=${System.currentTimeMillis() - startedAt}ms",
                     )
                 }
                 .onFailure { throwable ->
-                    if (applyOfflineFallback(throwable)) {
-                        PerfLogger.mark(
-                            event = "Home refresh offline",
-                            details = "duration=${System.currentTimeMillis() - startedAt}ms, " +
-                                "error=${throwable::class.java.simpleName}:${throwable.message}",
-                        )
-                        return@onFailure
-                    }
                     _uiState.update {
                         it.copy(
                             isLoading = false,
@@ -107,7 +95,6 @@ class HomeViewModel(
     }
 
     private var searchJob: Job? = null
-    private val descriptionRequests = ConcurrentHashMap.newKeySet<String>()
     private val recentRandomIds = ArrayDeque<String>()
 
     fun onSearchQueryChange(value: String) {
@@ -166,22 +153,6 @@ class HomeViewModel(
         }
     }
 
-    /** Only the `description` field is ever merged back into the card - the details fetch can
-     * return a less complete `Anime` than the original listing did (e.g. a source's details
-     * page missing a field the listing had), and swapping in the whole object used to silently
-     * drop those fields (year disappearing from a card's meta line was one instance). */
-    fun enrichDescription(anime: Anime) {
-        if (!anime.description.isNullOrBlank() || !descriptionRequests.add(anime.id)) return
-        viewModelScope.launch(Dispatchers.IO) {
-            runCatching { repository.enrichDescription(anime) }
-                .onSuccess { enriched ->
-                    val description = enriched.description
-                    if (!description.isNullOrBlank()) descriptionUpdates.trySend(anime.id to description)
-                }
-                .also { descriptionRequests.remove(anime.id) }
-        }
-    }
-
     private suspend fun loadFirstSearchPage(
         activeQuery: String,
         activeFilters: AnimeSearchFilters,
@@ -211,7 +182,7 @@ class HomeViewModel(
                     canLoadMore = items.size > SEARCH_PAGE_SIZE,
                 )
             }
-            _uiState.update { it.copy(searchResult = result) }
+            _uiState.update { it.copy(searchResult = result.withCardMetadata(repository.cardMetadata.value)) }
         } catch (cancelled: CancellationException) {
             AppLogger.d(SEARCH_LOG_TAG, "search cancelled after ${System.currentTimeMillis() - startedAt}ms")
             throw cancelled
@@ -271,7 +242,7 @@ class HomeViewModel(
                         searchResult = current.copy(
                             items = (
                                 current.items + nextItems.take(SEARCH_PAGE_SIZE)
-                            ).distinctBy { it.id },
+                            ).distinctBy { it.id }.withCardMetadata(repository.cardMetadata.value),
                             canLoadMore = nextItems.size > SEARCH_PAGE_SIZE,
                             isLoadingMore = false,
                             loadMoreError = null,
@@ -376,8 +347,8 @@ class HomeViewModel(
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
             runCatching { repository.loadHomeState() }
                 .onSuccess { state ->
-                    // The source lists are sufficient for first paint. Descriptions are optional
-                    // and enrichDescription loads them as their cards become visible.
+                    // The source lists are sufficient for first paint; pending aggregator work is
+                    // represented by a row-level loader and updates the same source-owned card.
                     val current = _uiState.value
                     _uiState.value = state.copy(
                         isLoading = false,
@@ -387,21 +358,13 @@ class HomeViewModel(
                         searchFilterCatalog = current.searchFilterCatalog,
                         isSearchFilterCatalogLoading = current.isSearchFilterCatalogLoading,
                         searchFilters = current.searchFilters,
-                    ).preserveLoadedDescriptions(current)
+                    ).withCardMetadata(repository.cardMetadata.value)
                     PerfLogger.mark(
                         event = "Home load finished",
                         details = "duration=${System.currentTimeMillis() - startedAt}ms",
                     )
                 }
                 .onFailure { throwable ->
-                    if (applyOfflineFallback(throwable)) {
-                        PerfLogger.mark(
-                            event = "Home load offline",
-                            details = "duration=${System.currentTimeMillis() - startedAt}ms, " +
-                                "error=${throwable::class.java.simpleName}:${throwable.message}",
-                        )
-                        return@onFailure
-                    }
                     _uiState.update {
                         it.copy(
                             isLoading = false,
@@ -444,126 +407,40 @@ class HomeViewModel(
         searchJob?.cancel()
         homeLoadJob?.cancel()
         filterCatalogJob?.cancel()
-        descriptionUpdates.close()
         repository.close()
         super.onCleared()
     }
 
-    private fun observeDescriptionUpdates() {
+    private fun observeCardMetadata() {
         viewModelScope.launch {
-            for (firstUpdate in descriptionUpdates) {
-                val updates = linkedMapOf(firstUpdate)
-                delay(DESCRIPTION_UPDATE_BATCH_WINDOW_MS)
-                while (true) {
-                    val nextUpdate = descriptionUpdates.tryReceive().getOrNull() ?: break
-                    updates[nextUpdate.first] = nextUpdate.second
-                }
-                _uiState.update { state -> state.replaceDescriptions(updates) }
+            repository.cardMetadata.collect { metadata ->
+                _uiState.update { state -> state.withCardMetadata(metadata) }
             }
         }
     }
 
-    private fun HomeUiState.replaceDescriptions(updates: Map<String, String>): HomeUiState {
-        val updatedFeatured = featuredAnime.replaceDescriptions(updates)
-        val updatedTrending = trending.replaceDescriptions(updates)
-        val updatedRecent = recentlyUpdated.replaceDescriptions(updates)
-        val updatedSearchResult = searchResult.replaceDescriptions(updates)
-        return if (
-            updatedFeatured === featuredAnime &&
-            updatedTrending === trending &&
-            updatedRecent === recentlyUpdated &&
-            updatedSearchResult === searchResult
-        ) {
-            this
-        } else {
-            copy(
-                featuredAnime = updatedFeatured,
-                trending = updatedTrending,
-                recentlyUpdated = updatedRecent,
-                searchResult = updatedSearchResult,
-            )
+    private fun observePendingCardMetadata() {
+        viewModelScope.launch {
+            repository.pendingCardMetadata.collect { pending ->
+                _uiState.update { it.copy(pendingCardMetadata = pending) }
+            }
         }
     }
 
-    /**
-     * A lost connection is not an error state on Home: the app has rows of its own to show
-     * (continue watching, recently watched) that live entirely on the device, and there is no
-     * reason to replace them with a "no internet" screen. Anything already on screen is kept
-     * untouched (a failed pull-to-refresh must not blank the feed); otherwise the stored rows are
-     * rendered in place of the error. Only when the device has no stored rows either does the
-     * offline message stay, so an empty feed still explains itself. Returns true when the failure
-     * was handled here.
-     *
-     * Every other failure (a source that is broken or returns nothing) keeps its error screen.
-     */
-    private fun applyOfflineFallback(throwable: Throwable): Boolean {
-        if (throwable !is NoInternetConnectionException) return false
-        val current = _uiState.value
-        if (current.hasLoadableContent()) {
-            // A failed pull-to-refresh must not blank a feed that is already on screen.
-            _uiState.value = current.copy(isLoading = false, errorMessage = null)
-            return true
-        }
-        val stored = repository.fallbackHomeState()
-        _uiState.value = if (stored.hasLoadableContent()) {
-            stored.copy(
-                isLoading = false,
-                errorMessage = null,
-                searchQuery = current.searchQuery,
-                searchResult = current.searchResult,
-                searchFilterCatalog = current.searchFilterCatalog,
-                isSearchFilterCatalogLoading = current.isSearchFilterCatalogLoading,
-                searchFilters = current.searchFilters,
-            ).preserveLoadedDescriptions(current)
-        } else {
-            // Nothing is stored on the device either: a blank feed with no explanation is worse
-            // than the message, so that case keeps the error state.
-            current.copy(isLoading = false, errorMessage = throwable.message)
-        }
-        return true
+    private fun HomeUiState.withCardMetadata(metadata: Map<String, Anime>): HomeUiState = copy(
+        featuredAnime = featuredAnime.withCardMetadata(metadata),
+        trending = trending.withCardMetadata(metadata),
+        recentlyUpdated = recentlyUpdated.withCardMetadata(metadata),
+        searchResult = searchResult.withCardMetadata(metadata),
+    )
+
+    private fun List<Anime>.withCardMetadata(metadata: Map<String, Anime>): List<Anime> = map { anime ->
+        metadata[anime.id]?.copy(title = anime.title) ?: anime
     }
 
-    /**
-     * Mirrors the condition the screen uses to choose between the feed and the error state.
-     */
-    private fun HomeUiState.hasLoadableContent(): Boolean =
-        featuredAnime.isNotEmpty() || continueAnime != null || recentlyWatched.isNotEmpty() ||
-            trending.isNotEmpty() || recentlyUpdated.isNotEmpty()
-
-    private fun HomeUiState.preserveLoadedDescriptions(previous: HomeUiState): HomeUiState {
-        val descriptions = (previous.featuredAnime + previous.trending + previous.recentlyUpdated)
-            .mapNotNull { anime -> anime.description?.takeIf(String::isNotBlank)?.let { anime.id to it } }
-            .toMap()
-        if (descriptions.isEmpty()) return this
-        return copy(
-            featuredAnime = featuredAnime.withDescriptions(descriptions),
-            trending = trending.withDescriptions(descriptions),
-            recentlyUpdated = recentlyUpdated.withDescriptions(descriptions),
-        )
-    }
-
-    private fun List<Anime>.withDescriptions(descriptions: Map<String, String>): List<Anime> = map { anime ->
-        if (anime.description.isNullOrBlank()) {
-            descriptions[anime.id]?.let { description -> anime.copy(description = description) } ?: anime
-        } else {
-            anime
-        }
-    }
-
-    private fun SearchUiState.replaceDescriptions(updates: Map<String, String>): SearchUiState = when (this) {
-        is SearchUiState.Content -> copy(items = items.replaceDescriptions(updates))
+    private fun SearchUiState.withCardMetadata(metadata: Map<String, Anime>): SearchUiState = when (this) {
+        is SearchUiState.Content -> copy(items = items.withCardMetadata(metadata))
         else -> this
-    }
-
-    private fun List<Anime>.replaceDescriptions(updates: Map<String, String>): List<Anime> {
-        var changed = false
-        val updatedItems = map { anime ->
-            updates[anime.id]?.let { description ->
-                changed = true
-                anime.copy(description = description)
-            } ?: anime
-        }
-        return if (changed) updatedItems else this
     }
 
     private fun observeLanguageChanges() {
@@ -605,7 +482,6 @@ class HomeViewModel(
         const val SEARCH_PAGE_SIZE = 24
         const val TRENDING_PAGE_SIZE = 20
         const val RECENT_UPDATES_PAGE_SIZE = 12
-        const val DESCRIPTION_UPDATE_BATCH_WINDOW_MS = 100L
         const val RANDOM_HISTORY_SIZE = 20
     }
 

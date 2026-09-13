@@ -13,6 +13,9 @@ import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import org.akkirrai.beakokit.metadata.ExternalMetadata
 import org.akkirrai.beakokit.metadata.ExternalMetadataPreferences
 import org.akkirrai.beakokit.metadata.MetadataProviderId
@@ -55,6 +58,7 @@ class AnimeSearchRepository(
 ) {
     private val searchCache = ConcurrentHashMap<String, CachedSearchResults>()
     private val filterCatalogCache = ConcurrentHashMap<String, AnimeSearchFilterCatalog>()
+    private val pendingCardMatches = ConcurrentHashMap.newKeySet<String>()
     private val appContext = context?.applicationContext
     private val appPreferences = appContext?.let(::AppPreferences)
     private val sourceManager = sourceManager ?: appContext?.let { AnimeSourceRuntimeManager(it, client) }
@@ -69,9 +73,15 @@ class AnimeSearchRepository(
                 log = { message -> AppLogger.d("ExternalMetadata", message) },
             )
         }
-    // Background matching outlives the request that started it on purpose: the screen has painted,
-    // and what this fills in is for the next visit. Cancelled with the repository.
+    // Owns preference observation and is cancelled with the repository.
     private val metadataScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val _cardMetadata = MutableStateFlow<Map<String, Anime>>(emptyMap())
+    /** Durable overlay for cards that completed an aggregator match. State, not an event, so a
+     * screen opening or paginating after a result cannot miss it. */
+    val cardMetadata = _cardMetadata.asStateFlow()
+    private val _pendingCardMetadata = MutableStateFlow<Set<String>>(emptySet())
+    /** Source cards whose aggregator lookup is still in progress. */
+    val pendingCardMetadata = _pendingCardMetadata.asStateFlow()
     private val detailsRequestSlots = Semaphore(MAX_CONCURRENT_DETAILS_REQUESTS)
 
     init {
@@ -146,7 +156,7 @@ class AnimeSearchRepository(
                 // The cached entry may be the details page's fully merged Anime, whose title comes
                 // from the aggregator. This list only ever shows the source's own title (see
                 // describeAll's doc), so that field is re-applied here even on a cache hit.
-                anime.copy(title = title.displayName)
+                (cardMetadata.value[title.id] ?: anime).copy(title = title.displayName)
             }
 
         searchCache[cacheKey] = CachedSearchResults(
@@ -202,7 +212,7 @@ class AnimeSearchRepository(
             val anime = getCachedDetails(detailsCacheKey(title.id)) ?: title.toAnime(preferEnglish = preferEnglish)
             // See search(): a details-cache hit carries the aggregator-merged title, but this list
             // always shows the source's own title, so it is re-applied here too.
-            anime.copy(title = title.displayName)
+            (cardMetadata.value[title.id] ?: anime).copy(title = title.displayName)
         }
         searchCache[cacheKey] = CachedSearchResults(
             items = results,
@@ -286,11 +296,17 @@ class AnimeSearchRepository(
         filterCatalogCache.clear()
         detailsCache.clear()
         detailsMutexes.clear()
+        pendingCardMatches.clear()
+        _cardMetadata.value = emptyMap()
+        _pendingCardMetadata.value = emptySet()
     }
 
     fun close() {
         searchCache.clear()
         filterCatalogCache.clear()
+        pendingCardMatches.clear()
+        _cardMetadata.value = emptyMap()
+        _pendingCardMetadata.value = emptySet()
         metadataScope.cancel()
         if (closeClientOnClose) client.close()
     }
@@ -470,16 +486,13 @@ class AnimeSearchRepository(
      *
      * The name on a list card is deliberately kept as the source's own, never the aggregator's,
      * even once a match has been found - this list, unlike the title page, is not enriched with the
-     * provider's title. That is on purpose: it keeps parity with desktop, and it keeps cards stable
-     * while scrolling and paginating instead of a card's name changing mid-list once a background
-     * match lands or a details cache warms it. The title page (describe() below) still merges the
-     * aggregator's entry in full, so a card and its own title page are expected to show different
-     * names - that disagreement is intentional, not a bug to chase.
+     * provider's title. The details page follows the same rule: the source owns the ID that opens
+     * for playback, while the aggregator enriches only the descriptive fields around that title.
      *
-     * Describing the misses inline is not an option: each provider paces its requests (~1/s), and a
-     * screen built to be scrolled asks for a screenful at a time. So every title that already has an
-     * entry is applied (poster, rating, etc., but not the name) before the screen paints, and the
-     * rest are matched in the background so a later load of this same list picks them up.
+     * A list never asks the source for full details before a card is opened. Cached aggregator
+     * data is applied synchronously; new matches continue in the background and update the durable
+     * [cardMetadata] overlay. This keeps the source list responsive without losing an update when
+     * the UI is loading, paginating, or temporarily off screen.
      */
     private suspend fun describeAll(source: AnimeSourceRuntime, titles: List<AnimeTitle>): List<AnimeTitle> {
         val service = metadataService ?: return titles
@@ -498,44 +511,55 @@ class AnimeSearchRepository(
         if (titles.isEmpty()) return titles
 
         val cached = titles.map { service.cachedMetadataFor(it.id, order) }
-        val missing = titles.filterIndexed { index, _ -> cached[index] == null }
         AppLogger.d(
             TAG,
             "describeAll: source=${source.descriptor.id.value} order=$order titles=${titles.size} " +
-                "alreadyDescribed=${titles.size - missing.size} warmingInBackground=${missing.size} " +
-                "(warmed cards only take effect on a later load of this same list)",
+                "alreadyDescribed=${cached.count { it != null }} deferredUntilDetails=${cached.count { it == null }}",
         )
-        missing.takeIf(List<AnimeTitle>::isNotEmpty)
-            ?.let { warmMetadata(service, order, it) }
+        titles.filterIndexed { index, title -> cached[index] == null && title.id !in cardMetadata.value }
+            .takeIf(List<AnimeTitle>::isNotEmpty)
+            ?.let { warmCardMetadata(service, order, it) }
         return titles.mapIndexed { index, title ->
-            cached[index]?.let { external ->
-                // Cards, unlike the title page, keep the source's own name. Merging the aggregator's
-                // name in here would actually make a card agree with its own title page - but that
-                // is not the goal: list screens deliberately do not adopt the aggregator's title, for
-                // parity with desktop and so a card's name does not change under the user mid-scroll
-                // as background matches land.
-                mergeExternalMetadata(title, external).copy(
-                    englishName = title.englishName,
-                    originalName = title.originalName,
-                )
-            } ?: title
+            val external = cached[index]
+            // mergeExternalMetadata keeps source-owned names. Re-applying these two fields also
+            // protects this list from details cached by an older app version.
+            val described = mergeExternalMetadata(title, external).copy(
+                englishName = title.englishName,
+                originalName = title.originalName,
+            )
+            described
         }
     }
 
-    /** Matches what a list screen showed but could not describe, so the next visit can. One at a
-     * time and off the caller's coroutine: the queues inside the service pace these anyway, and the
-     * screen that asked has already painted. */
-    private fun warmMetadata(service: ExternalMetadataService, order: List<MetadataProviderId>, titles: List<AnimeTitle>) {
-        if (titles.isEmpty()) return
+    /** Matches a source card without calling source.details(). The completed card is retained in
+     * [cardMetadata], not sent as a one-shot event. */
+    private fun warmCardMetadata(
+        service: ExternalMetadataService,
+        order: List<MetadataProviderId>,
+        titles: List<AnimeTitle>,
+    ) {
+        // Claim IDs before launching so duplicate pages/searches cannot create a second lookup
+        // or leave a permanent loading indicator behind.
+        val titlesToLoad = titles.filter { title ->
+            title.id !in cardMetadata.value && pendingCardMatches.add(title.id)
+        }
+        if (titlesToLoad.isEmpty()) return
+        _pendingCardMetadata.update { pending -> pending + titlesToLoad.map(AnimeTitle::id) }
         metadataScope.launch {
-            for (title in titles) {
-                runCatching { service.metadataFor(title, order) }
-                    .onSuccess { described ->
-                        if (described == null) {
-                            AppLogger.d(TAG, "warmMetadata: '${title.englishName ?: title.originalName}' — no provider had a match")
+            for (title in titlesToLoad) {
+                try {
+                    runCatching { service.metadataFor(title, order) }
+                        .onSuccess { external ->
+                            external ?: return@onSuccess
+                            val enriched = mergeExternalMetadata(title, external)
+                                .toAnime(preferEnglish = preferEnglish())
+                            _cardMetadata.update { known -> known + (title.id to enriched) }
                         }
-                    }
-                    .onFailure { AppLogger.w(TAG, "warmMetadata: ${title.id} not described", it) }
+                        .onFailure { AppLogger.w(TAG, "warmCardMetadata: ${title.id} not described", it) }
+                } finally {
+                    pendingCardMatches.remove(title.id)
+                    _pendingCardMetadata.update { pending -> pending - title.id }
+                }
             }
         }
     }
@@ -556,7 +580,8 @@ class AnimeSearchRepository(
 
     /**
      * Replaces a title's descriptive fields with a metadata provider's, when both the source asked
-     * for that in its manifest and the user has not turned it off.
+     * for that in its manifest and the user has not turned it off. Names and playback identity stay
+     * with the source; the aggregator owns the presentation metadata around them.
      *
      * Failures are swallowed on purpose: a provider being unreachable, rate-limiting us, or simply
      * not carrying this title must cost the better description and nothing else - the source's own
@@ -574,14 +599,13 @@ class AnimeSearchRepository(
 
     /**
      * The same aggregator-description [describe] gives the title itself, extended to its
-     * related/franchise/similar strips - otherwise those keep the source's own name and poster even
-     * on a details screen that is describing everything else from the aggregator, which is the same
-     * inconsistency [describe] exists to fix for the title.
+     * related/franchise/similar strips. Their source IDs remain actionable, so their source titles
+     * stay intact while the aggregator contributes only descriptive fields.
      *
      * `sections` is franchise/related/similar together (not three separate calls) so a title that
      * happens to appear in more than one of them - which does happen, e.g. the current title itself
-     * spliced into "related" - is only matched once. Sequential, same as [warmMetadata]: each is a
-     * request, and this is a handful of cards, not a scrollable list.
+     * spliced into "related" - is only matched once. Requests stay sequential because this is a
+     * handful of cards, not a scrollable list.
      */
     private suspend fun describeRelatedAnime(
         source: AnimeSourceRuntime,
@@ -603,7 +627,6 @@ class AnimeSearchRepository(
     }
 
     private fun RelatedAnimeTitle.describedWith(external: ExternalMetadata): RelatedAnimeTitle = copy(
-        title = external.englishName ?: external.romajiName ?: external.nativeName ?: title,
         posterUrl = external.posterUrl ?: posterUrl,
         year = external.year ?: year,
         type = external.type ?: type,
@@ -702,7 +725,7 @@ class AnimeSearchRepository(
             searchCache.remove(key, cached)
             return null
         }
-        return cached.items
+        return cached.items.map { anime -> cardMetadata.value[anime.id] ?: anime }
     }
 
     private fun getCachedDetails(key: String): Anime? {
