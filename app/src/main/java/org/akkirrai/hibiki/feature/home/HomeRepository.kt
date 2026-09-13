@@ -196,6 +196,12 @@ class HomeRepository(
         }
     }
 
+    /** Forgets a title's saved playback positions - the only thing the continue and
+     * recently-watched rows are built from, so this is what takes a title out of them. */
+    fun forgetWatchProgress(titleId: String) {
+        watchStateRepository.clearTitleProgress(titleId)
+    }
+
     suspend fun search(query: String): List<Anime> {
         AppLogger.d(TAG, "search(query=$query)")
         ensureInternetConnection()

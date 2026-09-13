@@ -32,6 +32,9 @@
 
     <string name="home_continue_title">Continue watching</string>
     <string name="home_recently_watched">Recently watched</string>
+    <string name="home_forget_progress_confirm_title">Forget watch progress?</string>
+    <string name="home_forget_progress_confirm_message">%1$s will disappear from continue watching and recently watched, and playback will start from the beginning next time.</string>
+    <string name="home_forget_progress_action">Forget</string>
     <string name="home_trending">Trending now</string>
     <string name="home_see_all">See all</string>
     <string name="home_recent_updates">Recent updates</string>

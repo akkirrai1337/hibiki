@@ -403,6 +403,29 @@ class HomeViewModel(
         }
     }
 
+    /**
+     * Forgets a title's watch progress, taking it out of the continue and recently-watched rows.
+     *
+     * The rows are recomputed here rather than by reloading Home: the state already holds the order
+     * the repository would rebuild - continue is simply the most recently watched title and the row
+     * is the rest of them - so a reload would spend a network round trip to show one card fewer.
+     */
+    fun forgetWatchProgress(anime: Anime) {
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.forgetWatchProgress(anime.id)
+            _uiState.update { state ->
+                if (state.continueAnime?.id == anime.id) {
+                    state.copy(
+                        continueAnime = state.recentlyWatched.firstOrNull(),
+                        recentlyWatched = state.recentlyWatched.drop(1),
+                    )
+                } else {
+                    state.copy(recentlyWatched = state.recentlyWatched.filterNot { it.id == anime.id })
+                }
+            }
+        }
+    }
+
     override fun onCleared() {
         searchJob?.cancel()
         homeLoadJob?.cancel()

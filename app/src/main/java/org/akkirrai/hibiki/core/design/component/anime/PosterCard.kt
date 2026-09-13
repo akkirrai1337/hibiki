@@ -2,6 +2,7 @@ package org.akkirrai.hibiki.core.design.component.anime
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -40,6 +41,9 @@ fun PosterCard(
     anime: Anime,
     metaText: String = anime.subtitle,
     onClick: (() -> Unit)? = null,
+    /** Only rows that own something removable pass this (Home's watched rows forget a title's
+     * progress) - everywhere else a long press keeps doing nothing. */
+    onLongClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
     titleBaseMaxLines: Int = 2,
     titleExtraLongTitleLines: Int = 2,
@@ -70,7 +74,11 @@ fun PosterCard(
             .then(sharedCardModifier)
             .then(
             if (onClick != null) {
-                Modifier.clickable(onClick = onClick)
+                if (onLongClick != null) {
+                    Modifier.combinedClickable(onClick = onClick, onLongClick = onLongClick)
+                } else {
+                    Modifier.clickable(onClick = onClick)
+                }
             } else {
                 Modifier
             }
@@ -120,6 +128,7 @@ fun AnimePosterCardItem(
     anime: Anime,
     metaText: String,
     onClick: () -> Unit,
+    onLongClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
     width: Dp? = null,
     height: Dp? = null,
@@ -135,6 +144,7 @@ fun AnimePosterCardItem(
         anime = anime,
         metaText = metaText,
         onClick = onClick,
+        onLongClick = onLongClick,
         titleBaseMaxLines = titleBaseMaxLines,
         titleExtraLongTitleLines = titleExtraLongTitleLines,
         titleOverflow = titleOverflow,

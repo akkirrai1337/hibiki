@@ -318,6 +318,21 @@ class WatchStateRepository(context: Context) {
         invalidateProgressEntries()
     }
 
+    /**
+     * Forgets every saved position this title has, across all of its sources and both key layouts.
+     *
+     * Home's continue/recently-watched rows are built from these entries alone, so this is what
+     * takes a title out of them. Daily activity totals are deliberately left alone: those are a
+     * record of time actually spent, which the profile's stats are built on, and not resume state.
+     */
+    fun clearTitleProgress(titleId: String) {
+        val prefixes = episodePrefixes(titleId)
+        val keys = prefs.all.keys.filter { key -> prefixes.any(key::startsWith) }
+        if (keys.isEmpty()) return
+        prefs.edit().apply { keys.forEach(::remove) }.apply()
+        invalidateProgressEntries()
+    }
+
     private fun parseProgress(
         titleId: String,
         episodeId: String,

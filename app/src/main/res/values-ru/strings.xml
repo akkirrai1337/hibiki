@@ -28,6 +28,9 @@
 
     <string name="home_continue_title">Продолжить просмотр</string>
     <string name="home_recently_watched">Недавно просмотренные</string>
+    <string name="home_forget_progress_confirm_title">Удалить данные о просмотре?</string>
+    <string name="home_forget_progress_confirm_message">«%1$s» исчезнет из «Продолжить просмотр» и «Недавно просмотренные», а воспроизведение в следующий раз начнётся сначала.</string>
+    <string name="home_forget_progress_action">Удалить</string>
     <string name="home_trending">Сейчас в тренде</string>
     <string name="home_see_all">Смотреть все</string>
     <string name="home_recent_updates">Недавние обновления</string>

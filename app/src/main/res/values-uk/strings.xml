@@ -30,6 +30,9 @@
     <string name="local_profile_stat_time">ЧАС\nПЕРЕГЛЯДУ</string>
     <string name="home_continue_title">Продовжити перегляд</string>
     <string name="home_recently_watched">Нещодавно переглянуті</string>
+    <string name="home_forget_progress_confirm_title">Видалити дані про перегляд?</string>
+    <string name="home_forget_progress_confirm_message">«%1$s» зникне з «Продовжити перегляд» і «Нещодавно переглянуті», а відтворення наступного разу почнеться спочатку.</string>
+    <string name="home_forget_progress_action">Видалити</string>
     <string name="home_trending">Зараз у тренді</string>
     <string name="home_see_all">Переглянути все</string>
     <string name="home_recent_updates">Останні оновлення</string>

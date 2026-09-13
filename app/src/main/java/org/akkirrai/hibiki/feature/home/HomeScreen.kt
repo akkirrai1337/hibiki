@@ -19,6 +19,7 @@ import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -78,6 +79,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
@@ -100,7 +102,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -166,6 +170,10 @@ fun HomeScreen(
         state.trending.isNotEmpty() || state.recentlyUpdated.isNotEmpty()
     val focusManager = LocalFocusManager.current
     val keyboardController = LocalSoftwareKeyboardController.current
+    val hapticFeedback = LocalHapticFeedback.current
+    // The title a long press on a watched card is offering to forget. Confirmed before anything is
+    // removed: a long press is easy to trigger by accident while scrolling a row.
+    var pendingProgressRemoval by remember { mutableStateOf<Anime?>(null) }
     var showSearchFilters by rememberSaveable { mutableStateOf(false) }
     val isImeVisible = WindowInsets.isImeVisible
     val isSearchActive = state.searchQuery.isNotBlank() ||
@@ -312,6 +320,10 @@ fun HomeScreen(
                                 isTrendingLoadingMore = state.isTrendingLoadingMore,
                                 isActive = isActive,
                                 onAnimeClick = onAnimeClick,
+                                onWatchedAnimeLongClick = { anime ->
+                                    hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    pendingProgressRemoval = anime
+                                },
                                 onEntryClick = openAggregatorEntry,
                                 metaText = { anime -> buildHomeMeta(anime, announcementLabel, movieLabel) },
                                 posterFooterContent = { anime ->
@@ -359,6 +371,29 @@ fun HomeScreen(
                 onDismissRequest = { showSearchFilters = false },
             )
         }
+
+        pendingProgressRemoval?.let { anime ->
+            AlertDialog(
+                onDismissRequest = { pendingProgressRemoval = null },
+                title = { Text(stringResource(R.string.home_forget_progress_confirm_title)) },
+                text = { Text(stringResource(R.string.home_forget_progress_confirm_message, anime.title)) },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            pendingProgressRemoval = null
+                            viewModel.forgetWatchProgress(anime)
+                        },
+                    ) {
+                        Text(stringResource(R.string.home_forget_progress_action))
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { pendingProgressRemoval = null }) {
+                        Text(stringResource(R.string.action_cancel))
+                    }
+                },
+            )
+        }
     }
 }
 
@@ -370,6 +405,7 @@ private fun LazyListScope.homeFeedContent(
     isTrendingLoadingMore: Boolean,
     isActive: Boolean,
     onAnimeClick: (Anime) -> Unit,
+    onWatchedAnimeLongClick: (Anime) -> Unit,
     onEntryClick: (Anime) -> Unit,
     metaText: @Composable (Anime) -> String,
     posterFooterContent: @Composable (Anime) -> Unit,
@@ -388,7 +424,11 @@ private fun LazyListScope.homeFeedContent(
     continueAnime?.let { anime ->
         item {
             Box(modifier = Modifier.padding(horizontal = UiDimens.ScreenPadding)) {
-                ContinueWatchingCard(anime = anime, onClick = { onAnimeClick(anime) })
+                ContinueWatchingCard(
+                    anime = anime,
+                    onClick = { onAnimeClick(anime) },
+                    onLongClick = { onWatchedAnimeLongClick(anime) },
+                )
             }
         }
     }
@@ -399,6 +439,7 @@ private fun LazyListScope.homeFeedContent(
                 icon = Icons.Outlined.History,
                 items = recentlyWatched,
                 onAnimeClick = onAnimeClick,
+                onAnimeLongClick = onWatchedAnimeLongClick,
                 sharedCardModifier = sharedCardModifier,
                 sharedPosterModifier = sharedPosterModifier,
             )
@@ -753,7 +794,8 @@ private fun FeaturedAnimeCard(
 @Composable
 private fun ContinueWatchingCard(
     anime: Anime?,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onLongClick: () -> Unit,
 ) {
     Column(
         verticalArrangement = Arrangement.spacedBy(10.dp)
@@ -776,7 +818,7 @@ private fun ContinueWatchingCard(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable(onClick = onClick)
+                        .combinedClickable(onClick = onClick, onLongClick = onLongClick)
                         .padding(12.dp),
                     horizontalArrangement = Arrangement.spacedBy(14.dp),
                     verticalAlignment = Alignment.CenterVertically
@@ -886,6 +928,7 @@ private fun AnimeSection(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     items: List<Anime>,
     onAnimeClick: (Anime) -> Unit,
+    onAnimeLongClick: ((Anime) -> Unit)? = null,
     onActionClick: (() -> Unit)? = null,
     sharedCardModifier: @Composable (Anime) -> Modifier = { Modifier },
     sharedPosterModifier: @Composable (Anime) -> Modifier = { Modifier },
@@ -914,6 +957,7 @@ private fun AnimeSection(
                         movieLabel = stringResource(R.string.anime_meta_movie),
                     ),
                     onClick = { onAnimeClick(anime) },
+                    onLongClick = onAnimeLongClick?.let { { it(anime) } },
                     width = 118.dp,
                     titleBaseMaxLines = 2,
                     titleExtraLongTitleLines = 0,
