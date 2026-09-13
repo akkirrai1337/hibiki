@@ -12,6 +12,7 @@ import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -41,6 +42,8 @@ fun AppMessageState(
     modifier: Modifier = Modifier,
     actionLabel: String? = null,
     onActionClick: (() -> Unit)? = null,
+    secondaryActionLabel: String? = null,
+    onSecondaryActionClick: (() -> Unit)? = null,
     icon: ImageVector? = null,
     iconContentDescription: String? = null,
     iconTint: Color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -90,6 +93,15 @@ fun AppMessageState(
                 modifier = Modifier.padding(top = 16.dp),
             ) {
                 Text(text = actionLabel)
+            }
+        }
+
+        if (secondaryActionLabel != null && onSecondaryActionClick != null) {
+            TextButton(
+                onClick = onSecondaryActionClick,
+                modifier = Modifier.padding(top = 4.dp),
+            ) {
+                Text(text = secondaryActionLabel)
             }
         }
     }
