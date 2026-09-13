@@ -2,6 +2,7 @@ package org.akkirrai.hibiki.core.design.component.anime
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -49,6 +50,9 @@ fun VerticalAnimeListItem(
     anime: Anime,
     metaText: String = anime.buildCardMeta(announcementLabel = ""),
     onClick: () -> Unit,
+    /** Only rows that own something removable pass this (the library's Saved category deletes a
+     * title's downloads) - everywhere else a long press keeps doing nothing. */
+    onLongClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
     posterWidth: Dp = 104.dp,
     descriptionMaxLines: Int = 5,
@@ -64,7 +68,13 @@ fun VerticalAnimeListItem(
             .then(sharedCardModifier)
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
-            .clickable(onClick = onClick)
+            .then(
+                if (onLongClick != null) {
+                    Modifier.combinedClickable(onClick = onClick, onLongClick = onLongClick)
+                } else {
+                    Modifier.clickable(onClick = onClick)
+                }
+            )
             .padding(horizontal = 12.dp, vertical = 10.dp),
         horizontalArrangement = Arrangement.spacedBy(14.dp),
         verticalAlignment = Alignment.Top,

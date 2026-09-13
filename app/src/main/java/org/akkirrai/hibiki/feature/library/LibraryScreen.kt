@@ -34,6 +34,7 @@ import androidx.compose.material.icons.outlined.Download
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.Pause
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
@@ -58,7 +59,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.font.FontWeight
@@ -111,6 +114,10 @@ fun LibraryScreen(
     }
     val visibleEntries = allVisibleEntries.take(visibleCount)
     val hasMoreEntries = visibleCount < allVisibleEntries.size
+    val hapticFeedback = LocalHapticFeedback.current
+    // The title a long press in Saved is offering to clear the downloads of. Confirmed first: this
+    // deletes files, and a long press is easy to trigger by accident while scrolling.
+    var pendingDownloadsRemoval by remember { mutableStateOf<Anime?>(null) }
 
     LaunchedEffect(Unit) {
         PerfLogger.mark("LibraryScreen composed")
@@ -209,6 +216,16 @@ fun LibraryScreen(
                     entry = entry,
                     modifier = Modifier.padding(horizontal = UiDimens.ScreenPadding),
                     onClick = { onAnimeClick(entry.anime) },
+                    // Only in Saved: that category *is* the downloaded episodes, so a long press
+                    // there has something of its own to offer. Elsewhere a card owns no files.
+                    onLongClick = if (entry.category == LibraryCategory.Saved) {
+                        {
+                            hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                            pendingDownloadsRemoval = entry.anime
+                        }
+                    } else {
+                        null
+                    },
                     sharedCardModifier = animeDetailsSharedCardModifier(
                         entry.anime.id,
                         sharedTransitionScope,
@@ -234,6 +251,28 @@ fun LibraryScreen(
         }
     }
 
+    pendingDownloadsRemoval?.let { anime ->
+        AlertDialog(
+            onDismissRequest = { pendingDownloadsRemoval = null },
+            title = { Text(stringResource(R.string.library_saved_remove_confirm_title)) },
+            text = { Text(stringResource(R.string.library_saved_remove_confirm_message, anime.title)) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        pendingDownloadsRemoval = null
+                        viewModel.removeSavedDownloads(anime.id)
+                    },
+                ) {
+                    Text(stringResource(R.string.library_saved_remove_action))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingDownloadsRemoval = null }) {
+                    Text(stringResource(R.string.action_cancel))
+                }
+            },
+        )
+    }
 }
 
 private const val LIBRARY_DEFERRED_SYNC_DELAY_MS = 420L
@@ -329,6 +368,7 @@ private fun LibraryAnimeCard(
     entry: LibraryEntry,
     modifier: Modifier = Modifier,
     onClick: () -> Unit,
+    onLongClick: (() -> Unit)? = null,
     sharedCardModifier: Modifier = Modifier,
     sharedPosterModifier: Modifier = Modifier,
 ) {
@@ -338,6 +378,7 @@ private fun LibraryAnimeCard(
         anime = anime,
         metaText = "",
         onClick = onClick,
+        onLongClick = onLongClick,
         modifier = modifier,
         posterFooterContent = { LibraryStatusPosterFooter(entry.category) },
         metaContent = {

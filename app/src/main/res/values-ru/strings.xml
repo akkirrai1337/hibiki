@@ -63,6 +63,9 @@
     <string name="library_add_title">Добавить в библиотеку</string>
     <string name="library_add_subtitle">Выберите статус для тайтла</string>
     <string name="library_button_title">В библиотеку</string>
+    <string name="library_saved_remove_confirm_title">Удалить скачанные серии?</string>
+    <string name="library_saved_remove_confirm_message">Все скачанные серии «%1$s» будут удалены с устройства, и тайтл пропадёт из «Сохранённого».</string>
+    <string name="library_saved_remove_action">Удалить</string>
     <string name="library_saved_note">Сохранённое управляется скачанными сериями. Чтобы убрать тайтл отсюда, удалите скачанные серии.</string>
     <string name="library_remove_action">Убрать из библиотеки</string>
     <string name="library_empty_title">Пока пусто</string>

@@ -79,6 +79,17 @@ class OfflineDownloadRepository(
         OfflineDownloadQueue.removeEpisode(appContext, sourceId, episodeId)
     }
 
+    /** Deletes every episode this title has downloaded, across all of the sources it was downloaded
+     * from. The library's Saved category is built from exactly these files, so this is also what
+     * takes a title out of it - see LibraryRepository.removeSavedFromLibrary. */
+    fun removeTitle(titleId: String) {
+        getOfflineSources(titleId).forEach { source ->
+            getOfflineEpisodes(source.sourceId).forEach { episode ->
+                removeEpisode(source.sourceId, episode.id)
+            }
+        }
+    }
+
     fun redownloadEpisode(source: WatchSource, episode: WatchEpisode) {
         OfflineDownloadQueue.redownloadEpisode(
             context = appContext,

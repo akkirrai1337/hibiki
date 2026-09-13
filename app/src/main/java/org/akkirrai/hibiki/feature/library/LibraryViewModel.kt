@@ -174,6 +174,21 @@ class LibraryViewModel(
         _uiState.update { it.copy(selectedCategory = category) }
     }
 
+    /**
+     * Deletes every downloaded episode of a title, which is also what takes it out of Saved.
+     *
+     * Saved is not a category anyone puts a title into: it is a view of what is on the device (see
+     * reconcileSavedDownloads, which puts every downloaded title back into it). So the files have to
+     * go first, and the category is dropped after - otherwise the next sync would simply restore it.
+     */
+    fun removeSavedDownloads(titleId: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            offlineDownloadRepository.removeTitle(titleId)
+            libraryRepository.removeSavedFromLibrary(titleId)
+            updateEntries(libraryRepository.getLibraryEntries())
+        }
+    }
+
     private fun updateEntries(entries: List<LibraryEntry>) {
         _uiState.update {
             it.copy(

@@ -64,6 +64,9 @@
     <string name="library_add_title">Додати до бібліотеки</string>
     <string name="library_add_subtitle">Виберіть статус цього аніме</string>
     <string name="library_button_title">Бібліотека</string>
+    <string name="library_saved_remove_confirm_title">Видалити завантажені серії?</string>
+    <string name="library_saved_remove_confirm_message">Усі завантажені серії «%1$s» буде видалено з пристрою, і тайтл зникне зі «Збереженого».</string>
+    <string name="library_saved_remove_action">Видалити</string>
     <string name="library_saved_note">Збережені аніме визначаються завантаженими серіями. Щоб прибрати аніме звідси, видаліть завантажені серії.</string>
     <string name="library_remove_action">Видалити з бібліотеки</string>
     <string name="library_empty_title">Тут поки порожньо</string>

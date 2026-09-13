@@ -67,6 +67,9 @@
     <string name="library_add_title">Add to library</string>
     <string name="library_add_subtitle">Choose a status for this title</string>
     <string name="library_button_title">Library</string>
+    <string name="library_saved_remove_confirm_title">Delete downloaded episodes?</string>
+    <string name="library_saved_remove_confirm_message">Every downloaded episode of %1$s will be deleted from this device, and it will leave Saved.</string>
+    <string name="library_saved_remove_action">Delete</string>
     <string name="library_saved_note">Saved titles are managed by downloaded episodes. To remove a title from here, delete the downloaded episodes.</string>
     <string name="library_remove_action">Remove from library</string>
     <string name="library_empty_title">Nothing here yet</string>
