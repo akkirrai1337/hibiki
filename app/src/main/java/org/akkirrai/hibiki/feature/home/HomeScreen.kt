@@ -266,7 +266,9 @@ fun HomeScreen(
                     ) {
                         searchStateVerticalListContent(
                             state = state.searchResult,
-                            onAnimeClick = onAnimeClick,
+                            // Results can be aggregator entries (see HomeRepository.aggregatorSearch),
+                            // which have to be resolved to a source title before they open.
+                            onAnimeClick = openAggregatorEntry,
                             metaText = { anime -> buildHomeMeta(anime, announcementLabel, movieLabel) },
                             onLoadMore = viewModel::loadMoreSearchResults,
                             loadMoreLabel = searchLoadMoreLabel,

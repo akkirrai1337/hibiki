@@ -83,11 +83,15 @@ class AniListClient(private val client: HttpClient) {
     suspend fun browse(request: ExternalCatalogRequest): List<ExternalMetadata>? {
         val (nowSeason, nowYear) = seasonNow()
         val seasonal = request.mode == ExternalCatalogRequest.Mode.SEASON
-        val sort = if (request.mode == ExternalCatalogRequest.Mode.POPULAR) "POPULARITY_DESC" else "TRENDING_DESC"
+        val sort = when {
+            !request.query.isNullOrBlank() -> "SEARCH_MATCH"
+            request.mode == ExternalCatalogRequest.Mode.POPULAR -> "POPULARITY_DESC"
+            else -> "TRENDING_DESC"
+        }
         val data = graphql(
-            """query (${'$'}page: Int, ${'$'}perPage: Int, ${'$'}season: MediaSeason, ${'$'}seasonYear: Int, ${'$'}genreIn: [String], ${'$'}genreNotIn: [String], ${'$'}formatIn: [MediaFormat], ${'$'}formatNotIn: [MediaFormat], ${'$'}statusIn: [MediaStatus], ${'$'}statusNotIn: [MediaStatus], ${'$'}startAfter: FuzzyDateInt, ${'$'}startBefore: FuzzyDateInt) {
+            """query (${'$'}page: Int, ${'$'}perPage: Int, ${'$'}season: MediaSeason, ${'$'}seasonYear: Int, ${'$'}genreIn: [String], ${'$'}genreNotIn: [String], ${'$'}formatIn: [MediaFormat], ${'$'}formatNotIn: [MediaFormat], ${'$'}statusIn: [MediaStatus], ${'$'}statusNotIn: [MediaStatus], ${'$'}startAfter: FuzzyDateInt, ${'$'}startBefore: FuzzyDateInt, ${'$'}search: String) {
               Page(page: ${'$'}page, perPage: ${'$'}perPage) {
-                media(type: ANIME, sort: $sort, season: ${'$'}season, seasonYear: ${'$'}seasonYear, genre_in: ${'$'}genreIn, genre_not_in: ${'$'}genreNotIn, format_in: ${'$'}formatIn, format_not_in: ${'$'}formatNotIn, status_in: ${'$'}statusIn, status_not_in: ${'$'}statusNotIn, startDate_greater: ${'$'}startAfter, startDate_lesser: ${'$'}startBefore, isAdult: false) { $ANILIST_MEDIA_FIELDS }
+                media(type: ANIME, sort: $sort, season: ${'$'}season, seasonYear: ${'$'}seasonYear, genre_in: ${'$'}genreIn, genre_not_in: ${'$'}genreNotIn, format_in: ${'$'}formatIn, format_not_in: ${'$'}formatNotIn, status_in: ${'$'}statusIn, status_not_in: ${'$'}statusNotIn, startDate_greater: ${'$'}startAfter, startDate_lesser: ${'$'}startBefore, search: ${'$'}search, isAdult: false) { $ANILIST_MEDIA_FIELDS }
               }
             }""",
             buildJsonObject {
@@ -112,6 +116,7 @@ class AniListClient(private val client: HttpClient) {
                 // zero month and day - so the bounds sit just outside the range, not on its first day.
                 request.yearFrom?.let { put("startAfter", (it - 1) * 10_000 + 9_999) }
                 request.yearTo?.let { put("startBefore", (it + 1) * 10_000) }
+                request.query?.trim()?.takeIf { it.isNotEmpty() }?.let { put("search", it) }
             },
         ) ?: return null
         return data.page?.media.orEmpty().map { it.toExternalMetadata() }
@@ -200,6 +205,13 @@ class KitsuClient(private val client: HttpClient) {
      */
     suspend fun browse(request: ExternalCatalogRequest): List<ExternalMetadata>? {
         val paging = "page[limit]=${request.limit}&page[offset]=${request.offset}"
+        // A text search pages like any other listing. Kitsu cannot filter it - the service never asks
+        // it to, see FILTERABLE_CATALOG_PROVIDERS.
+        request.query?.trim()?.takeIf { it.isNotEmpty() }?.let { query ->
+            val body = get<KitsuListResponse>("/anime?filter[text]=${query.urlEncoded()}&$paging&include=$KITSU_INCLUDE") ?: return null
+            val included = body.included.orEmpty()
+            return body.data.orEmpty().map { it.toExternalMetadata(included) }
+        }
         val path = when (request.mode) {
             ExternalCatalogRequest.Mode.TRENDING ->
                 if (request.offset > 0) return emptyList()

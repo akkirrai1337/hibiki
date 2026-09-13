@@ -139,6 +139,8 @@ data class ExternalCatalogRequest(
     val excludedStatuses: List<String> = emptyList(),
     val yearFrom: Int? = null,
     val yearTo: Int? = null,
+    /** Text to search the catalog for; the provider's own relevance order replaces the mode's sort. */
+    val query: String? = null,
 ) {
     enum class Mode { TRENDING, POPULAR, SEASON }
 

@@ -216,6 +216,7 @@ class HomeRepository(
     ): List<Anime> {
         AppLogger.d(TAG, "search(query=$query, filters=$filters, limit=$limit, offset=$offset)")
         ensureInternetConnection()
+        aggregatorSearch(query, filters, limit, offset)?.let { return it }
         return searchRepository.search(
             AnimeSearchRequest(
                 query = query,
@@ -233,7 +234,39 @@ class HomeRepository(
     }
 
     suspend fun getSearchFilterCatalog(): AnimeSearchFilterCatalog {
+        // Search goes through the aggregator whenever this source is browsed from one (see
+        // aggregatorSearch), so the filters it offers have to be the aggregator's too.
+        val order = AggregatorCatalogBrowser.providerOrder(appPreferences, currentSource().descriptor)
+        if (order != null && AggregatorCatalogBrowser.canFilter(order)) return AggregatorCatalogBrowser.filterCatalog()
         return searchRepository.getSearchFilterCatalog()
+    }
+
+    /**
+     * Search through the aggregator when this source is browsed from one: the same entries, titles
+     * and posters as the aggregator catalog, each resolved to the source's own title only once it is
+     * opened. Null hands the search back to the source - no provider may answer for it, or none did
+     * (an outage) - so a search that cannot go through the aggregator still finds something.
+     */
+    private suspend fun aggregatorSearch(
+        query: String,
+        filters: AnimeSearchFilters,
+        limit: Int,
+        offset: Int,
+    ): List<Anime>? {
+        val order = AggregatorCatalogBrowser.providerOrder(appPreferences, currentSource().descriptor) ?: return null
+        // With no provider that can filter, the sheet was the source's, and its aliases mean nothing
+        // to an aggregator - that search stays with the source.
+        if (filters.hasActiveFilters() && !AggregatorCatalogBrowser.canFilter(order)) return null
+        return AggregatorCatalogBrowser.browseRange(
+            service = metadataService,
+            order = order,
+            mode = ExternalCatalogRequest.Mode.POPULAR,
+            offset = offset,
+            limit = limit,
+            preferEnglish = preferEnglish(),
+            filters = filters,
+            query = query,
+        )
     }
 
     fun close() {
@@ -398,8 +431,11 @@ class HomeRepository(
         return null
     }
 
-    suspend fun enrichDescription(anime: Anime): Anime =
-        searchRepository.getDetails(anime.id, anime)
+    suspend fun enrichDescription(anime: Anime): Anime {
+        // An aggregator entry is not a title of the source yet, and already carries its description.
+        if (decodeExternalEntryId(anime.id) != null) return anime
+        return searchRepository.getDetails(anime.id, anime)
+    }
 
     /**
      * Turns a card from the aggregator catalog into something playable: the source's own title for
