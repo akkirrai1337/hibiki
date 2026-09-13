@@ -31,10 +31,10 @@ import androidx.compose.material.icons.outlined.BookmarkBorder
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.Download
+import androidx.compose.material.icons.outlined.DeleteOutline
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.Pause
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
@@ -44,7 +44,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -77,6 +76,8 @@ import org.akkirrai.hibiki.app.settings.LocalAppLanguage
 import org.akkirrai.hibiki.core.design.icon
 import org.akkirrai.hibiki.core.design.UiDimens
 import org.akkirrai.hibiki.core.design.component.AppMessageState
+import org.akkirrai.hibiki.core.design.component.AnimeQuickAction
+import org.akkirrai.hibiki.core.design.component.AnimeQuickActionsSheet
 import org.akkirrai.hibiki.core.design.component.AppTonalSurface
 import org.akkirrai.hibiki.core.design.component.search.AppSearchTopBar
 import org.akkirrai.hibiki.core.design.component.anime.AnimeTitleText
@@ -115,9 +116,7 @@ fun LibraryScreen(
     val visibleEntries = allVisibleEntries.take(visibleCount)
     val hasMoreEntries = visibleCount < allVisibleEntries.size
     val hapticFeedback = LocalHapticFeedback.current
-    // The title a long press in Saved is offering to clear the downloads of. Confirmed first: this
-    // deletes files, and a long press is easy to trigger by accident while scrolling.
-    var pendingDownloadsRemoval by remember { mutableStateOf<Anime?>(null) }
+    var titleWithActions by remember { mutableStateOf<Anime?>(null) }
 
     LaunchedEffect(Unit) {
         PerfLogger.mark("LibraryScreen composed")
@@ -216,12 +215,12 @@ fun LibraryScreen(
                     entry = entry,
                     modifier = Modifier.padding(horizontal = UiDimens.ScreenPadding),
                     onClick = { onAnimeClick(entry.anime) },
-                    // Only in Saved: that category *is* the downloaded episodes, so a long press
-                    // there has something of its own to offer. Elsewhere a card owns no files.
-                    onLongClick = if (entry.category == LibraryCategory.Saved) {
+                    // Saved is a view of files on the device; its actions belong to Downloads.
+                    // Other library cards can remove their title from every tracking category.
+                    onLongClick = if (entry.category != LibraryCategory.Saved) {
                         {
                             hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
-                            pendingDownloadsRemoval = entry.anime
+                            titleWithActions = entry.anime
                         }
                     } else {
                         null
@@ -251,26 +250,22 @@ fun LibraryScreen(
         }
     }
 
-    pendingDownloadsRemoval?.let { anime ->
-        AlertDialog(
-            onDismissRequest = { pendingDownloadsRemoval = null },
-            title = { Text(stringResource(R.string.library_saved_remove_confirm_title)) },
-            text = { Text(stringResource(R.string.library_saved_remove_confirm_message, anime.title)) },
-            confirmButton = {
-                TextButton(
+    titleWithActions?.let { anime ->
+        AnimeQuickActionsSheet(
+            anime = anime,
+            actions = listOf(
+                AnimeQuickAction(
+                    titleRes = R.string.library_remove_action,
+                    descriptionRes = R.string.library_remove_action_description,
+                    icon = Icons.Outlined.DeleteOutline,
+                    isDestructive = true,
                     onClick = {
-                        pendingDownloadsRemoval = null
-                        viewModel.removeSavedDownloads(anime.id)
+                        titleWithActions = null
+                        viewModel.removeFromLibrary(anime.id)
                     },
-                ) {
-                    Text(stringResource(R.string.library_saved_remove_action))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { pendingDownloadsRemoval = null }) {
-                    Text(stringResource(R.string.action_cancel))
-                }
-            },
+                ),
+            ),
+            onDismissRequest = { titleWithActions = null },
         )
     }
 }

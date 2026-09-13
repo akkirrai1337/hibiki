@@ -33,6 +33,9 @@
     <string name="home_forget_progress_confirm_title">Видалити дані про перегляд?</string>
     <string name="home_forget_progress_confirm_message">«%1$s» зникне з «Продовжити перегляд» і «Нещодавно переглянуті», а відтворення наступного разу почнеться спочатку.</string>
     <string name="home_forget_progress_action">Видалити</string>
+    <string name="home_forget_progress_action_description">Видалити прогрес і почати цей тайтл спочатку.</string>
+    <string name="downloads_remove_title_action">Видалити збережені епізоди</string>
+    <string name="downloads_remove_title_action_description">Видалити всі збережені епізоди цього тайтлу.</string>
     <string name="home_trending">Зараз у тренді</string>
     <string name="home_see_all">Переглянути все</string>
     <string name="home_recent_updates">Останні оновлення</string>
@@ -69,6 +72,7 @@
     <string name="library_saved_remove_action">Видалити</string>
     <string name="library_saved_note">Збережені аніме визначаються завантаженими серіями. Щоб прибрати аніме звідси, видаліть завантажені серії.</string>
     <string name="library_remove_action">Видалити з бібліотеки</string>
+    <string name="library_remove_action_description">Видалити цей тайтл із бібліотеки.</string>
     <string name="library_empty_title">Тут поки порожньо</string>
     <string name="library_show_more">Показати більше</string>
     <string name="library_empty_body">Додайте аніме до бібліотеки, і вони з’являться тут.</string>
@@ -94,6 +98,7 @@
     <string name="downloads_empty_body">Завантажені серії з’являться тут.</string>
     <string name="downloads_episode_count">%1$d завантажено</string>
     <string name="downloads_active_count">%1$d завантажується</string>
+    <string name="action_open_downloads">Відкрити завантаження</string>
     <string name="search_placeholder">Пошук аніме</string>
     <string name="search_filters_title">Фільтри</string>
     <string name="search_filters_unavailable">Фільтри тимчасово недоступні.</string>

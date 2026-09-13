@@ -189,6 +189,13 @@ class LibraryViewModel(
         }
     }
 
+    fun removeFromLibrary(titleId: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            libraryRepository.removeFromLibrary(titleId)
+            updateEntries(libraryRepository.getLibraryEntries())
+        }
+    }
+
     private fun updateEntries(entries: List<LibraryEntry>) {
         _uiState.update {
             it.copy(

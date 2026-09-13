@@ -61,6 +61,7 @@ import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.Logout
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.DeleteOutline
 import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.SearchOff
@@ -79,9 +80,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
@@ -123,6 +122,8 @@ import org.akkirrai.hibiki.core.design.component.AppCenteredLoading
 import org.akkirrai.hibiki.core.design.component.AppFilledIconButton
 import org.akkirrai.hibiki.core.design.component.AppFilledIconButtonStyle
 import org.akkirrai.hibiki.core.design.component.AppMessageState
+import org.akkirrai.hibiki.core.design.component.AnimeQuickAction
+import org.akkirrai.hibiki.core.design.component.AnimeQuickActionsSheet
 import org.akkirrai.hibiki.core.design.component.search.AppSearchTopBar
 import org.akkirrai.hibiki.core.design.component.AppTonalSurface
 import org.akkirrai.hibiki.core.design.component.AppTopScrim
@@ -387,25 +388,21 @@ fun HomeScreen(
         }
 
         pendingProgressRemoval?.let { anime ->
-            AlertDialog(
-                onDismissRequest = { pendingProgressRemoval = null },
-                title = { Text(stringResource(R.string.home_forget_progress_confirm_title)) },
-                text = { Text(stringResource(R.string.home_forget_progress_confirm_message, anime.title)) },
-                confirmButton = {
-                    TextButton(
+            AnimeQuickActionsSheet(
+                anime = anime,
+                actions = listOf(
+                    AnimeQuickAction(
+                        titleRes = R.string.home_forget_progress_action,
+                        descriptionRes = R.string.home_forget_progress_action_description,
+                        icon = Icons.Outlined.DeleteOutline,
+                        isDestructive = true,
                         onClick = {
                             pendingProgressRemoval = null
                             viewModel.forgetWatchProgress(anime)
                         },
-                    ) {
-                        Text(stringResource(R.string.home_forget_progress_action))
-                    }
-                },
-                dismissButton = {
-                    TextButton(onClick = { pendingProgressRemoval = null }) {
-                        Text(stringResource(R.string.action_cancel))
-                    }
-                },
+                    ),
+                ),
+                onDismissRequest = { pendingProgressRemoval = null },
             )
         }
     }
@@ -975,6 +972,7 @@ private fun AnimeSection(
                         anime = anime,
                         announcementLabel = stringResource(R.string.anime_meta_announcement),
                         movieLabel = stringResource(R.string.anime_meta_movie),
+                        includeRating = false,
                     ),
                     onClick = { onAnimeClick(anime) },
                     onLongClick = onAnimeLongClick?.let { { it(anime) } },
@@ -1077,9 +1075,11 @@ private fun buildHomeMeta(
     anime: Anime,
     announcementLabel: String,
     movieLabel: String,
+    includeRating: Boolean = true,
 ): String {
     return anime.buildCardMeta(
         announcementLabel = announcementLabel,
         movieLabel = movieLabel,
+        includeRating = includeRating,
     )
 }

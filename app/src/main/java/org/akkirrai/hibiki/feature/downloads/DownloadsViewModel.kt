@@ -54,6 +54,13 @@ class DownloadsViewModel(
         }
     }
 
+    fun removeTitle(titleId: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            offlineDownloadRepository.removeTitle(titleId)
+            refresh()
+        }
+    }
+
     private fun buildSourceEntry(source: WatchSource): DownloadedSourceEntry? {
         val episodes = offlineDownloadRepository.getOfflineEpisodes(source.sourceId)
         if (episodes.isEmpty()) return null

@@ -209,6 +209,11 @@ private fun HibikiNavHost(
                             )
                         }
                     },
+                    onOpenDownloads = {
+                        navController.runIfCurrent(backStackEntry) {
+                            navController.navigate(AnimeNavType.DOWNLOADS_ROUTE)
+                        }
+                    },
                     isActive = isTopLevelDestination && currentTopLevel == TopLevelDestination.Home,
                     bottomContentPadding = topLevelBottomContentPadding,
                     sharedTransitionScope = sharedTransitionScope,
@@ -267,6 +272,11 @@ private fun HibikiNavHost(
                                 TopLevelDestination.Catalog,
                                 TopLevelDestination.Sources,
                             )
+                        }
+                    },
+                    onOpenDownloads = {
+                        navController.runIfCurrent(backStackEntry) {
+                            navController.navigate(AnimeNavType.DOWNLOADS_ROUTE)
                         }
                     },
                     bottomContentPadding = topLevelBottomContentPadding,

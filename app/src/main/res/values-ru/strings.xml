@@ -31,6 +31,9 @@
     <string name="home_forget_progress_confirm_title">Удалить данные о просмотре?</string>
     <string name="home_forget_progress_confirm_message">«%1$s» исчезнет из «Продолжить просмотр» и «Недавно просмотренные», а воспроизведение в следующий раз начнётся сначала.</string>
     <string name="home_forget_progress_action">Удалить</string>
+    <string name="home_forget_progress_action_description">Удалить прогресс и начать этот тайтл с начала.</string>
+    <string name="downloads_remove_title_action">Удалить сохранённые эпизоды</string>
+    <string name="downloads_remove_title_action_description">Удалить все сохранённые эпизоды этого тайтла.</string>
     <string name="home_trending">Сейчас в тренде</string>
     <string name="home_see_all">Смотреть все</string>
     <string name="home_recent_updates">Недавние обновления</string>
@@ -68,6 +71,7 @@
     <string name="library_saved_remove_action">Удалить</string>
     <string name="library_saved_note">Сохранённое управляется скачанными сериями. Чтобы убрать тайтл отсюда, удалите скачанные серии.</string>
     <string name="library_remove_action">Убрать из библиотеки</string>
+    <string name="library_remove_action_description">Убрать этот тайтл из библиотеки.</string>
     <string name="library_empty_title">Пока пусто</string>
     <string name="library_show_more">Показать ещё</string>
     <string name="library_empty_body">Добавляй тайтлы в библиотеку, и они появятся здесь.</string>
@@ -93,6 +97,7 @@
     <string name="downloads_empty_body">Скачанные серии появятся здесь.</string>
     <string name="downloads_episode_count">%1$d скачано</string>
     <string name="downloads_active_count">%1$d загружается</string>
+    <string name="action_open_downloads">Открыть загрузки</string>
 
     <string name="search_placeholder">Поиск аниме</string>
     <string name="search_filters_title">Фильтры</string>

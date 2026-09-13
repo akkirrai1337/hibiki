@@ -35,6 +35,9 @@
     <string name="home_forget_progress_confirm_title">Forget watch progress?</string>
     <string name="home_forget_progress_confirm_message">%1$s will disappear from continue watching and recently watched, and playback will start from the beginning next time.</string>
     <string name="home_forget_progress_action">Forget</string>
+    <string name="home_forget_progress_action_description">Remove progress and start this title from the beginning.</string>
+    <string name="downloads_remove_title_action">Remove saved episodes</string>
+    <string name="downloads_remove_title_action_description">Delete all saved episodes for this title.</string>
     <string name="home_trending">Trending now</string>
     <string name="home_see_all">See all</string>
     <string name="home_recent_updates">Recent updates</string>
@@ -72,6 +75,7 @@
     <string name="library_saved_remove_action">Delete</string>
     <string name="library_saved_note">Saved titles are managed by downloaded episodes. To remove a title from here, delete the downloaded episodes.</string>
     <string name="library_remove_action">Remove from library</string>
+    <string name="library_remove_action_description">Remove this title from your library.</string>
     <string name="library_empty_title">Nothing here yet</string>
     <string name="library_show_more">Show more</string>
     <string name="library_empty_body">Add titles to your library and they will appear here.</string>
@@ -97,6 +101,7 @@
     <string name="downloads_empty_body">Episodes you download will appear here.</string>
     <string name="downloads_episode_count">%1$d downloaded</string>
     <string name="downloads_active_count">%1$d loading</string>
+    <string name="action_open_downloads">Open downloads</string>
 
     <string name="search_placeholder">Search anime</string>
     <string name="search_filters_title">Filters</string>
