@@ -183,6 +183,8 @@
     <string name="watch_download">Завантажити</string>
     <string name="watch_pause">Призупинити</string>
     <string name="watch_remove_download">Видалити завантаження</string>
+    <string name="watch_remove_download_confirm_title">Видалити завантаження?</string>
+    <string name="watch_remove_download_confirm_message">Серію %1$s буде видалено з пристрою — щоб переглянути офлайн, її доведеться завантажити знову.</string>
     <string name="watch_resume">Продовжити</string>
     <string name="watch_downloaded">Завантажено</string>
     <string name="watch_episode_headline">Серія %1$s</string>

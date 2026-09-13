@@ -185,6 +185,8 @@
     <string name="watch_download">Скачать</string>
     <string name="watch_pause">Пауза</string>
     <string name="watch_remove_download">Удалить загрузку</string>
+    <string name="watch_remove_download_confirm_title">Удалить загрузку?</string>
+    <string name="watch_remove_download_confirm_message">Серия %1$s будет удалена с устройства — чтобы посмотреть офлайн, её придётся скачать заново.</string>
     <string name="watch_resume">Продолжить</string>
     <string name="watch_downloaded">Скачано</string>
     <string name="watch_episode_headline">Серия %1$s</string>

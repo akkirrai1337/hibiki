@@ -187,6 +187,8 @@
     <string name="watch_download">Download</string>
     <string name="watch_pause">Pause</string>
     <string name="watch_remove_download">Remove download</string>
+    <string name="watch_remove_download_confirm_title">Remove download?</string>
+    <string name="watch_remove_download_confirm_message">Episode %1$s will be deleted from this device and will have to be downloaded again to watch offline.</string>
     <string name="watch_resume">Resume</string>
     <string name="watch_downloaded">Downloaded</string>
     <string name="watch_episode_headline">Episode %1$s</string>

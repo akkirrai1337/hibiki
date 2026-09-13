@@ -38,11 +38,13 @@ import androidx.compose.material.icons.outlined.Pause
 import androidx.compose.material.icons.outlined.PlayArrow
 import androidx.compose.material.icons.outlined.VideoLibrary
 import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -148,6 +150,17 @@ fun EpisodesScreen(
     val navigationLockedState = rememberWatchNavigationLockState(lifecycleOwner)
     val navigationLocked = navigationLockedState.value
     var downloadStates by remember(sourceId) { mutableStateOf<Map<String, OfflineEpisodeDownloadState>>(emptyMap()) }
+    // Set only for an episode that is actually downloaded - cancelling one still in flight throws
+    // nothing away and asks nothing. See the remove handler below.
+    var pendingRemoval by remember(sourceId) { mutableStateOf<WatchEpisode?>(null) }
+    val removeEpisodeDownload: (WatchEpisode) -> Unit = { episode ->
+        offlineDownloadRepository.removeEpisode(sourceId, episode.id)
+        val updatedStates = downloadStates + (episode.id to OfflineEpisodeDownloadState.NotDownloaded)
+        downloadStates = updatedStates
+        if (!updatedStates.values.any(OfflineEpisodeDownloadState::keepsTitleSaved)) {
+            libraryRepository.removeSavedFromLibrary(titleId)
+        }
+    }
     val coroutineScope = rememberCoroutineScope()
     var hasAutoScrolled by remember(sourceId) { mutableStateOf(false) }
 
@@ -335,11 +348,14 @@ fun EpisodesScreen(
                                 downloadStates = downloadStates + (episode.id to OfflineEpisodeDownloadState.Queued)
                             },
                             onRemoveClick = {
-                                offlineDownloadRepository.removeEpisode(sourceId, episode.id)
-                                val updatedStates = downloadStates + (episode.id to OfflineEpisodeDownloadState.NotDownloaded)
-                                downloadStates = updatedStates
-                                if (!updatedStates.values.any(OfflineEpisodeDownloadState::keepsTitleSaved)) {
-                                    libraryRepository.removeSavedFromLibrary(titleId)
+                                // Only a finished download is worth asking about: it is a file that
+                                // has to be fetched again, and the trash icon sits right next to
+                                // the row you tap to play. Cancelling a queued/running/paused one
+                                // throws away nothing that was not going to be re-fetched anyway.
+                                if (downloadStates[episode.id] == OfflineEpisodeDownloadState.Completed) {
+                                    pendingRemoval = episode
+                                } else {
+                                    removeEpisodeDownload(episode)
                                 }
                             },
                         )
@@ -365,6 +381,36 @@ fun EpisodesScreen(
                 }
             }
         }
+    }
+
+    pendingRemoval?.let { episode ->
+        AlertDialog(
+            onDismissRequest = { pendingRemoval = null },
+            title = { Text(stringResource(R.string.watch_remove_download_confirm_title)) },
+            text = {
+                Text(
+                    stringResource(
+                        R.string.watch_remove_download_confirm_message,
+                        formatEpisodeNumber(episode.number),
+                    ),
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        pendingRemoval = null
+                        removeEpisodeDownload(episode)
+                    },
+                ) {
+                    Text(stringResource(R.string.watch_remove_download))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingRemoval = null }) {
+                    Text(stringResource(R.string.action_cancel))
+                }
+            },
+        )
     }
 }
 
