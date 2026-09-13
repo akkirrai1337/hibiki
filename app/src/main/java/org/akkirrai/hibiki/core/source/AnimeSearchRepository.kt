@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
+import org.akkirrai.beakokit.metadata.ExternalMetadata
 import org.akkirrai.beakokit.metadata.ExternalMetadataPreferences
 import org.akkirrai.beakokit.metadata.MetadataProviderId
 import org.akkirrai.beakokit.metadata.ExternalMetadataService
@@ -29,6 +30,7 @@ import org.akkirrai.beakokit.model.AnimeSearchSort
 import org.akkirrai.beakokit.model.AnimeReleaseStatus
 import org.akkirrai.beakokit.model.AnimeTitle
 import org.akkirrai.beakokit.model.AnimeTrailerTitle
+import org.akkirrai.beakokit.model.RelatedAnimeTitle
 import org.akkirrai.hibiki.app.settings.AppPreferences
 import org.akkirrai.hibiki.app.settings.LanguageMode
 import org.akkirrai.hibiki.core.log.AppLogger
@@ -226,9 +228,18 @@ class AnimeSearchRepository(
                                 ?: throw it
                         }
                     val described = describe(source, title)
-                    val trailer = described.trailer?.toAnimeTrailer()
-                    val anime = described.toAnime(
-                        canonicalId = described.id,
+                    val enrichedSections = describeRelatedAnime(
+                        source,
+                        listOf(described.relatedAnime, described.franchiseAnime, described.similarAnime),
+                    )
+                    val describedFull = described.copy(
+                        relatedAnime = enrichedSections[0],
+                        franchiseAnime = enrichedSections[1],
+                        similarAnime = enrichedSections[2],
+                    )
+                    val trailer = describedFull.trailer?.toAnimeTrailer()
+                    val anime = describedFull.toAnime(
+                        canonicalId = describedFull.id,
                         preferEnglish = preferEnglish(),
                         fallback = fallback,
                         trailer = trailer ?: fallback.trailer,
@@ -537,6 +548,45 @@ class AnimeSearchRepository(
             .getOrNull()
         return mergeExternalMetadata(title, external)
     }
+
+    /**
+     * The same aggregator-description [describe] gives the title itself, extended to its
+     * related/franchise/similar strips - otherwise those keep the source's own name and poster even
+     * on a details screen that is describing everything else from the aggregator, which is the same
+     * inconsistency [describe] exists to fix for the title.
+     *
+     * `sections` is franchise/related/similar together (not three separate calls) so a title that
+     * happens to appear in more than one of them - which does happen, e.g. the current title itself
+     * spliced into "related" - is only matched once. Sequential, same as [warmMetadata]: each is a
+     * request, and this is a handful of cards, not a scrollable list.
+     */
+    private suspend fun describeRelatedAnime(
+        source: AnimeSourceRuntime,
+        sections: List<List<RelatedAnimeTitle>>,
+    ): List<List<RelatedAnimeTitle>> {
+        val service = metadataService ?: return sections
+        val order = providerOrderFor(source)
+        val all = sections.flatten().distinctBy(RelatedAnimeTitle::id)
+        if (order.isEmpty() || all.isEmpty()) return sections
+
+        val describedById = all.associate { item ->
+            val stub = AnimeTitle(id = item.id, originalName = item.title, englishName = item.title, posterUrl = item.posterUrl, year = item.year, type = item.type, status = item.status, availableEpisodeCount = item.episodeCount)
+            val external = runCatching { service.metadataFor(stub, order) }
+                .onFailure { AppLogger.w(TAG, "describeRelatedAnime: metadata lookup failed for ${item.id}", it) }
+                .getOrNull()
+            item.id to (external?.let { item.describedWith(it) } ?: item)
+        }
+        return sections.map { section -> section.map { describedById[it.id] ?: it } }
+    }
+
+    private fun RelatedAnimeTitle.describedWith(external: ExternalMetadata): RelatedAnimeTitle = copy(
+        title = external.englishName ?: external.romajiName ?: external.nativeName ?: title,
+        posterUrl = external.posterUrl ?: posterUrl,
+        year = external.year ?: year,
+        type = external.type ?: type,
+        episodeCount = external.episodeCount ?: episodeCount,
+        status = external.status ?: status,
+    )
 
     /** Whether titles should read in English for the current language setting - the catalog asks so
      * an aggregator entry is named the same way a source title on the same screen would be. */

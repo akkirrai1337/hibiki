@@ -37,20 +37,50 @@ class ExternalMetadataService(
     private val kitsu = KitsuClient(client)
 
     /**
-     * Describes one title from the first provider in [order] that can, trying the next when one
-     * cannot.
+     * Describes one title from [order]'s providers, in two passes.
+     *
+     * The first pass only reads what is already on record - a match written when a card was
+     * resolved from an aggregator's catalog, say - across *every* provider in [order], not just the
+     * first. Only once none of them has anything recorded does the second pass fall back to a live
+     * search, again in [order]. Without this split, a title already pinned to (say) Kitsu by the
+     * entry screen could still be re-guessed from AniList because AniList happens to be preferred -
+     * landing on a different show with a similar name and showing a different cover than the one
+     * just tapped.
      *
      * Never throws: a caller merges whatever comes back, and null simply means the screen keeps the
      * source's own metadata.
      */
     suspend fun metadataFor(anime: AnimeTitle, order: List<MetadataProviderId>): ExternalMetadata? {
+        // A provider that already has *anything* on record for this title - a match, or a still-fresh
+        // "no match" - is settled and must not be re-guessed by a live search in the second pass below.
+        val settled = mutableSetOf<MetadataProviderId>()
         for (provider in order) {
-            val media = runCatching { metadataFromProvider(anime, provider) }
+            val recorded = runCatching { recordedMetadataFor(anime, provider) }
+                .onFailure { log("metadataFor: provider=$provider threw for '${anime.englishName ?: anime.originalName}': ${it.message}") }
+                .getOrNull() ?: RecordedResult.Unrecorded
+            if (recorded is RecordedResult.Unrecorded) continue
+            settled += provider
+            (recorded as? RecordedResult.Found)?.let { return it.media }
+        }
+        for (provider in order) {
+            if (provider in settled) continue
+            val media = runCatching { liveSearchMetadataFor(anime, provider) }
                 .onFailure { log("metadataFor: provider=$provider threw for '${anime.englishName ?: anime.originalName}': ${it.message}") }
                 .getOrNull()
             if (media != null) return media
         }
         return null
+    }
+
+    /** Result of checking what is already on record for a provider, without a live search. */
+    private sealed interface RecordedResult {
+        /** A usable entry was found (a live match, a refresh, a cross-provider lookup, or a stale
+         * cached copy served because the provider is unreachable). */
+        data class Found(val media: ExternalMetadata) : RecordedResult
+        /** A search already ran and confirmed, within its TTL, that this provider has nothing. */
+        data object Confirmed : RecordedResult
+        /** Nothing recorded yet either way - a live search is the only way left to answer. */
+        data object Unrecorded : RecordedResult
     }
 
     /**
@@ -217,7 +247,10 @@ class ExternalMetadataService(
         return emptyList()
     }
 
-    private suspend fun metadataFromProvider(anime: AnimeTitle, provider: MetadataProviderId): ExternalMetadata? {
+    /** What is already on record for this title and provider - a prior match, or one reachable
+     * through another provider's id - with no live search. [RecordedResult.Unrecorded] means the
+     * caller must fall back to [liveSearchMetadataFor]. */
+    private suspend fun recordedMetadataFor(anime: AnimeTitle, provider: MetadataProviderId): RecordedResult {
         val titleId = anime.id
         val label = anime.englishName?.takeIf(String::isNotBlank) ?: anime.originalName
         val match = store.readMatch(titleId, provider)
@@ -229,44 +262,52 @@ class ExternalMetadataService(
                 // fruitless search.
                 val remainingMillis = TTL_NO_MATCH_MILLIS - (nowMillis() - match.matchedAtMillis)
                 if (remainingMillis > 0) {
-                    log("metadataFromProvider: '$label' provider=$provider skipped, remembered no-match (retries in ${remainingMillis / 60_000}m)")
-                    return null
+                    log("recordedMetadataFor: '$label' provider=$provider skipped, remembered no-match (retries in ${remainingMillis / 60_000}m)")
+                    return RecordedResult.Confirmed
                 }
-            } else {
-                val cached = store.readMedia(provider, match.externalId)
-                if (cached != null && nowMillis() - cached.cachedAtMillis < ttlFor(cached.media)) {
-                    log("metadataFromProvider: '$label' provider=$provider cache hit, externalId=${match.externalId}")
-                    return cached.media
-                }
-                val refreshed = fetchById(provider, match.externalId)
-                if (refreshed != null) {
-                    log("metadataFromProvider: '$label' provider=$provider refreshed bound entry externalId=${match.externalId}")
-                    store.writeMedia(refreshed, nowMillis())
-                    recordCrossMatches(titleId, refreshed)
-                    return refreshed
-                }
-                // Offline, or the provider is down. A stale entry beats an empty screen.
-                log("metadataFromProvider: '$label' provider=$provider refresh failed for externalId=${match.externalId}, ${if (cached != null) "serving stale copy" else "and nothing cached either"}")
-                return cached?.media
+                return RecordedResult.Unrecorded
             }
+            val cached = store.readMedia(provider, match.externalId)
+            if (cached != null && nowMillis() - cached.cachedAtMillis < ttlFor(cached.media)) {
+                log("recordedMetadataFor: '$label' provider=$provider cache hit, externalId=${match.externalId}")
+                return RecordedResult.Found(cached.media)
+            }
+            val refreshed = fetchById(provider, match.externalId)
+            if (refreshed != null) {
+                log("recordedMetadataFor: '$label' provider=$provider refreshed bound entry externalId=${match.externalId}")
+                store.writeMedia(refreshed, nowMillis())
+                recordCrossMatches(titleId, refreshed)
+                return RecordedResult.Found(refreshed)
+            }
+            // Offline, or the provider is down. A stale entry beats an empty screen.
+            log("recordedMetadataFor: '$label' provider=$provider refresh failed for externalId=${match.externalId}, ${if (cached != null) "serving stale copy" else "and nothing cached either"}")
+            return cached?.media?.let { RecordedResult.Found(it) } ?: RecordedResult.Unrecorded
         }
 
         crossLookup(titleId, provider)?.let { crossMatched ->
-            log("metadataFromProvider: '$label' provider=$provider matched via another provider's id, externalId=${crossMatched.externalId}")
+            log("recordedMetadataFor: '$label' provider=$provider matched via another provider's id, externalId=${crossMatched.externalId}")
             store.writeMedia(crossMatched, nowMillis())
             store.writeMatch(
                 MetadataMatchRecord(titleId, provider, crossMatched.externalId, null, manual = false, matchedAtMillis = nowMillis()),
             )
             recordCrossMatches(titleId, crossMatched)
-            return crossMatched
+            return RecordedResult.Found(crossMatched)
         }
 
-        // Three shots at most - each is a request, and a title that has not turned up by then is very
-        // likely simply absent. See searchQueriesFor for why the later ones are worth spending.
+        return RecordedResult.Unrecorded
+    }
+
+    /** Searches this provider live for a title with nothing on record yet. Three shots at most -
+     * each is a request, and a title that has not turned up by then is very likely simply absent.
+     * See searchQueriesFor for why the later ones are worth spending. */
+    private suspend fun liveSearchMetadataFor(anime: AnimeTitle, provider: MetadataProviderId): ExternalMetadata? {
+        val titleId = anime.id
+        val label = anime.englishName?.takeIf(String::isNotBlank) ?: anime.originalName
+
         var searched = false
         val queries = searchQueriesFor(anime, MAX_SEARCHES_PER_PROVIDER)
         if (queries.isEmpty()) {
-            log("metadataFromProvider: '$label' provider=$provider has no usable name to search with (englishName/originalName/synonyms all blank)")
+            log("liveSearchMetadataFor: '$label' provider=$provider has no usable name to search with (englishName/originalName/synonyms all blank)")
         }
         for (query in queries) {
             // Null means the request itself failed - unreachable, rate-limited, or (as AniList was
@@ -274,17 +315,17 @@ class ExternalMetadataService(
             // record: a remembered "no match" is a week-long statement about the *title*.
             val results = searchProvider(provider, query)
             if (results == null) {
-                log("metadataFromProvider: '$label' provider=$provider search request failed for '$query' - leaving no record")
+                log("liveSearchMetadataFor: '$label' provider=$provider search request failed for '$query' - leaving no record")
                 return null
             }
             searched = true
             val best = pickBestMatch(anime, results.map(ScoredEntry::candidate))
             if (best == null) {
-                log("metadataFromProvider: '$label' provider=$provider search for '$query' returned ${results.size} candidate(s) - none cleared the match threshold")
+                log("liveSearchMetadataFor: '$label' provider=$provider search for '$query' returned ${results.size} candidate(s) - none cleared the match threshold")
                 continue
             }
             val found = results.firstOrNull { it.media.externalId == best.externalId }?.media ?: continue
-            log("metadataFromProvider: '$label' provider=$provider search for '$query' matched externalId=${best.externalId} confidence=${(best.confidence * 100).toInt()}%")
+            log("liveSearchMetadataFor: '$label' provider=$provider search for '$query' matched externalId=${best.externalId} confidence=${(best.confidence * 100).toInt()}%")
             store.writeMedia(found, nowMillis())
             store.writeMatch(
                 MetadataMatchRecord(
@@ -301,7 +342,7 @@ class ExternalMetadataService(
         }
 
         if (searched) {
-            log("metadataFromProvider: '$label' provider=$provider no match after ${queries.size} quer${if (queries.size == 1) "y" else "ies"}, recording no-match for ${TTL_NO_MATCH_MILLIS / (24L * 60 * 60 * 1_000)}d")
+            log("liveSearchMetadataFor: '$label' provider=$provider no match after ${queries.size} quer${if (queries.size == 1) "y" else "ies"}, recording no-match for ${TTL_NO_MATCH_MILLIS / (24L * 60 * 60 * 1_000)}d")
             store.writeMatch(
                 MetadataMatchRecord(titleId, provider, externalId = null, confidencePercent = null, manual = false, matchedAtMillis = nowMillis()),
             )
