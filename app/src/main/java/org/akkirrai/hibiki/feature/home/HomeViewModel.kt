@@ -24,6 +24,7 @@ import org.akkirrai.beakokit.api.SourceException
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.app.di.hibikiDependencies
 import org.akkirrai.hibiki.app.settings.AppPreferences
+import org.akkirrai.hibiki.core.log.AppLogger
 import org.akkirrai.hibiki.core.log.PerfLogger
 import org.akkirrai.hibiki.core.model.Anime
 import org.akkirrai.hibiki.core.model.AnimeSearchFilters
@@ -185,6 +186,9 @@ class HomeViewModel(
         activeQuery: String,
         activeFilters: AnimeSearchFilters,
     ) {
+        // The query itself is not logged, only its length - it is what the user typed.
+        val startedAt = System.currentTimeMillis()
+        AppLogger.d(SEARCH_LOG_TAG, "search start queryLength=${activeQuery.length} filtered=${activeFilters.hasActiveFilters()}")
         try {
             val items = kotlinx.coroutines.withContext(Dispatchers.IO) {
                 repository.search(
@@ -194,7 +198,11 @@ class HomeViewModel(
                     offset = 0,
                 )
             }
-            if (activeQuery != uiState.value.searchQuery.trim()) return
+            AppLogger.d(SEARCH_LOG_TAG, "search ok items=${items.size} in ${System.currentTimeMillis() - startedAt}ms")
+            if (activeQuery != uiState.value.searchQuery.trim()) {
+                AppLogger.d(SEARCH_LOG_TAG, "search result discarded: the query changed while it ran")
+                return
+            }
             val result = if (items.isEmpty()) {
                 SearchUiState.Empty
             } else {
@@ -205,8 +213,14 @@ class HomeViewModel(
             }
             _uiState.update { it.copy(searchResult = result) }
         } catch (cancelled: CancellationException) {
+            AppLogger.d(SEARCH_LOG_TAG, "search cancelled after ${System.currentTimeMillis() - startedAt}ms")
             throw cancelled
         } catch (throwable: Throwable) {
+            AppLogger.w(
+                SEARCH_LOG_TAG,
+                "search failed in ${System.currentTimeMillis() - startedAt}ms: ${throwable::class.java.simpleName}: ${throwable.message}",
+                throwable,
+            )
             if (activeQuery != uiState.value.searchQuery.trim()) return
             val message = when (throwable) {
                 is SourceException -> throwable.message ?: appString(R.string.error_source_generic)
@@ -585,6 +599,7 @@ class HomeViewModel(
     }
 
     private companion object {
+        const val SEARCH_LOG_TAG = "HomeSearch"
         const val SEARCH_DEBOUNCE_MS = 450L
         const val MIN_QUERY_LENGTH = 3
         const val SEARCH_PAGE_SIZE = 24

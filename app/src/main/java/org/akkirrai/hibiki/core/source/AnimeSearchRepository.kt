@@ -5,6 +5,7 @@ import io.ktor.client.HttpClient
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -112,14 +113,33 @@ class AnimeSearchRepository(
         val normalizedRequest = request.copy(query = normalizedQuery)
         val cacheKey = searchCacheKey(normalizedRequest)
         if (!forceRefresh) {
-            getCachedSearch(cacheKey)?.let { return it }
+            getCachedSearch(cacheKey)?.let { cached ->
+                AppLogger.d(TAG, "search: cache hit items=${cached.size}")
+                return cached
+            }
         }
 
         ensureInternetConnection()
 
         val preferEnglish = preferEnglish()
         val source = currentSource()
-        val results = describeAll(source, source.search(normalizedRequest))
+        val sourceId = source.descriptor.id.value
+        // The query is logged by length only - it is what the user typed.
+        val requestSummary = "source=$sourceId queryLength=${normalizedQuery.length} filtered=$hasFilters " +
+            "sort=${normalizedRequest.sort} limit=${normalizedRequest.limit} offset=${normalizedRequest.offset}"
+        val startedAt = System.currentTimeMillis()
+        AppLogger.d(TAG, "search: start $requestSummary")
+        val sourceTitles = try {
+            source.search(normalizedRequest)
+        } catch (error: CancellationException) {
+            AppLogger.d(TAG, "search: cancelled after ${System.currentTimeMillis() - startedAt}ms $requestSummary")
+            throw error
+        } catch (error: Throwable) {
+            AppLogger.w(TAG, "search: source failed in ${System.currentTimeMillis() - startedAt}ms $requestSummary", error)
+            throw error
+        }
+        AppLogger.d(TAG, "search: source returned ${sourceTitles.size} in ${System.currentTimeMillis() - startedAt}ms $requestSummary")
+        val results = describeAll(source, sourceTitles)
             .map { title ->
                 val anime = getCachedDetails(detailsCacheKey(title.id))
                     ?: title.toAnime(preferEnglish = preferEnglish)
