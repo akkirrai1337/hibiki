@@ -44,6 +44,7 @@ fun AppModalBottomSheet(
     scrimColor: Color = Color.Black.copy(alpha = 0.5f),
     tonalElevation: Dp = 0.dp,
     dragHandleBackgroundColor: Color = Color.Transparent,
+    showDragHandle: Boolean = true,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val resolvedShape = shape ?: rememberDeviceScreenTopCornerShape()
@@ -55,32 +56,38 @@ fun AppModalBottomSheet(
         containerColor = containerColor,
         scrimColor = scrimColor,
         tonalElevation = tonalElevation,
-        dragHandle = {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(dragHandleBackgroundColor),
-                contentAlignment = Alignment.Center,
-            ) {
-                AnimatedContent(
-                    targetState = sheetState.targetValue,
-                    label = "bottom_sheet_handle",
-                ) { targetValue ->
-                    val (size, icon) = if (targetValue == SheetValue.Expanded) {
-                        16.dp to Icons.Rounded.Close
-                    } else {
-                        20.dp to Icons.Rounded.KeyboardArrowUp
+        dragHandle = if (showDragHandle) {
+            {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(dragHandleBackgroundColor),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    AnimatedContent(
+                        // The cross previews that releasing the current downward drag will close
+                        // the sheet. The arrow remains visible while the sheet stays open.
+                        targetState = sheetState.targetValue == SheetValue.Hidden,
+                        label = "bottom_sheet_handle",
+                    ) { willClose ->
+                        val (size, icon) = if (willClose) {
+                            16.dp to Icons.Rounded.Close
+                        } else {
+                            20.dp to Icons.Rounded.KeyboardArrowUp
+                        }
+                        Icon(
+                            imageVector = icon,
+                            contentDescription = null,
+                            modifier = Modifier
+                                .padding(8.dp)
+                                .size(size),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
                     }
-                    Icon(
-                        imageVector = icon,
-                        contentDescription = null,
-                        modifier = Modifier
-                            .padding(8.dp)
-                            .size(size),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
                 }
             }
+        } else {
+            null
         },
         content = content,
     )
