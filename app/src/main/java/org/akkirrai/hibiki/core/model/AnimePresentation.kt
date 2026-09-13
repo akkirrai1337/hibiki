@@ -9,6 +9,7 @@ fun Anime.buildCardMeta(
     movieLabel: String = "Movie",
     maxSubtitleParts: Int = 2,
     separator: String = " • ",
+    includeRating: Boolean = true,
 ): String {
     if (isAnnouncement()) return announcementLabel
 
@@ -25,7 +26,7 @@ fun Anime.buildCardMeta(
     val rating = ratings.firstNotNullOfOrNull { rating ->
         rating.value.takeIf { it.isFinite() && it > 0.0 }
     }
-    val ratingLabel = rating?.let { String.format(Locale.US, "%.1f ★", it) }
+    val ratingLabel = rating?.takeIf { includeRating }?.let { String.format(Locale.US, "%.1f ★", it) }
 
     return listOfNotNull(type, year, ratingLabel).joinToString(separator)
 }
