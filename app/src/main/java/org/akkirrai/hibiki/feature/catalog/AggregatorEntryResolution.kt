@@ -12,7 +12,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Search
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -33,7 +32,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
 import kotlinx.coroutines.launch
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.core.design.component.AppModalBottomSheet
@@ -69,7 +67,6 @@ internal fun rememberEntryOpener(
             resolving = null
             if (resolved != null) onOpen(resolved) else unresolved = entry
         }
-        ResolvingDialog()
     }
 
     unresolved?.let { entry ->
@@ -88,29 +85,6 @@ internal fun rememberEntryOpener(
         { anime ->
             // An ordinary source title opens the way it always has; only an entry needs resolving.
             if (decodeExternalEntryId(anime.id) == null) onOpen(anime) else resolving = anime
-        }
-    }
-}
-
-@Composable
-private fun ResolvingDialog() {
-    Dialog(onDismissRequest = {}) {
-        androidx.compose.material3.Surface(
-            shape = RoundedCornerShape(20.dp),
-            tonalElevation = 6.dp,
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(20.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
-                Text(
-                    text = stringResource(R.string.catalog_entry_resolving),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
         }
     }
 }
