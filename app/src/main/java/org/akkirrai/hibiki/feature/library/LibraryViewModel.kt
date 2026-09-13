@@ -130,50 +130,44 @@ class LibraryViewModel(
 
         val startedAt = SystemClock.elapsedRealtime()
         PerfLogger.mark("Library details refresh started", "entries=${saved.size}")
-        _uiState.update { it.copy(isRefreshing = true) }
-        try {
-            val refreshed = saved
-                .groupBy { entry -> entry.anime.id }
-                .flatMap { (_, groupedEntries) ->
-                    val baseEntry = groupedEntries.first()
-                    val currentCategories = libraryRepository.getLibraryCategories(baseEntry.anime.id)
-                    if (currentCategories.isEmpty()) {
-                        return@flatMap emptyList()
-                    }
-
-                    val freshAnime = runCatching { searchRepository.getDetails(baseEntry.anime.id, baseEntry.anime) }
-                        .onFailure { throwable ->
-                            if (throwable is CancellationException) {
-                                throw throwable
-                            }
-                        }
-                        .getOrNull()
-                    val anime = freshAnime ?: baseEntry.anime
-                    if (freshAnime != null) {
-                        currentCategories.sortedBy(LibraryCategory::ordinal).forEach { category ->
-                            libraryRepository.saveToLibrary(freshAnime, category)
-                        }
-                        offlineTitleMetadataRepository.save(freshAnime)
-                    }
-                    currentCategories
-                        .sortedBy(LibraryCategory::ordinal)
-                        .map { category -> baseEntry.copy(anime = anime, category = category) }
+        val refreshed = saved
+            .groupBy { entry -> entry.anime.id }
+            .flatMap { (_, groupedEntries) ->
+                val baseEntry = groupedEntries.first()
+                val currentCategories = libraryRepository.getLibraryCategories(baseEntry.anime.id)
+                if (currentCategories.isEmpty()) {
+                    return@flatMap emptyList()
                 }
-            lastDetailsRefreshAt = SystemClock.elapsedRealtime()
-            _uiState.update {
-                it.copy(
-                    entries = refreshed,
-                    selectedCategory = preferredCategory(refreshed, it.selectedCategory),
-                    isRefreshing = false,
-                )
+
+                val freshAnime = runCatching { searchRepository.getDetails(baseEntry.anime.id, baseEntry.anime) }
+                    .onFailure { throwable ->
+                        if (throwable is CancellationException) {
+                            throw throwable
+                        }
+                    }
+                    .getOrNull()
+                val anime = freshAnime ?: baseEntry.anime
+                if (freshAnime != null) {
+                    currentCategories.sortedBy(LibraryCategory::ordinal).forEach { category ->
+                        libraryRepository.saveToLibrary(freshAnime, category)
+                    }
+                    offlineTitleMetadataRepository.save(freshAnime)
+                }
+                currentCategories
+                    .sortedBy(LibraryCategory::ordinal)
+                    .map { category -> baseEntry.copy(anime = anime, category = category) }
             }
-            PerfLogger.mark(
-                event = "Library details refresh finished",
-                details = "entries=${saved.size}, refreshed=${refreshed.size}, duration=${PerfLogger.elapsedMs(startedAt)}ms",
+        lastDetailsRefreshAt = SystemClock.elapsedRealtime()
+        _uiState.update {
+            it.copy(
+                entries = refreshed,
+                selectedCategory = preferredCategory(refreshed, it.selectedCategory),
             )
-        } finally {
-            _uiState.update { it.copy(isRefreshing = false) }
         }
+        PerfLogger.mark(
+            event = "Library details refresh finished",
+            details = "entries=${saved.size}, refreshed=${refreshed.size}, duration=${PerfLogger.elapsedMs(startedAt)}ms",
+        )
     }
 
     fun selectCategory(category: LibraryCategory) {
@@ -235,7 +229,6 @@ class LibraryViewModel(
 data class LibraryUiState(
     val entries: List<LibraryEntry> = emptyList(),
     val selectedCategory: LibraryCategory = LibraryCategory.Watching,
-    val isRefreshing: Boolean = false,
     val searchQuery: String = "",
 ) {
     val orderedCategories: List<LibraryCategory>
