@@ -354,7 +354,8 @@ fun HomeScreen(
                 focusManager.clearFocus(force = true)
                 showSearchFilters = true
             },
-            showFilter = state.searchFilterCatalog?.capabilities?.supportedFilters?.isNotEmpty() ?: true,
+            // Hidden until the source has said it has filters - see CatalogScreen's showFilterControl.
+            showFilter = state.searchFilterCatalog?.capabilities?.supportedFilters?.isNotEmpty() ?: false,
             modifier = Modifier
                 .align(Alignment.TopCenter)
                 .fillMaxWidth()

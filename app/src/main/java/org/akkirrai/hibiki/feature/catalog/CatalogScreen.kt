@@ -178,7 +178,10 @@ fun CatalogScreen(
     // Default to showing the filter control while capabilities are still loading (unknown), so
     // it doesn't visibly pop in a moment after the screen appears -- only hide it once we
     // actually know the source has nothing to filter by.
-    val showFilterControl = state.filterCatalog?.capabilities?.supportedFilters?.isNotEmpty() ?: true
+    // Hidden until the source has actually said it has filters. An aggregator page never reports
+    // capabilities (see CatalogRepository.loadAggregatorPage), so a catalog opened in that mode stays
+    // null for good - defaulting to shown offered a button whose sheet could only say "unavailable".
+    val showFilterControl = state.filterCatalog?.capabilities?.supportedFilters?.isNotEmpty() ?: false
 
     LaunchedEffect(availableSorts, state.selectedSort) {
         if (state.selectedSort !in availableSorts) {
