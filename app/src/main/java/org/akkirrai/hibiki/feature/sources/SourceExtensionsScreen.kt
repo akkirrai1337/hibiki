@@ -710,14 +710,6 @@ private fun SourceRepositoryList(
                 val installedVersions = AnimeSourceRegistry.installedScriptExtensionVersions()
                 val installedResolverVersions = AnimeSourceRegistry.installedPlayerResolverVersions()
                 val extensionsListState = rememberLazyListState()
-                var previousInstalledIds by remember { mutableStateOf<Set<String>?>(null) }
-                LaunchedEffect(installedVersions.keys) {
-                    val installedIds = installedVersions.keys
-                    if (previousInstalledIds?.let { installedIds.any { id -> id !in previousInstalledIds.orEmpty() } } == true) {
-                        extensionsListState.animateScrollToItem(0)
-                    }
-                    previousInstalledIds = installedIds
-                }
                 val visibleExtensions = state.extensions.filter { extension ->
                     val matchesQuery = query.isBlank() ||
                         extension.name.contains(query, ignoreCase = true) ||

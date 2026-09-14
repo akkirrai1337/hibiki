@@ -553,11 +553,18 @@ class AnimeSearchRepository(
         // One coroutine per title, bounded by cardMatchSlots, instead of a single loop that made
         // every card on the page wait for every earlier one's full provider search to finish -
         // that serialized a 20-card list into 20x the latency of a single lookup.
-        for (title in titlesToLoad) {
+        for ((index, title) in titlesToLoad.withIndex()) {
             metadataScope.launch {
                 cardMatchSlots.withPermit {
                     try {
-                        runCatching { service.metadataFor(title, order) }
+                        // Every provider paces its own requests to stay under its rate limit, so a
+                        // page of fresh titles that all start with the same provider - the common
+                        // case, since it goes first because it usually has the title - queue up
+                        // behind that one provider's interval no matter how many run at once. Each
+                        // card starting from a different point in [order] (falling back through the
+                        // rest exactly as before) spreads that load across all three independent
+                        // queues instead.
+                        runCatching { service.metadataFor(title, order.rotated(index)) }
                             .onSuccess { external ->
                                 external ?: return@onSuccess
                                 val enriched = mergeExternalMetadata(title, external)
@@ -572,6 +579,14 @@ class AnimeSearchRepository(
                 }
             }
         }
+    }
+
+    /** [order] starting [n] positions further along, wrapping around - the same fallback order,
+     * just read from a different point in it. */
+    private fun List<MetadataProviderId>.rotated(n: Int): List<MetadataProviderId> {
+        if (size <= 1) return this
+        val shift = n % size
+        return subList(shift, size) + subList(0, shift)
     }
 
     private fun providerOrderFor(source: AnimeSourceRuntime): List<MetadataProviderId> {
@@ -630,11 +645,14 @@ class AnimeSearchRepository(
         if (order.isEmpty() || all.isEmpty()) return sections
 
         val describedById = coroutineScope {
-            all.map { item ->
+            all.mapIndexed { index, item ->
                 async {
                     relatedAnimeMatchSlots.withPermit {
                         val stub = AnimeTitle(id = item.id, originalName = item.title, englishName = item.title, posterUrl = item.posterUrl, year = item.year, type = item.type, status = item.status, availableEpisodeCount = item.episodeCount)
-                        val external = runCatching { service.metadataFor(stub, order) }
+                        // Same rotation as warmCardMetadata: spreads a franchise-heavy title's whole
+                        // batch of lookups across every provider's independent rate-limited queue
+                        // instead of piling them all onto whichever one is tried first.
+                        val external = runCatching { service.metadataFor(stub, order.rotated(index)) }
                             .onFailure { AppLogger.w(TAG, "describeRelatedAnime: metadata lookup failed for ${item.id}", it) }
                             .getOrNull()
                         item.id to (external?.let { item.describedWith(it) } ?: item)
