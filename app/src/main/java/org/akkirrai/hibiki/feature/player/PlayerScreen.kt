@@ -265,6 +265,7 @@ fun PlayerScreen(
     var videoAspectRatio by videoAspectRatioState
     var isSeeking by remember { mutableStateOf(false) }
     val isClosingState = remember { mutableStateOf(false) }
+    val playerPrepareStartedAt = remember { mutableLongStateOf(0L) }
     var isClosing by isClosingState
     var attachedPlayerView by remember { mutableStateOf<PlayerView?>(null) }
     val restoreWindowUiState = remember { mutableStateOf<(() -> Unit)?>(null) }
@@ -484,6 +485,7 @@ fun PlayerScreen(
         positionMs = positionMsState,
         sliderPositionMs = sliderPositionMsState,
         handledEndedEpisodeId = handledEndedEpisodeIdState,
+        playerPrepareStartedAt = playerPrepareStartedAt,
         watchedSecondsSnapshot = { watchedSecondsSnapshot() },
         subtitleLines = subtitleLinesState,
         onDisposed = { doubleTapSeek.cancelPending() },
@@ -521,6 +523,7 @@ fun PlayerScreen(
         context = context,
         state = state,
         playbackSpeed = playbackSpeed,
+        onPrepare = { playerPrepareStartedAt.longValue = SystemClock.elapsedRealtime() },
         keepControlsVisible = { keepControlsVisible() },
     )
 
@@ -2948,6 +2951,7 @@ private fun PlayerMediaPreparationEffect(
     context: Context,
     state: PlayerUiState,
     playbackSpeed: Float,
+    onPrepare: () -> Unit,
     keepControlsVisible: () -> Unit,
 ) {
     LaunchedEffect(state.playback) {
@@ -2987,6 +2991,7 @@ private fun PlayerMediaPreparationEffect(
         exoPlayer.clearMediaItems()
         exoPlayer.setMediaSource(playback.toMediaSource(context, offline = state.isPlayingOffline))
         exoPlayer.playbackParameters = PlaybackParameters(playbackSpeed)
+        onPrepare()
         exoPlayer.prepare()
         exoPlayer.playWhenReady = true
     }
@@ -3341,12 +3346,24 @@ private fun PlayerPlaybackListenerEffect(
     positionMs: MutableLongState,
     sliderPositionMs: MutableLongState,
     handledEndedEpisodeId: MutableState<String?>,
+    playerPrepareStartedAt: MutableLongState,
     watchedSecondsSnapshot: () -> List<Long>,
     subtitleLines: MutableState<List<String>>,
     onDisposed: () -> Unit,
 ) {
     DisposableEffect(exoPlayer) {
         val listener = object : Player.Listener {
+            override fun onRenderedFirstFrame() {
+                val preparedAt = playerPrepareStartedAt.longValue
+                if (preparedAt <= 0L) return
+                AppLogger.d(
+                    PLAYBACK_LOG_TAG,
+                    "[player.first_frame] sourceId=${state().currentSourceId}, elapsedMs=${SystemClock.elapsedRealtime() - preparedAt}",
+                )
+                // A new prepare resets this value; suppress duplicate renderer callbacks for the
+                // same media item so the log remains one timing point per playback start.
+                playerPrepareStartedAt.longValue = 0L
+            }
             override fun onVideoSizeChanged(videoSize: VideoSize) {
                 if (videoSize.width > 0 && videoSize.height > 0) {
                     videoAspectRatio.floatValue =

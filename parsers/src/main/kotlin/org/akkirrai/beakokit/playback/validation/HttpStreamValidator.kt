@@ -10,6 +10,7 @@ import io.ktor.http.isSuccess
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.coroutineScope
 import org.akkirrai.beakokit.api.StreamValidator
 import org.akkirrai.beakokit.model.StreamType
@@ -33,35 +34,7 @@ class HttpStreamValidator(
         }
 
         val result = try {
-            val videoResult = when (stream.type) {
-                StreamType.HLS -> validateHls(stream)
-                StreamType.MP4 -> validateMp4(stream)
-                StreamType.DASH -> validateDash(stream)
-            }
-            if (!videoResult.success || stream.audioUrl.isNullOrBlank()) {
-                videoResult
-            } else {
-                val audioResult = validateHls(
-                    stream.copy(
-                        url = stream.audioUrl,
-                        type = StreamType.HLS,
-                        quality = null,
-                        headers = stream.audioHeaders.ifEmpty { stream.headers },
-                        audioUrl = null,
-                        audioHeaders = emptyMap(),
-                        subtitles = emptyList(),
-                    ),
-                )
-                if (audioResult.success) {
-                    videoResult
-                } else {
-                    failure(
-                        stream,
-                        audioResult.statusCode,
-                        "Аудиодорожка недоступна: ${audioResult.message}",
-                    )
-                }
-            }
+            validateVideoAndAudio(stream)
         } catch (error: CancellationException) {
             throw error
         } catch (error: Exception) {
@@ -78,6 +51,54 @@ class HttpStreamValidator(
             trimValidationCache()
         }
         return result
+    }
+
+    /**
+     * Video and a separately delivered audio rendition are independent network chains. Starting
+     * them together removes one full playlist/segment round-trip on healthy streams, while both
+     * still have to pass the same strict validation before the stream is accepted.
+     *
+     * If video fails first, cancel the auxiliary request instead of making a failing candidate
+     * consume extra CDN capacity before PlaybackResolver tries its fallback.
+     */
+    private suspend fun validateVideoAndAudio(stream: VideoStream): StreamValidationResult = coroutineScope {
+        val video = async {
+            when (stream.type) {
+                StreamType.HLS -> validateHls(stream)
+                StreamType.MP4 -> validateMp4(stream)
+                StreamType.DASH -> validateDash(stream)
+            }
+        }
+        val audio = stream.audioUrl?.takeIf(String::isNotBlank)?.let { audioUrl ->
+            async {
+                validateHls(
+                    stream.copy(
+                        url = audioUrl,
+                        type = StreamType.HLS,
+                        quality = null,
+                        headers = stream.audioHeaders.ifEmpty { stream.headers },
+                        audioUrl = null,
+                        audioHeaders = emptyMap(),
+                        subtitles = emptyList(),
+                    ),
+                )
+            }
+        }
+        val videoResult = video.await()
+        if (!videoResult.success || audio == null) {
+            audio?.cancelAndJoin()
+            return@coroutineScope videoResult
+        }
+        val audioResult = audio.await()
+        if (audioResult.success) {
+            videoResult
+        } else {
+            failure(
+                stream,
+                audioResult.statusCode,
+                "Аудиодорожка недоступна: ${audioResult.message}",
+            )
+        }
     }
 
     private fun VideoStream.validationKey() = ValidationKey(

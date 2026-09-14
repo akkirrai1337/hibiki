@@ -42,6 +42,11 @@ interface StreamExtractor {
     suspend fun extractVariants(link: PlayerLink): List<VideoStream> = listOf(extract(link))
 }
 
+/** An extractor which has already proved a stream through its own authenticated browser transport. */
+interface PrevalidatedStreamExtractor : StreamExtractor {
+    fun prevalidatedResult(link: PlayerLink, stream: VideoStream): StreamValidationResult?
+}
+
 /**
  * A secondary transport for a link that already has a normal extractor.
  *

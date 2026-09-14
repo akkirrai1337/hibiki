@@ -13,6 +13,18 @@ import org.junit.Test
 
 class BrowserPlayerWebViewExtractorTest {
     @Test
+    fun `same manifest from network and resolver is captured once`() {
+        val network = BrowserCapturedStream(
+            "https://cdn.example/video/master.m3u8",
+            emptyMap(),
+            BrowserCaptureOrigin.NETWORK,
+        )
+
+        assertTrue(BrowserStreamSelector.containsUrl(listOf(network), network.url))
+        assertFalse(BrowserStreamSelector.containsUrl(listOf(network), "https://cdn.example/audio/en.m3u8"))
+    }
+
+    @Test
     fun `browser lifecycle pseudo url is safe to log`() {
         assertEquals("about", browserLogHost("about:blank"))
         assertEquals("example.com", browserLogHost("https://example.com/player"))

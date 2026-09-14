@@ -8,6 +8,7 @@ import org.akkirrai.beakokit.api.SourceUnavailableException
 import org.akkirrai.beakokit.api.FallbackStreamExtractor
 import org.akkirrai.beakokit.api.StreamExtractor
 import org.akkirrai.beakokit.api.StreamValidator
+import org.akkirrai.beakokit.api.PrevalidatedStreamExtractor
 import org.akkirrai.beakokit.model.PlayerLink
 import org.akkirrai.beakokit.model.StreamValidationResult
 import org.akkirrai.beakokit.model.VideoStream
@@ -109,7 +110,9 @@ class PlaybackResolver(
                         }
 
                         for (stream in streams) {
-                            val validation = validator.validate(stream)
+                            val validation = (extractor as? PrevalidatedStreamExtractor)
+                                ?.prevalidatedResult(link, stream)
+                                ?: validator.validate(stream)
                             if (validation.success) {
                                 successful = ResolvedPlaybackStream(
                                     link = link,

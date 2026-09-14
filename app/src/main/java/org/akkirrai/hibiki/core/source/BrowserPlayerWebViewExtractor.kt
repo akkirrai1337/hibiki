@@ -3,6 +3,7 @@ package org.akkirrai.hibiki.core.source
 import android.content.Context
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import android.webkit.JavascriptInterface
 import android.webkit.CookieManager
 import android.webkit.WebResourceRequest
@@ -21,6 +22,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import org.akkirrai.beakokit.api.SourceException
 import org.akkirrai.beakokit.api.StreamExtractor
+import org.akkirrai.beakokit.api.PrevalidatedStreamExtractor
 import org.akkirrai.beakokit.extension.BrowserScriptResolver
 import org.akkirrai.beakokit.http.normalizeUrl
 import org.akkirrai.beakokit.http.originOf
@@ -31,6 +33,7 @@ import org.akkirrai.beakokit.model.PlayerType
 import org.akkirrai.beakokit.model.StreamType
 import org.akkirrai.beakokit.model.SubtitleTrack
 import org.akkirrai.beakokit.model.VideoStream
+import org.akkirrai.beakokit.model.StreamValidationResult
 import org.akkirrai.hibiki.core.log.AppLogger
 import kotlin.coroutines.resume
 
@@ -53,12 +56,28 @@ class BrowserPlayerWebViewExtractor(
     private val context: Context,
     private val resolvers: List<BrowserScriptResolver>,
     private val client: HttpClient,
-) : StreamExtractor {
+) : StreamExtractor, PrevalidatedStreamExtractor {
     override fun supports(link: PlayerLink): Boolean = BrowserResolverRouting.supports(link, resolvers)
 
     override suspend fun extract(link: PlayerLink): VideoStream = extractVariants(link).first()
 
+    override fun prevalidatedResult(link: PlayerLink, stream: VideoStream): StreamValidationResult? {
+        if (!hostOf(link.url).equals(CATSTREAM_HOST, ignoreCase = true) ||
+            !stream.url.startsWith("http://127.0.0.1:")) return null
+        return StreamValidationResult(
+            success = true,
+            streamType = stream.type,
+            quality = stream.quality,
+            finalUrl = stream.url,
+            statusCode = 200,
+            message = "Verified by the CatStream WebView capture",
+            playerName = link.playerName,
+            translation = link.translation,
+        )
+    }
+
     override suspend fun extractVariants(link: PlayerLink): List<VideoStream> {
+        val resolverStartedAt = SystemClock.elapsedRealtime()
         val resolver = resolvers.firstOrNull { it.supportsBrowser(link) }
             ?: throw SourceException("No browser resolver is installed for this player")
         // Unlike BrowserFetchRequest, PlayerLink.url carries no scheme validation of its own - a
@@ -71,9 +90,16 @@ class BrowserPlayerWebViewExtractor(
             throw SourceException("Browser resolver page URL must be HTTP(S): $pageUrl")
         }
         AppLogger.d(TAG, "Start: host=${hostOf(link.url)}, player=${link.playerName.orEmpty()}")
+        // CatStream always uses the loopback relay on protected KAA streams. Binding the local
+        // socket is independent of page loading, so overlap its cold start with the several
+        // seconds the remote player spends hydrating instead of adding it after HLS is found.
+        if (hostOf(pageUrl).equals(CATSTREAM_HOST, ignoreCase = true)) {
+            WebViewStreamRelay.warmUp()
+        }
         val capture = withContext(Dispatchers.Main) {
             capture(pageUrl, link.headers, resolver.browserScript(link), resolver.requiresFrame)
         }
+        val captureElapsedMs = SystemClock.elapsedRealtime() - resolverStartedAt
         val streams = capture.streams
         val session = capture.session
         if (streams.isEmpty()) {
@@ -90,10 +116,18 @@ class BrowserPlayerWebViewExtractor(
         // AnimeWatchRepository's resolveAttemptTimeoutMillis); a CDN that blocks plain HTTP clients
         // (the whole reason WebViewStreamRelay exists) can otherwise eat that entire budget here
         // before ever reaching the relay fallback, silently timing out the attempt with no error.
+        val audioDiscoveryStartedAt = SystemClock.elapsedRealtime()
         val audio = link.audioUrl?.let { url ->
             BrowserCapturedStream(url, link.audioHeaders.ifEmpty { link.headers }, BrowserCaptureOrigin.SOURCE_AUDIO)
         } ?: BrowserStreamSelector.findAudio(streams)
-            ?: withTimeoutOrNull(AUDIO_PROBE_TIMEOUT_MS) { ranked.firstNotNullOfOrNull { fetchAudioFromMaster(it) } }
+            ?: withTimeoutOrNull(
+                if (hostOf(pageUrl).equals(CATSTREAM_HOST, ignoreCase = true)) {
+                    CATSTREAM_AUDIO_PROBE_TIMEOUT_MS
+                } else {
+                    AUDIO_PROBE_TIMEOUT_MS
+                },
+            ) { ranked.firstNotNullOfOrNull { fetchAudioFromMaster(it) } }
+        val audioDiscoveryElapsedMs = SystemClock.elapsedRealtime() - audioDiscoveryStartedAt
         // Some CDNs behind bot management block a plain HTTP client on TLS fingerprint alone, no
         // matter how closely its headers mimic a browser - the WebView that resolved this link is a
         // genuine Chromium network stack, so it's kept alive as a relay backend and offered as a
@@ -117,6 +151,7 @@ class BrowserPlayerWebViewExtractor(
             audio?.let { put(it.url, refreshCookie(it.url, it.headers)) }
             subtitles.forEach { put(it.url, it.headers) }
         }
+        val relayRegistrationStartedAt = SystemClock.elapsedRealtime()
         val relayToken = session?.let {
             withContext(Dispatchers.IO) {
                 WebViewStreamRelay.register(
@@ -133,6 +168,12 @@ class BrowserPlayerWebViewExtractor(
                 )
             }
         }
+        val relayRegistrationElapsedMs = SystemClock.elapsedRealtime() - relayRegistrationStartedAt
+        AppLogger.d(
+            TAG,
+            "Resources ready: captureMs=$captureElapsedMs, audioDiscoveryMs=$audioDiscoveryElapsedMs, " +
+                "relayRegistrationMs=$relayRegistrationElapsedMs, variants=${ranked.size}, subtitles=${subtitles.size}",
+        )
         return ranked.flatMap { stream ->
             val direct = VideoStream(
                 url = stream.url,
@@ -159,7 +200,15 @@ class BrowserPlayerWebViewExtractor(
                     },
                 )
             }
-            listOfNotNull(direct, proxied)
+            // CatStream's CDN rejects Media3's TLS fingerprint. The browser has already fetched
+            // this HLS URL to capture it, so go straight through its loopback relay instead of
+            // spending another full master/variant/range validation on a direct URL that cannot
+            // be used for playback anyway.
+            if (hostOf(pageUrl).equals(CATSTREAM_HOST, ignoreCase = true) && proxied != null) {
+                listOf(proxied)
+            } else {
+                listOfNotNull(direct, proxied)
+            }
         }
     }
 
@@ -213,6 +262,11 @@ class BrowserPlayerWebViewExtractor(
             var retry: Runnable? = null
             var settle: Runnable? = null
             lateinit var timeout: Runnable
+            val settleDelayMs = if (hostOf(pageUrl).equals(CATSTREAM_HOST, ignoreCase = true)) {
+                CATSTREAM_SETTLE_DELAY_MS
+            } else {
+                STREAM_SETTLE_DELAY_MS
+            }
 
             fun destroyView() {
                 val current = webView ?: return
@@ -248,20 +302,29 @@ class BrowserPlayerWebViewExtractor(
                     ),
                 )
             }
+            fun scheduleFinish() {
+                settle?.let(handler::removeCallbacks)
+                settle = Runnable(::finish).also { handler.postDelayed(it, settleDelayMs) }
+            }
             fun add(url: String, headers: Map<String, String>, origin: BrowserCaptureOrigin) {
+                if (delivered) return
                 if (!BrowserStreamSelector.isHls(url)) return
                 // Resolver scripts may poll the browser repeatedly. A duplicate observation must
                 // not keep postponing completion forever; only a genuinely new stream does.
-                if (captures.any { it.url == url && it.origin == origin }) return
+                // NETWORK commonly sees a manifest a short moment before a resolver script
+                // reports that exact URL as SOURCE_VIDEO. Ranking already treats them as one
+                // candidate; retaining the second copy only resets the settle timer and delays
+                // startup. Distinct audio URLs still remain independent captures.
+                if (BrowserStreamSelector.containsUrl(captures, url)) return
                 captures += BrowserCapturedStream(url, playbackHeaders(url, headers, pageUrl, CookieManager.getInstance().getCookie(url)), origin)
                 AppLogger.d(TAG, "HLS captured: origin=$origin, host=${hostOf(url)}, path=${url.substringBefore('?').takeLast(120)}, total=${captures.size}")
                 // Players commonly request an audio rendition before the video rendition. Wait
                 // briefly for that burst to settle, then return the deterministic best candidate
                 // before PlaybackResolver's per-player timeout cancels this coroutine.
-                settle?.let(handler::removeCallbacks)
-                settle = Runnable(::finish).also { handler.postDelayed(it, STREAM_SETTLE_DELAY_MS) }
+                scheduleFinish()
             }
             fun addSubtitle(url: String, label: String?, language: String?) {
+                if (delivered) return
                 if (!VTT_URL.matches(url)) return
                 if (subtitles.any { it.url == url }) return
                 subtitles += BrowserCapturedSubtitle(
@@ -274,10 +337,10 @@ class BrowserPlayerWebViewExtractor(
                 // A track list is commonly still hydrating (an Astro island, a lazy <track> insert)
                 // when the video stream itself is already playable, so without this a subtitle that
                 // was seconds away from being reported never gets the chance - finish() had already
-                // fired and delivered its result. Same settle-and-wait-for-more rule add() uses for
-                // streams: only postpone while tracks keep trickling in, not indefinitely.
-                settle?.let(handler::removeCallbacks)
-                settle = Runnable(::finish).also { handler.postDelayed(it, STREAM_SETTLE_DELAY_MS) }
+                // fired and delivered its result. A subtitle on its own must not finish capture
+                // before any video HLS exists; once video is present, it refreshes the same
+                // settle window as a new stream.
+                if (captures.isNotEmpty()) scheduleFinish()
             }
             fun probe(view: WebView) {
                 if (delivered || webView !== view || probes++ >= MAX_PROBES) return
@@ -458,12 +521,15 @@ class BrowserPlayerWebViewExtractor(
         // own slow path; leave several seconds for relay validation and the next player instead.
         const val TIMEOUT_MS = 11_000L
         const val AUDIO_PROBE_TIMEOUT_MS = 1_000L
+        const val CATSTREAM_AUDIO_PROBE_TIMEOUT_MS = 30L
         const val MAX_PROBES = 24
         // Long enough to give a subtitle track list a chance to show up - some players (KickAssAnime's
         // krussdomi.com among them) hydrate their track list a beat after the video element already
         // has its stream, and a settle window tuned only for the stream itself finished and handed
         // off its result before any of those tracks had rendered into the DOM.
         const val STREAM_SETTLE_DELAY_MS = 1_200L
+        const val CATSTREAM_SETTLE_DELAY_MS = 30L
+        const val CATSTREAM_HOST = "krussdomi.com"
         const val CONSOLE_MESSAGE_LOG_LIMIT = 200
         const val CHROME_USER_AGENT = "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Mobile Safari/537.36"
         const val TAG = "BrowserPlayerResolver"
@@ -538,6 +604,8 @@ private data class BrowserCapturedSubtitle(
 /** Pure selection policy, unit-testable without Android WebView or a real site. */
 internal object BrowserStreamSelector {
     fun isHls(url: String): Boolean = HLS_URL.containsMatchIn(url)
+    fun containsUrl(captures: List<BrowserCapturedStream>, url: String): Boolean =
+        captures.any { it.url == url }
     fun select(captures: List<BrowserCapturedStream>): BrowserCapturedStream? = rank(captures).firstOrNull()
     fun findAudio(captures: List<BrowserCapturedStream>): BrowserCapturedStream? = captures.asReversed().firstOrNull { it.origin == BrowserCaptureOrigin.SOURCE_AUDIO }
         ?: captures.asReversed().firstOrNull { isAudioRendition(it.url) }

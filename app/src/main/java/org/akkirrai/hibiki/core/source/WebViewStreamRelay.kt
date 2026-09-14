@@ -227,6 +227,18 @@ internal object WebViewStreamRelay {
         return token
     }
 
+    /**
+     * Starts the loopback listener before a browser resolver has finished loading its remote page.
+     * This is best-effort: [register] still performs the authoritative start and retries a failed
+     * warm-up, so playback behaviour is unchanged if the background bind cannot happen.
+     */
+    fun warmUp() {
+        executor.execute {
+            runCatching(::ensureServerStarted)
+                .onFailure { error -> AppLogger.w(TAG, "Relay warm-up failed", error) }
+        }
+    }
+
     /** Drops a session immediately without waiting for the idle reaper, e.g. when the caller knows
      * upfront that no relay fallback will ever be needed for it. */
     fun discard(webView: WebView, handler: Handler) {
