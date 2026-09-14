@@ -3,6 +3,7 @@ package org.akkirrai.hibiki.feature.details
 import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
+import android.graphics.BitmapFactory
 import android.os.Build
 import android.graphics.drawable.Drawable
 import androidx.activity.compose.BackHandler
@@ -29,6 +30,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -282,6 +284,7 @@ fun DetailsScreen(
     var isScreenTransitionSettled by remember(anime.id) { mutableStateOf(false) }
     var resumeState by remember(anime.id) { mutableStateOf<TitleWatchState?>(null) }
     var resumeFrame by remember(anime.id) { mutableStateOf<File?>(null) }
+    var resumeFrameAspectRatio by remember(anime.id) { mutableStateOf<Float?>(null) }
     val listState = remember(anime.id) {
         LazyListState(
             firstVisibleItemIndex = savedScreenState?.firstVisibleItemIndex ?: 0,
@@ -302,15 +305,18 @@ fun DetailsScreen(
 
     suspend fun refreshWatchStateSnapshot() {
         val snapshot = withContext(Dispatchers.IO) {
+            val resumeFrame = resumeFrameRepository.getFrame(anime.id)
             DetailsWatchSnapshot(
                 libraryCategory = libraryRepository.getLibraryCategory(anime.id),
                 resumeState = findResumeWatchState(watchStateRepository, anime.id),
-                resumeFrame = resumeFrameRepository.getFrame(anime.id),
+                resumeFrame = resumeFrame,
+                resumeFrameAspectRatio = resumeFrame?.aspectRatio(),
             )
         }
         libraryCategory = snapshot.libraryCategory
         resumeState = snapshot.resumeState
         resumeFrame = snapshot.resumeFrame
+        resumeFrameAspectRatio = snapshot.resumeFrameAspectRatio
     }
 
     // Resolves the voiceover list here, before navigating anywhere, so a single-voiceover title
@@ -578,6 +584,7 @@ fun DetailsScreen(
                     libraryCategory = libraryCategory,
                     resumeState = resumeState,
                     resumeFrame = resumeFrame,
+                    resumeFrameAspectRatio = resumeFrameAspectRatio,
                     isTitleDetailsSheetOpen = isTitleDetailsSheetOpen,
                     listState = listState,
                     onPosterClick = { isPosterPreviewOpen = true },
@@ -753,6 +760,7 @@ private fun DetailHeroSection(
     libraryCategory: LibraryCategory?,
     resumeState: TitleWatchState?,
     resumeFrame: File?,
+    resumeFrameAspectRatio: Float?,
     isTitleDetailsSheetOpen: Boolean,
     listState: LazyListState,
     onPosterClick: () -> Unit,
@@ -776,21 +784,28 @@ private fun DetailHeroSection(
         animationSpec = tween(durationMillis = 750),
         label = "details_poster_height",
     )
-    val bannerHeight = 224.dp
     val posterExpandedHeight = 200.dp
     val detailsHeight = 180.dp
     // Without a banner there is no artwork the poster/title need to clear, so the band it used to
     // occupy shrinks instead of staying behind as empty background. Everything below just moves up
     // with it, keeping the hero's own proportions intact.
     val hasHeroMedia = anime.trailer?.playbackUrl != null || (resumeState != null && resumeFrame != null)
-    val heroTopTrim = if (hasHeroMedia) 0.dp else 96.dp
-    val posterTop = 212.dp - heroTopTrim
-    val detailsTop = 224.dp - heroTopTrim
-    val heroHeight = 412.dp - heroTopTrim
+    BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+        // Stop frames retain the exact surface ratio they were captured with. Resize the whole
+        // hero around that frame, rather than keeping a fixed 224dp banner and exposing whatever
+        // title artwork happens to sit behind the unused space.
+        val bannerHeight = resumeFrameAspectRatio
+            ?.takeIf { it > 0f }
+            ?.let { (maxWidth / it).coerceIn(120.dp, 224.dp) }
+            ?: 224.dp
+        val heroTopTrim = if (hasHeroMedia) 0.dp else 96.dp
+        val posterTop = bannerHeight - 12.dp - heroTopTrim
+        val detailsTop = bannerHeight - heroTopTrim
+        val heroHeight = bannerHeight + 188.dp - heroTopTrim
 
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+        ) {
         // The banner only earns its space when it actually shows something the poster below doesn't:
         // a trailer still, or the frame the last watch session stopped on. For the common case
         // (neither) it was a second, cropped copy of the poster sitting right on top of the poster
@@ -881,6 +896,7 @@ private fun DetailHeroSection(
             onPrimaryClick = onPrimaryClick,
         )
         Spacer(modifier = Modifier.height(16.dp))
+        }
     }
 }
 
@@ -1196,7 +1212,8 @@ private fun DetailHeroMedia(
     val trailer = anime.trailer?.takeIf { it.playbackUrl != null }
     val imageUrl = trailer?.thumbnailUrl ?: anime.posterUrl
     val fallbackUrl = anime.posterUrl ?: anime.posterFallbackUrl
-    val hasBannerImage = !imageUrl.isNullOrBlank() || !fallbackUrl.isNullOrBlank()
+    val hasResumeFrame = resumeState != null && resumeFrame != null
+    val hasBannerImage = !hasResumeFrame && (!imageUrl.isNullOrBlank() || !fallbackUrl.isNullOrBlank())
     var isBannerLoaded by remember(imageUrl, fallbackUrl) { mutableStateOf(!hasBannerImage) }
     // The shared-element transition from a catalog card hands this composable a fresh instance
     // once it settles, resetting isBannerLoaded to false even though Coil already has this exact
@@ -1218,26 +1235,28 @@ private fun DetailHeroMedia(
             .background(MaterialTheme.colorScheme.surfaceContainer),
         contentAlignment = Alignment.Center,
     ) {
-        NetworkImage(
-            imageUrl = imageUrl,
-            fallbackUrl = fallbackUrl,
-            contentDescription = null,
-            // Only sample the poster for the title's accent color, not a trailer thumbnail --
-            // trailer stills are usually screenshots with a different color character, and the
-            // network-based fallback below always samples the poster, so this keeps both paths
-            // agreeing on the same color.
-            modifier = Modifier
-                .fillMaxSize()
-                .graphicsLayer {
-                    // Some trailer thumbnails include a thin black matte around their edge.
-                    // Scale only the trailer artwork within the clipped banner to remove it.
-                    if (trailer != null) {
-                        scaleX = 1.025f
-                        scaleY = 1.025f
-                    }
-                },
-            onImageLoaded = { isBannerLoaded = true },
-        )
+        if (!hasResumeFrame) {
+            NetworkImage(
+                imageUrl = imageUrl,
+                fallbackUrl = fallbackUrl,
+                contentDescription = null,
+                // Only sample the poster for the title's accent color, not a trailer thumbnail --
+                // trailer stills are usually screenshots with a different color character, and the
+                // network-based fallback below always samples the poster, so this keeps both paths
+                // agreeing on the same color.
+                modifier = Modifier
+                    .fillMaxSize()
+                    .graphicsLayer {
+                        // Some trailer thumbnails include a thin black matte around their edge.
+                        // Scale only the trailer artwork within the clipped banner to remove it.
+                        if (trailer != null) {
+                            scaleX = 1.025f
+                            scaleY = 1.025f
+                        }
+                    },
+                onImageLoaded = { isBannerLoaded = true },
+            )
+        }
 
         AnimatedVisibility(
             visible = showBannerSkeleton,
@@ -1303,6 +1322,7 @@ private fun ResumeFrameImage(
     frame: File,
     version: Long,
     modifier: Modifier = Modifier,
+    contentScale: ContentScale = ContentScale.Fit,
 ) {
     val context = LocalContext.current
     SubcomposeAsyncImage(
@@ -1312,7 +1332,9 @@ private fun ResumeFrameImage(
             .build(),
         contentDescription = null,
         modifier = modifier,
-        contentScale = ContentScale.Crop,
+        // A saved frame can have the device/surface aspect ratio rather than the hero banner
+        // ratio. The foreground keeps those proportions; its background can crop the same frame.
+        contentScale = contentScale,
         loading = {},
         error = {},
     )
@@ -2526,7 +2548,15 @@ private data class DetailsWatchSnapshot(
     val libraryCategory: LibraryCategory?,
     val resumeState: TitleWatchState?,
     val resumeFrame: File?,
+    val resumeFrameAspectRatio: Float?,
 )
+
+private fun File.aspectRatio(): Float? {
+    val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+    BitmapFactory.decodeFile(absolutePath, bounds)
+    return bounds.outWidth.takeIf { it > 0 }
+        ?.let { width -> bounds.outHeight.takeIf { it > 0 }?.let { height -> width.toFloat() / height } }
+}
 
 private fun readStoredTitleSeedColor(context: Context, key: String): Int? {
     val preferences = context.getSharedPreferences(TITLE_COLOR_PREFERENCES_NAME, Context.MODE_PRIVATE)
