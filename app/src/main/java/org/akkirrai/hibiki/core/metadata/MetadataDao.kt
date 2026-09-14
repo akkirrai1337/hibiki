@@ -60,6 +60,9 @@ abstract class MetadataDao {
     @Query("SELECT * FROM metadata_matches WHERE title_id = :titleId")
     abstract fun matches(titleId: String): List<MetadataMatchEntity>
 
+    @Query("SELECT * FROM metadata_matches WHERE title_id IN (:titleIds)")
+    abstract fun matches(titleIds: List<String>): List<MetadataMatchEntity>
+
     @Query("SELECT * FROM metadata_matches WHERE provider = :provider AND external_id = :externalId")
     abstract fun matchesForEntry(provider: String, externalId: Int): List<MetadataMatchEntity>
 
@@ -88,6 +91,9 @@ abstract class MetadataDao {
     @Query("SELECT provider FROM metadata_display_provider WHERE title_id = :titleId")
     abstract fun displayProvider(titleId: String): String?
 
+    @Query("SELECT * FROM metadata_display_provider WHERE title_id IN (:titleIds)")
+    abstract fun displayProviders(titleIds: List<String>): List<MetadataDisplayProviderEntity>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     abstract fun upsertDisplayProvider(display: MetadataDisplayProviderEntity)
 
@@ -103,8 +109,14 @@ abstract class MetadataDao {
     @Query("SELECT * FROM metadata_media WHERE provider = :provider AND external_id = :externalId")
     abstract fun media(provider: String, externalId: Int): MetadataMediaEntity?
 
+    @Query("SELECT * FROM metadata_media WHERE provider = :provider AND external_id IN (:externalIds)")
+    abstract fun media(provider: String, externalIds: List<Int>): List<MetadataMediaEntity>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     abstract fun upsertMedia(media: MetadataMediaEntity)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    abstract fun upsertMedia(media: List<MetadataMediaEntity>)
 
     /** Media past the cap, oldest first, and failure records long past every TTL that reads them. */
     @Transaction

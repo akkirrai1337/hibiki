@@ -271,25 +271,6 @@ class HomeViewModel(
         }
     }
 
-    fun loadMoreTrending() {
-        val current = uiState.value
-        if (current.isLoading || current.isTrendingLoadingMore || !current.canLoadMoreTrending) return
-        viewModelScope.launch(Dispatchers.IO) {
-            _uiState.update { it.copy(isTrendingLoadingMore = true) }
-            val page = runCatching {
-                repository.loadTrendingPage(offset = current.trendingNextOffset, limit = TRENDING_PAGE_SIZE)
-            }.getOrElse { emptyList() }
-            _uiState.update { state ->
-                state.copy(
-                    trending = (state.trending + page).distinctBy { it.id },
-                    isTrendingLoadingMore = false,
-                    canLoadMoreTrending = page.size >= TRENDING_PAGE_SIZE,
-                    trendingNextOffset = current.trendingNextOffset + page.size,
-                )
-            }
-        }
-    }
-
     fun loadMoreRecentUpdates() {
         val current = uiState.value
         if (current.isRecentUpdatesLoadingMore || !current.canLoadMoreRecentUpdates) return
@@ -480,7 +461,6 @@ class HomeViewModel(
         const val SEARCH_DEBOUNCE_MS = 450L
         const val MIN_QUERY_LENGTH = 3
         const val SEARCH_PAGE_SIZE = 24
-        const val TRENDING_PAGE_SIZE = 20
         const val RECENT_UPDATES_PAGE_SIZE = 12
         const val RANDOM_HISTORY_SIZE = 20
     }

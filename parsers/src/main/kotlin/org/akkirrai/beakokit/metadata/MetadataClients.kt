@@ -196,6 +196,8 @@ class MalClient(private val client: HttpClient, clientId: String? = null) {
     // Jikan publishes two limits, 3 requests a second and 60 a minute; the minute one binds.
     // The per-second limit is the burst.
     private val queue = MetadataRequestQueue(minIntervalMillis = 1_100, burst = 3)
+    private val byId = RequestCoalescer<Int, ExternalMetadata?>()
+    private val searches = RequestCoalescer<String, List<ScoredEntry>?>()
 
     /** MAL's own API, when the app was built with a client id. Jikan then only covers for it. */
     private val official = clientId?.takeIf(String::isNotBlank)?.let { MalOfficialClient(client, it) }
@@ -213,18 +215,20 @@ class MalClient(private val client: HttpClient, clientId: String? = null) {
 
     // A null from the official API is a failed request (or, for an id, a missing entry) - either way
     // Jikan gets its chance. An empty search result is an answer, and is not asked again.
-    suspend fun fetchById(malId: Int): ExternalMetadata? =
+    suspend fun fetchById(malId: Int): ExternalMetadata? = byId.load(malId) {
         official?.fetchById(malId)
             ?: get<JikanSingleResponse>("/anime/$malId")?.data?.toExternalMetadata()
+    }
 
-    suspend fun search(name: String): List<ScoredEntry>? {
-        official?.search(name)?.let { return it }
-        // `sfw` keeps adult entries out of the candidate pool, which matters because a name that
-        // matches a mainstream show also matches its parody often enough to pick the wrong one.
-        val body = get<JikanListResponse>("/anime?q=${name.urlEncoded()}&limit=10&sfw=true") ?: return null
-        return body.data.orEmpty()
-            .filter { it.approved != false }
-            .map { ScoredEntry(it.toMatchCandidate(), it.toExternalMetadata()) }
+    suspend fun search(name: String): List<ScoredEntry>? = searches.load(name.trim().lowercase()) {
+        official?.search(name) ?: run {
+            // `sfw` keeps adult entries out of the candidate pool, which matters because a name that
+            // matches a mainstream show also matches its parody often enough to pick the wrong one.
+            val body = get<JikanListResponse>("/anime?q=${name.urlEncoded()}&limit=10&sfw=true") ?: return@run null
+            body.data.orEmpty()
+                .filter { it.approved != false }
+                .map { ScoredEntry(it.toMatchCandidate(), it.toExternalMetadata()) }
+        }
     }
 
     private companion object {
@@ -274,6 +278,10 @@ class MalOfficialClient(private val client: HttpClient, private val clientId: St
 class KitsuClient(private val client: HttpClient) {
     // Kitsu publishes no hard rate limit, so this is a courtesy pace rather than a documented one.
     private val queue = MetadataRequestQueue(minIntervalMillis = 400, burst = 5)
+    private val byId = RequestCoalescer<Int, ExternalMetadata?>()
+    private val bySlug = RequestCoalescer<String, ExternalMetadata?>()
+    private val byMalId = RequestCoalescer<Int, ExternalMetadata?>()
+    private val searches = RequestCoalescer<String, List<ScoredEntry>?>()
 
 
     fun estimatedWaitMillis(): Long = queue.estimatedWaitMillis()
@@ -284,26 +292,26 @@ class KitsuClient(private val client: HttpClient) {
         parse = { it.decode<T>() },
     )
 
-    suspend fun fetchById(kitsuId: Int): ExternalMetadata? {
-        val body = get<KitsuSingleResponse>("/anime/$kitsuId?include=$KITSU_INCLUDE") ?: return null
-        return body.data?.toExternalMetadata(body.included.orEmpty())
+    suspend fun fetchById(kitsuId: Int): ExternalMetadata? = byId.load(kitsuId) {
+        val body = get<KitsuSingleResponse>("/anime/$kitsuId?include=$KITSU_INCLUDE") ?: return@load null
+        body.data?.toExternalMetadata(body.included.orEmpty())
     }
 
     /** Kitsu's web URLs name a title by slug, so a pasted link resolves through this rather than by
      * id. */
-    suspend fun fetchBySlug(slug: String): ExternalMetadata? {
-        val body = get<KitsuListResponse>("/anime?filter[slug]=${slug.urlEncoded()}&include=$KITSU_INCLUDE") ?: return null
-        return body.data.orEmpty().firstOrNull()?.toExternalMetadata(body.included.orEmpty())
+    suspend fun fetchBySlug(slug: String): ExternalMetadata? = bySlug.load(slug.trim().lowercase()) {
+        val body = get<KitsuListResponse>("/anime?filter[slug]=${slug.urlEncoded()}&include=$KITSU_INCLUDE") ?: return@load null
+        body.data.orEmpty().firstOrNull()?.toExternalMetadata(body.included.orEmpty())
     }
 
     /** Kitsu indexes the other providers' ids as first-class records, so a title already matched
      * elsewhere can be bound here exactly, with no search and no guessing. */
-    suspend fun fetchByMalId(malId: Int): ExternalMetadata? {
+    suspend fun fetchByMalId(malId: Int): ExternalMetadata? = byMalId.load(malId) {
         val body = get<KitsuMappingsResponse>("/mappings?filter[externalSite]=myanimelist/anime&filter[externalId]=$malId")
-            ?: return null
+            ?: return@load null
         val kitsuId = body.data.orEmpty().firstNotNullOfOrNull { it.relationships?.item?.data?.id?.toIntOrNull() }
-            ?: return null
-        return fetchById(kitsuId)
+            ?: return@load null
+        fetchById(kitsuId)
     }
 
     /**
@@ -353,11 +361,11 @@ class KitsuClient(private val client: HttpClient) {
         return data.orEmpty().map { it.toExternalMetadata(included) }
     }
 
-    suspend fun search(name: String): List<ScoredEntry>? {
+    suspend fun search(name: String): List<ScoredEntry>? = searches.load(name.trim().lowercase()) {
         val body = get<KitsuListResponse>("/anime?filter[text]=${name.urlEncoded()}&page[limit]=10&include=$KITSU_INCLUDE")
-            ?: return null
+            ?: return@load null
         val included = body.included.orEmpty()
-        return body.data.orEmpty().map { ScoredEntry(it.toMatchCandidate(), it.toExternalMetadata(included)) }
+        body.data.orEmpty().map { ScoredEntry(it.toMatchCandidate(), it.toExternalMetadata(included)) }
     }
 
     private companion object {

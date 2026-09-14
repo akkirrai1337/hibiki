@@ -42,13 +42,13 @@ class MetadataRequestQueue(
     @Volatile private var theoreticalArrivalMillis = 0L
     @Volatile private var cooledUntilMillis = 0L
     private val foregroundWaiting = MutableStateFlow(0)
+    private val visibleWaiting = MutableStateFlow(0)
     private val waiting = AtomicInteger(0)
 
     /** Null for every failure - offline, a non-2xx status, a provider being stood down. Callers
      * treat that as "no metadata this time" and keep the source's own, so nothing here throws. */
     suspend fun <T> run(request: suspend () -> HttpResponse, parse: suspend (HttpResponse) -> T?): T? {
-        val background = currentCoroutineContext()[MetadataPriority]?.background == true
-        if (!admit(background)) return null
+        if (!admit()) return null
 
         val response = runCatching { request() }.getOrNull() ?: return null
         if (response.status.value == 429) {
@@ -76,19 +76,32 @@ class MetadataRequestQueue(
     /**
      * Waits for this request's paced start slot. False when the provider is stood down.
      *
-     * Two lanes (see [MetadataPriority]): a background request only takes the lock while no
-     * foreground request is waiting, and re-checks once it has it, since one may have arrived in
-     * between. A foreground request therefore waits at most one pacing interval, however long the
-     * background backlog is.
+     * Three lanes (see [MetadataPriority]): visible cards yield to a title the user has opened, and
+     * speculative prefetch yields to both. Each lane re-checks after taking the lock, because a
+     * higher-priority request may arrive while it waited. A user-visible request therefore waits at
+     * most one pacing interval, however long the prefetch backlog is.
      */
-    private suspend fun admit(background: Boolean): Boolean {
+    private suspend fun admit(): Boolean {
+        val workClass = currentCoroutineContext()[MetadataPriority]?.workClass ?: MetadataWorkClass.FOREGROUND
         waiting.incrementAndGet()
-        if (!background) foregroundWaiting.update { it + 1 }
+        when (workClass) {
+            MetadataWorkClass.FOREGROUND -> foregroundWaiting.update { it + 1 }
+            MetadataWorkClass.VISIBLE -> visibleWaiting.update { it + 1 }
+            MetadataWorkClass.PREFETCH -> Unit
+        }
         try {
             while (true) {
-                if (background) foregroundWaiting.first { it == 0 }
+                when (workClass) {
+                    MetadataWorkClass.VISIBLE -> foregroundWaiting.first { it == 0 }
+                    MetadataWorkClass.PREFETCH -> {
+                        foregroundWaiting.first { it == 0 }
+                        visibleWaiting.first { it == 0 }
+                    }
+                    MetadataWorkClass.FOREGROUND -> Unit
+                }
                 val admitted: Boolean? = lock.withLock {
-                    if (background && foregroundWaiting.value > 0) return@withLock null
+                    if (workClass != MetadataWorkClass.FOREGROUND && foregroundWaiting.value > 0) return@withLock null
+                    if (workClass == MetadataWorkClass.PREFETCH && visibleWaiting.value > 0) return@withLock null
                     if (nowMillis() < cooledUntilMillis) return@withLock false
                     val now = nowMillis()
                     val arrival = maxOf(theoreticalArrivalMillis, now)
@@ -100,7 +113,11 @@ class MetadataRequestQueue(
                 if (admitted != null) return admitted
             }
         } finally {
-            if (!background) foregroundWaiting.update { it - 1 }
+            when (workClass) {
+                MetadataWorkClass.FOREGROUND -> foregroundWaiting.update { it - 1 }
+                MetadataWorkClass.VISIBLE -> visibleWaiting.update { it - 1 }
+                MetadataWorkClass.PREFETCH -> Unit
+            }
             waiting.decrementAndGet()
         }
     }

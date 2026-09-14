@@ -15,6 +15,11 @@ package org.akkirrai.beakokit.metadata
 interface ExternalMetadataStore {
     fun readMatch(titleId: String, provider: MetadataProviderId): MetadataMatchRecord?
 
+    /** Batch counterpart for list screens. Platform stores should override this to avoid one SQL
+     * query per card; the default keeps other hosts source-compatible. */
+    fun readMatches(titleIds: List<String>): Map<String, List<MetadataMatchRecord>> =
+        titleIds.distinct().associateWith(::readMatches)
+
     fun writeMatch(record: MetadataMatchRecord)
 
     /** Every recorded match for one title, across providers - what a cross-provider lookup reads. */
@@ -24,6 +29,9 @@ interface ExternalMetadataStore {
 
     /** The provider a title was last opened through - see [ExternalMetadataService.resolveSourceTitle]. */
     fun readDisplayProvider(titleId: String): MetadataProviderId?
+
+    fun readDisplayProviders(titleIds: List<String>): Map<String, MetadataProviderId> =
+        titleIds.distinct().mapNotNull { titleId -> readDisplayProvider(titleId)?.let { titleId to it } }.toMap()
 
     fun writeDisplayProvider(titleId: String, provider: MetadataProviderId)
 
@@ -42,8 +50,22 @@ interface ExternalMetadataStore {
 
     fun readMedia(provider: MetadataProviderId, externalId: Int): CachedMetadata?
 
+    fun readMediaBatch(keys: List<MetadataMediaKey>): Map<MetadataMediaKey, CachedMetadata> =
+        keys.distinct().mapNotNull { key -> readMedia(key.provider, key.externalId)?.let { key to it } }.toMap()
+
     fun writeMedia(media: ExternalMetadata, cachedAtMillis: Long)
+
+    /** A catalog page is received as one response, so platform stores can persist it in one
+     * transaction instead of opening a write transaction for every card. */
+    fun writeMediaBatch(media: List<ExternalMetadata>, cachedAtMillis: Long) {
+        media.forEach { writeMedia(it, cachedAtMillis) }
+    }
 }
+
+data class MetadataMediaKey(
+    val provider: MetadataProviderId,
+    val externalId: Int,
+)
 
 /**
  * Which entry of which provider a source title was matched to.

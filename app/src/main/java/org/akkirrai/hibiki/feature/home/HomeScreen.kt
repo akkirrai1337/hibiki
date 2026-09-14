@@ -57,7 +57,6 @@ import androidx.compose.material.icons.automirrored.outlined.TrendingUp
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.GridView
-import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.Logout
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.Close
@@ -122,6 +121,7 @@ import org.akkirrai.hibiki.core.design.component.AppCenteredLoading
 import org.akkirrai.hibiki.core.design.component.AppFilledIconButton
 import org.akkirrai.hibiki.core.design.component.AppFilledIconButtonStyle
 import org.akkirrai.hibiki.core.design.component.AppMessageState
+import org.akkirrai.hibiki.core.design.component.AppShimmerBlock
 import org.akkirrai.hibiki.core.design.component.AnimeQuickAction
 import org.akkirrai.hibiki.core.design.component.AnimeQuickActionsSheet
 import org.akkirrai.hibiki.core.design.component.search.AppSearchTopBar
@@ -209,22 +209,6 @@ fun HomeScreen(
     // New cards are source-owned and open directly. The opener only retains support for a legacy
     // in-memory aggregator entry while a screen is being recreated.
     val openAggregatorEntry = rememberEntryOpener(repository = viewModel.repository, onOpen = onAnimeClick)
-
-    LaunchedEffect(
-        homeListState,
-        state.trending.size,
-        state.isTrendingLoadingMore,
-        state.isLoading,
-        isSearchActive,
-    ) {
-        snapshotFlow {
-            val layout = homeListState.layoutInfo
-            val lastVisible = layout.visibleItemsInfo.lastOrNull()?.index ?: 0
-            homeListState.isScrollInProgress && lastVisible >= layout.totalItemsCount - 4
-        }.collect { nearEnd ->
-            if (nearEnd && !state.isLoading && !isSearchActive) viewModel.loadMoreTrending()
-        }
-    }
 
     BackHandler(enabled = isImeVisible || isSearchActive) {
         if (isImeVisible) {
@@ -331,7 +315,6 @@ fun HomeScreen(
                                 recentlyWatched = recentlyWatched,
                                 trending = state.trending,
                                 metadataLoadingIds = state.pendingCardMetadata,
-                                isTrendingLoadingMore = state.isTrendingLoadingMore,
                                 isActive = isActive,
                                 onAnimeClick = onAnimeClick,
                                 onWatchedAnimeLongClick = { anime ->
@@ -414,7 +397,6 @@ private fun LazyListScope.homeFeedContent(
     recentlyWatched: List<Anime>,
     trending: List<Anime>,
     metadataLoadingIds: Set<String>,
-    isTrendingLoadingMore: Boolean,
     isActive: Boolean,
     onAnimeClick: (Anime) -> Unit,
     onWatchedAnimeLongClick: (Anime) -> Unit,
@@ -467,16 +449,6 @@ private fun LazyListScope.homeFeedContent(
         sharedCardModifier = sharedCardModifier,
         sharedPosterModifier = sharedPosterModifier,
     )
-    if (isTrendingLoadingMore) {
-        item {
-            Box(
-                modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
-                contentAlignment = Alignment.Center,
-            ) {
-                CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
-            }
-        }
-    }
 }
 
 private fun homeSearchContentTransition(searchActive: Boolean): ContentTransform {
@@ -1050,17 +1022,7 @@ private fun AnimePoster(
 private fun AnimeImagePlaceholder(
     modifier: Modifier = Modifier
 ) {
-    AppTonalSurface(
-        modifier = modifier,
-        contentAlignment = Alignment.Center
-    ) {
-        Icon(
-            imageVector = Icons.Outlined.Image,
-            contentDescription = null,
-            modifier = Modifier.size(28.dp),
-            tint = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-    }
+    AppShimmerBlock(modifier = modifier.fillMaxSize())
 }
 
 private const val FEATURED_AUTO_ADVANCE_MS = 5000

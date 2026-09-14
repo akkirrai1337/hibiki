@@ -7,13 +7,27 @@ import kotlin.coroutines.CoroutineContext
  * Which lane of a provider's [MetadataRequestQueue] a lookup waits in, carried in the coroutine
  * context so it reaches the queue without threading a parameter through every client call.
  *
- * Absent means foreground. A background request - a list card, a related-titles strip - is only let
- * through while no foreground one is waiting, so opening a title never queues behind the page of
- * cards it was opened from.
+ * Absent means foreground. Visible cards come next, and speculative related-title work is last, so
+ * prefetch never keeps a just-visible card from getting its provider slot.
  */
-class MetadataPriority private constructor(val background: Boolean) : AbstractCoroutineContextElement(MetadataPriority) {
+enum class MetadataWorkClass {
+    FOREGROUND,
+    VISIBLE,
+    PREFETCH,
+}
+
+class MetadataPriority private constructor(
+    val workClass: MetadataWorkClass,
+) : AbstractCoroutineContextElement(MetadataPriority) {
+    /** Search-order balancing still needs to distinguish user-blocking from background work. */
+    val background: Boolean = workClass != MetadataWorkClass.FOREGROUND
+
     companion object Key : CoroutineContext.Key<MetadataPriority> {
-        val Foreground = MetadataPriority(background = false)
-        val Background = MetadataPriority(background = true)
+        val Foreground = MetadataPriority(MetadataWorkClass.FOREGROUND)
+        val Visible = MetadataPriority(MetadataWorkClass.VISIBLE)
+        val Prefetch = MetadataPriority(MetadataWorkClass.PREFETCH)
+
+        /** Existing callers that have no visibility signal are conservative prefetch work. */
+        val Background = Prefetch
     }
 }

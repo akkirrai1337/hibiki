@@ -8,6 +8,7 @@ import org.akkirrai.beakokit.metadata.CachedMetadata
 import org.akkirrai.beakokit.metadata.ExternalMetadata
 import org.akkirrai.beakokit.metadata.ExternalMetadataStore
 import org.akkirrai.beakokit.metadata.MetadataMatchRecord
+import org.akkirrai.beakokit.metadata.MetadataMediaKey
 import org.akkirrai.beakokit.metadata.MetadataProviderId
 import org.akkirrai.hibiki.core.database.HibikiDatabase
 import org.akkirrai.hibiki.core.log.AppLogger
@@ -31,12 +32,26 @@ class RoomExternalMetadataStore private constructor(context: Context) : External
     override fun readMatches(titleId: String): List<MetadataMatchRecord> =
         dao.matches(titleId).mapNotNull { it.toRecord() }
 
+    override fun readMatches(titleIds: List<String>): Map<String, List<MetadataMatchRecord>> {
+        if (titleIds.isEmpty()) return emptyMap()
+        return dao.matches(titleIds.distinct())
+            .mapNotNull { entity -> entity.toRecord()?.let { entity.titleId to it } }
+            .groupBy({ it.first }, { it.second })
+    }
+
     override fun writeMatch(record: MetadataMatchRecord) = dao.writeMatch(record.toEntity())
 
     override fun clearMatches(titleId: String) = dao.clearTitle(titleId)
 
     override fun readDisplayProvider(titleId: String): MetadataProviderId? =
         dao.displayProvider(titleId)?.let(MetadataProviderId::fromId)
+
+    override fun readDisplayProviders(titleIds: List<String>): Map<String, MetadataProviderId> {
+        if (titleIds.isEmpty()) return emptyMap()
+        return dao.displayProviders(titleIds.distinct()).mapNotNull { entry ->
+            MetadataProviderId.fromId(entry.provider)?.let { entry.titleId to it }
+        }.toMap()
+    }
 
     override fun writeDisplayProvider(titleId: String, provider: MetadataProviderId) =
         dao.upsertDisplayProvider(MetadataDisplayProviderEntity(titleId, provider.id))
@@ -69,12 +84,59 @@ class RoomExternalMetadataStore private constructor(context: Context) : External
         return cached
     }
 
+    override fun readMediaBatch(keys: List<MetadataMediaKey>): Map<MetadataMediaKey, CachedMetadata> {
+        val distinctKeys = keys.distinct()
+        if (distinctKeys.isEmpty()) return emptyMap()
+        val found = mutableMapOf<MetadataMediaKey, CachedMetadata>()
+        val missing = mutableListOf<MetadataMediaKey>()
+        for (key in distinctKeys) {
+            val cached = mediaMemory.get("${key.provider.id}_${key.externalId}")
+            if (cached != null) found[key] = cached else missing.add(key)
+        }
+        for ((provider, providerKeys) in missing.groupBy(MetadataMediaKey::provider)) {
+            val rows = dao.media(provider.id, providerKeys.map(MetadataMediaKey::externalId))
+            for (row in rows) {
+                val cached = runCatching {
+                    CachedMetadata(json.decodeFromString(ExternalMetadata.serializer(), row.json), row.cachedAt)
+                }.getOrNull() ?: continue
+                val key = MetadataMediaKey(provider, row.externalId)
+                mediaMemory.put("${provider.id}_${row.externalId}", cached)
+                found[key] = cached
+            }
+        }
+        return found
+    }
+
     override fun writeMedia(media: ExternalMetadata, cachedAtMillis: Long) {
         dao.upsertMedia(
             MetadataMediaEntity(media.provider.id, media.externalId, json.encodeToString(ExternalMetadata.serializer(), media), cachedAtMillis),
         )
         mediaMemory.put("${media.provider.id}_${media.externalId}", CachedMetadata(media, cachedAtMillis))
-        if (mediaWrites.incrementAndGet() % PRUNE_EVERY_WRITES == 0) {
+        val totalWrites = mediaWrites.incrementAndGet()
+        pruneIfNeeded(totalWrites, previousWrites = totalWrites - 1)
+    }
+
+    override fun writeMediaBatch(media: List<ExternalMetadata>, cachedAtMillis: Long) {
+        if (media.isEmpty()) return
+        dao.upsertMedia(
+            media.map { entry ->
+                MetadataMediaEntity(
+                    entry.provider.id,
+                    entry.externalId,
+                    json.encodeToString(ExternalMetadata.serializer(), entry),
+                    cachedAtMillis,
+                )
+            },
+        )
+        media.forEach { entry ->
+            mediaMemory.put("${entry.provider.id}_${entry.externalId}", CachedMetadata(entry, cachedAtMillis))
+        }
+        val totalWrites = mediaWrites.addAndGet(media.size)
+        pruneIfNeeded(totalWrites, previousWrites = totalWrites - media.size)
+    }
+
+    private fun pruneIfNeeded(totalWrites: Int, previousWrites: Int) {
+        if (totalWrites / PRUNE_EVERY_WRITES > previousWrites / PRUNE_EVERY_WRITES) {
             dao.prune(MAX_MEDIA_ENTRIES, System.currentTimeMillis() - FAILURE_RECORD_RETENTION_MILLIS)
         }
     }

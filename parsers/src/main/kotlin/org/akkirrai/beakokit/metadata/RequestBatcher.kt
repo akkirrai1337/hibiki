@@ -87,17 +87,22 @@ internal class RequestBatcher<K, V : Any>(
     }
 }
 
-/** A [RequestBatcher] per [MetadataPriority] lane, so a foreground lookup never rides in (and waits
- * behind) a background batch. */
+/** A [RequestBatcher] per [MetadataPriority] lane, so visible work never rides in (and waits behind)
+ * speculative prefetch. */
 internal class BatchLanes<K, V : Any>(
     maxBatch: Int,
     execute: suspend (takeKeys: () -> List<K>) -> Map<K, V>?,
 ) {
     private val foreground = RequestBatcher(maxBatch, MetadataPriority.Foreground, execute)
-    private val background = RequestBatcher(maxBatch, MetadataPriority.Background, execute)
+    private val visible = RequestBatcher(maxBatch, MetadataPriority.Visible, execute)
+    private val prefetch = RequestBatcher(maxBatch, MetadataPriority.Prefetch, execute)
 
     suspend fun load(key: K): BatchOutcome<V> {
-        val lane = if (currentCoroutineContext()[MetadataPriority]?.background == true) background else foreground
+        val lane = when (currentCoroutineContext()[MetadataPriority]?.workClass) {
+            MetadataWorkClass.VISIBLE -> visible
+            MetadataWorkClass.PREFETCH -> prefetch
+            else -> foreground
+        }
         return lane.load(key)
     }
 }

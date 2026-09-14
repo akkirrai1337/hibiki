@@ -529,7 +529,8 @@ class AnimeSearchRepository(
         }
         if (titles.isEmpty()) return titles
 
-        val cached = titles.map { service.cachedMetadataFor(it.id, order) }
+        val cachedByTitle = service.cachedMetadataForAll(titles.map(AnimeTitle::id), order)
+        val cached = titles.map { cachedByTitle[it.id] }
         AppLogger.d(
             TAG,
             "describeAll: source=${source.descriptor.id.value} order=$order titles=${titles.size} " +
@@ -568,7 +569,7 @@ class AnimeSearchRepository(
         // every card on the page wait for every earlier one's full provider search to finish -
         // that serialized a 20-card list into 20x the latency of a single lookup.
         for (title in titlesToLoad) {
-            metadataScope.launch(MetadataPriority.Background) {
+            metadataScope.launch(MetadataPriority.Visible) {
                 cardMatchSlots.withPermit {
                     try {
                         // Background priority: the service also sends each live search to whichever
@@ -634,8 +635,9 @@ class AnimeSearchRepository(
     ): Map<String, RelatedAnimeTitle> {
         val service = metadataService ?: return emptyMap()
         if (order.isEmpty()) return emptyMap()
+        val cachedByTitle = service.cachedMetadataForAll(items.map(RelatedAnimeTitle::id), order)
         return items.mapNotNull { item ->
-            service.cachedMetadataFor(item.id, order)?.let { item.id to item.describedWith(it) }
+            cachedByTitle[item.id]?.let { item.id to item.describedWith(it) }
         }.toMap()
     }
 
@@ -653,7 +655,7 @@ class AnimeSearchRepository(
         val service = metadataService ?: return
         if (order.isEmpty()) return
         for (item in items) {
-            metadataScope.launch(MetadataPriority.Background) {
+            metadataScope.launch(MetadataPriority.Prefetch) {
                 relatedAnimeMatchSlots.withPermit {
                     val stub = AnimeTitle(id = item.id, originalName = item.title, englishName = item.title, posterUrl = item.posterUrl, year = item.year, type = item.type, status = item.status, availableEpisodeCount = item.episodeCount)
                     val external = runCatching { service.metadataFor(stub, order) }

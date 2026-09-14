@@ -48,8 +48,11 @@ class ExternalMetadataService(
     private val mal = MalClient(client, malClientId)
     private val kitsu = KitsuClient(client)
     private val inFlight = ConcurrentHashMap<String, InFlightLookup>()
+    /** An aggregator card is often tapped twice while navigation is starting. Keep that from
+     * becoming two identical provider reads when its cached entry has expired or was evicted. */
+    private val inFlightEntries = ConcurrentHashMap<String, CompletableDeferred<ExternalMetadata?>>()
     private val pendingRefreshes: MutableSet<String> = ConcurrentHashMap.newKeySet()
-    private val refreshScope = CoroutineScope(SupervisorJob() + Dispatchers.IO + MetadataPriority.Background)
+    private val refreshScope = CoroutineScope(SupervisorJob() + Dispatchers.IO + MetadataPriority.Prefetch)
 
     /**
      * Describes one title from [order]'s providers, in two passes.
@@ -139,11 +142,31 @@ class ExternalMetadataService(
      * at roughly one a second, and the screen would finish painting long before they returned.
      */
     fun cachedMetadataFor(titleId: String, order: List<MetadataProviderId>): ExternalMetadata? {
-        for (provider in displayOrder(titleId, order)) {
-            val externalId = store.readMatch(titleId, provider)?.externalId ?: continue
-            store.readMedia(provider, externalId)?.media?.let { return it }
+        return cachedMetadataForAll(listOf(titleId), order)[titleId]
+    }
+
+    /** Reads a whole visible list from the store in bulk. This stays entirely offline, just like
+     * [cachedMetadataFor], but avoids multiplying Room reads by cards times providers. */
+    fun cachedMetadataForAll(titleIds: List<String>, order: List<MetadataProviderId>): Map<String, ExternalMetadata> {
+        val distinctIds = titleIds.distinct()
+        if (distinctIds.isEmpty() || order.isEmpty()) return emptyMap()
+        val matchesByTitle = store.readMatches(distinctIds)
+        val pinnedProviders = store.readDisplayProviders(distinctIds)
+        val candidates = distinctIds.associateWith { titleId ->
+            val displayedOrder = pinnedProviders[titleId]?.takeIf { it in order }
+                ?.let { pinned -> listOf(pinned) + order.filterNot { it == pinned } }
+                ?: order
+            displayedOrder.mapNotNull { provider ->
+                matchesByTitle[titleId]
+                    ?.firstOrNull { it.provider == provider }
+                    ?.externalId
+                    ?.let { externalId -> MetadataMediaKey(provider, externalId) }
+            }
         }
-        return null
+        val media = store.readMediaBatch(candidates.values.flatten())
+        return candidates.mapNotNull { (titleId, keys) ->
+            keys.firstNotNullOfOrNull { key -> media[key]?.media }?.let { titleId to it }
+        }.toMap()
     }
 
     /**
@@ -161,13 +184,52 @@ class ExternalMetadataService(
     /** One entry by id or by Kitsu slug, for the picker's paste-a-link path - the way a title gets
      * rebound while a provider's search is down. */
     suspend fun entryFor(reference: MetadataReference): ExternalMetadata? {
-        val media = when {
-            reference.slug != null && reference.provider == MetadataProviderId.KITSU -> kitsu.fetchBySlug(reference.slug!!)
-            reference.externalId != null -> fetchById(reference.provider, reference.externalId!!)
-            else -> null
+        reference.externalId?.let { externalId ->
+            val cached = store.readMedia(reference.provider, externalId)
+            if (cached != null) {
+                if (nowMillis() - cached.cachedAtMillis < ttlFor(cached.media)) {
+                    log("entryFor: provider=${reference.provider} cache hit, externalId=$externalId")
+                    return cached.media
+                }
+                // A catalog result already contains everything a resolver needs. Do not make
+                // opening that card wait behind a provider's pacing queue merely to refresh it.
+                log("entryFor: provider=${reference.provider} serving stale cache, externalId=$externalId")
+                refreshEntryInBackground(reference.provider, externalId)
+                return cached.media
+            }
         }
-        if (media != null) store.writeMedia(media, nowMillis())
-        return media ?: reference.externalId?.let { store.readMedia(reference.provider, it)?.media }
+
+        val key = when {
+            reference.externalId != null -> "${reference.provider.id}:id:${reference.externalId}"
+            reference.slug != null -> "${reference.provider.id}:slug:${reference.slug}"
+            else -> return null
+        }
+        while (true) {
+            val mine = CompletableDeferred<ExternalMetadata?>()
+            val existing = inFlightEntries.putIfAbsent(key, mine)
+            if (existing == null) {
+                try {
+                    val media = when {
+                        reference.slug != null && reference.provider == MetadataProviderId.KITSU -> kitsu.fetchBySlug(reference.slug)
+                        reference.externalId != null -> fetchById(reference.provider, reference.externalId)
+                        else -> null
+                    }
+                    if (media != null) store.writeMedia(media, nowMillis())
+                    mine.complete(media)
+                    return media ?: reference.externalId?.let { store.readMedia(reference.provider, it)?.media }
+                } catch (error: Throwable) {
+                    mine.completeExceptionally(error)
+                    throw error
+                } finally {
+                    inFlightEntries.remove(key, mine)
+                }
+            }
+            try {
+                return existing.await()
+            } catch (error: CancellationException) {
+                currentCoroutineContext().ensureActive()
+            }
+        }
     }
 
     /**
@@ -193,7 +255,7 @@ class ExternalMetadataService(
                     MetadataProviderId.MAL -> null
                 }
             }.getOrNull() ?: continue
-            for (media in results) store.writeMedia(media, nowMillis())
+            store.writeMediaBatch(results, nowMillis())
             return results to provider
         }
         return emptyList<ExternalMetadata>() to null
@@ -387,6 +449,7 @@ class ExternalMetadataService(
         val label = anime.englishName?.takeIf(String::isNotBlank) ?: anime.originalName
 
         var searched = false
+        var previousCandidateIds: Set<Int>? = null
         val queries = searchQueriesFor(anime, MAX_SEARCHES_PER_PROVIDER)
         if (queries.isEmpty()) {
             log("liveSearchMetadataFor: '$label' provider=$provider has no usable name to search with (englishName/originalName/synonyms all blank)")
@@ -404,6 +467,16 @@ class ExternalMetadataService(
             val best = pickBestMatch(anime, results.map(ScoredEntry::candidate))
             if (best == null) {
                 log("liveSearchMetadataFor: '$label' provider=$provider search for '$query' returned ${results.size} candidate(s) - none cleared the match threshold")
+                val candidateIds = results.mapTo(mutableSetOf()) { it.media.externalId }
+                // A provider sometimes normalizes decorative punctuation and season suffixes before
+                // searching. If two variants therefore produce the identical candidate set, a third
+                // spelling is overwhelmingly another request for the same answer. Keep trying when
+                // the second spelling actually changed the pool, because that is the useful case.
+                if (previousCandidateIds == candidateIds && query != queries.last()) {
+                    log("liveSearchMetadataFor: '$label' provider=$provider second spelling repeated the same candidates; skipping remaining variants")
+                    break
+                }
+                previousCandidateIds = candidateIds
                 continue
             }
             val found = results.firstOrNull { it.media.externalId == best.externalId }?.media ?: continue
@@ -420,6 +493,12 @@ class ExternalMetadataService(
                 ),
             )
             recordCrossMatches(titleId, found)
+            // Background card matching deliberately chooses whichever provider can answer first.
+            // Keep that provider for details too: cross-provider bindings are useful fallbacks, but
+            // must not make the poster change after the user taps the card they just saw.
+            if (store.readDisplayProvider(titleId) == null) {
+                store.writeDisplayProvider(titleId, provider)
+            }
             return found
         }
 
@@ -503,6 +582,20 @@ class ExternalMetadataService(
                 val refreshed = runCatching { fetchById(provider, externalId) }.getOrNull() ?: return@launch
                 store.writeMedia(refreshed, nowMillis())
                 recordCrossMatches(titleId, refreshed)
+            } finally {
+                pendingRefreshes.remove(key)
+            }
+        }
+    }
+
+    /** Refreshes a catalog entry without inventing a source-title binding just to do so. */
+    private fun refreshEntryInBackground(provider: MetadataProviderId, externalId: Int) {
+        val key = "${provider.id}:$externalId"
+        if (!pendingRefreshes.add(key)) return
+        refreshScope.launch {
+            try {
+                val refreshed = runCatching { fetchById(provider, externalId) }.getOrNull() ?: return@launch
+                store.writeMedia(refreshed, nowMillis())
             } finally {
                 pendingRefreshes.remove(key)
             }

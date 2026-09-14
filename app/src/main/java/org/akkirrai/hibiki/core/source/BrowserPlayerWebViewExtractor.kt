@@ -289,6 +289,7 @@ class BrowserPlayerWebViewExtractor(
                     AppLogger.d(TAG, "Resolver script result: $result")
                 }
                 view.evaluateJavascript(VIDEO_ELEMENT_PROBE, null)
+                view.evaluateJavascript(SUBTITLE_TRACK_PROBE, null)
                 view.evaluateJavascript(MEDIA_SILENCE_SCRIPT, null)
                 retry = Runnable { probe(view) }.also { handler.postDelayed(it, nextProbeDelayMs(probes)) }
             }
@@ -337,7 +338,17 @@ class BrowserPlayerWebViewExtractor(
                 WebViewStreamRelay.installBridge(this)
                 webViewClient = object : WebViewClient() {
                     override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse? {
-                        handler.post { add(request.url.toString(), request.requestHeaders, BrowserCaptureOrigin.NETWORK) }
+                        handler.post {
+                            val url = request.url.toString()
+                            if (VTT_URL.matches(url)) {
+                                // A few players only fetch their WebVTT file after a delayed
+                                // hydration. Capture it directly as a fallback when their resolver
+                                // script did not get a chance to inspect the track element.
+                                addSubtitle(url, null, null)
+                            } else {
+                                add(url, request.requestHeaders, BrowserCaptureOrigin.NETWORK)
+                            }
+                        }
                         return null
                     }
                     override fun onPageFinished(view: WebView, url: String) {
@@ -460,6 +471,10 @@ class BrowserPlayerWebViewExtractor(
         val AUDIO_MEDIA_URI = Regex("#EXT-X-MEDIA:[^\\n]*TYPE=AUDIO[^\\n]*URI=\"([^\"]+)\"", RegexOption.IGNORE_CASE)
         val VTT_URL = Regex("https?://.+\\.vtt(?:[?#].*)?", RegexOption.IGNORE_CASE)
         const val VIDEO_ELEMENT_PROBE = """;(function(){try{var v=document.querySelector('video');if(!v)return;var r=function(){var u=v.currentSrc||v.src||'';if(/\\.m3u8(?:[?#]|$)/i.test(u))HibikiResolver.stream(u)};r();v.addEventListener('loadedmetadata',r,{once:true});v.addEventListener('canplay',r,{once:true});v.addEventListener('playing',r,{once:true})}catch(e){}})();"""
+        // Generic fallback for resolver pages that insert ordinary <track> elements after their
+        // own resolver script has already run. The native side deduplicates URLs, so it is safe to
+        // run on every probe while the page hydrates.
+        const val SUBTITLE_TRACK_PROBE = """;(function(){try{var ts=document.querySelectorAll('track[kind=subtitles],track[kind=captions]');for(var i=0;i<ts.length;i++){var t=ts[i],u=t.src||'';if(/\\.vtt(?:[?#]|$)/i.test(u))HibikiResolver.subtitle(u,t.label||null,t.srclang||null)}}catch(e){}})();"""
 
         /**
          * Keeps every media element in a resolver page silent, in the page rather than per source.
