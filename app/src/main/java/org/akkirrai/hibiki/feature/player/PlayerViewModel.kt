@@ -150,6 +150,12 @@ class PlayerViewModel(
                             excludedStreamUrls = unplayable,
                             preferredPlayerName = state.selectedPlayerName,
                             preferredQuality = state.selectedQualityLabel,
+                            // A player the user picked before (or is picking right now) for this
+                            // title+voiceover is a decision, not a hint - without this it was only
+                            // ever a soft ordering preference, so a quality-label mismatch or a
+                            // resolution hiccup could silently hand the episode to a different
+                            // player than the one they chose, with no sign anything had switched.
+                            requiredPlayerName = state.selectedPlayerName,
                         )
                     }
             }.throwIfCancelled()
