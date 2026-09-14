@@ -25,6 +25,17 @@ class HibikiDependencies(
     private val appContext = context.applicationContext
     private val parserClient = AndroidHttpClientFactory.create()
     private val sourceRuntimeManager = AnimeSourceRuntimeManager(appContext, parserClient)
+    // Watch-source payloads contain the provider's title/group/episode mapping. They are needed
+    // again immediately after navigation from details or episodes to player, so keeping them at
+    // app scope avoids reloading the same provider page before a stream can be resolved.
+    private val sharedAnimeWatchRepository by lazy {
+        AnimeWatchRepository(
+            context = appContext,
+            client = parserClient,
+            sourceManager = sourceRuntimeManager,
+            closeClientOnClose = false,
+        )
+    }
 
     /** One service for the whole app: it owns per-provider request queues and a cache, and two of
      * them would pace each other's requests wrongly and race on the same store. */
@@ -44,12 +55,7 @@ class HibikiDependencies(
         closeClientOnClose = false,
     )
 
-    fun animeWatchRepository(): AnimeWatchRepository = AnimeWatchRepository(
-        context = appContext,
-        client = parserClient,
-        sourceManager = sourceRuntimeManager,
-        closeClientOnClose = false,
-    )
+    fun animeWatchRepository(): AnimeWatchRepository = sharedAnimeWatchRepository
 
     fun homeRepository(): HomeRepository = HomeRepository(
         context = appContext,

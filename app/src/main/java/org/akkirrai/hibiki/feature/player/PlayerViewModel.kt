@@ -81,10 +81,12 @@ class PlayerViewModel(
             )
         }
         loadJob = viewModelScope.launch(Dispatchers.IO) {
+            val offlineEpisodes = offlineDownloadRepository.getOfflineEpisodes(state.currentSourceId)
+            // A selected KAA source can resolve the requested episode directly. Do not make the
+            // initial frame wait for the optional playlist; it is fetched on opening settings.
             val episodesResult = runCatching {
-                offlineDownloadRepository.getOfflineEpisodes(state.currentSourceId)
-                    .takeIf { it.isNotEmpty() }
-                    ?: repository.getEpisodes(state.currentSourceId)
+                offlineEpisodes.takeIf { it.isNotEmpty() }
+                    ?: repository.getCachedEpisodes(state.currentSourceId).orEmpty()
             }.throwIfCancelled()
             val currentState = _uiState.value
             if (currentState.currentSourceId != state.currentSourceId || currentState.currentEpisodeId != state.currentEpisodeId) {
@@ -192,9 +194,6 @@ class PlayerViewModel(
                             selectedQualityLabel = stream.qualityLabel ?: it.selectedQualityLabel,
                             availableQualityLabels = stream.availableQualityLabels,
                         )
-                    }
-                    if (offlineCandidate == null) {
-                        loadSettingsOptions()
                     }
                 }
                 .onFailure { throwable ->
@@ -388,12 +387,14 @@ class PlayerViewModel(
             }
             result
                 .onSuccess { options ->
+                    val episodes = repository.getEpisodes(state.currentSourceId)
                     settingsLoadingKey = null
                     _uiState.update {
                         it.copy(
                             isSettingsLoading = false,
                             settingsOptions = options,
                             settingsOptionsKey = optionsKey,
+                            episodes = episodes.ifEmpty { it.episodes },
                         )
                     }
                 }
@@ -558,7 +559,6 @@ class PlayerViewModel(
     override fun onCleared() {
         loadJob?.cancel()
         settingsLoadJob?.cancel()
-        repository.close()
         super.onCleared()
     }
 

@@ -38,6 +38,17 @@ class AnimeSourceRuntimeTest {
     }
 
     @Test
+    fun `details cache is shared between catalog and playback callers`() = runBlocking {
+        val source = FakeAnimeSource()
+        val runtime = runtime(source)
+
+        runtime.details("7")
+        runtime.details("source:ani-liberty:7")
+
+        assertEquals(1, source.detailsRequests)
+    }
+
+    @Test
     fun `filter contract hides unsupported and technical options`() = runBlocking {
         val source = FakeAnimeSource(
             AnimeSearchFilterCatalog(
@@ -125,11 +136,13 @@ class AnimeSourceRuntimeTest {
             primaryLanguage = SourceLanguage.RUSSIAN,
         )
         var requestedDetailsId: String? = null
+        var detailsRequests: Int = 0
         override val catalogCapabilities = CAPABILITIES
         override suspend fun search(query: String): List<AnimeTitle> = listOf(TITLE)
         override suspend fun getSearchFilterCatalog(): AnimeSearchFilterCatalog = catalog
         override suspend fun getById(id: String): AnimeTitle {
             requestedDetailsId = id
+            detailsRequests += 1
             return TITLE
         }
     }

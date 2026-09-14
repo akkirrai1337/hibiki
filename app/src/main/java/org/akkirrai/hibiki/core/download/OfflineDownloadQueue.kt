@@ -536,7 +536,6 @@ object OfflineDownloadQueue {
                     synchronized(requestLock) { resolvingIds.remove(entry.downloadId) }
                 }
             } finally {
-                repository.close()
                 synchronized(processingLock) { isProcessing = false }
                 if (!addedAny) {
                     drain(context, manager)

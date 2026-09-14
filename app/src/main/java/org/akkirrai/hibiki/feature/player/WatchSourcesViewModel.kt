@@ -153,11 +153,6 @@ class WatchSourcesViewModel(
         }
     }
 
-    override fun onCleared() {
-        repository.close()
-        super.onCleared()
-    }
-
     private fun WatchSourcesScreenState.withSources(
         sources: List<WatchSource>,
         isLoading: Boolean,

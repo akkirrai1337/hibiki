@@ -82,11 +82,6 @@ class EpisodesViewModel(
             .sortedBy(WatchEpisode::number)
     }
 
-    override fun onCleared() {
-        repository.close()
-        super.onCleared()
-    }
-
     class Factory(
         private val sourceId: String,
         private val context: Context,

@@ -242,9 +242,6 @@ fun DetailsScreen(
     val resumeFrameRepository = remember(dependencies) { dependencies.resumeFrameRepository() }
     val animeWatchRepository = remember(dependencies) { dependencies.animeWatchRepository() }
     val offlineDownloadRepository = remember(dependencies) { dependencies.offlineDownloadRepository() }
-    DisposableEffect(animeWatchRepository) {
-        onDispose { animeWatchRepository.close() }
-    }
     var isResolvingWatchSources by remember(anime.id) { mutableStateOf(false) }
     // Bumped by a manual rebind, which is a change to what describes this title - the details fetch
     // below re-runs and the screen redraws from the entry that was just chosen.

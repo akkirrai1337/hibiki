@@ -2,6 +2,8 @@ package org.akkirrai.hibiki.core.source
 
 import android.content.Context
 import io.ktor.client.HttpClient
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import org.akkirrai.beakokit.api.AnimeKey
 import org.akkirrai.beakokit.api.AnimeSource
 import org.akkirrai.beakokit.api.PlaybackGroup
@@ -26,6 +28,11 @@ class AnimeSourceRuntime internal constructor(
 ) {
     private val latestSource = source as? LatestSource
     private val playbackSource = source as? PlaybackSource
+    // Catalog/details and playback both need the full provider title. Reusing it here lets a
+    // direct Details -> Player transition avoid a second getById() request even though the two
+    // features use different repositories.
+    private val detailsCache = ConcurrentHashMap<String, CachedDetails>()
+    private val detailsLocks = ConcurrentHashMap<String, Mutex>()
 
     val supportsPlayback: Boolean
         get() = playbackSource != null
@@ -35,7 +42,18 @@ class AnimeSourceRuntime internal constructor(
 
     suspend fun search(query: String): List<AnimeTitle> = source.search(query).map(::scopeTitle)
 
-    suspend fun details(id: String): AnimeTitle = source.getById(nativeId(id)).let(::scopeTitle)
+    suspend fun details(id: String): AnimeTitle {
+        val nativeId = nativeId(id)
+        cachedDetails(nativeId)?.let { return it }
+        val lock = detailsLocks.computeIfAbsent(nativeId) { Mutex() }
+        return lock.withLock {
+            cachedDetails(nativeId) ?: source.getById(nativeId)
+                .let(::scopeTitle)
+                .also { detailsCache[nativeId] = CachedDetails(it, System.currentTimeMillis()) }
+        }.also {
+            detailsLocks.remove(nativeId, lock)
+        }
+    }
 
     fun normalizeId(id: String): String = scopedId(nativeId(id))
 
@@ -72,12 +90,32 @@ class AnimeSourceRuntime internal constructor(
 
     private fun scopedId(nativeId: String): String = AnimeKey(descriptor.id, nativeId).value
 
+    private fun cachedDetails(nativeId: String): AnimeTitle? {
+        val cached = detailsCache[nativeId] ?: return null
+        if (System.currentTimeMillis() - cached.cachedAt >= DETAILS_CACHE_TTL_MS) {
+            detailsCache.remove(nativeId, cached)
+            return null
+        }
+        return cached.title
+    }
+
+    internal fun cachedDetailsFor(id: String): AnimeTitle? = cachedDetails(nativeId(id))
+
     private fun scopeTitle(title: AnimeTitle): AnimeTitle = title.copy(
         id = scopedId(title.id),
         similarAnime = title.similarAnime.map { it.copy(id = scopedId(it.id)) },
         franchiseAnime = title.franchiseAnime.map { it.copy(id = scopedId(it.id)) },
         relatedAnime = title.relatedAnime.map { it.copy(id = scopedId(it.id)) },
     )
+
+    private data class CachedDetails(
+        val title: AnimeTitle,
+        val cachedAt: Long,
+    )
+
+    private companion object {
+        const val DETAILS_CACHE_TTL_MS = 30 * 60_000L
+    }
 }
 
 class AnimeSourceRuntimeManager(

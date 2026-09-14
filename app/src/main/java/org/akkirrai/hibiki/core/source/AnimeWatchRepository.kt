@@ -200,8 +200,15 @@ class AnimeWatchRepository(
 
         ensureInternetConnection()
 
-        val payload = ensureSourcePayload(sourceId) ?: throw SourceException(appString(R.string.watch_error_voiceover_not_found))
-        val episode = payload.episodes.firstOrNull { it.id == episodeId }
+        // KAA's selected source id and episode id already carry everything its player-link API
+        // needs. Avoid downloading every locale and episode page merely to start this one episode;
+        // the complete list remains lazy for the settings panel. Fall back for any source whose
+        // group identity cannot be reconstructed safely.
+        val directPayload = knownKickAssPayload(sourceId, episodeId)
+        val payload = directPayload ?: ensureSourcePayload(sourceId)
+            ?: throw SourceException(appString(R.string.watch_error_voiceover_not_found))
+        val episode = directPayload?.episodes?.single()
+            ?: payload.episodes.firstOrNull { it.id == episodeId }
             ?: throw SourceException(appString(R.string.watch_error_episode_not_found))
         // A selected voiceover is an explicit user choice. Trying unrelated sibling groups made
         // a broken provider look like an endless load while spending the entire resolution budget
@@ -231,6 +238,11 @@ class AnimeWatchRepository(
                         AppLogger.w(TAG, "Playback attempt ${candidateIndex + 1}/${candidates.size} timed out discovering links: voiceover=${candidatePayload.source.title}")
                         emptyList()
                     }
+                    AppLogger.d(
+                        TAG,
+                        "Playback attempt ${candidateIndex + 1}/${candidates.size} links ready: " +
+                            "count=${rawLinks.size}, elapsedMs=${System.currentTimeMillis() - startedAt}",
+                    )
                     val links = prioritizeLinks(
                         links = rawLinks.filterNot { it.url in excludedStreamUrls },
                         preferredPlayerName = preferredPlayerName,
@@ -335,6 +347,22 @@ class AnimeWatchRepository(
         preferredPlayerName: String? = null,
         preferredQuality: String? = null,
     ): ResolvedPlayerStream {
+        // KAA exposes all servers for the selected episode in one response. If the title details
+        // are already present, resolving that response directly is both the fastest candidate and
+        // avoids fetching the optional all-locale playlist just to discover its player names.
+        if (knownKickAssPayload(sourceId, episodeId) != null) {
+            return ResolvedPlayerStream(
+                playerName = null,
+                playback = resolveStream(
+                    sourceId = sourceId,
+                    episodeId = episodeId,
+                    forceRefresh = forceRefresh,
+                    excludedStreamUrls = excludedStreamUrls,
+                    preferredPlayerName = preferredPlayerName,
+                    preferredQuality = preferredQuality,
+                ),
+            )
+        }
         val playerNames = getPlaybackSettingsOptions(sourceId, episodeId)
             .links
             .mapNotNull { it.playerName?.trim()?.takeIf(String::isNotBlank) }
@@ -485,6 +513,36 @@ class AnimeWatchRepository(
 
     private fun sourceForTitle(titleId: String): AnimeSourceRuntime = sourceManager?.forTitle(titleId)
         ?: error("Anime source selection requires an Android context")
+
+    private fun knownKickAssPayload(sourceId: String, episodeId: String): SourcePayload? {
+        val titleId = extractTitleId(sourceId)
+        val runtime = sourceForTitle(titleId)
+        if (runtime.descriptor.id.value != "kickassanime") return null
+        val title = runtime.cachedDetailsFor(titleId) ?: return null
+        val groupSlug = sourceId.substringAfter(WATCH_SOURCE_SEPARATOR, "")
+            .substringBeforeLast('-', "")
+        val locale = when (groupSlug) {
+            "japanese" -> "ja-JP"
+            "english" -> "en-US"
+            "spanish" -> "es-ES"
+            "korean" -> "ko-KR"
+            "chinese" -> "zh-CN"
+            else -> return null
+        }
+        val episodeNumber = Regex("^ep-([0-9]+(?:\\.[0-9]+)?)-")
+            .find(episodeId)?.groupValues?.getOrNull(1)?.toDoubleOrNull() ?: 0.0
+        val episode = Episode(id = episodeId, number = episodeNumber, title = null)
+        val sourceTitle = groupSlug.replaceFirstChar(Char::uppercase)
+        return SourcePayload(
+            source = WatchSource(sourceId, sourceTitle, episodeCount = null, isPriority = false),
+            order = 0,
+            animeId = titleId,
+            title = title,
+            group = PlaybackGroup(id = locale, title = sourceTitle, episodes = listOf(episode)),
+            episodes = listOf(episode),
+            runtime = runtime,
+        )
+    }
 
     private suspend fun ensureSourcePayload(sourceId: String): SourcePayload? {
         val titleId = extractTitleId(sourceId)
