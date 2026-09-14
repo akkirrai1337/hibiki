@@ -7,6 +7,11 @@ import android.view.WindowManager
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.only
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -50,7 +55,12 @@ fun AppModalBottomSheet(
     val resolvedShape = shape ?: rememberDeviceScreenTopCornerShape()
     ModalBottomSheet(
         onDismissRequest = onDismissRequest,
-        modifier = modifier,
+        // The top inset stays outside the sheet, as a fixed margin. By default it is padding inside
+        // the content, shrunk by however far the sheet has been dragged - so a sheet tall enough to
+        // reach the status bar changed height on every frame of a drag, re-created its anchors, and
+        // snapped back to expanded: it looked stuck and jittered until release, then closed at once.
+        modifier = modifier.windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top)),
+        contentWindowInsets = { WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom) },
         sheetState = sheetState,
         shape = resolvedShape,
         containerColor = containerColor,
