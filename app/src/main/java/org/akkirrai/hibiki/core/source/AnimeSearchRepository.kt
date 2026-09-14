@@ -26,7 +26,7 @@ import org.akkirrai.beakokit.metadata.MetadataProviderId
 import org.akkirrai.beakokit.metadata.ExternalMetadataService
 import org.akkirrai.beakokit.metadata.mergeExternalMetadata
 import org.akkirrai.beakokit.metadata.metadataProviderOrder
-import org.akkirrai.hibiki.core.metadata.PreferencesExternalMetadataStore
+import org.akkirrai.hibiki.core.metadata.SqliteExternalMetadataStore
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
@@ -73,7 +73,7 @@ class AnimeSearchRepository(
         ?: appContext?.let {
             ExternalMetadataService(
                 client,
-                PreferencesExternalMetadataStore(it),
+                SqliteExternalMetadataStore.get(it),
                 log = { message -> AppLogger.d("ExternalMetadata", message) },
             )
         }
@@ -562,18 +562,13 @@ class AnimeSearchRepository(
         // One coroutine per title, bounded by cardMatchSlots, instead of a single loop that made
         // every card on the page wait for every earlier one's full provider search to finish -
         // that serialized a 20-card list into 20x the latency of a single lookup.
-        for ((index, title) in titlesToLoad.withIndex()) {
+        for (title in titlesToLoad) {
             metadataScope.launch(MetadataPriority.Background) {
                 cardMatchSlots.withPermit {
                     try {
-                        // Every provider paces its own requests to stay under its rate limit, so a
-                        // page of fresh titles that all start with the same provider - the common
-                        // case, since it goes first because it usually has the title - queue up
-                        // behind that one provider's interval no matter how many run at once. Each
-                        // card starting from a different point in [order] (falling back through the
-                        // rest exactly as before) spreads that load across all three independent
-                        // queues instead.
-                        runCatching { service.metadataFor(title, order.rotated(index)) }
+                        // Background priority: the service also sends each live search to whichever
+                        // provider's queue frees up first, spreading a page across all of them.
+                        runCatching { service.metadataFor(title, order) }
                             .onSuccess { external ->
                                 external ?: return@onSuccess
                                 val enriched = mergeExternalMetadata(title, external)
@@ -588,14 +583,6 @@ class AnimeSearchRepository(
                 }
             }
         }
-    }
-
-    /** [order] starting [n] positions further along, wrapping around - the same fallback order,
-     * just read from a different point in it. */
-    private fun List<MetadataProviderId>.rotated(n: Int): List<MetadataProviderId> {
-        if (size <= 1) return this
-        val shift = n % size
-        return subList(shift, size) + subList(0, shift)
     }
 
     private fun providerOrderFor(source: AnimeSourceRuntime): List<MetadataProviderId> {
@@ -660,13 +647,11 @@ class AnimeSearchRepository(
     ) {
         val service = metadataService ?: return
         if (order.isEmpty()) return
-        for ((index, item) in items.withIndex()) {
+        for (item in items) {
             metadataScope.launch(MetadataPriority.Background) {
                 relatedAnimeMatchSlots.withPermit {
                     val stub = AnimeTitle(id = item.id, originalName = item.title, englishName = item.title, posterUrl = item.posterUrl, year = item.year, type = item.type, status = item.status, availableEpisodeCount = item.episodeCount)
-                    // Same rotation as warmCardMetadata: spreads the batch across every provider's
-                    // independent rate-limited queue.
-                    val external = runCatching { service.metadataFor(stub, order.rotated(index)) }
+                    val external = runCatching { service.metadataFor(stub, order) }
                         .onFailure { AppLogger.w(TAG, "warmRelatedAnime: metadata lookup failed for ${item.id}", it) }
                         .getOrNull()
                         ?: return@withPermit

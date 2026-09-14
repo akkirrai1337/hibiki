@@ -8,6 +8,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * One paced request queue per metadata provider.
@@ -21,6 +22,11 @@ import kotlinx.coroutines.sync.withLock
  * its entire latency, not just the pacing interval - on a slow connection that turned a page of
  * twenty cards into twenty sequential round trips instead of twenty paced-but-overlapping ones.
  *
+ * Pacing is a token bucket (GCRA): up to [burst] requests start back to back after a quiet spell,
+ * and only then does the interval apply. Every provider here counts a window, not the gap between
+ * two requests, so a screen's first handful of lookups - the ones a user is actually waiting on - no
+ * longer pay the interval each.
+ *
  * A 429 stands the provider down instead of sleeping in line: waiting out a Retry-After inside the
  * queue held every request behind it for up to a minute, so one throttled lookup froze a whole
  * screen's worth. Failing fast costs that lookup its description - the source's own still shows -
@@ -28,12 +34,15 @@ import kotlinx.coroutines.sync.withLock
  */
 class MetadataRequestQueue(
     private val minIntervalMillis: Long,
+    private val burst: Int = 1,
     private val nowMillis: () -> Long = System::currentTimeMillis,
 ) {
     private val lock = Mutex()
-    private var lastRequestAtMillis = 0L
-    private var cooledUntilMillis = 0L
+    private val burstToleranceMillis = minIntervalMillis * (burst - 1).coerceAtLeast(0)
+    @Volatile private var theoreticalArrivalMillis = 0L
+    @Volatile private var cooledUntilMillis = 0L
     private val foregroundWaiting = MutableStateFlow(0)
+    private val waiting = AtomicInteger(0)
 
     /** Null for every failure - offline, a non-2xx status, a provider being stood down. Callers
      * treat that as "no metadata this time" and keep the source's own, so nothing here throws. */
@@ -54,6 +63,17 @@ class MetadataRequestQueue(
     }
 
     /**
+     * Roughly how long a request queued now would wait to start - what lets a lookup go to whichever
+     * provider frees up first. [Long.MAX_VALUE] while the provider is stood down.
+     */
+    fun estimatedWaitMillis(): Long {
+        val now = nowMillis()
+        if (now < cooledUntilMillis) return Long.MAX_VALUE
+        val slot = (theoreticalArrivalMillis - burstToleranceMillis - now).coerceAtLeast(0)
+        return slot + waiting.get() * minIntervalMillis
+    }
+
+    /**
      * Waits for this request's paced start slot. False when the provider is stood down.
      *
      * Two lanes (see [MetadataPriority]): a background request only takes the lock while no
@@ -62,6 +82,7 @@ class MetadataRequestQueue(
      * background backlog is.
      */
     private suspend fun admit(background: Boolean): Boolean {
+        waiting.incrementAndGet()
         if (!background) foregroundWaiting.update { it + 1 }
         try {
             while (true) {
@@ -69,15 +90,18 @@ class MetadataRequestQueue(
                 val admitted: Boolean? = lock.withLock {
                     if (background && foregroundWaiting.value > 0) return@withLock null
                     if (nowMillis() < cooledUntilMillis) return@withLock false
-                    val wait = lastRequestAtMillis + minIntervalMillis - nowMillis()
+                    val now = nowMillis()
+                    val arrival = maxOf(theoreticalArrivalMillis, now)
+                    val wait = arrival - burstToleranceMillis - now
                     if (wait > 0) delay(wait)
-                    lastRequestAtMillis = nowMillis()
+                    theoreticalArrivalMillis = arrival + minIntervalMillis
                     true
                 }
                 if (admitted != null) return admitted
             }
         } finally {
             if (!background) foregroundWaiting.update { it - 1 }
+            waiting.decrementAndGet()
         }
     }
 

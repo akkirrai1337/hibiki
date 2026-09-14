@@ -107,7 +107,7 @@ class ExternalMetadataService(
             settled += provider
             (recorded as? RecordedResult.Found)?.let { return it.media }
         }
-        for (provider in effectiveOrder) {
+        for (provider in liveSearchOrder(effectiveOrder)) {
             if (provider in settled) continue
             val media = runCatching { liveSearchMetadataFor(anime, provider) }
                 .onFailure { log("metadataFor: provider=$provider threw for '${anime.englishName ?: anime.originalName}': ${it.message}") }
@@ -472,6 +472,23 @@ class ExternalMetadataService(
             store.writeMatch(
                 MetadataMatchRecord(titleId, provider, externalId, confidencePercent = null, manual = false, matchedAtMillis = nowMillis()),
             )
+        }
+    }
+
+    /**
+     * The order a live search tries providers in. A foreground lookup keeps the user's preference -
+     * it is the title on screen. A background one (a page of cards) goes to whichever provider's
+     * queue frees up first, ties keeping preference, so a page spreads by each provider's actual
+     * capacity instead of evenly: Kitsu takes more, the slowest queue (Jikan's) takes less.
+     */
+    private suspend fun liveSearchOrder(order: List<MetadataProviderId>): List<MetadataProviderId> {
+        if (currentCoroutineContext()[MetadataPriority]?.background != true) return order
+        return order.sortedBy { provider ->
+            when (provider) {
+                MetadataProviderId.ANILIST -> anilist.estimatedWaitMillis()
+                MetadataProviderId.MAL -> mal.estimatedWaitMillis()
+                MetadataProviderId.KITSU -> kitsu.estimatedWaitMillis()
+            }
         }
     }
 

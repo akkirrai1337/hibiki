@@ -42,7 +42,11 @@ private suspend inline fun <reified T> HttpResponse.decode(): T? =
 class AniListClient(private val client: HttpClient) {
     // AniList allows about 90 requests a minute per IP. Nothing here is latency-critical - a screen
     // paints from the source first and fills metadata in as it arrives.
-    private val queue = MetadataRequestQueue(minIntervalMillis = 700)
+    // A burst of 3 stays far inside the per-minute window.
+    private val queue = MetadataRequestQueue(minIntervalMillis = 700, burst = 3)
+
+
+    fun estimatedWaitMillis(): Long = queue.estimatedWaitMillis()
 
     private suspend fun graphql(query: String, variables: JsonObject): AniListData? = queue.run(
         request = {
@@ -139,7 +143,11 @@ class AniListClient(private val client: HttpClient) {
  * official MAL API needs a registered client id even to read. */
 class MalClient(private val client: HttpClient) {
     // Jikan publishes two limits, 3 requests a second and 60 a minute; the minute one binds.
-    private val queue = MetadataRequestQueue(minIntervalMillis = 1_100)
+    // The per-second limit is the burst.
+    private val queue = MetadataRequestQueue(minIntervalMillis = 1_100, burst = 3)
+
+
+    fun estimatedWaitMillis(): Long = queue.estimatedWaitMillis()
 
     private suspend inline fun <reified T> get(path: String): T? = queue.run(
         request = { client.get(BASE_URL + path) { header(HttpHeaders.Accept, "application/json") } },
@@ -166,7 +174,10 @@ class MalClient(private val client: HttpClient) {
 /** Kitsu's public JSON:API. No key, no account. */
 class KitsuClient(private val client: HttpClient) {
     // Kitsu publishes no hard rate limit, so this is a courtesy pace rather than a documented one.
-    private val queue = MetadataRequestQueue(minIntervalMillis = 400)
+    private val queue = MetadataRequestQueue(minIntervalMillis = 400, burst = 5)
+
+
+    fun estimatedWaitMillis(): Long = queue.estimatedWaitMillis()
 
     private suspend inline fun <reified T> get(path: String): T? = queue.run(
         // JSON:API's own media type, which is what Kitsu's documentation asks for.
