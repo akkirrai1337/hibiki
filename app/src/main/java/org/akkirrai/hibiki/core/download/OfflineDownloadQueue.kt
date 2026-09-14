@@ -23,6 +23,7 @@ import org.akkirrai.hibiki.core.model.WatchSource
 import org.akkirrai.hibiki.core.log.AppLogger
 import org.akkirrai.hibiki.core.source.AnimeWatchRepository
 import org.akkirrai.hibiki.app.di.hibikiDependencies
+import org.akkirrai.hibiki.core.database.HibikiDatabase
 import org.akkirrai.hibiki.core.source.OfflineTitleMetadataRepository
 import org.akkirrai.hibiki.core.source.watchTitleIdFromSourceId
 import org.json.JSONArray
@@ -36,6 +37,7 @@ object OfflineDownloadQueue {
     private const val QUEUE_KEY = "pending_queue"
     private const val STORED_EPISODES_KEY = "stored_episodes"
     private const val FAILED_EPISODES_KEY = "failed_episodes"
+    private const val LEGACY_PLAYBACK_PREFIX = "offline_playback:"
     private const val SESSION_TOTAL_KEY = "session_total"
     private const val SESSION_COMPLETED_KEY = "session_completed"
     private const val SESSION_COMPLETED_IDS_KEY = "session_completed_ids"
@@ -271,12 +273,10 @@ object OfflineDownloadQueue {
             )
             clearFailedEntries(appContext, setOf(id))
             removeFromSession(appContext, id)
-            prefs(appContext).getString(playbackKey(sourceId, episodeId), null)
+            dao(appContext).playback(id)
                 ?.let { encoded -> runCatching { decodePlayback(JSONObject(encoded)) }.getOrNull() }
                 ?.let { playback -> OfflineStreamHeaders.remove(appContext, playback.streamUrl) }
-            prefs(appContext).edit()
-                .remove(playbackKey(sourceId, episodeId))
-                .apply()
+            dao(appContext).deletePlayback(id)
             val isManagedDownload = manager.currentDownloads.any { it.request.id == id } ||
                 runCatching { manager.downloadIndex.getDownload(id) != null }.getOrDefault(false)
             if (isManagedDownload) {
@@ -335,7 +335,7 @@ object OfflineDownloadQueue {
         if (state != OfflineEpisodeDownloadState.Completed) {
             return null
         }
-        val encoded = prefs(context).getString(playbackKey(sourceId, episodeId), null)
+        val encoded = dao(context).playback(downloadId(sourceId, episodeId))
         val snapshot = encoded
             ?.let { raw -> runCatching { decodePlayback(JSONObject(raw)) }.getOrNull() }
         // The download index is the authoritative record of what actually sits in the download
@@ -605,68 +605,34 @@ object OfflineDownloadQueue {
         }
     }
 
-    private fun pendingEntries(context: Context): List<PendingEpisode> {
-        val raw = prefs(context).getString(QUEUE_KEY, null) ?: return emptyList()
-        return runCatching {
-            val array = JSONArray(raw)
-            buildList {
-                for (index in 0 until array.length()) {
-                    val item = array.optJSONObject(index) ?: continue
-                    PendingEpisode.fromJson(item)?.let(::add)
-                }
-            }
-        }.getOrDefault(emptyList())
-    }
+    private fun pendingEntries(context: Context): List<PendingEpisode> =
+        dao(context).pending().mapNotNull(::decodeEntry)
 
     private fun savePendingEntries(context: Context, entries: List<PendingEpisode>) {
-        prefs(context).edit()
-            .putString(
-                QUEUE_KEY,
-                JSONArray().apply { entries.forEach { put(it.toJson()) } }.toString(),
-            )
-            .apply()
+        dao(context).replacePending(entries.map { it.toJson().toString() })
     }
 
-    private fun storedEntries(context: Context): List<PendingEpisode> {
-        val raw = prefs(context).getString(STORED_EPISODES_KEY, null) ?: return emptyList()
-        return runCatching {
-            val array = JSONArray(raw)
-            buildList {
-                for (index in 0 until array.length()) {
-                    val item = array.optJSONObject(index) ?: continue
-                    PendingEpisode.fromJson(item)?.let(::add)
-                }
-            }
-        }.getOrDefault(emptyList())
-    }
+    private fun storedEntries(context: Context): List<PendingEpisode> =
+        dao(context).stored().mapNotNull(::decodeEntry)
 
     private fun saveStoredEntries(context: Context, entries: List<PendingEpisode>) {
-        prefs(context).edit()
-            .putString(
-                STORED_EPISODES_KEY,
-                JSONArray().apply { entries.forEach { put(it.toJson()) } }.toString(),
-            )
-            .apply()
+        dao(context).replaceStored(entries.map { it.toJson().toString() })
     }
 
-    private fun failedEntryIds(context: Context): Set<String> {
-        val raw = prefs(context).getStringSet(FAILED_EPISODES_KEY, emptySet()) ?: emptySet()
-        return raw.filter(String::isNotBlank).toSet()
-    }
+    private fun decodeEntry(json: String): PendingEpisode? =
+        runCatching { PendingEpisode.fromJson(JSONObject(json)) }.getOrNull()
+
+    private fun failedEntryIds(context: Context): Set<String> =
+        dao(context).failedIds().filter(String::isNotBlank).toSet()
 
     private fun markFailedEntry(context: Context, entry: PendingEpisode) {
         saveStoredEntries(context, mergeStoredEntries(storedEntries(context), listOf(entry)))
-        prefs(context).edit()
-            .putStringSet(FAILED_EPISODES_KEY, failedEntryIds(context) + entry.downloadId)
-            .apply()
+        dao(context).addFailed(DownloadFailedEntity(entry.downloadId))
     }
 
     private fun clearFailedEntries(context: Context, ids: Set<String>) {
         if (ids.isEmpty()) return
-        val updated = failedEntryIds(context) - ids
-        prefs(context).edit()
-            .putStringSet(FAILED_EPISODES_KEY, updated)
-            .apply()
+        dao(context).removeFailed(ids.toList())
     }
 
     private fun mergeStoredEntries(
@@ -728,9 +694,9 @@ object OfflineDownloadQueue {
         episodeId: String,
         playback: PlaybackStream,
     ) {
-        prefs(context).edit()
-            .putString(playbackKey(sourceId, episodeId), encodePlayback(playback).toString())
-            .apply()
+        dao(context).upsertPlayback(
+            DownloadPlaybackEntity(downloadId(sourceId, episodeId), encodePlayback(playback).toString()),
+        )
     }
 
     private fun PlaybackStream.toDownloadRequest(
@@ -826,9 +792,6 @@ object OfflineDownloadQueue {
         }
     }
 
-    private fun playbackKey(sourceId: String, episodeId: String): String =
-        "offline_playback:${downloadId(sourceId, episodeId)}"
-
     fun getPendingCount(context: Context): Int = pendingEntries(context).size
 
     fun getTotalQueuedCount(context: Context): Int = storedEntries(context).size
@@ -906,8 +869,59 @@ object OfflineDownloadQueue {
     private fun downloadId(sourceId: String, episodeId: String): String =
         "$sourceId:$episodeId"
 
+    /** Session progress counters only - the queue itself lives in [DownloadDao]. */
     private fun prefs(context: Context) =
         context.applicationContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+
+    @Volatile
+    private var downloadDao: DownloadDao? = null
+
+    private fun dao(context: Context): DownloadDao =
+        downloadDao ?: synchronized(this) {
+            downloadDao ?: HibikiDatabase.get(context).downloadDao().also { dao ->
+                importLegacyQueue(context, dao)
+                downloadDao = dao
+            }
+        }
+
+    /** Moves the queue out of SharedPreferences, once, leaving only the session counters there. */
+    private fun importLegacyQueue(context: Context, dao: DownloadDao) {
+        val prefs = prefs(context)
+        val entries = prefs.all
+        val playback = entries.filterKeys { it.startsWith(LEGACY_PLAYBACK_PREFIX) }
+        val hasLegacy = QUEUE_KEY in entries || STORED_EPISODES_KEY in entries ||
+            FAILED_EPISODES_KEY in entries || playback.isNotEmpty()
+        if (!hasLegacy) return
+        fun jsonItems(key: String): List<String> {
+            val raw = prefs.getString(key, null) ?: return emptyList()
+            return runCatching {
+                val array = JSONArray(raw)
+                (0 until array.length()).mapNotNull { array.optJSONObject(it)?.toString() }
+            }.getOrDefault(emptyList())
+        }
+        val failed = prefs.getStringSet(FAILED_EPISODES_KEY, emptySet()).orEmpty()
+            .filter(String::isNotBlank)
+            .toSet()
+        val imported = runCatching {
+            dao.importLegacy(
+                pending = jsonItems(QUEUE_KEY),
+                stored = jsonItems(STORED_EPISODES_KEY),
+                failed = failed,
+                playback = playback.mapNotNull { (key, value) ->
+                    (value as? String)?.let { key.removePrefix(LEGACY_PLAYBACK_PREFIX) to it }
+                }.toMap(),
+            )
+        }.onFailure {
+            AppLogger.w(TAG, "legacy download queue import failed, keeping it in preferences", it)
+        }.isSuccess
+        if (!imported) return
+        val editor = prefs.edit()
+            .remove(QUEUE_KEY)
+            .remove(STORED_EPISODES_KEY)
+            .remove(FAILED_EPISODES_KEY)
+        playback.keys.forEach(editor::remove)
+        editor.commit()
+    }
 
     private data class PendingEpisode(
         val sourceId: String,

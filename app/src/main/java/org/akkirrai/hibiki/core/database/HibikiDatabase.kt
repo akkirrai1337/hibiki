@@ -12,6 +12,11 @@ import androidx.room.PrimaryKey
 import androidx.room.Query
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import org.akkirrai.hibiki.core.download.DownloadDao
+import org.akkirrai.hibiki.core.download.DownloadFailedEntity
+import org.akkirrai.hibiki.core.download.DownloadPendingEntity
+import org.akkirrai.hibiki.core.download.DownloadPlaybackEntity
+import org.akkirrai.hibiki.core.download.DownloadStoredEntity
 import org.akkirrai.hibiki.core.metadata.MetadataDao
 import org.akkirrai.hibiki.core.metadata.MetadataDisplayProviderEntity
 import org.akkirrai.hibiki.core.metadata.MetadataMatchEntity
@@ -33,15 +38,21 @@ import org.akkirrai.hibiki.core.metadata.MetadataUnresolvedEntity
         MetadataUnresolvedEntity::class,
         MetadataDisplayProviderEntity::class,
         OfflineTitleEntity::class,
+        DownloadPendingEntity::class,
+        DownloadStoredEntity::class,
+        DownloadFailedEntity::class,
+        DownloadPlaybackEntity::class,
     ],
-    version = 2,
+    version = 3,
     exportSchema = true,
-    autoMigrations = [AutoMigration(from = 1, to = 2)],
+    autoMigrations = [AutoMigration(from = 1, to = 2), AutoMigration(from = 2, to = 3)],
 )
 abstract class HibikiDatabase : RoomDatabase() {
     abstract fun metadataDao(): MetadataDao
 
     abstract fun offlineTitleDao(): OfflineTitleDao
+
+    abstract fun downloadDao(): DownloadDao
 
     companion object {
         @Volatile private var instance: HibikiDatabase? = null
