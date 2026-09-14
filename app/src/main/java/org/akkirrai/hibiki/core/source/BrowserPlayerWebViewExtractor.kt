@@ -271,6 +271,13 @@ class BrowserPlayerWebViewExtractor(
                     headers = playbackHeaders(url, emptyMap(), pageUrl, CookieManager.getInstance().getCookie(url)),
                 )
                 AppLogger.d(TAG, "Subtitle captured: language=${language.orEmpty()}, host=${hostOf(url)}")
+                // A track list is commonly still hydrating (an Astro island, a lazy <track> insert)
+                // when the video stream itself is already playable, so without this a subtitle that
+                // was seconds away from being reported never gets the chance - finish() had already
+                // fired and delivered its result. Same settle-and-wait-for-more rule add() uses for
+                // streams: only postpone while tracks keep trickling in, not indefinitely.
+                settle?.let(handler::removeCallbacks)
+                settle = Runnable(::finish).also { handler.postDelayed(it, STREAM_SETTLE_DELAY_MS) }
             }
             fun probe(view: WebView) {
                 if (delivered || webView !== view || probes++ >= MAX_PROBES) return
@@ -441,7 +448,11 @@ class BrowserPlayerWebViewExtractor(
         const val TIMEOUT_MS = 11_000L
         const val AUDIO_PROBE_TIMEOUT_MS = 1_000L
         const val MAX_PROBES = 24
-        const val STREAM_SETTLE_DELAY_MS = 600L
+        // Long enough to give a subtitle track list a chance to show up - some players (KickAssAnime's
+        // krussdomi.com among them) hydrate their track list a beat after the video element already
+        // has its stream, and a settle window tuned only for the stream itself finished and handed
+        // off its result before any of those tracks had rendered into the DOM.
+        const val STREAM_SETTLE_DELAY_MS = 1_200L
         const val CONSOLE_MESSAGE_LOG_LIMIT = 200
         const val CHROME_USER_AGENT = "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Mobile Safari/537.36"
         const val TAG = "BrowserPlayerResolver"
