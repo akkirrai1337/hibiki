@@ -10,6 +10,7 @@ import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
 import io.ktor.http.contentType
+import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonArray
@@ -40,16 +41,63 @@ private suspend inline fun <reified T> HttpResponse.decode(): T? =
  * HTTP 403 on every query), which is exactly the case the service's provider fallback exists for.
  */
 class AniListClient(private val client: HttpClient) {
-    // AniList allows about 90 requests a minute per IP. Nothing here is latency-critical - a screen
-    // paints from the source first and fills metadata in as it arrives.
-    // A burst of 3 stays far inside the per-minute window.
-    private val queue = MetadataRequestQueue(minIntervalMillis = 700, burst = 3)
-
+    // AniList documents 90 requests a minute per IP, but has been running degraded at 30 (its own
+    // X-RateLimit-Limit header says so), and overshooting costs a minute's stand-down. Paced for 30;
+    // batching below is what keeps that affordable.
+    private val queue = MetadataRequestQueue(minIntervalMillis = 2_100, burst = 2)
 
     fun estimatedWaitMillis(): Long = queue.estimatedWaitMillis()
 
-    private suspend fun graphql(query: String, variables: JsonObject): AniListData? = queue.run(
+    /**
+     * Name searches, many to a request as GraphQL aliases (`a0: Page { media(search: $q0) }`, ...).
+     * AniList caps a query's complexity at 500, and each aliased page of ten costs about 28 - 12
+     * keeps well clear of it.
+     */
+    private val searches = BatchLanes<String, List<ScoredEntry>>(MAX_SEARCH_ALIASES) execute@{ takeKeys ->
+        var names = emptyList<String>()
+        val pages = postGraphql(
+            body = {
+                names = takeKeys()
+                val variables = names.indices.joinToString { "\$q$it: String" }
+                val selections = names.indices.joinToString(" ") { i ->
+                    "a$i: Page(perPage: 10) { media(search: \$q$i, type: ANIME) { $ANILIST_MEDIA_FIELDS } }"
+                }
+                "query ($variables) { $selections }" to buildJsonObject {
+                    names.forEachIndexed { i, name -> put("q$i", name) }
+                }
+            },
+            parse = { it.decode<AniListAliasedResponse>()?.data },
+        ) ?: return@execute null
+        // A name whose alias is missing from an otherwise good answer gets no entry, and so reads as a
+        // failed request - never as an empty result, which would be recorded as "AniList lacks this".
+        names.withIndex().mapNotNull { (i, name) ->
+            pages["a$i"]?.let { page -> name to page.media.orEmpty().map { ScoredEntry(it.toMatchCandidate(), it.toExternalMetadata()) } }
+        }.toMap()
+    }
+
+    private val byId = BatchLanes<Int, ExternalMetadata>(MAX_IDS_PER_REQUEST) execute@{ takeKeys ->
+        val page = postGraphql(
+            body = { BY_ID_QUERY to buildJsonObject { put("ids", JsonArray(takeKeys().map(::JsonPrimitive))) } },
+            parse = { it.decode<AniListResponse>()?.data?.page },
+        ) ?: return@execute null
+        page.media.orEmpty().associate { it.id to it.toExternalMetadata() }
+    }
+
+    private val byMalId = BatchLanes<Int, ExternalMetadata>(MAX_IDS_PER_REQUEST) execute@{ takeKeys ->
+        val page = postGraphql(
+            body = { BY_MAL_ID_QUERY to buildJsonObject { put("ids", JsonArray(takeKeys().map(::JsonPrimitive))) } },
+            parse = { it.decode<AniListResponse>()?.data?.page },
+        ) ?: return@execute null
+        page.media.orEmpty()
+            .mapNotNull { media -> media.idMal?.let { it to media.toExternalMetadata() } }
+            .distinctBy { it.first }
+            .toMap()
+    }
+
+    /** [body] is built only once the queue admits the request - which is when a batch takes its keys. */
+    private suspend fun <T> postGraphql(body: () -> Pair<String, JsonObject>, parse: suspend (HttpResponse) -> T?): T? = queue.run(
         request = {
+            val (query, variables) = body()
             client.post(ENDPOINT) {
                 contentType(ContentType.Application.Json)
                 header(HttpHeaders.Accept, ContentType.Application.Json.toString())
@@ -64,20 +112,17 @@ class AniListClient(private val client: HttpClient) {
                 )
             }
         },
-        parse = { it.decode<AniListResponse>()?.data },
+        parse = parse,
     )
 
-    suspend fun fetchById(anilistId: Int): ExternalMetadata? = graphql(
-        "query (\$id: Int) { Media(id: \$id, type: ANIME) { $ANILIST_MEDIA_FIELDS } }",
-        buildJsonObject { put("id", anilistId) },
-    )?.media?.toExternalMetadata()
+    private suspend fun graphql(query: String, variables: JsonObject): AniListData? =
+        postGraphql(body = { query to variables }, parse = { it.decode<AniListResponse>()?.data })
+
+    suspend fun fetchById(anilistId: Int): ExternalMetadata? = (byId.load(anilistId) as? BatchOutcome.Done)?.value
 
     /** Looks a title up by its MAL id - what lets a match established elsewhere be reused here
      * without searching by name again. */
-    suspend fun fetchByMalId(malId: Int): ExternalMetadata? = graphql(
-        "query (\$idMal: Int) { Media(idMal: \$idMal, type: ANIME) { $ANILIST_MEDIA_FIELDS } }",
-        buildJsonObject { put("idMal", malId) },
-    )?.media?.toExternalMetadata()
+    suspend fun fetchByMalId(malId: Int): ExternalMetadata? = (byMalId.load(malId) as? BatchOutcome.Done)?.value
 
     /**
      * A page of AniList's catalog. Its "trending" is genuinely trending - what people are watching
@@ -126,18 +171,24 @@ class AniListClient(private val client: HttpClient) {
         return data.page?.media.orEmpty().map { it.toExternalMetadata() }
     }
 
-    suspend fun search(name: String): List<ScoredEntry>? {
-        val data = graphql(
-            "query (\$search: String) { Page(perPage: 10) { media(search: \$search, type: ANIME) { $ANILIST_MEDIA_FIELDS } } }",
-            buildJsonObject { put("search", name) },
-        ) ?: return null
-        return data.page?.media.orEmpty().map { ScoredEntry(it.toMatchCandidate(), it.toExternalMetadata()) }
+    suspend fun search(name: String): List<ScoredEntry>? = when (val outcome = searches.load(name)) {
+        BatchOutcome.Failed -> null
+        is BatchOutcome.Done -> outcome.value
     }
 
     private companion object {
         const val ENDPOINT = "https://graphql.anilist.co"
+        const val MAX_SEARCH_ALIASES = 12
+        // AniList's page size cap.
+        const val MAX_IDS_PER_REQUEST = 50
+        val BY_ID_QUERY = "query (\$ids: [Int]) { Page(perPage: 50) { media(id_in: \$ids, type: ANIME) { $ANILIST_MEDIA_FIELDS } } }"
+        val BY_MAL_ID_QUERY = "query (\$ids: [Int]) { Page(perPage: 50) { media(idMal_in: \$ids, type: ANIME) { $ANILIST_MEDIA_FIELDS } } }"
     }
 }
+
+/** A response of aliased pages - `{ "data": { "a0": { "media": [...] }, "a1": ... } }`. */
+@Serializable
+internal data class AniListAliasedResponse(val data: Map<String, AniListPage?>? = null)
 
 /** Jikan, MAL's unofficial read-only API. No key and no account, which is why it is here: the
  * official MAL API needs a registered client id even to read. */

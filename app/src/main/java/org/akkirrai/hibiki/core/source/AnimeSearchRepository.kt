@@ -69,10 +69,13 @@ class AnimeSearchRepository(
     private val titleMatcher = TitleMatcher()
     // Built here rather than injected: everything it needs (the shared client, the app's own
     // preferences) is already on this repository, and nothing else in the app describes a title.
+    // Only for the standalone path below, and closed with this repository: the shared client retries
+    // 429s, which is wrong for a metadata provider (see AndroidHttpClientFactory.createMetadata).
+    private var ownedMetadataClient: HttpClient? = null
     private val metadataService = metadataService
         ?: appContext?.let {
             ExternalMetadataService(
-                client,
+                AndroidHttpClientFactory.createMetadata().also { created -> ownedMetadataClient = created },
                 RoomExternalMetadataStore.get(it),
                 log = { message -> AppLogger.d("ExternalMetadata", message) },
             )
@@ -322,6 +325,7 @@ class AnimeSearchRepository(
         _relatedMetadata.value = emptyMap()
         _pendingCardMetadata.value = emptySet()
         metadataScope.cancel()
+        ownedMetadataClient?.close()
         if (closeClientOnClose) client.close()
     }
 
