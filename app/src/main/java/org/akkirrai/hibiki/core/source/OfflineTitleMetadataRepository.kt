@@ -1,6 +1,9 @@
 package org.akkirrai.hibiki.core.source
 
 import android.content.Context
+import org.akkirrai.hibiki.core.database.HibikiDatabase
+import org.akkirrai.hibiki.core.database.OfflineTitleEntity
+import org.akkirrai.hibiki.core.log.AppLogger
 import org.akkirrai.hibiki.core.model.Anime
 import org.akkirrai.hibiki.core.model.AnimeRating
 import org.akkirrai.hibiki.core.model.AnimeTrailer
@@ -8,8 +11,15 @@ import org.akkirrai.hibiki.core.model.RelatedAnime
 import org.json.JSONArray
 import org.json.JSONObject
 
+/** The last full description of each opened title, so its pages render offline. One row per title
+ * in [HibikiDatabase], under the normalized title id. */
 class OfflineTitleMetadataRepository(context: Context) {
-    private val prefs = context.applicationContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+    private val appContext = context.applicationContext
+    private val dao = HibikiDatabase.get(appContext).offlineTitleDao()
+
+    init {
+        importLegacyIfPresent()
+    }
 
     fun save(anime: Anime) {
         val normalized = anime.copy(
@@ -18,16 +28,31 @@ class OfflineTitleMetadataRepository(context: Context) {
             franchiseAnime = anime.franchiseAnime.map { it.copy(id = YummyIdMigration.normalizeTitleId(it.id)) },
             relatedAnime = anime.relatedAnime.map { it.copy(id = YummyIdMigration.normalizeTitleId(it.id)) },
         )
-        prefs.edit()
-            .putString(key(normalized.id), encodeAnime(normalized).toString())
-            .apply()
+        dao.upsert(OfflineTitleEntity(normalized.id, encodeAnime(normalized).toString(), System.currentTimeMillis()))
     }
 
     fun get(id: String): Anime? {
-        val encoded = YummyIdMigration.compatibleTitleIds(id)
-            .firstNotNullOfOrNull { candidate -> prefs.getString(key(candidate), null) }
-            ?: return null
+        val candidates = YummyIdMigration.compatibleTitleIds(id)
+        val rows = dao.find(candidates).associateBy(OfflineTitleEntity::titleId)
+        val encoded = candidates.firstNotNullOfOrNull { rows[it]?.json } ?: return null
         return runCatching { decodeAnime(JSONObject(encoded)) }.getOrNull()
+    }
+
+    /** Moves the SharedPreferences store into the database, once, and deletes the file. */
+    private fun importLegacyIfPresent() {
+        synchronized(importLock) {
+            val prefs = appContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            val entries = prefs.all
+            if (entries.isEmpty()) return
+            val rows = entries.mapNotNull { (key, value) ->
+                if (!key.startsWith(KEY_PREFIX) || value !is String) return@mapNotNull null
+                val titleId = YummyIdMigration.normalizeTitleId(key.removePrefix(KEY_PREFIX))
+                if (titleId.isBlank()) null else OfflineTitleEntity(titleId, value, 0L)
+            }
+            dao.insertIfAbsent(rows)
+            AppLogger.d(TAG, "imported ${rows.size} legacy offline titles")
+            appContext.deleteSharedPreferences(PREFS_NAME)
+        }
     }
 
     private fun encodeAnime(anime: Anime): JSONObject {
@@ -169,9 +194,10 @@ class OfflineTitleMetadataRepository(context: Context) {
         }
     }
 
-    private fun key(id: String): String = "offline_title_$id"
-
     companion object {
         const val PREFS_NAME = "hibiki_offline_title_metadata"
+        private const val KEY_PREFIX = "offline_title_"
+        private const val TAG = "OfflineTitleMetadata"
+        private val importLock = Any()
     }
 }

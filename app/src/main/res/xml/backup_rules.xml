@@ -2,5 +2,6 @@
 <full-backup-content>
     <include domain="sharedpref" path="hibiki_app_preferences.xml" />
     <include domain="sharedpref" path="hibiki_library.xml" />
+    <include domain="database" path="hibiki_library.db" />
     <include domain="sharedpref" path="hibiki_watch_state.xml" />
 </full-backup-content>

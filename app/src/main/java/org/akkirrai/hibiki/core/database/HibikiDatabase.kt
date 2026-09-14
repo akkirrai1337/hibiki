@@ -1,7 +1,15 @@
 package org.akkirrai.hibiki.core.database
 
 import android.content.Context
+import androidx.room.AutoMigration
+import androidx.room.ColumnInfo
+import androidx.room.Dao
 import androidx.room.Database
+import androidx.room.Entity
+import androidx.room.Insert
+import androidx.room.OnConflictStrategy
+import androidx.room.PrimaryKey
+import androidx.room.Query
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import org.akkirrai.hibiki.core.metadata.MetadataDao
@@ -24,12 +32,16 @@ import org.akkirrai.hibiki.core.metadata.MetadataUnresolvedEntity
         MetadataMediaEntity::class,
         MetadataUnresolvedEntity::class,
         MetadataDisplayProviderEntity::class,
+        OfflineTitleEntity::class,
     ],
-    version = 1,
+    version = 2,
     exportSchema = true,
+    autoMigrations = [AutoMigration(from = 1, to = 2)],
 )
 abstract class HibikiDatabase : RoomDatabase() {
     abstract fun metadataDao(): MetadataDao
+
+    abstract fun offlineTitleDao(): OfflineTitleDao
 
     companion object {
         @Volatile private var instance: HibikiDatabase? = null
@@ -44,4 +56,24 @@ abstract class HibikiDatabase : RoomDatabase() {
                     .also { instance = it }
             }
     }
+}
+
+@Entity(tableName = "offline_titles")
+data class OfflineTitleEntity(
+    @PrimaryKey @ColumnInfo(name = "title_id") val titleId: String,
+    val json: String,
+    @ColumnInfo(name = "saved_at") val savedAt: Long,
+)
+
+@Dao
+interface OfflineTitleDao {
+    @Query("SELECT * FROM offline_titles WHERE title_id IN (:titleIds)")
+    fun find(titleIds: List<String>): List<OfflineTitleEntity>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    fun upsert(title: OfflineTitleEntity)
+
+    /** A legacy import never overwrites a title saved since. */
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    fun insertIfAbsent(titles: List<OfflineTitleEntity>)
 }
