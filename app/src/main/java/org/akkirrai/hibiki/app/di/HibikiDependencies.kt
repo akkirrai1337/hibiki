@@ -1,6 +1,7 @@
 package org.akkirrai.hibiki.app.di
 
 import android.content.Context
+import org.akkirrai.hibiki.BuildConfig
 import org.akkirrai.hibiki.HibikiApplication
 import org.akkirrai.hibiki.core.download.OfflineDownloadRepository
 import org.akkirrai.hibiki.core.log.AppLogger
@@ -32,6 +33,7 @@ class HibikiDependencies(
             AndroidHttpClientFactory.createMetadata(),
             RoomExternalMetadataStore.get(appContext),
             log = { message -> AppLogger.d("ExternalMetadata", message) },
+            malClientId = BuildConfig.MAL_CLIENT_ID.takeIf(String::isNotBlank),
         )
 
     fun animeSearchRepository(): AnimeSearchRepository = AnimeSearchRepository(

@@ -1,3 +1,4 @@
+import java.util.Properties
 import org.gradle.api.tasks.Copy
 
 plugins {
@@ -29,6 +30,21 @@ val hasReleaseSigning = listOf(
     releaseKeyPassword
 ).all { !it.isNullOrBlank() }
 
+val localProperties = Properties().apply {
+    rootProject.file("local.properties").takeIf { it.isFile }?.inputStream()?.use { load(it) }
+}
+
+/**
+ * A value that must stay out of git: an environment variable (CI), a Gradle property
+ * (~/.gradle/gradle.properties or -P), or local.properties, in that order. Empty when none is set,
+ * so a build without it still works - the feature behind it simply stays off.
+ */
+fun buildSecret(name: String): String =
+    System.getenv(name)
+        ?: providers.gradleProperty(name).orNull
+        ?: localProperties.getProperty(name)
+        ?: ""
+
 android {
     sourceSets["main"].res.srcDir(hibikiIconResDir)
     namespace = "org.akkirrai.hibiki"
@@ -44,6 +60,8 @@ android {
         versionName = "2.7.1"
 
         buildConfigField("boolean", "GITHUB_UPDATES_ENABLED", "true")
+        // MAL API client id for reading public anime data. Without it MAL is read through Jikan.
+        buildConfigField("String", "MAL_CLIENT_ID", "\"${buildSecret("MAL_CLIENT_ID").trim()}\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

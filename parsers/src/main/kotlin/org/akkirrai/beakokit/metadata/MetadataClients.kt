@@ -192,23 +192,33 @@ internal data class AniListAliasedResponse(val data: Map<String, AniListPage?>? 
 
 /** Jikan, MAL's unofficial read-only API. No key and no account, which is why it is here: the
  * official MAL API needs a registered client id even to read. */
-class MalClient(private val client: HttpClient) {
+class MalClient(private val client: HttpClient, clientId: String? = null) {
     // Jikan publishes two limits, 3 requests a second and 60 a minute; the minute one binds.
     // The per-second limit is the burst.
     private val queue = MetadataRequestQueue(minIntervalMillis = 1_100, burst = 3)
 
+    /** MAL's own API, when the app was built with a client id. Jikan then only covers for it. */
+    private val official = clientId?.takeIf(String::isNotBlank)?.let { MalOfficialClient(client, it) }
 
-    fun estimatedWaitMillis(): Long = queue.estimatedWaitMillis()
+    fun estimatedWaitMillis(): Long {
+        val officialWait = official?.estimatedWaitMillis() ?: return queue.estimatedWaitMillis()
+        // Stood down: lookups fall through to Jikan, so that is the wait that matters.
+        return if (officialWait == Long.MAX_VALUE) queue.estimatedWaitMillis() else officialWait
+    }
 
     private suspend inline fun <reified T> get(path: String): T? = queue.run(
         request = { client.get(BASE_URL + path) { header(HttpHeaders.Accept, "application/json") } },
         parse = { it.decode<T>() },
     )
 
+    // A null from the official API is a failed request (or, for an id, a missing entry) - either way
+    // Jikan gets its chance. An empty search result is an answer, and is not asked again.
     suspend fun fetchById(malId: Int): ExternalMetadata? =
-        get<JikanSingleResponse>("/anime/$malId")?.data?.toExternalMetadata()
+        official?.fetchById(malId)
+            ?: get<JikanSingleResponse>("/anime/$malId")?.data?.toExternalMetadata()
 
     suspend fun search(name: String): List<ScoredEntry>? {
+        official?.search(name)?.let { return it }
         // `sfw` keeps adult entries out of the candidate pool, which matters because a name that
         // matches a mainstream show also matches its parody often enough to pick the wrong one.
         val body = get<JikanListResponse>("/anime?q=${name.urlEncoded()}&limit=10&sfw=true") ?: return null
@@ -219,6 +229,44 @@ class MalClient(private val client: HttpClient) {
 
     private companion object {
         const val BASE_URL = "https://api.jikan.moe/v4"
+    }
+}
+
+/**
+ * MAL's official v2 API, reading public data with the app's client id - no user account, no OAuth.
+ * Faster than Jikan, which scrapes MAL through its own cache under a 60-a-minute limit.
+ */
+class MalOfficialClient(private val client: HttpClient, private val clientId: String) {
+    // MAL documents no limit; about one request a second is what it tolerates in practice.
+    private val queue = MetadataRequestQueue(minIntervalMillis = 1_000, burst = 3)
+
+    fun estimatedWaitMillis(): Long = queue.estimatedWaitMillis()
+
+    private suspend inline fun <reified T> get(path: String): T? = queue.run(
+        request = {
+            client.get(BASE_URL + path) {
+                header(CLIENT_ID_HEADER, clientId)
+                header(HttpHeaders.Accept, "application/json")
+            }
+        },
+        parse = { it.decode<T>() },
+    )
+
+    suspend fun fetchById(malId: Int): ExternalMetadata? =
+        get<MalOfficialAnime>("/anime/$malId?fields=$MAL_OFFICIAL_FIELDS")?.toExternalMetadata()
+
+    suspend fun search(name: String): List<ScoredEntry>? {
+        // `nsfw=false` for the same reason Jikan is asked for `sfw`.
+        val body = get<MalOfficialListResponse>("/anime?q=${name.urlEncoded()}&limit=10&nsfw=false&fields=$MAL_OFFICIAL_FIELDS")
+            ?: return null
+        return body.data.orEmpty()
+            .mapNotNull(MalOfficialNode::node)
+            .map { ScoredEntry(it.toMatchCandidate(), it.toExternalMetadata()) }
+    }
+
+    private companion object {
+        const val BASE_URL = "https://api.myanimelist.net/v2"
+        const val CLIENT_ID_HEADER = "X-MAL-CLIENT-ID"
     }
 }
 

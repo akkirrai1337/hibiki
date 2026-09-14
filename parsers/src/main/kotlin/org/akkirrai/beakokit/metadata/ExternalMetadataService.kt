@@ -40,9 +40,12 @@ class ExternalMetadataService(
      * a candidate was rejected, how many requests it cost. No-op by default; the app wires this to
      * its own logger so this module stays free of any platform logging dependency. */
     private val log: (String) -> Unit = {},
+    /** The app's MAL API client id. With one, MAL is read through its official API and Jikan only
+     * covers for it; without one, Jikan alone. */
+    malClientId: String? = null,
 ) {
     private val anilist = AniListClient(client)
-    private val mal = MalClient(client)
+    private val mal = MalClient(client, malClientId)
     private val kitsu = KitsuClient(client)
     private val inFlight = ConcurrentHashMap<String, InFlightLookup>()
     private val pendingRefreshes: MutableSet<String> = ConcurrentHashMap.newKeySet()

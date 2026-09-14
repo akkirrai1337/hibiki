@@ -78,6 +78,7 @@ class AnimeSearchRepository(
                 AndroidHttpClientFactory.createMetadata().also { created -> ownedMetadataClient = created },
                 RoomExternalMetadataStore.get(it),
                 log = { message -> AppLogger.d("ExternalMetadata", message) },
+                malClientId = org.akkirrai.hibiki.BuildConfig.MAL_CLIENT_ID.takeIf(String::isNotBlank),
             )
         }
     // Owns preference observation and is cancelled with the repository.
