@@ -20,14 +20,8 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeout
 import org.akkirrai.beakokit.api.StreamExtractor
 import org.akkirrai.beakokit.api.SourceException
-import org.akkirrai.beakokit.playback.extractor.AksorExtractor
-import org.akkirrai.beakokit.playback.extractor.AniBoomExtractor
-import org.akkirrai.beakokit.playback.extractor.CvhExtractor
 import org.akkirrai.beakokit.playback.extractor.DirectHlsExtractor
 import org.akkirrai.beakokit.playback.extractor.DirectMp4Extractor
-import org.akkirrai.beakokit.playback.extractor.KodikExtractor
-import org.akkirrai.beakokit.playback.extractor.SibnetExtractor
-import org.akkirrai.beakokit.playback.extractor.VkExtractor
 import org.akkirrai.beakokit.playback.PlaybackResolver
 import org.akkirrai.beakokit.extension.BrowserScriptResolver
 import org.akkirrai.beakokit.extension.BrowserPlaybackMode
@@ -719,17 +713,14 @@ class AnimeWatchRepository(
             add(DirectHlsExtractor())
             add(DirectMp4Extractor())
             appContext?.let { add(DirectStreamWebViewRelayExtractor(it)) }
-            // Downloaded resolver extensions win over compatibility implementations below.
+            // AniBoom/Kodik/Aksor/Vk/Cvh/Sibnet are downloaded resolver extensions now (hibiki-sources
+            // ships and maintains all six); their Kotlin fallbacks were retired once each had a
+            // passing parity test against the fixtures that used to prove the Kotlin version
+            // (see Scripted*ResolverTest in parsers/src/test/kotlin/.../extension/).
             addAll(downloadedResolvers)
-            add(AniBoomExtractor(client))
-            add(KodikExtractor(client))
-            add(AksorExtractor(client))
             appContext?.let {
                 add(BrowserPlayerWebViewExtractor(it, activeBrowserResolvers, client))
             }
-            add(SibnetExtractor(client))
-            add(CvhExtractor(client))
-            add(VkExtractor(client))
         }
         extractorsGeneration = generation
         return activeExtractors

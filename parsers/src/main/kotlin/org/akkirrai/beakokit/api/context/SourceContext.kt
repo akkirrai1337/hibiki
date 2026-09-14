@@ -2,6 +2,7 @@ package org.akkirrai.beakokit.api.context
 
 import io.ktor.client.HttpClient
 import org.akkirrai.beakokit.api.BrowserFetchProvider
+import org.akkirrai.beakokit.api.BrowserRelayProvider
 import org.akkirrai.beakokit.api.ChallengeSessionProvider
 import org.akkirrai.beakokit.api.SourceLanguage
 import org.akkirrai.beakokit.api.execution.HealthTrackingSourceExecutionPolicy
@@ -20,6 +21,8 @@ interface SourceContext {
         get() = ChallengeSessionProvider.UNSUPPORTED
     val browserFetchProvider: BrowserFetchProvider
         get() = BrowserFetchProvider.UNSUPPORTED
+    val browserRelayProvider: BrowserRelayProvider
+        get() = BrowserRelayProvider.UNSUPPORTED
     val sourceExecutionPolicy: SourceExecutionPolicy
         get() = SourceExecutionPolicy.NONE
 
@@ -74,6 +77,7 @@ data class DefaultSourceContext(
     override val sourceHealthReporter: SourceHealthReporter = SourceHealthReporter.NONE,
     override val challengeSessionProvider: ChallengeSessionProvider = ChallengeSessionProvider.UNSUPPORTED,
     override val browserFetchProvider: BrowserFetchProvider = BrowserFetchProvider.UNSUPPORTED,
+    override val browserRelayProvider: BrowserRelayProvider = BrowserRelayProvider.UNSUPPORTED,
     override val sourceExecutionPolicy: SourceExecutionPolicy =
         HealthTrackingSourceExecutionPolicy(sourceHealthReporter),
     override val extensionStorage: ExtensionStorage = ExtensionStorage.NONE,

@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
@@ -95,6 +96,7 @@ import org.akkirrai.hibiki.app.settings.LocalAppPreferences
 import org.akkirrai.hibiki.app.settings.LocalAppPreferencesState
 import org.akkirrai.hibiki.core.design.UiDimens
 import org.akkirrai.hibiki.core.design.component.search.AppSearchTopBar
+import org.akkirrai.hibiki.core.log.AppLogger
 import org.akkirrai.hibiki.core.network.AndroidHttpClientFactory
 import org.akkirrai.hibiki.core.source.AnimeSourceRegistry
 import org.akkirrai.hibiki.core.source.extension.ExtensionMarketplaceClient
@@ -165,6 +167,36 @@ fun SourceExtensionsScreen(
             }
         }
         origins
+    }
+    // A source only fetches its resolverDependencies on install/update (onInstall/onUpdateAll
+    // below) - a source installed before a dependency was added to its manifest, or before its
+    // Kotlin fallback was retired in favor of the resolver entirely, would otherwise be stuck
+    // silently missing a resolver forever with no error pointing at why, since the marketplace only
+    // ever surfaces this as an "update available" badge when the resolver is outdated, not when
+    // it's absent. Silently backfills any missing resolver the moment the repository index is
+    // available, so an existing install self-heals without the user having to reinstall anything.
+    LaunchedEffect(mergedExtensions) {
+        if (mergedExtensions.isEmpty()) return@LaunchedEffect
+        val installedSourceIds = AnimeSourceRegistry.installedScriptExtensionVersions().keys
+        val installedResolverIds = AnimeSourceRegistry.installedPlayerResolverVersions().keys
+        mergedExtensions
+            .asSequence()
+            .filter { it.type == "source" && it.id in installedSourceIds }
+            .flatMap { it.resolverDependencies }
+            .distinct()
+            .filterNot { it in installedResolverIds }
+            .forEach { resolverId ->
+                val resolver = mergedExtensions.firstOrNull { it.id == resolverId && it.type == "player-resolver" }
+                    ?: return@forEach
+                runCatching {
+                    AnimeSourceRegistry.installPlayerResolverExtension(
+                        marketplaceClient.fetchPlayerResolverManifest(resolver),
+                        originByExtensionId[resolver.id].orEmpty(),
+                    )
+                }.onFailure { error ->
+                    AppLogger.w("SourceExtensions", "reconcile: failed to backfill resolver $resolverId", error)
+                }
+            }
     }
     val sourceExtensions = mergedExtensions.filter { it.type == "source" }
     // Player-resolver extensions have no lang field at all (index.json defaults it to "" - see
@@ -677,6 +709,15 @@ private fun SourceRepositoryList(
             is RepositoryLoadState.Loaded -> {
                 val installedVersions = AnimeSourceRegistry.installedScriptExtensionVersions()
                 val installedResolverVersions = AnimeSourceRegistry.installedPlayerResolverVersions()
+                val extensionsListState = rememberLazyListState()
+                var previousInstalledIds by remember { mutableStateOf<Set<String>?>(null) }
+                LaunchedEffect(installedVersions.keys) {
+                    val installedIds = installedVersions.keys
+                    if (previousInstalledIds?.let { installedIds.any { id -> id !in previousInstalledIds.orEmpty() } } == true) {
+                        extensionsListState.animateScrollToItem(0)
+                    }
+                    previousInstalledIds = installedIds
+                }
                 val visibleExtensions = state.extensions.filter { extension ->
                     val matchesQuery = query.isBlank() ||
                         extension.name.contains(query, ignoreCase = true) ||
@@ -702,6 +743,7 @@ private fun SourceRepositoryList(
                     // shorter viewport than it needs and making the last row look clipped right
                     // above the floating bottom bar instead of scrolling clear of it.
                     LazyColumn(
+                        state = extensionsListState,
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(
                             start = 16.dp,

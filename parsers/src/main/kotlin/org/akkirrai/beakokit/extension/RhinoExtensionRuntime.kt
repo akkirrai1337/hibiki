@@ -15,6 +15,7 @@ import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import kotlinx.serialization.json.Json
 import org.akkirrai.beakokit.api.BrowserFetchRequest
+import org.akkirrai.beakokit.api.BrowserRelayRequest
 import org.akkirrai.beakokit.api.ChallengeSessionRequest
 import org.akkirrai.beakokit.api.SourceErrorKind
 import org.akkirrai.beakokit.api.SourceException
@@ -332,6 +333,7 @@ class RhinoExtensionRuntime(
         ScriptableObject.putProperty(scope, "fetchAll", FetchAllFunction(sourceContext, scope))
         ScriptableObject.putProperty(scope, "challenge", ChallengeFunction(sourceContext, scope))
         ScriptableObject.putProperty(scope, "browserFetch", BrowserFetchFunction(sourceContext, scope))
+        ScriptableObject.putProperty(scope, "browserRelay", BrowserRelayFunction(sourceContext, scope))
         // What makes an account possible: a token survives the call that fetched it. Rhino runs
         // in-process, so this writes straight through to the host's store rather than collecting
         // writes the way the desktop's worker has to.
@@ -703,6 +705,49 @@ class RhinoExtensionRuntime(
             val headersObject = cx.newObject(this.scope)
             response.headers.forEach { (name, value) -> ScriptableObject.putProperty(headersObject, name.lowercase(), value) }
             ScriptableObject.putProperty(result, "headers", headersObject)
+            return result
+        }
+    }
+
+    /**
+     * Registers a persistent browser-backed relay for a batch of URLs instead of answering one
+     * request - for a resolver that already knows the real manifest/segment/subtitle URLs (computed
+     * itself, e.g. by decrypting an API response) but whose CDN still blocks a plain HTTP client
+     * outright, the way [BrowserFetchFunction] answers one request at a time cannot serve a whole
+     * HLS playback (many segment requests over the life of the stream). `browserRelay(pageUrl, urls,
+     * options)` returns `{urls: {original: proxied}}`; the resolver hands the proxied URLs back as
+     * its `VideoStream`/subtitle URLs and the host keeps relaying every later request against them
+     * for as long as the session stays alive.
+     */
+    private class BrowserRelayFunction(
+        private val sourceContext: SourceContext,
+        private val scope: Scriptable,
+    ) : org.mozilla.javascript.BaseFunction() {
+        override fun call(
+            cx: Context,
+            scope: Scriptable,
+            thisObj: Scriptable,
+            args: Array<out Any?>,
+        ): Any {
+            val pageUrl = Context.toString(args.getOrNull(0))
+            val urls = (args.getOrNull(1) as? org.mozilla.javascript.NativeArray)
+                ?.map { Context.toString(it) }
+                ?: emptyList()
+            val options = args.getOrNull(2) as? NativeObject
+            val headers = (options?.get("headers", options) as? NativeObject)?.entries
+                ?.associate { (key, value) -> key.toString() to Context.toString(value) }
+                .orEmpty()
+
+            val relayResult = runBlocking {
+                sourceContext.browserRelayProvider.relay(
+                    BrowserRelayRequest(pageUrl = pageUrl, urls = urls, headers = headers),
+                )
+            }
+
+            val result = cx.newObject(this.scope)
+            val urlsObject = cx.newObject(this.scope)
+            relayResult.urls.forEach { (original, proxied) -> ScriptableObject.putProperty(urlsObject, original, proxied) }
+            ScriptableObject.putProperty(result, "urls", urlsObject)
             return result
         }
     }

@@ -192,6 +192,11 @@ object AnimeSourceRegistry {
                     }
                 },
                 challengeSessionProvider = AndroidChallengeSessionProvider(appContext),
+                // Regular source scripts have had this since createRuntime() below; resolver
+                // scripts silently defaulted to BrowserFetchProvider.UNSUPPORTED because this call
+                // never set it, so an HTTP-runtime resolver could never actually call browserFetch().
+                browserFetchProvider = AndroidBrowserFetchProvider(appContext),
+                browserRelayProvider = AndroidBrowserRelayProvider(appContext),
             ),
         ).orEmpty()
     }
