@@ -1,7 +1,11 @@
 package org.akkirrai.beakokit.metadata
 
 import io.ktor.client.statement.HttpResponse
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
@@ -29,18 +33,13 @@ class MetadataRequestQueue(
     private val lock = Mutex()
     private var lastRequestAtMillis = 0L
     private var cooledUntilMillis = 0L
+    private val foregroundWaiting = MutableStateFlow(0)
 
     /** Null for every failure - offline, a non-2xx status, a provider being stood down. Callers
      * treat that as "no metadata this time" and keep the source's own, so nothing here throws. */
     suspend fun <T> run(request: suspend () -> HttpResponse, parse: suspend (HttpResponse) -> T?): T? {
-        val admitted = lock.withLock {
-            if (nowMillis() < cooledUntilMillis) return null
-            val wait = lastRequestAtMillis + minIntervalMillis - nowMillis()
-            if (wait > 0) delay(wait)
-            lastRequestAtMillis = nowMillis()
-            true
-        }
-        if (!admitted) return null
+        val background = currentCoroutineContext()[MetadataPriority]?.background == true
+        if (!admit(background)) return null
 
         val response = runCatching { request() }.getOrNull() ?: return null
         if (response.status.value == 429) {
@@ -52,6 +51,34 @@ class MetadataRequestQueue(
         }
         if (response.status.value !in 200..299) return null
         return runCatching { parse(response) }.getOrNull()
+    }
+
+    /**
+     * Waits for this request's paced start slot. False when the provider is stood down.
+     *
+     * Two lanes (see [MetadataPriority]): a background request only takes the lock while no
+     * foreground request is waiting, and re-checks once it has it, since one may have arrived in
+     * between. A foreground request therefore waits at most one pacing interval, however long the
+     * background backlog is.
+     */
+    private suspend fun admit(background: Boolean): Boolean {
+        if (!background) foregroundWaiting.update { it + 1 }
+        try {
+            while (true) {
+                if (background) foregroundWaiting.first { it == 0 }
+                val admitted: Boolean? = lock.withLock {
+                    if (background && foregroundWaiting.value > 0) return@withLock null
+                    if (nowMillis() < cooledUntilMillis) return@withLock false
+                    val wait = lastRequestAtMillis + minIntervalMillis - nowMillis()
+                    if (wait > 0) delay(wait)
+                    lastRequestAtMillis = nowMillis()
+                    true
+                }
+                if (admitted != null) return admitted
+            }
+        } finally {
+            if (!background) foregroundWaiting.update { it - 1 }
+        }
     }
 
     private companion object {

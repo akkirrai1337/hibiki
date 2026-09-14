@@ -88,6 +88,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -157,6 +158,7 @@ import org.akkirrai.hibiki.core.model.TitleWatchState
 import org.akkirrai.hibiki.core.model.WatchSource
 import org.akkirrai.hibiki.core.model.WatchSourceSelection
 import org.akkirrai.hibiki.core.source.AnimeSearchRepository
+import org.akkirrai.hibiki.core.source.withRelatedMetadata
 import org.akkirrai.hibiki.core.source.AnimeSourceDescriptor
 import org.akkirrai.hibiki.core.source.AnimeSourceRegistry
 import org.akkirrai.hibiki.app.settings.LocalAppPreferencesState
@@ -233,6 +235,7 @@ fun DetailsScreen(
         saved.firstVisibleItemIndex == 0 && saved.firstVisibleItemScrollOffset == 0
     } ?: true
     val searchRepository = remember(dependencies) { dependencies.animeSearchRepository() }
+    val relatedMetadata by searchRepository.relatedMetadata.collectAsState()
     val libraryRepository = remember(dependencies) { dependencies.libraryRepository() }
     val offlineTitleMetadataRepository = remember(dependencies) { dependencies.offlineTitleMetadataRepository() }
     val watchStateRepository = remember(dependencies) { dependencies.watchStateRepository() }
@@ -461,12 +464,13 @@ fun DetailsScreen(
     }
     val uiModel = remember(
         currentAnime,
+        relatedMetadata,
         heroInfo,
         description,
         sourceDescriptor.contentFeatures,
     ) {
         buildDetailsUiModel(
-            anime = currentAnime,
+            anime = currentAnime.withRelatedMetadata(relatedMetadata),
             hero = heroInfo,
             description = description,
             contentFeatures = sourceDescriptor.contentFeatures,

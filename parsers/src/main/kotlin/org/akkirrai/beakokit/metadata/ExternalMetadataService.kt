@@ -1,6 +1,15 @@
 package org.akkirrai.beakokit.metadata
 
 import io.ktor.client.HttpClient
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.launch
+import java.util.concurrent.ConcurrentHashMap
 import org.akkirrai.beakokit.model.AnimeTitle
 
 /**
@@ -35,6 +44,9 @@ class ExternalMetadataService(
     private val anilist = AniListClient(client)
     private val mal = MalClient(client)
     private val kitsu = KitsuClient(client)
+    private val inFlight = ConcurrentHashMap<String, InFlightLookup>()
+    private val pendingRefreshes: MutableSet<String> = ConcurrentHashMap.newKeySet()
+    private val refreshScope = CoroutineScope(SupervisorJob() + Dispatchers.IO + MetadataPriority.Background)
 
     /**
      * Describes one title from [order]'s providers, in two passes.
@@ -51,6 +63,38 @@ class ExternalMetadataService(
      * source's own metadata.
      */
     suspend fun metadataFor(anime: AnimeTitle, order: List<MetadataProviderId>): ExternalMetadata? {
+        // One lookup per title at a time: Home, Catalog and a details page each have their own
+        // repository, and all of them can ask for the same title at once.
+        val background = currentCoroutineContext()[MetadataPriority]?.background == true
+        while (true) {
+            val mine = InFlightLookup(background)
+            val existing = inFlight.putIfAbsent(anime.id, mine)
+            if (existing == null) {
+                try {
+                    return lookUpMetadata(anime, order).also { mine.result.complete(it) }
+                } catch (error: Throwable) {
+                    mine.result.completeExceptionally(error)
+                    throw error
+                } finally {
+                    inFlight.remove(anime.id, mine)
+                }
+            }
+            // A foreground caller must not wait in a background lookup's lane - it runs its own.
+            if (existing.background && !background) return lookUpMetadata(anime, order)
+            try {
+                return existing.result.await()
+            } catch (error: CancellationException) {
+                // Either this caller was cancelled, or the lookup's owner was - then take it over.
+                currentCoroutineContext().ensureActive()
+            }
+        }
+    }
+
+    private class InFlightLookup(val background: Boolean) {
+        val result = CompletableDeferred<ExternalMetadata?>()
+    }
+
+    private suspend fun lookUpMetadata(anime: AnimeTitle, order: List<MetadataProviderId>): ExternalMetadata? {
         val effectiveOrder = displayOrder(anime.id, order)
         // A provider that already has *anything* on record for this title - a match, or a still-fresh
         // "no match" - is settled and must not be re-guessed by a live search in the second pass below.
@@ -301,16 +345,22 @@ class ExternalMetadataService(
                 log("recordedMetadataFor: '$label' provider=$provider cache hit, externalId=${match.externalId}")
                 return RecordedResult.Found(cached.media)
             }
+            if (cached != null) {
+                // Stale: shown now, refreshed behind it. Waiting on the refresh held a whole title
+                // page on a round trip for data that is at worst half a day old.
+                log("recordedMetadataFor: '$label' provider=$provider serving stale copy of externalId=${match.externalId}, refreshing in background")
+                refreshInBackground(titleId, provider, match.externalId)
+                return RecordedResult.Found(cached.media)
+            }
             val refreshed = fetchById(provider, match.externalId)
             if (refreshed != null) {
-                log("recordedMetadataFor: '$label' provider=$provider refreshed bound entry externalId=${match.externalId}")
+                log("recordedMetadataFor: '$label' provider=$provider fetched bound entry externalId=${match.externalId}")
                 store.writeMedia(refreshed, nowMillis())
                 recordCrossMatches(titleId, refreshed)
                 return RecordedResult.Found(refreshed)
             }
-            // Offline, or the provider is down. A stale entry beats an empty screen.
-            log("recordedMetadataFor: '$label' provider=$provider refresh failed for externalId=${match.externalId}, ${if (cached != null) "serving stale copy" else "and nothing cached either"}")
-            return cached?.media?.let { RecordedResult.Found(it) } ?: RecordedResult.Unrecorded
+            log("recordedMetadataFor: '$label' provider=$provider fetch failed for externalId=${match.externalId} and nothing cached either")
+            return RecordedResult.Unrecorded
         }
 
         crossLookup(titleId, provider)?.let { crossMatched ->
@@ -422,6 +472,20 @@ class ExternalMetadataService(
             store.writeMatch(
                 MetadataMatchRecord(titleId, provider, externalId, confidencePercent = null, manual = false, matchedAtMillis = nowMillis()),
             )
+        }
+    }
+
+    private fun refreshInBackground(titleId: String, provider: MetadataProviderId, externalId: Int) {
+        val key = "${provider.id}:$externalId"
+        if (!pendingRefreshes.add(key)) return
+        refreshScope.launch {
+            try {
+                val refreshed = runCatching { fetchById(provider, externalId) }.getOrNull() ?: return@launch
+                store.writeMedia(refreshed, nowMillis())
+                recordCrossMatches(titleId, refreshed)
+            } finally {
+                pendingRefreshes.remove(key)
+            }
         }
     }
 

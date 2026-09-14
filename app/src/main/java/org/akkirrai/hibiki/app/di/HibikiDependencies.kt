@@ -29,7 +29,7 @@ class HibikiDependencies(
      * them would pace each other's requests wrongly and race on the same store. */
     val externalMetadata: ExternalMetadataService =
         ExternalMetadataService(
-            parserClient,
+            AndroidHttpClientFactory.createMetadata(),
             PreferencesExternalMetadataStore(appContext),
             log = { message -> AppLogger.d("ExternalMetadata", message) },
         )

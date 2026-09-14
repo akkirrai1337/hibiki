@@ -21,6 +21,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import org.akkirrai.beakokit.metadata.ExternalMetadata
 import org.akkirrai.beakokit.metadata.ExternalMetadataPreferences
+import org.akkirrai.beakokit.metadata.MetadataPriority
 import org.akkirrai.beakokit.metadata.MetadataProviderId
 import org.akkirrai.beakokit.metadata.ExternalMetadataService
 import org.akkirrai.beakokit.metadata.mergeExternalMetadata
@@ -85,6 +86,10 @@ class AnimeSearchRepository(
     private val _pendingCardMetadata = MutableStateFlow<Set<String>>(emptySet())
     /** Source cards whose aggregator lookup is still in progress. */
     val pendingCardMetadata = _pendingCardMetadata.asStateFlow()
+    private val _relatedMetadata = MutableStateFlow<Map<String, RelatedAnime>>(emptyMap())
+    /** Related titles described after their details page was returned - see [warmRelatedAnime].
+     * Apply with [withRelatedMetadata]. */
+    val relatedMetadata = _relatedMetadata.asStateFlow()
     private val detailsRequestSlots = Semaphore(MAX_CONCURRENT_DETAILS_REQUESTS)
     private val cardMatchSlots = Semaphore(MAX_CONCURRENT_CARD_MATCHES)
     private val relatedAnimeMatchSlots = Semaphore(MAX_CONCURRENT_CARD_MATCHES)
@@ -266,14 +271,15 @@ class AnimeSearchRepository(
                                 ?: throw it
                         }
                     val described = describe(source, title)
-                    val enrichedSections = describeRelatedAnime(
-                        source,
-                        listOf(described.relatedAnime, described.franchiseAnime, described.similarAnime),
-                    )
+                    val order = providerOrderFor(source)
+                    val related = listOf(described.relatedAnime, described.franchiseAnime, described.similarAnime)
+                        .flatten()
+                        .distinctBy(RelatedAnimeTitle::id)
+                    val cachedRelated = cachedRelatedAnime(order, related)
                     val describedFull = described.copy(
-                        relatedAnime = enrichedSections[0],
-                        franchiseAnime = enrichedSections[1],
-                        similarAnime = enrichedSections[2],
+                        relatedAnime = described.relatedAnime.map { cachedRelated[it.id] ?: it },
+                        franchiseAnime = described.franchiseAnime.map { cachedRelated[it.id] ?: it },
+                        similarAnime = described.similarAnime.map { cachedRelated[it.id] ?: it },
                     )
                     val trailer = describedFull.trailer?.toAnimeTrailer()
                     val anime = describedFull.toAnime(
@@ -288,6 +294,7 @@ class AnimeSearchRepository(
                         cachedAt = System.currentTimeMillis(),
                     )
                     trimOldestEntries(detailsCache, MAX_DETAILS_CACHE_ENTRIES) { it.cachedAt }
+                    warmRelatedAnime(order, related.filterNot { it.id in cachedRelated }, cacheKey)
                     anime
                 }
             }
@@ -304,6 +311,7 @@ class AnimeSearchRepository(
         pendingCardMatches.clear()
         _cardMetadata.value = emptyMap()
         _pendingCardMetadata.value = emptySet()
+        _relatedMetadata.value = emptyMap()
     }
 
     fun close() {
@@ -311,6 +319,7 @@ class AnimeSearchRepository(
         filterCatalogCache.clear()
         pendingCardMatches.clear()
         _cardMetadata.value = emptyMap()
+        _relatedMetadata.value = emptyMap()
         _pendingCardMetadata.value = emptySet()
         metadataScope.cancel()
         if (closeClientOnClose) client.close()
@@ -554,7 +563,7 @@ class AnimeSearchRepository(
         // every card on the page wait for every earlier one's full provider search to finish -
         // that serialized a 20-card list into 20x the latency of a single lookup.
         for ((index, title) in titlesToLoad.withIndex()) {
-            metadataScope.launch {
+            metadataScope.launch(MetadataPriority.Background) {
                 cardMatchSlots.withPermit {
                     try {
                         // Every provider paces its own requests to stay under its rate limit, so a
@@ -623,44 +632,52 @@ class AnimeSearchRepository(
     }
 
     /**
-     * The same aggregator-description [describe] gives the title itself, extended to its
-     * related/franchise/similar strips. Their source IDs remain actionable, so their source titles
-     * stay intact while the aggregator contributes only descriptive fields.
-     *
-     * `sections` is franchise/related/similar together (not three separate calls) so a title that
-     * happens to appear in more than one of them - which does happen, e.g. the current title itself
-     * spliced into "related" - is only matched once. Requests run concurrently, bounded the same as
-     * a list's card matches: a franchise-heavy title's related/franchise/similar strips combined are
-     * routinely well past "a handful", and this runs on getDetails()'s critical path, so matching
-     * them one at a time was making every such title page wait out the sum of every lookup instead
-     * of the slowest one.
+     * Related/franchise/similar titles already described in the store, applied with no request.
+     * Their source IDs remain actionable, so their source titles stay intact while the aggregator
+     * contributes only descriptive fields.
      */
-    private suspend fun describeRelatedAnime(
-        source: AnimeSourceRuntime,
-        sections: List<List<RelatedAnimeTitle>>,
-    ): List<List<RelatedAnimeTitle>> {
-        val service = metadataService ?: return sections
-        val order = providerOrderFor(source)
-        val all = sections.flatten().distinctBy(RelatedAnimeTitle::id)
-        if (order.isEmpty() || all.isEmpty()) return sections
+    private fun cachedRelatedAnime(
+        order: List<MetadataProviderId>,
+        items: List<RelatedAnimeTitle>,
+    ): Map<String, RelatedAnimeTitle> {
+        val service = metadataService ?: return emptyMap()
+        if (order.isEmpty()) return emptyMap()
+        return items.mapNotNull { item ->
+            service.cachedMetadataFor(item.id, order)?.let { item.id to item.describedWith(it) }
+        }.toMap()
+    }
 
-        val describedById = coroutineScope {
-            all.mapIndexed { index, item ->
-                async {
-                    relatedAnimeMatchSlots.withPermit {
-                        val stub = AnimeTitle(id = item.id, originalName = item.title, englishName = item.title, posterUrl = item.posterUrl, year = item.year, type = item.type, status = item.status, availableEpisodeCount = item.episodeCount)
-                        // Same rotation as warmCardMetadata: spreads a franchise-heavy title's whole
-                        // batch of lookups across every provider's independent rate-limited queue
-                        // instead of piling them all onto whichever one is tried first.
-                        val external = runCatching { service.metadataFor(stub, order.rotated(index)) }
-                            .onFailure { AppLogger.w(TAG, "describeRelatedAnime: metadata lookup failed for ${item.id}", it) }
-                            .getOrNull()
-                        item.id to (external?.let { item.describedWith(it) } ?: item)
+    /**
+     * Describes the rest of a title's related strips off getDetails()'s critical path. A
+     * franchise-heavy title carries 15-30 of them, each up to several paced requests, and the page
+     * used to wait for all of them before showing anything. Results land in [relatedMetadata] and in
+     * the details cache, at background priority so they never hold up another title being opened.
+     */
+    private fun warmRelatedAnime(
+        order: List<MetadataProviderId>,
+        items: List<RelatedAnimeTitle>,
+        detailsCacheKey: String,
+    ) {
+        val service = metadataService ?: return
+        if (order.isEmpty()) return
+        for ((index, item) in items.withIndex()) {
+            metadataScope.launch(MetadataPriority.Background) {
+                relatedAnimeMatchSlots.withPermit {
+                    val stub = AnimeTitle(id = item.id, originalName = item.title, englishName = item.title, posterUrl = item.posterUrl, year = item.year, type = item.type, status = item.status, availableEpisodeCount = item.episodeCount)
+                    // Same rotation as warmCardMetadata: spreads the batch across every provider's
+                    // independent rate-limited queue.
+                    val external = runCatching { service.metadataFor(stub, order.rotated(index)) }
+                        .onFailure { AppLogger.w(TAG, "warmRelatedAnime: metadata lookup failed for ${item.id}", it) }
+                        .getOrNull()
+                        ?: return@withPermit
+                    val described = RelatedAnimeTitleMapper.map(item.describedWith(external))
+                    _relatedMetadata.update { known -> known + (item.id to described) }
+                    detailsCache.computeIfPresent(detailsCacheKey) { _, cached ->
+                        cached.copy(anime = cached.anime.withRelatedMetadata(mapOf(item.id to described)))
                     }
                 }
-            }.awaitAll().toMap()
+            }
         }
-        return sections.map { section -> section.map { describedById[it.id] ?: it } }
     }
 
     private fun RelatedAnimeTitle.describedWith(external: ExternalMetadata): RelatedAnimeTitle = copy(
@@ -865,4 +882,15 @@ class AnimeSearchRepository(
         val detailsCache = ConcurrentHashMap<String, CachedAnime>()
         val detailsMutexes = ConcurrentHashMap<String, Mutex>()
     }
+}
+
+/** [this] with related/franchise/similar entries replaced by their described copies, by id. */
+fun Anime.withRelatedMetadata(overlay: Map<String, RelatedAnime>): Anime {
+    if (overlay.isEmpty()) return this
+    fun List<RelatedAnime>.overlaid() = map { overlay[it.id] ?: it }
+    return copy(
+        relatedAnime = relatedAnime.overlaid(),
+        franchiseAnime = franchiseAnime.overlaid(),
+        similarAnime = similarAnime.overlaid(),
+    )
 }
