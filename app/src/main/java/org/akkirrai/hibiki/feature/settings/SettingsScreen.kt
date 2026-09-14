@@ -3,6 +3,14 @@ package org.akkirrai.hibiki.feature.settings
 import android.graphics.Bitmap
 import android.content.Intent
 import android.widget.Toast
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.material.icons.outlined.Extension
+import androidx.compose.material.icons.outlined.Link
+import androidx.compose.material.icons.outlined.SwapHoriz
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.rememberModalBottomSheetState
+import org.akkirrai.hibiki.core.design.component.AppModalBottomSheet
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
@@ -128,6 +136,7 @@ fun SettingsScreen(
         source.info.useExternalMetadata
     }
     var isLanguageDialogOpen by rememberSaveable { mutableStateOf(false) }
+    var isMetadataSheetOpen by rememberSaveable { mutableStateOf(false) }
     val discordRpcManager = remember(context) { DiscordRpcManager.get(context) }
     var isDiscordAuthDialogOpen by remember { mutableStateOf(false) }
     var pendingDiscordToken by remember { mutableStateOf<String?>(null) }
@@ -148,6 +157,13 @@ fun SettingsScreen(
 
     LaunchedEffect(Unit) {
         PerfLogger.mark("SettingsScreen composed")
+    }
+
+    if (isMetadataSheetOpen) {
+        ExternalMetadataSheet(
+            sources = externalMetadataSources.map { it.id.value to it.name },
+            onDismissRequest = { isMetadataSheetOpen = false },
+        )
     }
 
     Box(modifier = modifier.fillMaxSize()) {
@@ -231,10 +247,7 @@ fun SettingsScreen(
 
         item(key = "sources") {
             SettingsSection(title = stringResource(R.string.settings_sources)) {
-                // The two aggregator rows only appear once the feature itself is on: which
-                // aggregator, and whether to try the others, mean nothing while nothing is being
-                // described.
-                SettingsItems(count = if (preferences.externalMetadataEnabled) 5 else 2) { index, shape ->
+                SettingsItems(count = 2) { index, shape ->
                     when (index) {
                         0 -> SettingsSwitchItem(
                             icon = Icons.Filled.VisibilityOff,
@@ -244,72 +257,20 @@ fun SettingsScreen(
                             onCheckedChange = appPreferences::setHideNsfwSources,
                         )
 
-                        1 -> SettingsSwitchItem(
+                        // Everything about aggregators sits behind this one row: laid out inline, its
+                        // five switches and per-source overrides read as unrelated settings rather
+                        // than as one feature and its options.
+                        else -> SettingsActionItem(
                             icon = Icons.Outlined.Public,
-                            title = stringResource(R.string.settings_external_metadata),
-                            checked = preferences.externalMetadataEnabled,
+                            title = stringResource(R.string.settings_external_metadata_title),
+                            subtitle = externalMetadataSummary(
+                                enabled = preferences.externalMetadataEnabled,
+                                provider = preferences.externalMetadataProvider,
+                                fallback = preferences.externalMetadataFallback,
+                            ),
                             shape = shape,
-                            onCheckedChange = appPreferences::setExternalMetadataEnabled,
-                        )
-
-                        2 -> SettingsVerticalItem(
-                            icon = Icons.Outlined.Public,
-                            title = stringResource(R.string.settings_external_metadata_provider),
-                            shape = shape,
-                        ) {
-                            SettingsSegmentedControl(
-                                options = MetadataProviderId.entries,
-                                selectedOption = preferences.externalMetadataProvider,
-                                // Provider names are proper nouns, so they are not translated - and
-                                // MAL is labelled by the site people know, not by Jikan, the API it
-                                // is read through.
-                                label = { provider -> provider.ratingSource },
-                                onSelect = { provider ->
-                                    appPreferences.setExternalMetadataProvider(provider)
-                                    haptic.performHapticFeedback(HapticFeedbackType.SegmentTick)
-                                },
-                            )
-                        }
-
-                        3 -> SettingsSwitchItem(
-                            icon = Icons.Outlined.Public,
-                            title = stringResource(R.string.settings_external_metadata_fallback),
-                            checked = preferences.externalMetadataFallback,
-                            shape = shape,
-                            onCheckedChange = appPreferences::setExternalMetadataFallback,
-                        )
-
-                        else -> SettingsSwitchItem(
-                            icon = Icons.Outlined.Public,
-                            title = stringResource(R.string.settings_external_metadata_show_binding),
-                            checked = preferences.externalMetadataShowBinding,
-                            shape = shape,
-                            onCheckedChange = appPreferences::setExternalMetadataShowBinding,
-                        )
-                    }
-                }
-                if (externalMetadataSources.isNotEmpty()) {
-                    Text(
-                        text = stringResource(R.string.settings_external_metadata_per_source),
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(top = 4.dp),
-                    )
-                    SettingsItems(count = externalMetadataSources.size) { index, shape ->
-                        val source = externalMetadataSources[index]
-                        val override = preferences.externalMetadataOverrides[source.id.value]
-                        val enabled = override ?: preferences.externalMetadataEnabled
-                        SettingsSwitchItem(
-                            icon = Icons.Outlined.Public,
-                            title = source.name,
-                            checked = enabled,
-                            shape = shape,
-                            onCheckedChange = { next ->
-                                appPreferences.setExternalMetadataOverride(
-                                    source.id.value,
-                                    next.takeIf { it != preferences.externalMetadataEnabled },
-                                )
-                            },
+                            showNavigationArrow = true,
+                            onClick = { isMetadataSheetOpen = true },
                         )
                     }
                 }
@@ -547,6 +508,147 @@ private fun notificationPermissionLabel(state: NotificationPermissionState): Str
         NotificationPermissionState.DENIED -> R.string.settings_notifications_disabled
     },
 )
+
+@Composable
+private fun externalMetadataSummary(enabled: Boolean, provider: MetadataProviderId, fallback: Boolean): String = when {
+    !enabled -> stringResource(R.string.settings_external_metadata_off)
+    // Provider names are proper nouns, so they are not translated.
+    fallback -> stringResource(R.string.settings_external_metadata_summary_fallback, provider.ratingSource)
+    else -> provider.ratingSource
+}
+
+/**
+ * The aggregator feature and all of its options in one place: the master switch first, then how it
+ * behaves (shown only while it is on), then per-source overrides - which stay visible either way,
+ * since an override can turn aggregators on for one source while they are off globally.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ExternalMetadataSheet(
+    /** Source id to display name, for sources whose manifest asks for aggregator metadata. */
+    sources: List<Pair<String, String>>,
+    onDismissRequest: () -> Unit,
+) {
+    val appPreferences = LocalAppPreferences.current
+    val preferences = LocalAppPreferencesState.current
+    val haptic = LocalHapticFeedback.current
+    AppModalBottomSheet(
+        onDismissRequest = onDismissRequest,
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp, vertical = 8.dp)
+                .navigationBarsPadding(),
+            verticalArrangement = Arrangement.spacedBy(20.dp),
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(
+                    text = stringResource(R.string.settings_external_metadata_title),
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+                Text(
+                    text = stringResource(R.string.settings_external_metadata_sheet_description),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+
+            SettingsItems(count = 1) { _, shape ->
+                SettingsSwitchItem(
+                    icon = Icons.Outlined.Public,
+                    title = stringResource(R.string.settings_external_metadata),
+                    checked = preferences.externalMetadataEnabled,
+                    shape = shape,
+                    onCheckedChange = appPreferences::setExternalMetadataEnabled,
+                )
+            }
+
+            AnimatedVisibility(visible = preferences.externalMetadataEnabled) {
+                ExternalMetadataSheetGroup(title = stringResource(R.string.settings_external_metadata_behaviour)) {
+                    SettingsItems(count = 3) { index, shape ->
+                        when (index) {
+                            0 -> SettingsVerticalItem(
+                                icon = Icons.Outlined.Public,
+                                title = stringResource(R.string.settings_external_metadata_provider),
+                                shape = shape,
+                            ) {
+                                SettingsSegmentedControl(
+                                    options = MetadataProviderId.entries,
+                                    selectedOption = preferences.externalMetadataProvider,
+                                    // MAL is labelled by the site people know, not by Jikan, the API
+                                    // it is read through.
+                                    label = { provider -> provider.ratingSource },
+                                    onSelect = { provider ->
+                                        appPreferences.setExternalMetadataProvider(provider)
+                                        haptic.performHapticFeedback(HapticFeedbackType.SegmentTick)
+                                    },
+                                )
+                            }
+
+                            1 -> SettingsSwitchItem(
+                                icon = Icons.Outlined.SwapHoriz,
+                                title = stringResource(R.string.settings_external_metadata_fallback),
+                                checked = preferences.externalMetadataFallback,
+                                shape = shape,
+                                onCheckedChange = appPreferences::setExternalMetadataFallback,
+                            )
+
+                            else -> SettingsSwitchItem(
+                                icon = Icons.Outlined.Link,
+                                title = stringResource(R.string.settings_external_metadata_show_binding),
+                                checked = preferences.externalMetadataShowBinding,
+                                shape = shape,
+                                onCheckedChange = appPreferences::setExternalMetadataShowBinding,
+                            )
+                        }
+                    }
+                }
+            }
+
+            if (sources.isNotEmpty()) {
+                ExternalMetadataSheetGroup(title = stringResource(R.string.settings_external_metadata_per_source)) {
+                    SettingsItems(count = sources.size) { index, shape ->
+                        val (sourceId, sourceName) = sources[index]
+                        val enabled = preferences.externalMetadataOverrides[sourceId] ?: preferences.externalMetadataEnabled
+                        SettingsSwitchItem(
+                            icon = Icons.Outlined.Extension,
+                            title = sourceName,
+                            checked = enabled,
+                            shape = shape,
+                            onCheckedChange = { next ->
+                                appPreferences.setExternalMetadataOverride(
+                                    sourceId,
+                                    next.takeIf { it != preferences.externalMetadataEnabled },
+                                )
+                            },
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ExternalMetadataSheetGroup(
+    title: String,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(horizontal = 4.dp),
+        )
+        content()
+    }
+}
 
 @Composable
 private fun SettingsSection(

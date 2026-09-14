@@ -417,6 +417,11 @@
     <string name="details_metadata_picker_nothing">Nothing found.</string>
     <string name="details_metadata_picker_reset">Match automatically again</string>
     <string name="settings_external_metadata_show_binding">Show the metadata entry on a title</string>
+    <string name="settings_external_metadata_title">Metadata aggregators</string>
+    <string name="settings_external_metadata_off">Off</string>
+    <string name="settings_external_metadata_summary_fallback">%1$s, then the others</string>
+    <string name="settings_external_metadata_sheet_description">Descriptions, posters and ratings come from an aggregator instead of the source. What you watch still comes from the source.</string>
+    <string name="settings_external_metadata_behaviour">Behaviour</string>
     <string name="catalog_entry_resolving">Looking for it on this source…</string>
     <string name="catalog_entry_not_on_source">%1$s is not on this source</string>
     <string name="catalog_entry_not_on_source_hint">Its name here may be spelled differently, or it may not be uploaded at all. Find it yourself and the choice is remembered.</string>
