@@ -344,7 +344,16 @@ class BrowserPlayerWebViewExtractor(
                 }
                 webChromeClient = object : android.webkit.WebChromeClient() {
                     override fun onConsoleMessage(message: android.webkit.ConsoleMessage): Boolean {
-                        AppLogger.d(TAG, "Console: ${message.messageLevel()} ${message.message()} (${message.sourceId()}:${message.lineNumber()})")
+                        // Ad/tracker scripts on these embed pages can spam console.log hundreds of
+                        // times a second, worse the slower the page's own network is. Each line was
+                        // handed whole to AppLogger.d, whose sanitize() runs ~10 regexes over it - on
+                        // this same UI thread as the resolver's own postDelayed probes and
+                        // evaluateJavascript callbacks, so a slow connection's extra log spam was
+                        // directly stealing the main-thread time the resolver needed to notice its
+                        // own stream capture sooner. Truncating keeps the first line's diagnostic
+                        // value while making the cost independent of how much a page spams.
+                        val text = message.message().let { if (it.length > CONSOLE_MESSAGE_LOG_LIMIT) it.take(CONSOLE_MESSAGE_LOG_LIMIT) + "…" else it }
+                        AppLogger.d(TAG, "Console: ${message.messageLevel()} $text (${message.sourceId()}:${message.lineNumber()})")
                         return true
                     }
                 }
@@ -397,6 +406,7 @@ class BrowserPlayerWebViewExtractor(
         const val AUDIO_PROBE_TIMEOUT_MS = 1_000L
         const val MAX_PROBES = 24
         const val STREAM_SETTLE_DELAY_MS = 600L
+        const val CONSOLE_MESSAGE_LOG_LIMIT = 200
         const val CHROME_USER_AGENT = "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Mobile Safari/537.36"
         const val TAG = "BrowserPlayerResolver"
         val QUALITY = Regex("""(?<!\\d)(240|360|480|540|720|1080|1440|2160)(?:p|\\.m3u8|/)""")

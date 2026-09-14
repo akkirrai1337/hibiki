@@ -6,7 +6,10 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
@@ -83,6 +86,8 @@ class AnimeSearchRepository(
     /** Source cards whose aggregator lookup is still in progress. */
     val pendingCardMetadata = _pendingCardMetadata.asStateFlow()
     private val detailsRequestSlots = Semaphore(MAX_CONCURRENT_DETAILS_REQUESTS)
+    private val cardMatchSlots = Semaphore(MAX_CONCURRENT_CARD_MATCHES)
+    private val relatedAnimeMatchSlots = Semaphore(MAX_CONCURRENT_CARD_MATCHES)
 
     init {
         // Changing whether/which/how external metadata is fetched can only be seen by the user
@@ -545,20 +550,25 @@ class AnimeSearchRepository(
         }
         if (titlesToLoad.isEmpty()) return
         _pendingCardMetadata.update { pending -> pending + titlesToLoad.map(AnimeTitle::id) }
-        metadataScope.launch {
-            for (title in titlesToLoad) {
-                try {
-                    runCatching { service.metadataFor(title, order) }
-                        .onSuccess { external ->
-                            external ?: return@onSuccess
-                            val enriched = mergeExternalMetadata(title, external)
-                                .toAnime(preferEnglish = preferEnglish())
-                            _cardMetadata.update { known -> known + (title.id to enriched) }
-                        }
-                        .onFailure { AppLogger.w(TAG, "warmCardMetadata: ${title.id} not described", it) }
-                } finally {
-                    pendingCardMatches.remove(title.id)
-                    _pendingCardMetadata.update { pending -> pending - title.id }
+        // One coroutine per title, bounded by cardMatchSlots, instead of a single loop that made
+        // every card on the page wait for every earlier one's full provider search to finish -
+        // that serialized a 20-card list into 20x the latency of a single lookup.
+        for (title in titlesToLoad) {
+            metadataScope.launch {
+                cardMatchSlots.withPermit {
+                    try {
+                        runCatching { service.metadataFor(title, order) }
+                            .onSuccess { external ->
+                                external ?: return@onSuccess
+                                val enriched = mergeExternalMetadata(title, external)
+                                    .toAnime(preferEnglish = preferEnglish())
+                                _cardMetadata.update { known -> known + (title.id to enriched) }
+                            }
+                            .onFailure { AppLogger.w(TAG, "warmCardMetadata: ${title.id} not described", it) }
+                    } finally {
+                        pendingCardMatches.remove(title.id)
+                        _pendingCardMetadata.update { pending -> pending - title.id }
+                    }
                 }
             }
         }
@@ -604,8 +614,11 @@ class AnimeSearchRepository(
      *
      * `sections` is franchise/related/similar together (not three separate calls) so a title that
      * happens to appear in more than one of them - which does happen, e.g. the current title itself
-     * spliced into "related" - is only matched once. Requests stay sequential because this is a
-     * handful of cards, not a scrollable list.
+     * spliced into "related" - is only matched once. Requests run concurrently, bounded the same as
+     * a list's card matches: a franchise-heavy title's related/franchise/similar strips combined are
+     * routinely well past "a handful", and this runs on getDetails()'s critical path, so matching
+     * them one at a time was making every such title page wait out the sum of every lookup instead
+     * of the slowest one.
      */
     private suspend fun describeRelatedAnime(
         source: AnimeSourceRuntime,
@@ -616,12 +629,18 @@ class AnimeSearchRepository(
         val all = sections.flatten().distinctBy(RelatedAnimeTitle::id)
         if (order.isEmpty() || all.isEmpty()) return sections
 
-        val describedById = all.associate { item ->
-            val stub = AnimeTitle(id = item.id, originalName = item.title, englishName = item.title, posterUrl = item.posterUrl, year = item.year, type = item.type, status = item.status, availableEpisodeCount = item.episodeCount)
-            val external = runCatching { service.metadataFor(stub, order) }
-                .onFailure { AppLogger.w(TAG, "describeRelatedAnime: metadata lookup failed for ${item.id}", it) }
-                .getOrNull()
-            item.id to (external?.let { item.describedWith(it) } ?: item)
+        val describedById = coroutineScope {
+            all.map { item ->
+                async {
+                    relatedAnimeMatchSlots.withPermit {
+                        val stub = AnimeTitle(id = item.id, originalName = item.title, englishName = item.title, posterUrl = item.posterUrl, year = item.year, type = item.type, status = item.status, availableEpisodeCount = item.episodeCount)
+                        val external = runCatching { service.metadataFor(stub, order) }
+                            .onFailure { AppLogger.w(TAG, "describeRelatedAnime: metadata lookup failed for ${item.id}", it) }
+                            .getOrNull()
+                        item.id to (external?.let { item.describedWith(it) } ?: item)
+                    }
+                }
+            }.awaitAll().toMap()
         }
         return sections.map { section -> section.map { describedById[it.id] ?: it } }
     }
@@ -810,6 +829,9 @@ class AnimeSearchRepository(
         const val SEARCH_CACHE_VERSION = 2
         const val SEARCH_PAGE_SIZE = 20
         const val MAX_CONCURRENT_DETAILS_REQUESTS = 3
+        // Card matches are one lookup against providers already picked for this source, not the
+        // full details page, so more of them can run at once without hammering any single provider.
+        const val MAX_CONCURRENT_CARD_MATCHES = 5
         const val MAX_SEARCH_CACHE_ENTRIES = 100
         const val MAX_DETAILS_CACHE_ENTRIES = 200
         const val SEARCH_CACHE_TTL_MS = 5 * 60_000L
