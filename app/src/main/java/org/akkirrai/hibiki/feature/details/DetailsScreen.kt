@@ -20,10 +20,6 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.graphics.res.animatedVectorResource
 import androidx.compose.animation.graphics.res.rememberAnimatedVectorPainter
@@ -142,6 +138,7 @@ import org.akkirrai.hibiki.core.design.iconOrDefault
 import org.akkirrai.hibiki.core.design.UiDimens
 import org.akkirrai.hibiki.core.design.AppMotion
 import org.akkirrai.hibiki.core.design.component.AppBackButton
+import org.akkirrai.hibiki.core.design.component.AppShimmerBlock
 import org.akkirrai.beakokit.metadata.ExternalMetadataPreferences
 import org.akkirrai.beakokit.metadata.metadataProviderOrder
 import org.akkirrai.hibiki.core.design.component.AppModalBottomSheet
@@ -1246,7 +1243,7 @@ private fun DetailHeroMedia(
             enter = fadeIn(animationSpec = tween(120)),
             exit = fadeOut(animationSpec = tween(180)),
         ) {
-            DetailsSkeletonBlock(modifier = Modifier.fillMaxSize())
+            AppShimmerBlock(modifier = Modifier.fillMaxSize())
         }
 
         if (resumeState != null && resumeFrame != null) {
@@ -1491,18 +1488,18 @@ private fun DetailInfoPillSkeleton(width: Dp) {
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            DetailsSkeletonBlock(
+            AppShimmerBlock(
                 modifier = Modifier
                     .size(36.dp)
                     .clip(CircleShape),
             )
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                DetailsSkeletonBlock(
+                AppShimmerBlock(
                     modifier = Modifier
                         .width(52.dp)
                         .height(9.dp),
                 )
-                DetailsSkeletonBlock(
+                AppShimmerBlock(
                     modifier = Modifier
                         .width(72.dp)
                         .height(12.dp),
@@ -1520,9 +1517,9 @@ private fun DetailDescriptionSkeleton() {
             .padding(top = 10.dp),
         verticalArrangement = Arrangement.spacedBy(7.dp),
     ) {
-        DetailsSkeletonBlock(modifier = Modifier.fillMaxWidth().height(12.dp))
-        DetailsSkeletonBlock(modifier = Modifier.fillMaxWidth(0.88f).height(12.dp))
-        DetailsSkeletonBlock(modifier = Modifier.fillMaxWidth(0.66f).height(12.dp))
+        AppShimmerBlock(modifier = Modifier.fillMaxWidth().height(12.dp))
+        AppShimmerBlock(modifier = Modifier.fillMaxWidth(0.88f).height(12.dp))
+        AppShimmerBlock(modifier = Modifier.fillMaxWidth(0.66f).height(12.dp))
     }
 }
 
@@ -1532,9 +1529,9 @@ private fun GenrePillsSkeletonRow() {
         modifier = Modifier.padding(horizontal = DETAIL_CONTENT_START_PADDING),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        DetailsSkeletonBlock(modifier = Modifier.width(82.dp).height(32.dp).clip(CircleShape))
-        DetailsSkeletonBlock(modifier = Modifier.width(106.dp).height(32.dp).clip(CircleShape))
-        DetailsSkeletonBlock(modifier = Modifier.width(74.dp).height(32.dp).clip(CircleShape))
+        AppShimmerBlock(modifier = Modifier.width(82.dp).height(32.dp).clip(CircleShape))
+        AppShimmerBlock(modifier = Modifier.width(106.dp).height(32.dp).clip(CircleShape))
+        AppShimmerBlock(modifier = Modifier.width(74.dp).height(32.dp).clip(CircleShape))
     }
 }
 
@@ -1556,37 +1553,20 @@ private fun RelatedTitlesSkeleton() {
         ) {
             repeat(3) {
                 Column(modifier = Modifier.width(100.dp)) {
-                    DetailsSkeletonBlock(
+                    AppShimmerBlock(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(140.dp)
                             .clip(RoundedCornerShape(12.dp)),
                     )
                     Spacer(modifier = Modifier.height(8.dp))
-                    DetailsSkeletonBlock(modifier = Modifier.fillMaxWidth().height(12.dp))
+                    AppShimmerBlock(modifier = Modifier.fillMaxWidth().height(12.dp))
                     Spacer(modifier = Modifier.height(6.dp))
-                    DetailsSkeletonBlock(modifier = Modifier.fillMaxWidth(0.68f).height(10.dp))
+                    AppShimmerBlock(modifier = Modifier.fillMaxWidth(0.68f).height(10.dp))
                 }
             }
         }
     }
-}
-
-@Composable
-private fun DetailsSkeletonBlock(modifier: Modifier = Modifier) {
-    val transition = rememberInfiniteTransition(label = "detailsSkeleton")
-    val alpha by transition.animateFloat(
-        initialValue = 0.34f,
-        targetValue = 0.62f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 900),
-            repeatMode = RepeatMode.Reverse,
-        ),
-        label = "detailsSkeletonAlpha",
-    )
-    Box(
-        modifier = modifier.background(MaterialTheme.colorScheme.onSurface.copy(alpha = alpha * 0.14f)),
-    )
 }
 
 @Composable

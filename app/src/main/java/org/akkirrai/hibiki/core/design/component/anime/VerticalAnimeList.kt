@@ -40,6 +40,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import org.akkirrai.hibiki.core.design.component.AppCenteredLoading
 import org.akkirrai.hibiki.core.design.component.AppLoadMoreBlock
+import org.akkirrai.hibiki.core.design.component.AppShimmerBlock
 import org.akkirrai.hibiki.core.design.component.search.AppErrorCard
 import org.akkirrai.hibiki.core.design.component.search.AppSearchPlaceholder
 import org.akkirrai.hibiki.core.model.Anime
@@ -90,7 +91,7 @@ fun VerticalAnimeListItem(
                 .background(MaterialTheme.colorScheme.surfaceContainer),
         ) {
             if (metadataLoading) {
-                AppCenteredLoading(modifier = Modifier.fillMaxSize())
+                AppShimmerBlock(modifier = Modifier.fillMaxSize())
             } else {
                 PosterImage(
                     primaryUrl = anime.posterUrl,
@@ -176,7 +177,10 @@ fun VerticalAnimeListItem(
             }
 
             if (metadataLoading) {
-                AppCenteredLoading(modifier = Modifier.fillMaxWidth().height(42.dp))
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    AppShimmerBlock(modifier = Modifier.fillMaxWidth().height(12.dp))
+                    AppShimmerBlock(modifier = Modifier.fillMaxWidth(0.68f).height(12.dp))
+                }
             } else if (metaContent != null) {
                 metaContent()
             } else if (metaText.isNotBlank()) {
