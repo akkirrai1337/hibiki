@@ -26,7 +26,7 @@ import org.akkirrai.beakokit.metadata.MetadataProviderId
 import org.akkirrai.beakokit.metadata.ExternalMetadataService
 import org.akkirrai.beakokit.metadata.mergeExternalMetadata
 import org.akkirrai.beakokit.metadata.metadataProviderOrder
-import org.akkirrai.hibiki.core.metadata.SqliteExternalMetadataStore
+import org.akkirrai.hibiki.core.metadata.RoomExternalMetadataStore
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
@@ -73,7 +73,7 @@ class AnimeSearchRepository(
         ?: appContext?.let {
             ExternalMetadataService(
                 client,
-                SqliteExternalMetadataStore.get(it),
+                RoomExternalMetadataStore.get(it),
                 log = { message -> AppLogger.d("ExternalMetadata", message) },
             )
         }

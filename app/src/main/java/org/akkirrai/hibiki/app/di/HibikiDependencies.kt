@@ -6,7 +6,7 @@ import org.akkirrai.hibiki.core.download.OfflineDownloadRepository
 import org.akkirrai.hibiki.core.log.AppLogger
 import org.akkirrai.hibiki.core.profile.LocalProfileRepository
 import org.akkirrai.beakokit.metadata.ExternalMetadataService
-import org.akkirrai.hibiki.core.metadata.SqliteExternalMetadataStore
+import org.akkirrai.hibiki.core.metadata.RoomExternalMetadataStore
 import org.akkirrai.hibiki.core.source.AnimeSearchRepository
 import org.akkirrai.hibiki.core.source.AnimeSourceRuntimeManager
 import org.akkirrai.hibiki.core.source.AnimeWatchRepository
@@ -30,7 +30,7 @@ class HibikiDependencies(
     val externalMetadata: ExternalMetadataService =
         ExternalMetadataService(
             AndroidHttpClientFactory.createMetadata(),
-            SqliteExternalMetadataStore.get(appContext),
+            RoomExternalMetadataStore.get(appContext),
             log = { message -> AppLogger.d("ExternalMetadata", message) },
         )
 

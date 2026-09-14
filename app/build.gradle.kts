@@ -4,6 +4,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
     kotlin("plugin.serialization")
+    id("com.google.devtools.ksp")
 }
 
 val hibikiIconResDir = layout.buildDirectory.dir("generated/res/hibikiIcon").get().asFile
@@ -103,6 +104,11 @@ android {
     }
 }
 
+ksp {
+    // Checked in, so a schema change shows up in review and a migration can be tested against it.
+    arg("room.schemaLocation", "$projectDir/schemas")
+}
+
 tasks.named("preBuild") {
     dependsOn(syncHibikiIcon)
 }
@@ -150,6 +156,8 @@ dependencies {
     implementation(libs.androidx.media3.session)
     implementation(libs.androidx.media3.ui)
     implementation(libs.play.services.cronet)
+    implementation(libs.androidx.room.runtime)
+    ksp(libs.androidx.room.compiler)
     testImplementation(libs.junit)
     testImplementation("io.ktor:ktor-client-mock:${libs.versions.ktor.get()}")
     androidTestImplementation(libs.androidx.junit)
