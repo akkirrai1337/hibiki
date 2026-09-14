@@ -68,6 +68,14 @@ fun AppModalBottomSheet(
                         // The cross previews that releasing the current downward drag will close
                         // the sheet. The arrow remains visible while the sheet stays open.
                         targetState = sheetState.targetValue == SheetValue.Hidden,
+                        // A fixed cell: the two icons differ in size, and letting the handle resize
+                        // (AnimatedContent animates its size by default) changed the sheet's height
+                        // mid-drag. ModalBottomSheet recomputes its anchors from that height every
+                        // frame, so a short sheet visibly jerked while being swiped down.
+                        modifier = Modifier
+                            .padding(8.dp)
+                            .size(20.dp),
+                        contentAlignment = Alignment.Center,
                         label = "bottom_sheet_handle",
                     ) { willClose ->
                         val (size, icon) = if (willClose) {
@@ -78,9 +86,7 @@ fun AppModalBottomSheet(
                         Icon(
                             imageVector = icon,
                             contentDescription = null,
-                            modifier = Modifier
-                                .padding(8.dp)
-                                .size(size),
+                            modifier = Modifier.size(size),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
