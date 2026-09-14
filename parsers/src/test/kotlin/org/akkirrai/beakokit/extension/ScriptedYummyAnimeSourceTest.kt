@@ -46,6 +46,11 @@ class ScriptedYummyAnimeSourceTest {
                     SourceCapability.PLAYBACK,
                     SourceCapability.RELATED_TITLES,
                     SourceCapability.SIMILAR_TITLES,
+                    SourceCapability.ACCOUNT,
+                    SourceCapability.COMMENTS,
+                    SourceCapability.REVIEWS,
+                    SourceCapability.LIBRARY_SYNC,
+                    SourceCapability.ACTIVITY_SYNC,
                 ),
                 source.info.capabilities,
             )

@@ -72,7 +72,7 @@ class BrowserPlayerWebViewExtractor(
         }
         AppLogger.d(TAG, "Start: host=${hostOf(link.url)}, player=${link.playerName.orEmpty()}")
         val capture = withContext(Dispatchers.Main) {
-            capture(pageUrl, link.headers, resolver.browserScript(link))
+            capture(pageUrl, link.headers, resolver.browserScript(link), resolver.requiresFrame)
         }
         val streams = capture.streams
         val session = capture.session
@@ -200,12 +200,14 @@ class BrowserPlayerWebViewExtractor(
         pageUrl: String,
         pageHeaders: Map<String, String>,
         resolverScript: String,
+        requiresFrame: Boolean,
     ): BrowserCaptureResult =
         suspendCancellableCoroutine { continuation ->
             val handler = Handler(Looper.getMainLooper())
             val captures = mutableListOf<BrowserCapturedStream>()
             val subtitles = mutableListOf<BrowserCapturedSubtitle>()
             var webView: WebView? = null
+            var frameInjected = false
             var delivered = false
             var probes = 0
             var retry: Runnable? = null
@@ -303,7 +305,15 @@ class BrowserPlayerWebViewExtractor(
                 // that inspects how it loads.
                 settings.loadsImagesAutomatically = false
                 settings.blockNetworkImage = true
-                settings.userAgentString = CHROME_USER_AGENT
+                // A resolver/source can override the spoofed UA via the PlayerLink's own headers -
+                // same pattern DirectStreamWebViewRelayExtractor and AndroidBrowserRelayProvider
+                // already follow. Needed for at least one BROWSER-runtime site (Alloha) whose own
+                // player app throws under the default mobile UA and never mounts a player at all.
+                settings.userAgentString = pageHeaders.entries
+                    .firstOrNull { it.key.equals("User-Agent", ignoreCase = true) }
+                    ?.value
+                    ?.takeIf(String::isNotBlank)
+                    ?: CHROME_USER_AGENT
                 addJavascriptInterface(object {
                     @JavascriptInterface fun stream(url: String) = handler.post { add(url, emptyMap(), BrowserCaptureOrigin.VIDEO_ELEMENT) }
                     @JavascriptInterface fun master(url: String) = handler.post { add(url, emptyMap(), BrowserCaptureOrigin.SOURCE_MASTER) }
@@ -328,6 +338,10 @@ class BrowserPlayerWebViewExtractor(
                         // down. Ktor's host parser treats that pseudo-URL as a malformed HTTPS
                         // address, so logging lifecycle noise must never be able to crash playback.
                         AppLogger.d(TAG, "Page finished: host=${browserLogHost(url)}")
+                        if (requiresFrame && !frameInjected) {
+                            frameInjected = true
+                            view.evaluateJavascript(buildFrameInjectionScript(pageUrl), null)
+                        }
                         probe(view)
                     }
                     override fun onReceivedError(view: WebView, request: WebResourceRequest, error: android.webkit.WebResourceError) {
@@ -357,7 +371,14 @@ class BrowserPlayerWebViewExtractor(
                         return true
                     }
                 }
-                loadUrl(pageUrl, pageHeaders)
+                // A page that requires real iframe nesting (see requiresFrame's doc) is loaded
+                // top-level as its own bare origin instead - a genuine, if unrelated, HTTP(S)
+                // response from that host, just to get a real (non-data:) document whose later
+                // iframe navigation computes a normal Referer. The actual target page is injected
+                // as an iframe once this shell finishes loading (onPageFinished above), which is
+                // also exactly the nesting its own resolver script already expects
+                // (`document.querySelector('iframe')`).
+                loadUrl(if (requiresFrame) originOf(pageUrl) else pageUrl, pageHeaders)
                 handler.postDelayed({ probe(this) }, nextProbeDelayMs(0))
             }
             continuation.invokeOnCancellation {
@@ -368,6 +389,21 @@ class BrowserPlayerWebViewExtractor(
                 destroyView()
             }
         }
+
+    /** A full-viewport iframe pointed at the real target page, appended to whatever shell document
+     * is currently loaded. See [capture]'s requiresFrame handling for why this exists. */
+    private fun buildFrameInjectionScript(targetUrl: String): String {
+        val escapedUrl = targetUrl.replace("\\", "\\\\").replace("\"", "\\\"")
+        return """
+            (function(){
+                var f=document.createElement('iframe');
+                f.src="$escapedUrl";
+                f.setAttribute('allow','autoplay');
+                f.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;border:0';
+                document.body.appendChild(f);
+            })();
+        """.trimIndent()
+    }
 
     /**
      * WebViewClient.shouldInterceptRequest only exposes headers the *page script* set explicitly;

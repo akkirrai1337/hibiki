@@ -24,6 +24,11 @@ data class PlayerResolverExtensionManifest(
     val runtime: ResolverRuntime = ResolverRuntime.HTTP,
     /** Whether browser media is extracted for ExoPlayer or rendered by the host WebView. */
     val browserPlaybackMode: BrowserPlaybackMode? = BrowserPlaybackMode.EXTRACT_STREAM,
+    /** Some embed pages actively detect top-level (non-iframe) loading and blank themselves out
+     * (Alloha does this with a `window != window.top` check that wipes <html> otherwise) - the
+     * page only ever renders normally when a real site embeds it in an iframe. Set for a resolver
+     * whose page needs that same nesting from the host's own capture WebView. */
+    val requiresFrame: Boolean = false,
 ) {
     fun violations(): List<String> = buildList {
         if (!ID.matches(id)) add("Resolver id must be a lowercase slug: $id")
@@ -53,6 +58,8 @@ interface BrowserScriptResolver {
     fun supportsBrowser(link: PlayerLink): Boolean
     suspend fun browserScript(link: PlayerLink): String
     val browserPlaybackMode: BrowserPlaybackMode get() = BrowserPlaybackMode.EXTRACT_STREAM
+    /** See [PlayerResolverExtensionManifest.requiresFrame]. */
+    val requiresFrame: Boolean get() = false
 }
 
 /** Loads resolver files from the same extension directory as source extensions. */
@@ -119,6 +126,9 @@ private class ScriptedPlayerResolver(
 
     override val browserPlaybackMode: BrowserPlaybackMode
         get() = manifest.browserPlaybackMode ?: BrowserPlaybackMode.EXTRACT_STREAM
+
+    override val requiresFrame: Boolean
+        get() = manifest.requiresFrame
 
     override suspend fun browserScript(link: PlayerLink): String {
         check(manifest.runtime == ResolverRuntime.BROWSER) { "Resolver ${manifest.id} is not a browser resolver" }
