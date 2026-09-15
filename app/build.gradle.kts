@@ -56,8 +56,8 @@ android {
         applicationId = "org.akkirrai.hibiki"
         minSdk = 26
         targetSdk = 36
-        versionCode = 271
-        versionName = "2.7.1"
+        versionCode = 272
+        versionName = "2.7.2"
 
         buildConfigField("boolean", "GITHUB_UPDATES_ENABLED", "true")
         // MAL API client id for reading public anime data. Without it MAL is read through Jikan.
