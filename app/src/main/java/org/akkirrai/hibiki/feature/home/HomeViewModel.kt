@@ -51,10 +51,12 @@ class HomeViewModel(
     }
 
     private var homeLoadJob: Job? = null
+    private var homeSupplementJob: Job? = null
     private var filterCatalogJob: Job? = null
 
     fun refresh() {
         homeLoadJob?.cancel()
+        homeSupplementJob?.cancel()
         homeLoadJob = viewModelScope.launch(Dispatchers.IO) {
             val startedAt = System.currentTimeMillis()
             PerfLogger.mark("Home refresh started")
@@ -77,6 +79,7 @@ class HomeViewModel(
                         event = "Home refresh finished",
                         details = "duration=${System.currentTimeMillis() - startedAt}ms",
                     )
+                    loadHomeSupplements(forceRefresh = true)
                 }
                 .onFailure { throwable ->
                     _uiState.update {
@@ -322,6 +325,7 @@ class HomeViewModel(
 
     fun load() {
         homeLoadJob?.cancel()
+        homeSupplementJob?.cancel()
         homeLoadJob = viewModelScope.launch(Dispatchers.IO) {
             val startedAt = System.currentTimeMillis()
             PerfLogger.mark("Home load started")
@@ -344,6 +348,7 @@ class HomeViewModel(
                         event = "Home load finished",
                         details = "duration=${System.currentTimeMillis() - startedAt}ms",
                     )
+                    loadHomeSupplements()
                 }
                 .onFailure { throwable ->
                     _uiState.update {
@@ -387,9 +392,37 @@ class HomeViewModel(
     override fun onCleared() {
         searchJob?.cancel()
         homeLoadJob?.cancel()
+        homeSupplementJob?.cancel()
         filterCatalogJob?.cancel()
         repository.close()
         super.onCleared()
+    }
+
+    /** The source catalog is enough for first paint; slow rows enrich it after the screen is live. */
+    private fun loadHomeSupplements(forceRefresh: Boolean = false) {
+        homeSupplementJob?.cancel()
+        homeSupplementJob = viewModelScope.launch(Dispatchers.IO) {
+            val startedAt = System.currentTimeMillis()
+            runCatching { repository.loadHomeSupplements(forceRefresh) }
+                .onSuccess { supplements ->
+                    _uiState.update { state ->
+                        state.copy(
+                            continueAnime = supplements.continueAnime,
+                            recentlyUpdated = supplements.recentlyUpdated,
+                        ).withCardMetadata(repository.cardMetadata.value)
+                    }
+                    PerfLogger.mark(
+                        event = "Home supplements finished",
+                        details = "duration=${System.currentTimeMillis() - startedAt}ms, " +
+                            "recentlyUpdated=${supplements.recentlyUpdated.size}",
+                    )
+                }
+                .onFailure { error ->
+                    if (error !is CancellationException) {
+                        AppLogger.w("HomeViewModel", "Home supplements failed", error)
+                    }
+                }
+        }
     }
 
     private fun observeCardMetadata() {

@@ -10,6 +10,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
@@ -565,11 +566,18 @@ class AnimeSearchRepository(
         }
         if (titlesToLoad.isEmpty()) return
         _pendingCardMetadata.update { pending -> pending + titlesToLoad.map(AnimeTitle::id) }
-        // One coroutine per title, bounded by cardMatchSlots, instead of a single loop that made
-        // every card on the page wait for every earlier one's full provider search to finish -
-        // that serialized a 20-card list into 20x the latency of a single lookup.
-        for (title in titlesToLoad) {
-            metadataScope.launch(MetadataPriority.Visible) {
+        // Give the first row a short uncontended head start. Previously every title in a 24-card
+        // home response entered the visible provider lane at once: cards the user could not yet
+        // see occupied the same five match slots and competed for the same provider queues.
+        // The remainder still enriches automatically, just as prefetch work after the first paint.
+        for ((index, title) in titlesToLoad.withIndex()) {
+            val priority = if (index < VISIBLE_CARD_MATCH_COUNT) {
+                MetadataPriority.Visible
+            } else {
+                MetadataPriority.Prefetch
+            }
+            metadataScope.launch(priority) {
+                if (index >= VISIBLE_CARD_MATCH_COUNT) delay(CARD_METADATA_PREFETCH_HEAD_START_MILLIS)
                 cardMatchSlots.withPermit {
                     try {
                         // Background priority: the service also sends each live search to whichever
@@ -859,6 +867,8 @@ class AnimeSearchRepository(
         // Card matches are one lookup against providers already picked for this source, not the
         // full details page, so more of them can run at once without hammering any single provider.
         const val MAX_CONCURRENT_CARD_MATCHES = 5
+        const val VISIBLE_CARD_MATCH_COUNT = 6
+        const val CARD_METADATA_PREFETCH_HEAD_START_MILLIS = 250L
         const val MAX_SEARCH_CACHE_ENTRIES = 100
         const val MAX_DETAILS_CACHE_ENTRIES = 200
         const val SEARCH_CACHE_TTL_MS = 5 * 60_000L
