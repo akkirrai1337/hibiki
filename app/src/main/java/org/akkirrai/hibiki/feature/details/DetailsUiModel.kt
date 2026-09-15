@@ -21,6 +21,12 @@ internal data class RelatedSection(
     override val key: String = "related"
 }
 
+internal data class FranchiseSection(
+    val items: List<RelatedAnime>,
+) : DetailsSection {
+    override val key: String = "franchise"
+}
+
 internal data class SimilarSection(
     val items: List<RelatedAnime>,
 ) : DetailsSection {
@@ -55,6 +61,11 @@ internal fun buildDetailsUiModel(
         emptyList()
     }
     val sections = buildList {
+        // Provider entries resolve against the selected source only after a tap, so this works even
+        // when the source has no own relationship API.
+        if (anime.aggregatorFranchiseAnime.isNotEmpty()) {
+            add(FranchiseSection(items = anime.aggregatorFranchiseAnime.distinctBy(RelatedAnime::id)))
+        }
         if (relatedItems.isNotEmpty()) {
             add(
                 RelatedSection(items = relatedItems)

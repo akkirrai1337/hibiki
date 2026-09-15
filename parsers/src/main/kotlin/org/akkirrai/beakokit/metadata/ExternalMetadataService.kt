@@ -145,6 +145,17 @@ class ExternalMetadataService(
         return cachedMetadataForAll(listOf(titleId), order)[titleId]
     }
 
+    /** Fetches AniList's one-hop franchise graph only for an already-matched title details page.
+     * List cards stay on the small aliased-search query. */
+    suspend fun franchiseFor(anime: AnimeTitle, order: List<MetadataProviderId>): ExternalMetadata? {
+        val media = metadataFor(anime, order) ?: return null
+        if (media.provider != MetadataProviderId.ANILIST || media.franchiseLoaded) return media
+        val detailed = anilist.fetchDetailsById(media.externalId) ?: return media
+        store.writeMedia(detailed, nowMillis())
+        recordCrossMatches(anime.id, detailed)
+        return detailed
+    }
+
     /** Reads a whole visible list from the store in bulk. This stays entirely offline, just like
      * [cachedMetadataFor], but avoids multiplying Room reads by cards times providers. */
     fun cachedMetadataForAll(titleIds: List<String>, order: List<MetadataProviderId>): Map<String, ExternalMetadata> {

@@ -160,22 +160,22 @@ class ExternalMetadataTest {
     }
 
     @Test
-    fun `puts the preferred provider first and the others behind it`() {
+    fun `puts the preferred provider first and the others behind it when distribution is enabled`() {
         assertEquals(
             listOf(MetadataProviderId.ANILIST, MetadataProviderId.MAL, MetadataProviderId.KITSU),
-            metadataProviderOrder(ExternalMetadataPreferences(), "anichi", true),
+            metadataProviderOrder(ExternalMetadataPreferences(fallbackEnabled = true), "anichi", true),
         )
         assertEquals(
             listOf(MetadataProviderId.KITSU, MetadataProviderId.ANILIST, MetadataProviderId.MAL),
-            metadataProviderOrder(ExternalMetadataPreferences(provider = MetadataProviderId.KITSU), "anichi", true),
+            metadataProviderOrder(ExternalMetadataPreferences(provider = MetadataProviderId.KITSU, fallbackEnabled = true), "anichi", true),
         )
     }
 
     @Test
-    fun `asks only the preferred provider when fallback is off`() {
+    fun `asks only the preferred provider by default`() {
         assertEquals(
             listOf(MetadataProviderId.ANILIST),
-            metadataProviderOrder(ExternalMetadataPreferences(fallbackEnabled = false), "anichi", true),
+            metadataProviderOrder(ExternalMetadataPreferences(), "anichi", true),
         )
     }
 
@@ -225,6 +225,37 @@ class ExternalMetadataTest {
         assertEquals("Source text", merged.description)
         assertEquals(listOf("Fantasy"), merged.genres)
         assertEquals("https://source/poster.jpg", merged.posterUrl)
+    }
+
+    @Test
+    fun `uses dedicated aggregator banner without replacing it with a poster`() {
+        val source = title { copy(bannerUrl = "https://source/banner.jpg") }
+        val merged = mergeExternalMetadata(source, external { copy(bannerUrl = "https://anilist/banner.jpg") })
+
+        assertEquals("https://anilist/banner.jpg", merged.bannerUrl)
+        assertEquals("https://source/banner.jpg", mergeExternalMetadata(source, external { copy(bannerUrl = null) }).bannerUrl)
+    }
+
+    @Test
+    fun `keeps playable AniList franchise relations and excludes adaptations`() {
+        val media = AniListMedia(
+            id = 1,
+            relations = AniListRelations(
+                edges = listOf(
+                    AniListRelationEdge(
+                        relationType = "SEQUEL",
+                        node = AniListMedia(id = 2, title = AniListTitle(english = "Season 2"), format = "TV"),
+                    ),
+                    AniListRelationEdge(
+                        relationType = "ADAPTATION",
+                        node = AniListMedia(id = 3, title = AniListTitle(english = "Manga")),
+                    ),
+                ),
+            ),
+        )
+
+        assertEquals(listOf("Season 2"), media.toExternalMetadata().franchise.map { it.title })
+        assertEquals("Sequel", media.toExternalMetadata().franchise.single().relationLabel)
     }
 
     @Test

@@ -120,6 +120,12 @@ class AniListClient(private val client: HttpClient) {
 
     suspend fun fetchById(anilistId: Int): ExternalMetadata? = (byId.load(anilistId) as? BatchOutcome.Done)?.value
 
+    /** A one-title details request. Relations are intentionally excluded from list/search batches. */
+    suspend fun fetchDetailsById(anilistId: Int): ExternalMetadata? = graphql(
+        DETAILS_BY_ID_QUERY,
+        buildJsonObject { put("id", anilistId) },
+    )?.media?.toExternalMetadata()
+
     /** Looks a title up by its MAL id - what lets a match established elsewhere be reused here
      * without searching by name again. */
     suspend fun fetchByMalId(malId: Int): ExternalMetadata? = (byMalId.load(malId) as? BatchOutcome.Done)?.value
@@ -181,6 +187,7 @@ class AniListClient(private val client: HttpClient) {
         const val MAX_SEARCH_ALIASES = 12
         // AniList's page size cap.
         const val MAX_IDS_PER_REQUEST = 50
+        const val DETAILS_BY_ID_QUERY = "query (\$id: Int) { Media(id: \$id, type: ANIME) { $ANILIST_DETAILS_MEDIA_FIELDS } }"
         val BY_ID_QUERY = "query (\$ids: [Int]) { Page(perPage: 50) { media(id_in: \$ids, type: ANIME) { $ANILIST_MEDIA_FIELDS } } }"
         val BY_MAL_ID_QUERY = "query (\$ids: [Int]) { Page(perPage: 50) { media(idMal_in: \$ids, type: ANIME) { $ANILIST_MEDIA_FIELDS } } }"
     }

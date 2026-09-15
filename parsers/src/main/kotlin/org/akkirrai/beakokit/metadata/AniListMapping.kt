@@ -26,6 +26,7 @@ data class AniListMedia(
     val isAdult: Boolean? = null,
     val studios: AniListStudios? = null,
     val nextAiringEpisode: AniListAiringEpisode? = null,
+    val relations: AniListRelations? = null,
 )
 
 @Serializable
@@ -47,6 +48,12 @@ data class AniListStudio(val name: String? = null)
 data class AniListAiringEpisode(val airingAt: Long? = null)
 
 @Serializable
+data class AniListRelations(val edges: List<AniListRelationEdge>? = null)
+
+@Serializable
+data class AniListRelationEdge(val relationType: String? = null, val node: AniListMedia? = null)
+
+@Serializable
 data class AniListPage(val media: List<AniListMedia>? = null)
 
 @Serializable
@@ -57,6 +64,19 @@ data class AniListData(
 
 @Serializable
 data class AniListResponse(val data: AniListData? = null)
+
+/** Relation nodes deliberately omit relations themselves: franchise data is one hop, not a graph
+ * traversal that can make one details response arbitrarily large. */
+const val ANILIST_RELATED_MEDIA_FIELDS = """
+    id
+    title { romaji english native }
+    coverImage { extraLarge large }
+    seasonYear
+    startDate { year }
+    format
+    status
+    episodes
+"""
 
 /** The field selection every AniList query here asks for. */
 const val ANILIST_MEDIA_FIELDS = """
@@ -77,6 +97,13 @@ const val ANILIST_MEDIA_FIELDS = """
     isAdult
     studios(isMain: true) { nodes { name } }
     nextAiringEpisode { airingAt }
+"""
+
+/** Only the details screen needs the one-hop franchise graph. Keeping it out of aliased list
+ * searches preserves their small, safe GraphQL complexity budget. */
+const val ANILIST_DETAILS_MEDIA_FIELDS = """
+    $ANILIST_MEDIA_FIELDS
+    relations { edges { relationType node { $ANILIST_RELATED_MEDIA_FIELDS } } }
 """
 
 private val FORMAT_TO_TYPE = mapOf(
@@ -135,8 +162,35 @@ fun AniListMedia.toExternalMetadata() = ExternalMetadata(
     ageRating = null,
     // AniList reports airing times in epoch seconds, the same unit AnimeTitle.nextEpisodeAt uses.
     nextEpisodeAt = nextAiringEpisode?.airingAt,
+    franchise = relations?.edges.orEmpty().mapNotNull(AniListRelationEdge::toExternalRelation),
+    franchiseLoaded = relations != null,
     isAdult = isAdult == true,
 )
+
+private fun AniListRelationEdge.toExternalRelation(): ExternalMetadataRelation? {
+    val media = node ?: return null
+    val label = when (relationType) {
+        "PREQUEL" -> "Prequel"
+        "SEQUEL" -> "Sequel"
+        "SIDE_STORY" -> "Side story"
+        "PARENT" -> "Parent story"
+        "ALTERNATIVE" -> "Alternative version"
+        "SUMMARY" -> "Summary"
+        "FULL_VERSION" -> "Full version"
+        else -> return null
+    }
+    val title = media.title?.english ?: media.title?.romaji ?: media.title?.native ?: return null
+    return ExternalMetadataRelation(
+        externalId = media.id,
+        title = title,
+        posterUrl = media.coverImage?.extraLarge ?: media.coverImage?.large,
+        type = mapAniListFormat(media.format),
+        year = media.seasonYear ?: media.startDate?.year,
+        episodeCount = media.episodes,
+        status = mapAniListStatus(media.status),
+        relationLabel = label,
+    )
+}
 
 fun AniListMedia.toMatchCandidate() = MatchCandidate(
     externalId = id,

@@ -156,10 +156,12 @@ import org.akkirrai.hibiki.core.model.formatEpisodeNumber
 import org.akkirrai.hibiki.core.model.formatPlaybackTime
 import org.akkirrai.hibiki.core.model.isWatchedToEnd
 import org.akkirrai.hibiki.core.model.RelatedAnime
+import org.akkirrai.hibiki.feature.catalog.rememberEntryOpener
 import org.akkirrai.hibiki.core.model.TitleWatchState
 import org.akkirrai.hibiki.core.model.WatchSource
 import org.akkirrai.hibiki.core.model.WatchSourceSelection
 import org.akkirrai.hibiki.core.source.AnimeSearchRepository
+import org.akkirrai.hibiki.core.source.withAggregatorFranchiseMetadata
 import org.akkirrai.hibiki.core.source.withRelatedMetadata
 import org.akkirrai.hibiki.core.source.AnimeSourceDescriptor
 import org.akkirrai.hibiki.core.source.AnimeSourceRegistry
@@ -237,7 +239,16 @@ fun DetailsScreen(
         saved.firstVisibleItemIndex == 0 && saved.firstVisibleItemScrollOffset == 0
     } ?: true
     val searchRepository = remember(dependencies) { dependencies.animeSearchRepository() }
+    val franchiseEntryResolver = remember(dependencies) { dependencies.catalogRepository() }
+    DisposableEffect(franchiseEntryResolver) {
+        onDispose(franchiseEntryResolver::close)
+    }
+    val onResolvedRelatedAnimeClick = rememberEntryOpener(
+        repository = franchiseEntryResolver,
+        onOpen = onRelatedAnimeClick,
+    )
     val relatedMetadata by searchRepository.relatedMetadata.collectAsState()
+    val aggregatorFranchiseMetadata by searchRepository.aggregatorFranchiseMetadata.collectAsState()
     val libraryRepository = remember(dependencies) { dependencies.libraryRepository() }
     val offlineTitleMetadataRepository = remember(dependencies) { dependencies.offlineTitleMetadataRepository() }
     val watchStateRepository = remember(dependencies) { dependencies.watchStateRepository() }
@@ -468,12 +479,15 @@ fun DetailsScreen(
     val uiModel = remember(
         currentAnime,
         relatedMetadata,
+        aggregatorFranchiseMetadata,
         heroInfo,
         description,
         sourceDescriptor.contentFeatures,
     ) {
         buildDetailsUiModel(
-            anime = currentAnime.withRelatedMetadata(relatedMetadata),
+            anime = currentAnime
+                .withRelatedMetadata(relatedMetadata)
+                .withAggregatorFranchiseMetadata(aggregatorFranchiseMetadata),
             hero = heroInfo,
             description = description,
             contentFeatures = sourceDescriptor.contentFeatures,
@@ -660,6 +674,13 @@ fun DetailsScreen(
                                         onAnimeClick = onRelatedAnimeClick,
                                     )
                                 }
+                                is FranchiseSection -> {
+                                    RelatedAnimeList(
+                                        items = section.items,
+                                        title = stringResource(R.string.details_franchise),
+                                        onAnimeClick = onResolvedRelatedAnimeClick,
+                                    )
+                                }
                                 is SimilarSection -> {
                                     RelatedAnimeList(
                                         items = section.items,
@@ -789,7 +810,8 @@ private fun DetailHeroSection(
     // Without a banner there is no artwork the poster/title need to clear, so the band it used to
     // occupy shrinks instead of staying behind as empty background. Everything below just moves up
     // with it, keeping the hero's own proportions intact.
-    val hasHeroMedia = anime.trailer?.playbackUrl != null || (resumeState != null && resumeFrame != null)
+    val hasHeroMedia = anime.trailer?.playbackUrl != null || !anime.bannerUrl.isNullOrBlank() ||
+        (resumeState != null && resumeFrame != null)
     BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
         // Stop frames retain the exact surface ratio they were captured with. Resize the whole
         // hero around that frame, rather than keeping a fixed 224dp banner and exposing whatever
@@ -806,11 +828,9 @@ private fun DetailHeroSection(
         Column(
             modifier = Modifier.fillMaxWidth(),
         ) {
-        // The banner only earns its space when it actually shows something the poster below doesn't:
-        // a trailer still, or the frame the last watch session stopped on. For the common case
-        // (neither) it was a second, cropped copy of the poster sitting right on top of the poster
-        // itself - so that case drops the banner entirely and leaves the accent-tinted screen
-        // background showing, with no banner edge and no empty band left behind.
+        // The banner only earns its space when it has dedicated wide artwork, a trailer still, or
+        // the frame where the last watch session stopped. A cropped duplicate of the poster is not
+        // a banner, so titles without any of those keep the compact hero.
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -1210,7 +1230,7 @@ private fun DetailHeroMedia(
     modifier: Modifier = Modifier,
 ) {
     val trailer = anime.trailer?.takeIf { it.playbackUrl != null }
-    val imageUrl = trailer?.thumbnailUrl ?: anime.posterUrl
+    val imageUrl = trailer?.thumbnailUrl ?: anime.bannerUrl ?: anime.posterUrl
     val fallbackUrl = anime.posterUrl ?: anime.posterFallbackUrl
     val hasResumeFrame = resumeState != null && resumeFrame != null
     val hasBannerImage = !hasResumeFrame && (!imageUrl.isNullOrBlank() || !fallbackUrl.isNullOrBlank())
@@ -2081,6 +2101,7 @@ private fun RelatedAnimeList(
                             year = related.year,
                             type = related.type,
                             status = related.status,
+                            relationLabel = related.relationLabel,
                             announcementLabel = announcementLabel,
                         ),
                         style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
@@ -2520,6 +2541,7 @@ internal fun formatRelatedAnimeMetadata(
     type: String?,
     status: String? = null,
     announcementLabel: String = "announcement",
+    relationLabel: String? = null,
 ): String {
     val releaseLabel = year
         ?.takeIf { it > 0 }
@@ -2531,7 +2553,7 @@ internal fun formatRelatedAnimeMetadata(
         ?.replace('_', ' ')
         ?.replace('-', ' ')
         ?.uppercase(Locale.ROOT)
-    return listOfNotNull(releaseLabel, typeLabel).joinToString(" • ")
+    return listOfNotNull(relationLabel, releaseLabel, typeLabel).joinToString(" • ")
 }
 
 private const val DEFAULT_TYPE = "TV"

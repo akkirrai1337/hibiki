@@ -9,6 +9,7 @@ data class Anime(
     val nextEpisodeAt: Long? = null,
     val posterUrl: String? = null,
     val posterFallbackUrl: String? = null,
+    val bannerUrl: String? = null,
     val description: String? = null,
     val genres: List<String> = emptyList(),
     val alternativeTitles: List<String> = emptyList(),
@@ -21,6 +22,8 @@ data class Anime(
     val studios: List<String> = emptyList(),
     val similarAnime: List<RelatedAnime> = emptyList(),
     val franchiseAnime: List<RelatedAnime> = emptyList(),
+    /** Franchise entries from AniList. Their ids resolve against the selected source on tap. */
+    val aggregatorFranchiseAnime: List<RelatedAnime> = emptyList(),
     val relatedAnime: List<RelatedAnime> = emptyList(),
     val releaseDate: String? = null,
 )
@@ -53,4 +56,5 @@ data class RelatedAnime(
     val year: Int? = null,
     val episodeCount: Int? = null,
     val status: String? = null,
+    val relationLabel: String? = null,
 )

@@ -231,6 +231,7 @@ private fun encodeAnime(anime: Anime): JSONObject {
         put("nextEpisodeAt", anime.nextEpisodeAt)
         put("posterUrl", anime.posterUrl)
         put("posterFallbackUrl", anime.posterFallbackUrl)
+        put("bannerUrl", anime.bannerUrl)
         put("description", anime.description)
         put("alternativeTitles", JSONArray(anime.alternativeTitles))
         put("ageRating", anime.ageRating)
@@ -285,6 +286,7 @@ private fun decodeAnime(json: JSONObject): Anime {
         nextEpisodeAt = json.optLong("nextEpisodeAt").takeIf { it > 0L },
         posterUrl = json.optString("posterUrl").ifBlank { null },
         posterFallbackUrl = json.optString("posterFallbackUrl").ifBlank { null },
+        bannerUrl = json.optString("bannerUrl").ifBlank { null },
         description = json.optString("description").ifBlank { null },
         alternativeTitles = json.optJSONArray("alternativeTitles").toStringList(),
         ratings = json.optJSONArray("ratings").toRatingsList(),

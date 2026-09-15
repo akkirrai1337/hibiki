@@ -175,6 +175,7 @@
     <string name="details_source_material_game">Игра</string>
     <string name="details_source_material_original">Оригинал</string>
     <string name="details_related">Связанное</string>
+    <string name="details_franchise">Франшиза</string>
     <string name="details_similar">Похожие</string>
     <string name="details_related_titles">Связанные тайтлы</string>
     <string name="details_related_count_label">%1$d тайтлов</string>
@@ -402,7 +403,8 @@
     <string name="settings_external_metadata">Метаданные из агрегатора</string>
     <string name="settings_external_metadata_per_source">Для отдельных источников</string>
     <string name="settings_external_metadata_provider">Источник метаданных</string>
-    <string name="settings_external_metadata_fallback">Пробовать другие агрегаторы</string>
+    <string name="settings_external_metadata_fallback">Распределять загрузку метаданных</string>
+    <string name="settings_external_metadata_fallback_summary">Использует другие агрегаторы, когда так быстрее. Их данные могут отличаться.</string>
     <string name="details_metadata_described">Метаданные из %1$s</string>
     <string name="details_metadata_described_confidence">Метаданные из %1$s · совпадение %2$d%%</string>
     <string name="details_metadata_described_manual">Метаданные из %1$s · выбрано вручную</string>

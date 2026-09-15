@@ -65,6 +65,7 @@ class OfflineTitleMetadataRepository(context: Context) {
             put("nextEpisodeAt", anime.nextEpisodeAt)
             put("posterUrl", anime.posterUrl)
             put("posterFallbackUrl", anime.posterFallbackUrl)
+            put("bannerUrl", anime.bannerUrl)
             put("description", anime.description)
             put("genres", JSONArray(anime.genres))
             put("alternativeTitles", JSONArray(anime.alternativeTitles))
@@ -125,6 +126,7 @@ class OfflineTitleMetadataRepository(context: Context) {
             nextEpisodeAt = json.optLong("nextEpisodeAt").takeIf { it > 0L },
             posterUrl = json.optString("posterUrl").ifBlank { null },
             posterFallbackUrl = json.optString("posterFallbackUrl").ifBlank { null },
+            bannerUrl = json.optString("bannerUrl").ifBlank { null },
             description = json.optString("description").ifBlank { null },
             genres = json.optJSONArray("genres").toStringList(),
             alternativeTitles = json.optJSONArray("alternativeTitles").toStringList(),

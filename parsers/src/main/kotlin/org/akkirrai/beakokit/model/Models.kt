@@ -14,6 +14,8 @@ data class AnimeTitle(
     val type: String? = null,
     val episodeCount: Int? = null,
     val posterUrl: String? = null,
+    /** Wide artwork for a title header. Unlike [posterUrl], this is never used on catalog cards. */
+    val bannerUrl: String? = null,
     val status: String? = null,
     val description: String? = null,
     /** Unix timestamp in seconds for the next scheduled episode, when the source provides one. */

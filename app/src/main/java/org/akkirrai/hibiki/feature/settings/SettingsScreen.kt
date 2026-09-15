@@ -593,6 +593,7 @@ private fun ExternalMetadataSheet(
                             1 -> SettingsSwitchItem(
                                 icon = Icons.Outlined.SwapHoriz,
                                 title = stringResource(R.string.settings_external_metadata_fallback),
+                                description = stringResource(R.string.settings_external_metadata_fallback_summary),
                                 checked = preferences.externalMetadataFallback,
                                 shape = shape,
                                 onCheckedChange = appPreferences::setExternalMetadataFallback,
@@ -792,6 +793,7 @@ private fun SettingsSliderItem(
 private fun SettingsSwitchItem(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     title: String,
+    description: String? = null,
     checked: Boolean,
     shape: Shape,
     onCheckedChange: (Boolean) -> Unit,
@@ -818,11 +820,20 @@ private fun SettingsSwitchItem(
             )
         },
     ) {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.titleSmall,
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.9f),
-        )
+        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.9f),
+            )
+            description?.let {
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
     }
 }
 

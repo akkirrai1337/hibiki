@@ -173,6 +173,7 @@
     <string name="details_source_material_game">Гра</string>
     <string name="details_source_material_original">Оригінал</string>
     <string name="details_related">Пов’язані аніме</string>
+    <string name="details_franchise">Франшиза</string>
     <string name="details_similar">Схожі</string>
     <string name="details_related_titles">Пов’язані аніме</string>
     <string name="details_related_count_label">Аніме: %1$d</string>
@@ -396,7 +397,8 @@
     <string name="settings_external_metadata">Метадані з агрегатора</string>
     <string name="settings_external_metadata_per_source">Для окремих джерел</string>
     <string name="settings_external_metadata_provider">Джерело метаданих</string>
-    <string name="settings_external_metadata_fallback">Пробувати інші агрегатори</string>
+    <string name="settings_external_metadata_fallback">Розподіляти завантаження метаданих</string>
+    <string name="settings_external_metadata_fallback_summary">Використовує інші агрегатори, коли так швидше. Їхні дані можуть відрізнятися.</string>
     <string name="details_metadata_described">Метадані з %1$s</string>
     <string name="details_metadata_described_confidence">Метадані з %1$s · збіг %2$d%%</string>
     <string name="details_metadata_described_manual">Метадані з %1$s · вибрано вручну</string>

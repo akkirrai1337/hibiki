@@ -88,7 +88,25 @@ data class ExternalMetadata(
     /** Unix seconds, matching [AnimeTitle.nextEpisodeAt]. MAL publishes no such timestamp, so a
      * title described from MAL keeps whatever countdown its source reported. */
     val nextEpisodeAt: Long? = null,
+    /** Franchise entries owned by an aggregator. Their ids are intentionally not merged into a
+     * source title's related lists: the app resolves them to the selected source only on tap. */
+    val franchise: List<ExternalMetadataRelation> = emptyList(),
+    /** Distinguishes an entry with no franchise links from a lightweight list/search entry that
+     * has not fetched its one-hop relation graph yet. */
+    val franchiseLoaded: Boolean = false,
     val isAdult: Boolean = false,
+)
+
+@Serializable
+data class ExternalMetadataRelation(
+    val externalId: Int,
+    val title: String,
+    val posterUrl: String? = null,
+    val type: String? = null,
+    val year: Int? = null,
+    val episodeCount: Int? = null,
+    val status: String? = null,
+    val relationLabel: String? = null,
 )
 
 /** The user's half of the decision (the source's half is its manifest's `useExternalMetadata`). */
@@ -98,8 +116,9 @@ data class ExternalMetadataPreferences(
     val overrides: Map<String, Boolean> = emptyMap(),
     val provider: MetadataProviderId = MetadataProviderId.ANILIST,
     /** Whether the other providers are tried when the preferred one has nothing or cannot be
-     * reached. Both APIs have outages, and a screen that quietly falls back still looks right. */
-    val fallbackEnabled: Boolean = true,
+     * reached. Background cards also distribute across those providers for throughput, at the
+     * cost of provider-specific fields such as covers and airing times differing per title. */
+    val fallbackEnabled: Boolean = false,
 )
 
 /**
@@ -532,6 +551,7 @@ fun mergeExternalMetadata(anime: AnimeTitle, external: ExternalMetadata?): Anime
     return anime.copy(
         description = preferExternal(external.description, anime.description),
         posterUrl = preferExternal(external.posterUrl, anime.posterUrl),
+        bannerUrl = preferExternal(external.bannerUrl, anime.bannerUrl),
         genres = preferExternal(external.genres, anime.genres),
         studios = preferExternal(external.studios, anime.studios),
         year = preferExternal(external.year, anime.year),

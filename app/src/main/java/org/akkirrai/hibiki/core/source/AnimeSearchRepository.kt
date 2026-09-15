@@ -28,6 +28,7 @@ import org.akkirrai.beakokit.metadata.ExternalMetadataService
 import org.akkirrai.beakokit.metadata.mergeExternalMetadata
 import org.akkirrai.beakokit.metadata.metadataProviderOrder
 import org.akkirrai.hibiki.core.metadata.RoomExternalMetadataStore
+import org.akkirrai.hibiki.core.metadata.externalEntryId
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
@@ -95,6 +96,9 @@ class AnimeSearchRepository(
     /** Related titles described after their details page was returned - see [warmRelatedAnime].
      * Apply with [withRelatedMetadata]. */
     val relatedMetadata = _relatedMetadata.asStateFlow()
+    private val _aggregatorFranchiseMetadata = MutableStateFlow<Map<String, List<RelatedAnime>>>(emptyMap())
+    /** AniList franchise strips fetched after the details page's first paint. */
+    val aggregatorFranchiseMetadata = _aggregatorFranchiseMetadata.asStateFlow()
     private val detailsRequestSlots = Semaphore(MAX_CONCURRENT_DETAILS_REQUESTS)
     private val cardMatchSlots = Semaphore(MAX_CONCURRENT_CARD_MATCHES)
     private val relatedAnimeMatchSlots = Semaphore(MAX_CONCURRENT_CARD_MATCHES)
@@ -294,6 +298,13 @@ class AnimeSearchRepository(
                         }
                     val described = describe(source, title)
                     val order = providerOrderFor(source)
+                    // An AniList franchise is a list of provider entries, not source ids. Keep it
+                    // beside source-owned relations so the UI can resolve an item lazily on tap.
+                    val aggregatorFranchise = metadataService
+                        ?.cachedMetadataFor(title.id, order)
+                        ?.takeIf { it.provider == MetadataProviderId.ANILIST }
+                        ?.toAggregatorFranchiseAnime()
+                        .orEmpty()
                     val related = listOf(described.relatedAnime, described.franchiseAnime, described.similarAnime)
                         .flatten()
                         .distinctBy(RelatedAnimeTitle::id)
@@ -309,6 +320,7 @@ class AnimeSearchRepository(
                         preferEnglish = preferEnglish(),
                         fallback = fallback,
                         trailer = trailer ?: fallback.trailer,
+                        aggregatorFranchiseAnime = aggregatorFranchise,
                     )
 
                     detailsCache[cacheKey] = CachedAnime(
@@ -317,6 +329,7 @@ class AnimeSearchRepository(
                     )
                     trimOldestEntries(detailsCache, MAX_DETAILS_CACHE_ENTRIES) { it.cachedAt }
                     warmRelatedAnime(order, related.filterNot { it.id in cachedRelated }, cacheKey)
+                    warmAggregatorFranchise(title, order, cacheKey)
                     anime
                 }
             }
@@ -334,6 +347,7 @@ class AnimeSearchRepository(
         _cardMetadata.value = emptyMap()
         _pendingCardMetadata.value = emptySet()
         _relatedMetadata.value = emptyMap()
+        _aggregatorFranchiseMetadata.value = emptyMap()
     }
 
     fun close() {
@@ -342,6 +356,7 @@ class AnimeSearchRepository(
         pendingCardMatches.clear()
         _cardMetadata.value = emptyMap()
         _relatedMetadata.value = emptyMap()
+        _aggregatorFranchiseMetadata.value = emptyMap()
         _pendingCardMetadata.value = emptySet()
         metadataScope.cancel()
         ownedMetadataClient?.close()
@@ -353,6 +368,7 @@ class AnimeSearchRepository(
         preferEnglish: Boolean,
         fallback: Anime? = null,
         trailer: AnimeTrailer? = null,
+        aggregatorFranchiseAnime: List<RelatedAnime> = emptyList(),
     ): Anime {
         val posterUrl = posterUrl ?: fallback?.posterUrl
         val sourcePosterFallbackUrl = posterFallbackUrl
@@ -375,6 +391,7 @@ class AnimeSearchRepository(
             posterUrl = posterUrl,
             posterFallbackUrl = sourcePosterFallbackUrl ?: fallback?.posterFallbackUrl
                 ?.takeIf { it.isNotBlank() && it != posterUrl },
+            bannerUrl = bannerUrl ?: fallback?.bannerUrl,
             description = description ?: fallback?.description,
             genres = genres.ifEmpty { fallback?.genres.orEmpty() },
             alternativeTitles = buildAlternativeTitles(fallback?.alternativeTitles.orEmpty()),
@@ -395,6 +412,7 @@ class AnimeSearchRepository(
                 .ifEmpty { fallback?.similarAnime.orEmpty() },
             franchiseAnime = franchiseAnime.map(RelatedAnimeTitleMapper::map)
                 .ifEmpty { fallback?.franchiseAnime.orEmpty() },
+            aggregatorFranchiseAnime = aggregatorFranchiseAnime.ifEmpty { fallback?.aggregatorFranchiseAnime.orEmpty() },
             relatedAnime = relatedAnime.map(RelatedAnimeTitleMapper::map)
                 .ifEmpty { fallback?.relatedAnime.orEmpty() },
             releaseDate = formatReleaseDate(preferEnglish) ?: fallback?.releaseDate,
@@ -720,6 +738,42 @@ class AnimeSearchRepository(
         status = external.status ?: status,
     )
 
+    private fun ExternalMetadata.toAggregatorFranchiseAnime(): List<RelatedAnime> =
+        franchise.map { relation ->
+            RelatedAnime(
+                id = externalEntryId(MetadataProviderId.ANILIST, relation.externalId),
+                title = relation.title,
+                posterUrl = relation.posterUrl,
+                type = relation.type,
+                year = relation.year,
+                episodeCount = relation.episodeCount,
+                status = relation.status,
+                relationLabel = relation.relationLabel,
+            )
+        }
+
+    /** This optional decoration must never delay a title's source details or playable episodes. */
+    private fun warmAggregatorFranchise(
+        title: AnimeTitle,
+        order: List<MetadataProviderId>,
+        detailsCacheKey: String,
+    ) {
+        val service = metadataService ?: return
+        if (MetadataProviderId.ANILIST !in order) return
+        metadataScope.launch(MetadataPriority.Prefetch) {
+            val external = runCatching { service.franchiseFor(title, order) }
+                .onFailure { AppLogger.w(TAG, "warmAggregatorFranchise: metadata lookup failed for ${title.id}", it) }
+                .getOrNull()
+                ?.takeIf { it.provider == MetadataProviderId.ANILIST && it.franchiseLoaded }
+                ?: return@launch
+            val franchise = external.toAggregatorFranchiseAnime()
+            _aggregatorFranchiseMetadata.update { known -> known + (title.id to franchise) }
+            detailsCache.computeIfPresent(detailsCacheKey) { _, cached ->
+                cached.copy(anime = cached.anime.copy(aggregatorFranchiseAnime = franchise))
+            }
+        }
+    }
+
     /** Whether titles should read in English for the current language setting - the catalog asks so
      * an aggregator entry is named the same way a source title on the same screen would be. */
     fun prefersEnglishTitles(): Boolean = preferEnglish()
@@ -928,3 +982,7 @@ fun Anime.withRelatedMetadata(overlay: Map<String, RelatedAnime>): Anime {
         similarAnime = similarAnime.overlaid(),
     )
 }
+
+/** Applies the lazy AniList franchise response for this source title, if it has arrived. */
+fun Anime.withAggregatorFranchiseMetadata(overlay: Map<String, List<RelatedAnime>>): Anime =
+    overlay[id]?.let { copy(aggregatorFranchiseAnime = it) } ?: this

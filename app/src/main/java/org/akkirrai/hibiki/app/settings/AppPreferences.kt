@@ -70,9 +70,9 @@ data class AppPreferencesState(
      * weak half of what it returns, so the better screen is the right default. */
     val externalMetadataEnabled: Boolean = false,
     val externalMetadataProvider: MetadataProviderId = MetadataProviderId.ANILIST,
-    /** Whether the other aggregators are tried when the preferred one has nothing or cannot be
-     * reached. Not decorative: AniList disabled its public API outright while this was written. */
-    val externalMetadataFallback: Boolean = true,
+    /** Whether background card lookups may use other aggregators when their queues are freer.
+     * This speeds a page up, but each service can disagree about covers, scores and airing dates. */
+    val externalMetadataFallback: Boolean = false,
     /** Whether the details screen prints which provider entry describes a title. Off by default: it
      * answers a question most people never ask, and turning it on is also what makes the manual
      * rebind reachable, since that line is what opens it. */
@@ -472,7 +472,7 @@ class AppPreferences(context: Context) {
                 externalMetadataEnabled = prefs.getBoolean(KEY_EXTERNAL_METADATA_ENABLED, false),
                 externalMetadataProvider = MetadataProviderId.fromId(prefs.getString(KEY_EXTERNAL_METADATA_PROVIDER, null))
                     ?: MetadataProviderId.ANILIST,
-                externalMetadataFallback = prefs.getBoolean(KEY_EXTERNAL_METADATA_FALLBACK, true),
+                externalMetadataFallback = prefs.getBoolean(KEY_EXTERNAL_METADATA_FALLBACK, false),
                 externalMetadataShowBinding = prefs.getBoolean(KEY_EXTERNAL_METADATA_SHOW_BINDING, false),
                 externalMetadataOverrides = readExternalMetadataOverrides(prefs),
                 sourceLanguageFilterSeeded = prefs.getBoolean(KEY_SOURCE_LANGUAGE_FILTER_SEEDED, false),
