@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.NotificationsActive
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
@@ -58,13 +59,16 @@ import org.akkirrai.hibiki.feature.sources.SourceExtensionsScreen
 private enum class OnboardingStep {
     WELCOME,
     SOURCES,
+    METADATA,
     NOTIFICATIONS,
 }
 
 @Composable
 fun FirstLaunchOnboarding(
     notificationPermissionState: NotificationPermissionState,
+    externalMetadataEnabled: Boolean,
     onRequestNotificationPermission: () -> Unit,
+    onExternalMetadataEnabledChanged: (Boolean) -> Unit,
     onComplete: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -76,7 +80,8 @@ fun FirstLaunchOnboarding(
         stepName = when (step) {
             OnboardingStep.WELCOME -> OnboardingStep.WELCOME.name
             OnboardingStep.SOURCES -> OnboardingStep.WELCOME.name
-            OnboardingStep.NOTIFICATIONS -> OnboardingStep.SOURCES.name
+            OnboardingStep.METADATA -> OnboardingStep.SOURCES.name
+            OnboardingStep.NOTIFICATIONS -> OnboardingStep.METADATA.name
         }
     }
 
@@ -120,6 +125,12 @@ fun FirstLaunchOnboarding(
                         modifier = Modifier.fillMaxSize(),
                     )
 
+                    OnboardingStep.METADATA -> MetadataStep(
+                        enabled = externalMetadataEnabled,
+                        onEnabledChanged = onExternalMetadataEnabledChanged,
+                        modifier = Modifier.fillMaxSize(),
+                    )
+
                     OnboardingStep.NOTIFICATIONS -> NotificationsStep(
                         permissionState = notificationPermissionState,
                         onRequestPermission = onRequestNotificationPermission,
@@ -139,13 +150,15 @@ fun FirstLaunchOnboarding(
                     stepName = when (step) {
                         OnboardingStep.WELCOME -> OnboardingStep.WELCOME.name
                         OnboardingStep.SOURCES -> OnboardingStep.WELCOME.name
-                        OnboardingStep.NOTIFICATIONS -> OnboardingStep.SOURCES.name
+                        OnboardingStep.METADATA -> OnboardingStep.SOURCES.name
+                        OnboardingStep.NOTIFICATIONS -> OnboardingStep.METADATA.name
                     }
                 },
                 onNext = {
                     when (step) {
                         OnboardingStep.WELCOME -> stepName = OnboardingStep.SOURCES.name
-                        OnboardingStep.SOURCES -> stepName = OnboardingStep.NOTIFICATIONS.name
+                        OnboardingStep.SOURCES -> stepName = OnboardingStep.METADATA.name
+                        OnboardingStep.METADATA -> stepName = OnboardingStep.NOTIFICATIONS.name
                         OnboardingStep.NOTIFICATIONS -> onComplete()
                         }
                 },
@@ -188,6 +201,51 @@ private fun SourcesStep(
                 onboarding = true,
                 onInstallationActiveChanged = onInstallationActiveChanged,
                 bottomContentPadding = 12.dp,
+            )
+        }
+    }
+}
+
+@Composable
+private fun MetadataStep(
+    enabled: Boolean,
+    onEnabledChanged: (Boolean) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        Icon(
+            imageVector = Icons.Rounded.AutoAwesome,
+            contentDescription = null,
+            modifier = Modifier.size(112.dp),
+            tint = MaterialTheme.colorScheme.primary,
+        )
+        Spacer(Modifier.height(32.dp))
+        Text(
+            text = stringResource(R.string.onboarding_metadata_title),
+            style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center,
+        )
+        Spacer(Modifier.height(14.dp))
+        Text(
+            text = stringResource(R.string.onboarding_metadata_description),
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+        )
+        Spacer(Modifier.height(32.dp))
+        Button(onClick = { onEnabledChanged(!enabled) }) {
+            Text(
+                stringResource(
+                    if (enabled) R.string.onboarding_metadata_disable
+                    else R.string.onboarding_metadata_enable,
+                ),
             )
         }
     }

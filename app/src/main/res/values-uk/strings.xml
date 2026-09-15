@@ -469,6 +469,10 @@
     <string name="onboarding_source_language_ru">Вміст російською мовою</string>
     <string name="onboarding_source_language_en">Вміст англійською мовою</string>
     <string name="onboarding_source_languages_ru_en">Вміст російською та англійською мовами</string>
+    <string name="onboarding_metadata_title">Доповнити інформацію про тайтли</string>
+    <string name="onboarding_metadata_description">Додадуть описи, оцінки, жанри та кращі обкладинки, коли джерело їх не повертає. Налаштування можна змінити будь-коли.</string>
+    <string name="onboarding_metadata_enable">Використовувати агрегатори</string>
+    <string name="onboarding_metadata_disable">Вимкнути агрегатори</string>
     <string name="onboarding_notifications_title">Сповіщення</string>
     <string name="onboarding_notifications_description">Отримуйте сповіщення про завершення завантажень.</string>
     <string name="onboarding_notifications_allow">Дозволити сповіщення</string>

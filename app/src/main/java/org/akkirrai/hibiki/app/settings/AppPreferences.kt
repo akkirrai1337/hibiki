@@ -68,7 +68,7 @@ data class AppPreferencesState(
     /** Whether a source that declares `useExternalMetadata` gets its titles described by an
      * aggregator. On by default: a source only asks for this because its own descriptions are the
      * weak half of what it returns, so the better screen is the right default. */
-    val externalMetadataEnabled: Boolean = true,
+    val externalMetadataEnabled: Boolean = false,
     val externalMetadataProvider: MetadataProviderId = MetadataProviderId.ANILIST,
     /** Whether the other aggregators are tried when the preferred one has nothing or cannot be
      * reached. Not decorative: AniList disabled its public API outright while this was written. */
@@ -469,7 +469,7 @@ class AppPreferences(context: Context) {
                     .orEmpty()
                     .toSet(),
                 hideNsfwSources = prefs.getBoolean(KEY_HIDE_NSFW_SOURCES, false),
-                externalMetadataEnabled = prefs.getBoolean(KEY_EXTERNAL_METADATA_ENABLED, true),
+                externalMetadataEnabled = prefs.getBoolean(KEY_EXTERNAL_METADATA_ENABLED, false),
                 externalMetadataProvider = MetadataProviderId.fromId(prefs.getString(KEY_EXTERNAL_METADATA_PROVIDER, null))
                     ?: MetadataProviderId.ANILIST,
                 externalMetadataFallback = prefs.getBoolean(KEY_EXTERNAL_METADATA_FALLBACK, true),

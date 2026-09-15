@@ -475,6 +475,10 @@
     <string name="onboarding_source_language_ru">Контент на русском языке</string>
     <string name="onboarding_source_language_en">Контент на английском языке</string>
     <string name="onboarding_source_languages_ru_en">Контент на русском и английском языках</string>
+    <string name="onboarding_metadata_title">Дополнить информацию о тайтлах</string>
+    <string name="onboarding_metadata_description">Добавят описания, оценки, жанры и лучшие обложки, когда источник их не отдаёт. Настройку можно изменить в любой момент.</string>
+    <string name="onboarding_metadata_enable">Использовать агрегаторы</string>
+    <string name="onboarding_metadata_disable">Выключить агрегаторы</string>
     <string name="onboarding_notifications_title">Уведомления</string>
     <string name="onboarding_notifications_description">Получайте уведомления после завершения загрузок.</string>
     <string name="onboarding_notifications_allow">Разрешить уведомления</string>

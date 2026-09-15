@@ -477,6 +477,10 @@
     <string name="onboarding_source_language_ru">Russian-language content</string>
     <string name="onboarding_source_language_en">English-language content</string>
     <string name="onboarding_source_languages_ru_en">Russian and English content</string>
+    <string name="onboarding_metadata_title">Enrich title information</string>
+    <string name="onboarding_metadata_description">Add descriptions, ratings, genres, and better covers when a source is missing them. You can change this anytime in Settings.</string>
+    <string name="onboarding_metadata_enable">Use metadata aggregators</string>
+    <string name="onboarding_metadata_disable">Turn off metadata aggregators</string>
     <string name="onboarding_notifications_title">Notifications</string>
     <string name="onboarding_notifications_description">Get notified when downloads are complete.</string>
     <string name="onboarding_notifications_allow">Allow notifications</string>
