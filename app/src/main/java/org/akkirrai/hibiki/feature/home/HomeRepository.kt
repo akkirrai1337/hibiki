@@ -120,6 +120,7 @@ class HomeRepository(
                 ),
                 allowEmptyQuery = true,
                 forceRefresh = forceRefresh,
+                cardMetadataInitialDelayMillis = HOME_METADATA_BATCH_WINDOW_MILLIS,
             )
         }
         AppLogger.d(TAG, "loadHomeState: first catalog page returned ${catalog.size} items")
@@ -234,6 +235,7 @@ class HomeRepository(
                     forceRefresh = forceRefresh,
                     cardMetadataVisibleCount = 0,
                     cardMetadataPrefetchDelayMillis = HOME_BACKGROUND_METADATA_DELAY_MILLIS,
+                    cardMetadataInitialDelayMillis = HOME_METADATA_BATCH_WINDOW_MILLIS,
                 )
             }
                 .onFailure { error -> AppLogger.w(TAG, "Home recent updates are unavailable: ${error.message}") }
@@ -273,6 +275,7 @@ class HomeRepository(
                     forceRefresh = forceRefresh,
                     cardMetadataVisibleCount = 0,
                     cardMetadataPrefetchDelayMillis = HOME_BACKGROUND_METADATA_DELAY_MILLIS,
+                    cardMetadataInitialDelayMillis = HOME_METADATA_BATCH_WINDOW_MILLIS,
                 )
             }
         }.onFailure { error ->
@@ -372,6 +375,7 @@ class HomeRepository(
         forceRefresh: Boolean = false,
         cardMetadataVisibleCount: Int = 6,
         cardMetadataPrefetchDelayMillis: Long = 250L,
+        cardMetadataInitialDelayMillis: Long = 0,
     ): List<Anime> =
         // Home renders only one short row. Parsing the 100-item pagination snapshot here delayed
         // first paint even though 88 entries were immediately discarded; the catalog keeps its
@@ -381,6 +385,7 @@ class HomeRepository(
             forceRefresh = forceRefresh,
             cardMetadataVisibleCount = cardMetadataVisibleCount,
             cardMetadataPrefetchDelayMillis = cardMetadataPrefetchDelayMillis,
+            cardMetadataInitialDelayMillis = cardMetadataInitialDelayMillis,
         )
 
     private suspend fun loadRecentlyUpdatedCatalog(forceRefresh: Boolean = false): List<Anime> {
@@ -505,6 +510,9 @@ class HomeRepository(
         const val HOME_FULL_SECTION_LIMIT = 100
         const val HOME_TRENDING_WINDOW_SIZE = 24
         const val HOME_FIRST_PAINT_WINDOW_SIZE = 8
+        // The first source page, remaining catalog and latest row normally arrive within this
+        // window. Their metadata can then fill AniList batches instead of starting three waves.
+        const val HOME_METADATA_BATCH_WINDOW_MILLIS = 300L
         const val HOME_BACKGROUND_METADATA_DELAY_MILLIS = 2_000L
         const val HOME_TRENDING_MAX_OFFSET_EXCLUSIVE = 201
         const val AGGREGATOR_TOP_N = 100

@@ -469,7 +469,12 @@ class ExternalMetadataService(
             // Null means the request itself failed - unreachable, rate-limited, or (as AniList was
             // while this was written) disabled outright. Give up on this provider and leave no
             // record: a remembered "no match" is a week-long statement about the *title*.
-            val results = searchProvider(provider, query)
+            val results = if (provider == MetadataProviderId.ANILIST) {
+                anilist.searchCandidates(query)
+                    ?.map { candidate -> ScoredEntry(candidate, ExternalMetadata(provider, candidate.externalId)) }
+            } else {
+                searchProvider(provider, query)
+            }
             if (results == null) {
                 log("liveSearchMetadataFor: '$label' provider=$provider search request failed for '$query' - leaving no record")
                 return null
@@ -490,7 +495,13 @@ class ExternalMetadataService(
                 previousCandidateIds = candidateIds
                 continue
             }
-            val found = results.firstOrNull { it.media.externalId == best.externalId }?.media ?: continue
+            // AniList's lightweight search returns only match fields. Fetch the single chosen id
+            // through its own batch lane; the other providers already returned full media.
+            val found = if (provider == MetadataProviderId.ANILIST) {
+                anilist.fetchById(best.externalId) ?: return null
+            } else {
+                results.firstOrNull { it.media.externalId == best.externalId }?.media ?: continue
+            }
             log("liveSearchMetadataFor: '$label' provider=$provider search for '$query' matched externalId=${best.externalId} confidence=${(best.confidence * 100).toInt()}%")
             store.writeMedia(found, nowMillis())
             store.writeMatch(

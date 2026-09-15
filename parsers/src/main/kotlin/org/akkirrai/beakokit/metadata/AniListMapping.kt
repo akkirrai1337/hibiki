@@ -99,6 +99,17 @@ const val ANILIST_MEDIA_FIELDS = """
     nextAiringEpisode { airingAt }
 """
 
+/** Enough to score a name-search candidate, but deliberately no artwork, synopsis or statistics.
+ * The winning id is fetched through the normal bulk-by-id query afterwards. */
+const val ANILIST_MATCH_FIELDS = """
+    id
+    title { romaji english native }
+    synonyms
+    seasonYear
+    startDate { year }
+    format
+"""
+
 /** Only the details screen needs the one-hop franchise graph. Keeping it out of aliased list
  * searches preserves their small, safe GraphQL complexity budget. */
 const val ANILIST_DETAILS_MEDIA_FIELDS = """

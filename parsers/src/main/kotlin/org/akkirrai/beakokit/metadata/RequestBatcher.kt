@@ -5,6 +5,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /** What one key got out of a batched request. */
@@ -32,6 +33,8 @@ internal sealed interface BatchOutcome<out V> {
 internal class RequestBatcher<K, V : Any>(
     private val maxBatch: Int,
     priority: MetadataPriority,
+    /** A short first-window delay lets a screen's concurrently launched card lookups arrive. */
+    private val collectionDelayMillis: Long = 0,
     private val execute: suspend (takeKeys: () -> List<K>) -> Map<K, V>?,
 ) {
     private class Waiter<K, V>(val key: K) {
@@ -59,6 +62,9 @@ internal class RequestBatcher<K, V : Any>(
     }
 
     private suspend fun drain() {
+        // Only wait once, when an idle lane becomes active. Later batches already had an entire
+        // network request in which to accumulate, so delaying those merely slows the backlog.
+        if (collectionDelayMillis > 0) delay(collectionDelayMillis)
         while (true) {
             var batch: List<Waiter<K, V>> = emptyList()
             val results = runCatching {
@@ -91,11 +97,27 @@ internal class RequestBatcher<K, V : Any>(
  * speculative prefetch. */
 internal class BatchLanes<K, V : Any>(
     maxBatch: Int,
+    /** Kept out of foreground lookups, such as a title page opened by the user. */
+    backgroundCollectionDelayMillis: Long = 0,
     execute: suspend (takeKeys: () -> List<K>) -> Map<K, V>?,
 ) {
-    private val foreground = RequestBatcher(maxBatch, MetadataPriority.Foreground, execute)
-    private val visible = RequestBatcher(maxBatch, MetadataPriority.Visible, execute)
-    private val prefetch = RequestBatcher(maxBatch, MetadataPriority.Prefetch, execute)
+    private val foreground = RequestBatcher(
+        maxBatch = maxBatch,
+        priority = MetadataPriority.Foreground,
+        execute = execute,
+    )
+    private val visible = RequestBatcher(
+        maxBatch = maxBatch,
+        priority = MetadataPriority.Visible,
+        collectionDelayMillis = backgroundCollectionDelayMillis,
+        execute = execute,
+    )
+    private val prefetch = RequestBatcher(
+        maxBatch = maxBatch,
+        priority = MetadataPriority.Prefetch,
+        collectionDelayMillis = backgroundCollectionDelayMillis,
+        execute = execute,
+    )
 
     suspend fun load(key: K): BatchOutcome<V> {
         val lane = when (currentCoroutineContext()[MetadataPriority]?.workClass) {

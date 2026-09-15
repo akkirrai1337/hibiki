@@ -101,6 +101,10 @@ class AnimeSearchRepository(
     val aggregatorFranchiseMetadata = _aggregatorFranchiseMetadata.asStateFlow()
     private val detailsRequestSlots = Semaphore(MAX_CONCURRENT_DETAILS_REQUESTS)
     private val cardMatchSlots = Semaphore(MAX_CONCURRENT_CARD_MATCHES)
+    // AniList turns independent card searches into one GraphQL request. Let a whole alias batch
+    // reach it together when it is the sole selected provider; the normal cap still protects
+    // fallback mode, where those lookups may fan out to non-batching services.
+    private val aniListCardMatchSlots = Semaphore(MAX_ANILIST_CONCURRENT_CARD_MATCHES)
     private val relatedAnimeMatchSlots = Semaphore(MAX_CONCURRENT_CARD_MATCHES)
 
     init {
@@ -130,6 +134,9 @@ class AnimeSearchRepository(
         forceRefresh: Boolean = false,
         cardMetadataVisibleCount: Int = VISIBLE_CARD_MATCH_COUNT,
         cardMetadataPrefetchDelayMillis: Long = CARD_METADATA_PREFETCH_HEAD_START_MILLIS,
+        /** Lets a caller that obtains several source lists at once coalesce their background
+         * metadata work before any card enters a provider queue. */
+        cardMetadataInitialDelayMillis: Long = 0,
     ): List<Anime> {
         val normalizedQuery = request.query.trim()
         val hasFilters = request.typeAliases.isNotEmpty() ||
@@ -175,6 +182,7 @@ class AnimeSearchRepository(
             titles = sourceTitles,
             cardMetadataVisibleCount = cardMetadataVisibleCount,
             cardMetadataPrefetchDelayMillis = cardMetadataPrefetchDelayMillis,
+            cardMetadataInitialDelayMillis = cardMetadataInitialDelayMillis,
         )
             .map { title ->
                 val anime = getCachedDetails(detailsCacheKey(title.id))
@@ -231,6 +239,7 @@ class AnimeSearchRepository(
         forceRefresh: Boolean = false,
         cardMetadataVisibleCount: Int = VISIBLE_CARD_MATCH_COUNT,
         cardMetadataPrefetchDelayMillis: Long = CARD_METADATA_PREFETCH_HEAD_START_MILLIS,
+        cardMetadataInitialDelayMillis: Long = 0,
     ): List<Anime> {
         val cacheKey = "latest:${selectedSourceId().value}:$limit:${languageKey()}"
         if (!forceRefresh) getCachedSearch(cacheKey)?.let { return it }
@@ -244,6 +253,7 @@ class AnimeSearchRepository(
             titles = source.latest(limit),
             cardMetadataVisibleCount = cardMetadataVisibleCount,
             cardMetadataPrefetchDelayMillis = cardMetadataPrefetchDelayMillis,
+            cardMetadataInitialDelayMillis = cardMetadataInitialDelayMillis,
         ).map { title ->
             val anime = getCachedDetails(detailsCacheKey(title.id)) ?: title.toAnime(preferEnglish = preferEnglish)
             // See search(): a details-cache hit carries the aggregator-merged title, but this list
@@ -554,6 +564,7 @@ class AnimeSearchRepository(
         titles: List<AnimeTitle>,
         cardMetadataVisibleCount: Int = VISIBLE_CARD_MATCH_COUNT,
         cardMetadataPrefetchDelayMillis: Long = CARD_METADATA_PREFETCH_HEAD_START_MILLIS,
+        cardMetadataInitialDelayMillis: Long = 0,
     ): List<AnimeTitle> {
         val service = metadataService ?: return titles
         val order = providerOrderFor(source)
@@ -586,6 +597,7 @@ class AnimeSearchRepository(
                     titles = it,
                     visibleCount = cardMetadataVisibleCount,
                     prefetchDelayMillis = cardMetadataPrefetchDelayMillis,
+                    initialDelayMillis = cardMetadataInitialDelayMillis,
                 )
             }
         return titles.mapIndexed { index, title ->
@@ -608,6 +620,7 @@ class AnimeSearchRepository(
         titles: List<AnimeTitle>,
         visibleCount: Int,
         prefetchDelayMillis: Long,
+        initialDelayMillis: Long,
     ) {
         // Claim IDs before launching so duplicate pages/searches cannot create a second lookup
         // or leave a permanent loading indicator behind.
@@ -616,9 +629,14 @@ class AnimeSearchRepository(
         }
         if (titlesToLoad.isEmpty()) return
         _pendingCardMetadata.update { pending -> pending + titlesToLoad.map(AnimeTitle::id) }
+        val matchSlots = if (order == listOf(MetadataProviderId.ANILIST)) {
+            aniListCardMatchSlots
+        } else {
+            cardMatchSlots
+        }
         // Give the first row a short uncontended head start. Previously every title in a 24-card
         // home response entered the visible provider lane at once: cards the user could not yet
-        // see occupied the same five match slots and competed for the same provider queues.
+        // see occupied the same limited slots and competed for the same provider queues.
         // The remainder still enriches automatically, just as prefetch work after the first paint.
         for ((index, title) in titlesToLoad.withIndex()) {
             val priority = if (index < visibleCount) {
@@ -627,8 +645,9 @@ class AnimeSearchRepository(
                 MetadataPriority.Prefetch
             }
             metadataScope.launch(priority) {
+                if (initialDelayMillis > 0) delay(initialDelayMillis)
                 if (index >= visibleCount) delay(prefetchDelayMillis)
-                cardMatchSlots.withPermit {
+                matchSlots.withPermit {
                     try {
                         // Background priority: the service also sends each live search to whichever
                         // provider's queue frees up first, spreading a page across all of them.
@@ -953,6 +972,7 @@ class AnimeSearchRepository(
         // Card matches are one lookup against providers already picked for this source, not the
         // full details page, so more of them can run at once without hammering any single provider.
         const val MAX_CONCURRENT_CARD_MATCHES = 5
+        const val MAX_ANILIST_CONCURRENT_CARD_MATCHES = 12
         const val VISIBLE_CARD_MATCH_COUNT = 6
         const val CARD_METADATA_PREFETCH_HEAD_START_MILLIS = 250L
         const val MAX_SEARCH_CACHE_ENTRIES = 100

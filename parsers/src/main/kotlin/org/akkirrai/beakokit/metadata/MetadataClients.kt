@@ -53,7 +53,13 @@ class AniListClient(private val client: HttpClient) {
      * AniList caps a query's complexity at 500, and each aliased page of ten costs about 28 - 12
      * keeps well clear of it.
      */
-    private val searches = BatchLanes<String, List<ScoredEntry>>(MAX_SEARCH_ALIASES) execute@{ takeKeys ->
+    // Home-card work launches together, but can reach this client over a few scheduler turns.
+    // Let each background lane collect for 40 ms so its first request carries one useful GraphQL
+    // batch. A deliberate title-page search remains immediate in the foreground lane.
+    private val searches = BatchLanes<String, List<ScoredEntry>>(
+        maxBatch = MAX_SEARCH_ALIASES,
+        backgroundCollectionDelayMillis = BACKGROUND_BATCH_WINDOW_MILLIS,
+    ) execute@{ takeKeys ->
         var names = emptyList<String>()
         val pages = postGraphql(
             body = {
@@ -75,7 +81,35 @@ class AniListClient(private val client: HttpClient) {
         }.toMap()
     }
 
-    private val byId = BatchLanes<Int, ExternalMetadata>(MAX_IDS_PER_REQUEST) execute@{ takeKeys ->
+    /** Lightweight automatic-match lookup. Full media is fetched only after the matcher chooses
+     * one id, avoiding descriptions, banners and covers for the nine losing candidates. */
+    private val candidateSearches = BatchLanes<String, List<MatchCandidate>>(
+        maxBatch = MAX_SEARCH_ALIASES,
+        backgroundCollectionDelayMillis = BACKGROUND_BATCH_WINDOW_MILLIS,
+    ) execute@{ takeKeys ->
+        var names = emptyList<String>()
+        val pages = postGraphql(
+            body = {
+                names = takeKeys()
+                val variables = names.indices.joinToString { "\$q$it: String" }
+                val selections = names.indices.joinToString(" ") { i ->
+                    "a$i: Page(perPage: 10) { media(search: \$q$i, type: ANIME) { $ANILIST_MATCH_FIELDS } }"
+                }
+                "query ($variables) { $selections }" to buildJsonObject {
+                    names.forEachIndexed { i, name -> put("q$i", name) }
+                }
+            },
+            parse = { it.decode<AniListAliasedResponse>()?.data },
+        ) ?: return@execute null
+        names.withIndex().mapNotNull { (i, name) ->
+            pages["a$i"]?.let { page -> name to page.media.orEmpty().map(AniListMedia::toMatchCandidate) }
+        }.toMap()
+    }
+
+    private val byId = BatchLanes<Int, ExternalMetadata>(
+        maxBatch = MAX_IDS_PER_REQUEST,
+        backgroundCollectionDelayMillis = BACKGROUND_BATCH_WINDOW_MILLIS,
+    ) execute@{ takeKeys ->
         val page = postGraphql(
             body = { BY_ID_QUERY to buildJsonObject { put("ids", JsonArray(takeKeys().map(::JsonPrimitive))) } },
             parse = { it.decode<AniListResponse>()?.data?.page },
@@ -83,7 +117,10 @@ class AniListClient(private val client: HttpClient) {
         page.media.orEmpty().associate { it.id to it.toExternalMetadata() }
     }
 
-    private val byMalId = BatchLanes<Int, ExternalMetadata>(MAX_IDS_PER_REQUEST) execute@{ takeKeys ->
+    private val byMalId = BatchLanes<Int, ExternalMetadata>(
+        maxBatch = MAX_IDS_PER_REQUEST,
+        backgroundCollectionDelayMillis = BACKGROUND_BATCH_WINDOW_MILLIS,
+    ) execute@{ takeKeys ->
         val page = postGraphql(
             body = { BY_MAL_ID_QUERY to buildJsonObject { put("ids", JsonArray(takeKeys().map(::JsonPrimitive))) } },
             parse = { it.decode<AniListResponse>()?.data?.page },
@@ -182,9 +219,17 @@ class AniListClient(private val client: HttpClient) {
         is BatchOutcome.Done -> outcome.value
     }
 
+    /** For automatic source-title matching. Unlike [search], this does not download full media for
+     * every candidate; use [fetchById] for the selected id. */
+    suspend fun searchCandidates(name: String): List<MatchCandidate>? = when (val outcome = candidateSearches.load(name)) {
+        BatchOutcome.Failed -> null
+        is BatchOutcome.Done -> outcome.value
+    }
+
     private companion object {
         const val ENDPOINT = "https://graphql.anilist.co"
         const val MAX_SEARCH_ALIASES = 12
+        const val BACKGROUND_BATCH_WINDOW_MILLIS = 40L
         // AniList's page size cap.
         const val MAX_IDS_PER_REQUEST = 50
         const val DETAILS_BY_ID_QUERY = "query (\$id: Int) { Media(id: \$id, type: ANIME) { $ANILIST_DETAILS_MEDIA_FIELDS } }"
