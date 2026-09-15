@@ -179,6 +179,8 @@ jobs:
           HIBIKI_RELEASE_KEY_PASSWORD: ${{ secrets.HIBIKI_RELEASE_KEY_PASSWORD }}
           # Optional: without it the release reads MAL through Jikan instead of MAL's official API.
           MAL_CLIENT_ID: ${{ secrets.MAL_CLIENT_ID }}
+          # Optional public OAuth identifier for AniList library sync.
+          ANILIST_CLIENT_ID: ${{ secrets.ANILIST_CLIENT_ID }}
         run: ./gradlew :app:assembleRelease
 
       - name: Verify APK signature
