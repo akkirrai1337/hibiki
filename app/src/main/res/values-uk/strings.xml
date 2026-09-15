@@ -253,7 +253,7 @@
     <string name="watch_error_timeout">%1$s: час очікування вичерпано</string>
     <string name="watch_error_open_player_failed">Не вдалося відкрити плеєр</string>
     <string name="watch_error_stream_unavailable">Не вдалося отримати відеопотік</string>
-    <string name="watch_error_no_voiceovers_from_source">YummyAnime не повернув доступних озвучень</string>
+    <string name="watch_error_no_voiceovers_from_source">Джерело не повернуло доступні варіанти перегляду</string>
     <string name="download_notification_channel_name">Завантаження</string>
     <string name="download_notification_channel_description">Завантаження серій для перегляду без інтернету</string>
     <string name="download_notification_active">Завантаження серій: %1$d</string>
