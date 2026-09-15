@@ -62,6 +62,9 @@ android {
         buildConfigField("boolean", "GITHUB_UPDATES_ENABLED", "true")
         // MAL API client id for reading public anime data. Without it MAL is read through Jikan.
         buildConfigField("String", "MAL_CLIENT_ID", "\"${buildSecret("MAL_CLIENT_ID").trim()}\"")
+        // AniList OAuth client id for optional library sync. The mobile implicit flow deliberately
+        // has no client secret, so this public identifier is safe to embed in the app.
+        buildConfigField("String", "ANILIST_CLIENT_ID", "\"${buildSecret("ANILIST_CLIENT_ID").trim()}\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
