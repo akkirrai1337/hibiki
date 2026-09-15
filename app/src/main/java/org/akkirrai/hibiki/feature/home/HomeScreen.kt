@@ -117,7 +117,6 @@ import kotlinx.coroutines.launch
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.core.download.OfflineDownloadRepository
 import org.akkirrai.hibiki.core.design.UiDimens
-import org.akkirrai.hibiki.core.design.component.AppCenteredLoading
 import org.akkirrai.hibiki.core.design.component.AppFilledIconButton
 import org.akkirrai.hibiki.core.design.component.AppFilledIconButtonStyle
 import org.akkirrai.hibiki.core.design.component.AppMessageState
@@ -477,7 +476,45 @@ private fun homeSearchContentTransition(searchActive: Boolean): ContentTransform
 private fun HomeLoadingState(
     modifier: Modifier = Modifier,
 ) {
-    AppCenteredLoading(modifier = modifier)
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .padding(
+                start = UiDimens.ScreenPadding,
+                top = HOME_CONTENT_TOP_PADDING,
+                end = UiDimens.ScreenPadding,
+            ),
+        verticalArrangement = Arrangement.spacedBy(20.dp),
+    ) {
+        // Match the first stable layout on Home so loading reads as incoming content rather than
+        // a blocking state. AppShimmerBlock is shared with title and poster skeletons.
+        AppShimmerBlock(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(240.dp)
+                .clip(RoundedCornerShape(28.dp)),
+        )
+        repeat(HOME_LOADING_CARD_COUNT) {
+            Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                AppShimmerBlock(
+                    modifier = Modifier
+                        .width(112.dp)
+                        .height(168.dp)
+                        .clip(RoundedCornerShape(16.dp)),
+                )
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(top = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    AppShimmerBlock(modifier = Modifier.fillMaxWidth().height(18.dp).clip(CircleShape))
+                    AppShimmerBlock(modifier = Modifier.fillMaxWidth(0.72f).height(18.dp).clip(CircleShape))
+                    AppShimmerBlock(modifier = Modifier.fillMaxWidth(0.42f).height(12.dp).clip(CircleShape))
+                }
+            }
+        }
+    }
 }
 
 @Composable
@@ -1026,6 +1063,7 @@ private fun AnimeImagePlaceholder(
 }
 
 private const val FEATURED_AUTO_ADVANCE_MS = 5000
+private const val HOME_LOADING_CARD_COUNT = 2
 private val HOME_CONTENT_TOP_PADDING = UiDimens.SearchBarTopPadding +
     UiDimens.SearchBarHeight +
     UiDimens.ScreenPadding

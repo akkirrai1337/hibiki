@@ -409,12 +409,13 @@ class HomeViewModel(
                         state.copy(
                             continueAnime = supplements.continueAnime,
                             recentlyUpdated = supplements.recentlyUpdated,
+                            trending = supplements.trending,
                         ).withCardMetadata(repository.cardMetadata.value)
                     }
                     PerfLogger.mark(
                         event = "Home supplements finished",
                         details = "duration=${System.currentTimeMillis() - startedAt}ms, " +
-                            "recentlyUpdated=${supplements.recentlyUpdated.size}",
+                            "trending=${supplements.trending.size}, recentlyUpdated=${supplements.recentlyUpdated.size}",
                     )
                 }
                 .onFailure { error ->
