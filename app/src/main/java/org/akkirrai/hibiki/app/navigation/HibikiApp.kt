@@ -303,11 +303,6 @@ private fun HibikiNavHost(
                             navController.navigate(AnimeNavType.createDetailsRoute(anime))
                         }
                     },
-                    onOpenDownloads = {
-                        navController.runIfCurrent(backStackEntry) {
-                            navController.navigate(AnimeNavType.DOWNLOADS_ROUTE)
-                        }
-                    },
                     isActive = isTopLevelDestination && currentTopLevel == TopLevelDestination.Library,
                     bottomContentPadding = topLevelBottomContentPadding,
                     sharedTransitionScope = sharedTransitionScope,

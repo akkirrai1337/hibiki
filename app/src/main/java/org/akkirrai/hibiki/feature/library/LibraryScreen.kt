@@ -30,7 +30,6 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.outlined.BookmarkBorder
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.ChevronRight
-import androidx.compose.material.icons.outlined.Download
 import androidx.compose.material.icons.outlined.DeleteOutline
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Image
@@ -39,7 +38,6 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
@@ -99,7 +97,6 @@ import org.akkirrai.hibiki.core.source.LibraryEntry
 fun LibraryScreen(
     onAnimeClick: (Anime) -> Unit,
     isActive: Boolean,
-    onOpenDownloads: () -> Unit = {},
     modifier: Modifier = Modifier,
     bottomContentPadding: Dp = UiDimens.ScreenPadding,
     sharedTransitionScope: SharedTransitionScope? = null,
@@ -168,12 +165,6 @@ fun LibraryScreen(
                         showFilter = false,
                         modifier = Modifier.weight(1f),
                     )
-                    IconButton(onClick = onOpenDownloads) {
-                        Icon(
-                            imageVector = Icons.Outlined.Download,
-                            contentDescription = stringResource(R.string.downloads_entry_content_description),
-                        )
-                    }
                 }
                 LibraryCategoryChips(
                     selectedCategory = state.selectedCategory,
@@ -188,13 +179,19 @@ fun LibraryScreen(
             item {
                 EmptyLibraryState(
                     title = stringResource(R.string.library_empty_title),
-                    body = stringResource(R.string.library_empty_body)
+                    body = if (state.selectedCategory == LibraryCategory.Saved) {
+                        emptyLibraryCategoryMessage(LibraryCategory.Saved)
+                    } else {
+                        stringResource(R.string.library_empty_body)
+                    },
                 )
             }
         } else if (visibleEntries.isEmpty()) {
             item {
                 EmptyLibraryState(
-                    title = if (state.searchQuery.isBlank()) {
+                    title = if (state.searchQuery.isBlank() && state.selectedCategory == LibraryCategory.Saved) {
+                        stringResource(R.string.library_empty_title)
+                    } else if (state.searchQuery.isBlank()) {
                         stringResource(R.string.library_section_empty_title)
                     } else {
                         stringResource(R.string.home_search_empty_title)
