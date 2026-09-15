@@ -229,7 +229,13 @@ class HomeRepository(
     /** Network enrichment deliberately deferred until the source-owned home catalog is visible. */
     suspend fun loadHomeSupplements(forceRefresh: Boolean = false): HomeSupplements = coroutineScope {
         val recentlyUpdated = async {
-            runCatching { loadRecentlyUpdated(forceRefresh) }
+            runCatching {
+                loadRecentlyUpdated(
+                    forceRefresh = forceRefresh,
+                    cardMetadataVisibleCount = 0,
+                    cardMetadataPrefetchDelayMillis = HOME_BACKGROUND_METADATA_DELAY_MILLIS,
+                )
+            }
                 .onFailure { error -> AppLogger.w(TAG, "Home recent updates are unavailable: ${error.message}") }
                 .getOrDefault(emptyList())
         }
@@ -265,6 +271,8 @@ class HomeRepository(
                     ),
                     allowEmptyQuery = true,
                     forceRefresh = forceRefresh,
+                    cardMetadataVisibleCount = 0,
+                    cardMetadataPrefetchDelayMillis = HOME_BACKGROUND_METADATA_DELAY_MILLIS,
                 )
             }
         }.onFailure { error ->
@@ -360,11 +368,20 @@ class HomeRepository(
         return catalog.drop(offset.coerceAtLeast(0)).take(limit.coerceAtLeast(1))
     }
 
-    private suspend fun loadRecentlyUpdated(forceRefresh: Boolean = false): List<Anime> =
+    private suspend fun loadRecentlyUpdated(
+        forceRefresh: Boolean = false,
+        cardMetadataVisibleCount: Int = 6,
+        cardMetadataPrefetchDelayMillis: Long = 250L,
+    ): List<Anime> =
         // Home renders only one short row. Parsing the 100-item pagination snapshot here delayed
         // first paint even though 88 entries were immediately discarded; the catalog keeps its
         // own full snapshot through loadRecentlyUpdatedPage when the user actually opens it.
-        searchRepository.latest(limit = HOME_SECTION_LIMIT, forceRefresh = forceRefresh)
+        searchRepository.latest(
+            limit = HOME_SECTION_LIMIT,
+            forceRefresh = forceRefresh,
+            cardMetadataVisibleCount = cardMetadataVisibleCount,
+            cardMetadataPrefetchDelayMillis = cardMetadataPrefetchDelayMillis,
+        )
 
     private suspend fun loadRecentlyUpdatedCatalog(forceRefresh: Boolean = false): List<Anime> {
         return searchRepository.latest(limit = HOME_FULL_SECTION_LIMIT, forceRefresh = forceRefresh)
@@ -488,6 +505,7 @@ class HomeRepository(
         const val HOME_FULL_SECTION_LIMIT = 100
         const val HOME_TRENDING_WINDOW_SIZE = 24
         const val HOME_FIRST_PAINT_WINDOW_SIZE = 8
+        const val HOME_BACKGROUND_METADATA_DELAY_MILLIS = 2_000L
         const val HOME_TRENDING_MAX_OFFSET_EXCLUSIVE = 201
         const val AGGREGATOR_TOP_N = 100
         const val FEATURED_COUNT = 5
