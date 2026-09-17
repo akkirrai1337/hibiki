@@ -42,9 +42,9 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyListScope
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.runtime.snapshotFlow
@@ -133,16 +133,15 @@ import org.akkirrai.hibiki.core.design.component.anime.AnimePosterCardItem
 import org.akkirrai.hibiki.core.design.component.anime.AnimeSourceBadge
 import org.akkirrai.hibiki.core.design.component.anime.PosterImage
 import org.akkirrai.hibiki.core.design.component.SectionHeader
-import org.akkirrai.hibiki.core.design.component.anime.searchStateVerticalListContent
+import org.akkirrai.hibiki.core.design.component.anime.PORTRAIT_GRID_COLUMNS
+import org.akkirrai.hibiki.core.design.component.anime.PortraitGridSpacing
+import org.akkirrai.hibiki.core.design.component.anime.searchStatePosterGridContent
 import org.akkirrai.hibiki.core.design.component.anime.VerticalAnimeListItem
-import org.akkirrai.hibiki.core.design.component.anime.verticalAnimeListContent
-import org.akkirrai.hibiki.core.design.component.anime.LibraryStatusPosterFooter
-import org.akkirrai.hibiki.core.design.component.anime.rememberLibraryStatusByAnimeId
 import org.akkirrai.hibiki.core.log.PerfLogger
 import org.akkirrai.hibiki.core.model.Anime
 import org.akkirrai.hibiki.core.model.SearchUiState
-import org.akkirrai.hibiki.core.source.AnimeSourceRegistry
 import org.akkirrai.hibiki.core.model.buildCardMeta
+import org.akkirrai.hibiki.core.source.AnimeSourceRegistry
 import org.akkirrai.hibiki.app.settings.LocalAppPreferencesState
 import org.akkirrai.hibiki.feature.catalog.rememberEntryOpener
 
@@ -180,8 +179,6 @@ fun HomeScreen(
     val isImeVisible = WindowInsets.isImeVisible
     val isSearchActive = state.searchQuery.isNotBlank() ||
         state.searchResult !is SearchUiState.Idle
-    val announcementLabel = stringResource(R.string.anime_meta_announcement)
-    val movieLabel = stringResource(R.string.anime_meta_movie)
     val searchLoadMoreLabel = stringResource(R.string.search_load_more)
     val searchEmptyTitle = stringResource(R.string.home_search_empty_title)
     val searchEmptyMessage = stringResource(R.string.home_search_empty_message)
@@ -192,7 +189,6 @@ fun HomeScreen(
     val sharedPosterModifier: @Composable (Anime) -> Modifier = { anime ->
         animeDetailsSharedPosterModifier(anime.id, sharedTransitionScope, animatedVisibilityScope)
     }
-    val libraryStatusByAnimeId = rememberLibraryStatusByAnimeId()
     val selectedSourceId = LocalAppPreferencesState.current.animeSource
     val noSourcesInstalled = AnimeSourceRegistry.sources.isEmpty()
     val context = LocalContext.current
@@ -250,7 +246,8 @@ fun HomeScreen(
                 label = "HomeSearchContent",
             ) { searchActive ->
                 if (searchActive) {
-                    LazyColumn(
+                    LazyVerticalGrid(
+                        columns = GridCells.Fixed(PORTRAIT_GRID_COLUMNS),
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(
                             start = UiDimens.ScreenPadding,
@@ -258,26 +255,20 @@ fun HomeScreen(
                             end = UiDimens.ScreenPadding,
                             bottom = bottomContentPadding
                         ),
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(PortraitGridSpacing),
+                        horizontalArrangement = Arrangement.spacedBy(PortraitGridSpacing),
                     ) {
-                        searchStateVerticalListContent(
+                        searchStatePosterGridContent(
                             state = state.searchResult,
                             onAnimeClick = openAggregatorEntry,
-                            metaText = { anime -> buildHomeMeta(anime, announcementLabel, movieLabel) },
                             onLoadMore = viewModel::loadMoreSearchResults,
                             loadMoreLabel = searchLoadMoreLabel,
-                            metadataLoadingIds = state.pendingCardMetadata,
                             resultsCountLabel = { count ->
                                 pluralStringResource(R.plurals.search_results_count, count, count)
                             },
                             emptyTitle = searchEmptyTitle,
                             emptyMessage = searchEmptyMessage,
                             emptyIcon = Icons.Outlined.SearchOff,
-                            posterFooterContent = { anime ->
-                                libraryStatusByAnimeId[anime.id]?.let { category ->
-                                    LibraryStatusPosterFooter(category)
-                                }
-                            },
                             sharedCardModifier = sharedCardModifier,
                             sharedPosterModifier = sharedPosterModifier,
                         )
@@ -313,7 +304,6 @@ fun HomeScreen(
                                 continueAnime = continueAnime,
                                 recentlyWatched = recentlyWatched,
                                 trending = state.trending,
-                                metadataLoadingIds = state.pendingCardMetadata,
                                 isActive = isActive,
                                 onAnimeClick = onAnimeClick,
                                 onWatchedAnimeLongClick = { anime ->
@@ -321,12 +311,6 @@ fun HomeScreen(
                                     pendingProgressRemoval = anime
                                 },
                                 onEntryClick = openAggregatorEntry,
-                                metaText = { anime -> buildHomeMeta(anime, announcementLabel, movieLabel) },
-                                posterFooterContent = { anime ->
-                                    libraryStatusByAnimeId[anime.id]?.let { category ->
-                                        LibraryStatusPosterFooter(category)
-                                    }
-                                },
                                 sharedCardModifier = sharedCardModifier,
                                 sharedPosterModifier = sharedPosterModifier,
                             )
@@ -395,13 +379,10 @@ private fun LazyListScope.homeFeedContent(
     continueAnime: Anime?,
     recentlyWatched: List<Anime>,
     trending: List<Anime>,
-    metadataLoadingIds: Set<String>,
     isActive: Boolean,
     onAnimeClick: (Anime) -> Unit,
     onWatchedAnimeLongClick: (Anime) -> Unit,
     onEntryClick: (Anime) -> Unit,
-    metaText: @Composable (Anime) -> String,
-    posterFooterContent: @Composable (Anime) -> Unit,
     sharedCardModifier: @Composable (Anime) -> Modifier,
     sharedPosterModifier: @Composable (Anime) -> Modifier,
 ) {
@@ -438,16 +419,18 @@ private fun LazyListScope.homeFeedContent(
             )
         }
     }
-    verticalAnimeListContent(
-        items = trending,
-        metaText = metaText,
-        onAnimeClick = onEntryClick,
-        modifier = Modifier.padding(horizontal = UiDimens.ScreenPadding),
-        metadataLoadingIds = metadataLoadingIds,
-        posterFooterContent = posterFooterContent,
-        sharedCardModifier = sharedCardModifier,
-        sharedPosterModifier = sharedPosterModifier,
-    )
+    if (trending.isNotEmpty()) {
+        item {
+            AnimeSection(
+                title = stringResource(R.string.home_trending),
+                icon = Icons.AutoMirrored.Outlined.TrendingUp,
+                items = trending,
+                onAnimeClick = onEntryClick,
+                sharedCardModifier = sharedCardModifier,
+                sharedPosterModifier = sharedPosterModifier,
+            )
+        }
+    }
 }
 
 private fun homeSearchContentTransition(searchActive: Boolean): ContentTransform {
@@ -970,30 +953,32 @@ private fun AnimeSection(
             onActionClick = onActionClick,
         )
 
-        LazyRow(
-            horizontalArrangement = Arrangement.spacedBy(UiDimens.ItemSpacing),
-            contentPadding = PaddingValues(horizontal = UiDimens.ScreenPadding)
+        Column(
+            modifier = Modifier.padding(horizontal = UiDimens.ScreenPadding),
+            verticalArrangement = Arrangement.spacedBy(PortraitGridSpacing),
         ) {
-            items(items, key = { it.id }) { anime ->
-                AnimePosterCardItem(
-                    anime = anime,
-                    metaText = buildHomeMeta(
-                        anime = anime,
-                        announcementLabel = stringResource(R.string.anime_meta_announcement),
-                        movieLabel = stringResource(R.string.anime_meta_movie),
-                        includeRating = false,
-                    ),
-                    onClick = { onAnimeClick(anime) },
-                    onLongClick = onAnimeLongClick?.let { { it(anime) } },
-                    width = 118.dp,
-                    titleBaseMaxLines = 2,
-                    titleExtraLongTitleLines = 0,
-                    titleOverflow = TextOverflow.Ellipsis,
-                    reservedTitleLines = 3,
-                    reserveMetaLine = true,
-                    sharedCardModifier = sharedCardModifier(anime),
-                    sharedPosterModifier = sharedPosterModifier(anime),
-                )
+            items.chunked(PORTRAIT_GRID_COLUMNS).forEach { rowItems ->
+                Row(horizontalArrangement = Arrangement.spacedBy(PortraitGridSpacing)) {
+                    rowItems.forEach { anime ->
+                        AnimePosterCardItem(
+                            anime = anime,
+                            metaText = "",
+                            onClick = { onAnimeClick(anime) },
+                            onLongClick = onAnimeLongClick?.let { { it(anime) } },
+                            modifier = Modifier.weight(1f),
+                            titleBaseMaxLines = 2,
+                            titleExtraLongTitleLines = 0,
+                            titleOverflow = TextOverflow.Ellipsis,
+                            reservedTitleLines = 2,
+                            showRating = true,
+                            sharedCardModifier = sharedCardModifier(anime),
+                            sharedPosterModifier = sharedPosterModifier(anime),
+                        )
+                    }
+                    repeat(PORTRAIT_GRID_COLUMNS - rowItems.size) {
+                        Spacer(modifier = Modifier.weight(1f))
+                    }
+                }
             }
         }
     }

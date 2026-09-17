@@ -137,6 +137,8 @@ class AnimeSearchRepository(
         /** Lets a caller that obtains several source lists at once coalesce their background
          * metadata work before any card enters a provider queue. */
         cardMetadataInitialDelayMillis: Long = 0,
+        /** Browse grids can use only source data, leaving enrichment for the details screen. */
+        enrichCardsWithMetadata: Boolean = true,
     ): List<Anime> {
         val normalizedQuery = request.query.trim()
         val hasFilters = request.typeAliases.isNotEmpty() ||
@@ -149,7 +151,7 @@ class AnimeSearchRepository(
         if (normalizedQuery.isBlank() && !hasFilters && !allowEmptyQuery) return emptyList()
 
         val normalizedRequest = request.copy(query = normalizedQuery)
-        val cacheKey = searchCacheKey(normalizedRequest)
+        val cacheKey = searchCacheKey(normalizedRequest, enrichCardsWithMetadata)
         if (!forceRefresh) {
             getCachedSearch(cacheKey)?.let { cached ->
                 AppLogger.d(TAG, "search: cache hit items=${cached.size}")
@@ -183,14 +185,20 @@ class AnimeSearchRepository(
             cardMetadataVisibleCount = cardMetadataVisibleCount,
             cardMetadataPrefetchDelayMillis = cardMetadataPrefetchDelayMillis,
             cardMetadataInitialDelayMillis = cardMetadataInitialDelayMillis,
+            enrichCardsWithMetadata = enrichCardsWithMetadata,
         )
             .map { title ->
-                val anime = getCachedDetails(detailsCacheKey(title.id))
-                    ?: title.toAnime(preferEnglish = preferEnglish)
+                val anime = if (enrichCardsWithMetadata) {
+                    getCachedDetails(detailsCacheKey(title.id))
+                        ?: title.toAnime(preferEnglish = preferEnglish)
+                } else {
+                    title.toAnime(preferEnglish = preferEnglish)
+                }
                 // The cached entry may be the details page's fully merged Anime, whose title comes
                 // from the aggregator. This list only ever shows the source's own title (see
                 // describeAll's doc), so that field is re-applied here even on a cache hit.
-                (cardMetadata.value[title.id] ?: anime).copy(title = title.displayName)
+                (if (enrichCardsWithMetadata) cardMetadata.value[title.id] ?: anime else anime)
+                    .copy(title = title.displayName)
             }
 
         searchCache[cacheKey] = CachedSearchResults(
@@ -213,6 +221,7 @@ class AnimeSearchRepository(
         query: String,
         limit: Int,
         offset: Int,
+        enrichCardsWithMetadata: Boolean = true,
     ): List<Anime> {
         return search(
             AnimeSearchRequest(
@@ -220,7 +229,8 @@ class AnimeSearchRepository(
                 limit = limit,
                 offset = offset,
                 sort = AnimeSearchSort.RELEVANCE,
-            )
+            ),
+            enrichCardsWithMetadata = enrichCardsWithMetadata,
         )
     }
 
@@ -240,8 +250,9 @@ class AnimeSearchRepository(
         cardMetadataVisibleCount: Int = VISIBLE_CARD_MATCH_COUNT,
         cardMetadataPrefetchDelayMillis: Long = CARD_METADATA_PREFETCH_HEAD_START_MILLIS,
         cardMetadataInitialDelayMillis: Long = 0,
+        enrichCardsWithMetadata: Boolean = true,
     ): List<Anime> {
-        val cacheKey = "latest:${selectedSourceId().value}:$limit:${languageKey()}"
+        val cacheKey = "latest:${selectedSourceId().value}:$limit:${languageKey()}:metadata=$enrichCardsWithMetadata"
         if (!forceRefresh) getCachedSearch(cacheKey)?.let { return it }
 
         ensureInternetConnection()
@@ -254,11 +265,17 @@ class AnimeSearchRepository(
             cardMetadataVisibleCount = cardMetadataVisibleCount,
             cardMetadataPrefetchDelayMillis = cardMetadataPrefetchDelayMillis,
             cardMetadataInitialDelayMillis = cardMetadataInitialDelayMillis,
+            enrichCardsWithMetadata = enrichCardsWithMetadata,
         ).map { title ->
-            val anime = getCachedDetails(detailsCacheKey(title.id)) ?: title.toAnime(preferEnglish = preferEnglish)
+            val anime = if (enrichCardsWithMetadata) {
+                getCachedDetails(detailsCacheKey(title.id)) ?: title.toAnime(preferEnglish = preferEnglish)
+            } else {
+                title.toAnime(preferEnglish = preferEnglish)
+            }
             // See search(): a details-cache hit carries the aggregator-merged title, but this list
             // always shows the source's own title, so it is re-applied here too.
-            (cardMetadata.value[title.id] ?: anime).copy(title = title.displayName)
+            (if (enrichCardsWithMetadata) cardMetadata.value[title.id] ?: anime else anime)
+                .copy(title = title.displayName)
         }
         searchCache[cacheKey] = CachedSearchResults(
             items = results,
@@ -565,7 +582,9 @@ class AnimeSearchRepository(
         cardMetadataVisibleCount: Int = VISIBLE_CARD_MATCH_COUNT,
         cardMetadataPrefetchDelayMillis: Long = CARD_METADATA_PREFETCH_HEAD_START_MILLIS,
         cardMetadataInitialDelayMillis: Long = 0,
+        enrichCardsWithMetadata: Boolean = true,
     ): List<AnimeTitle> {
+        if (!enrichCardsWithMetadata) return titles
         val service = metadataService ?: return titles
         val order = providerOrderFor(source)
         if (order.isEmpty()) {
@@ -824,7 +843,7 @@ class AnimeSearchRepository(
             LanguageMode.SYSTEM -> "sys"
         }
 
-    private fun searchCacheKey(request: AnimeSearchRequest): String {
+    private fun searchCacheKey(request: AnimeSearchRequest, enrichCardsWithMetadata: Boolean): String {
         val languageKey = languageKey()
         val types = request.typeAliases.sorted().joinToString(",")
         val statuses = request.statusAliases.sorted().joinToString(",")
@@ -846,6 +865,9 @@ class AnimeSearchRepository(
             append(request.offset)
             append(':')
             append(request.sort.name)
+            append(':')
+            append("metadata=")
+            append(enrichCardsWithMetadata)
             append(':')
             append(types)
             append(':')

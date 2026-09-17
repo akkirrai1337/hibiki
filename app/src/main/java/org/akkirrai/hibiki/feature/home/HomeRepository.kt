@@ -121,6 +121,7 @@ class HomeRepository(
                 allowEmptyQuery = true,
                 forceRefresh = forceRefresh,
                 cardMetadataInitialDelayMillis = HOME_METADATA_BATCH_WINDOW_MILLIS,
+                enrichCardsWithMetadata = false,
             )
         }
         AppLogger.d(TAG, "loadHomeState: first catalog page returned ${catalog.size} items")
@@ -173,7 +174,7 @@ class HomeRepository(
     suspend fun search(query: String): List<Anime> {
         AppLogger.d(TAG, "search(query=$query)")
         ensureInternetConnection()
-        return searchRepository.search(query)
+        return searchRepository.search(query = query, limit = 20, offset = 0, enrichCardsWithMetadata = false)
     }
 
     suspend fun search(
@@ -196,7 +197,8 @@ class HomeRepository(
                 excludedGenreAliases = filters.excludedGenreAliases.sorted(),
                 yearFrom = filters.yearFrom,
                 yearTo = filters.yearTo,
-            )
+            ),
+            enrichCardsWithMetadata = false,
         )
     }
 
@@ -236,6 +238,7 @@ class HomeRepository(
                     cardMetadataVisibleCount = 0,
                     cardMetadataPrefetchDelayMillis = HOME_BACKGROUND_METADATA_DELAY_MILLIS,
                     cardMetadataInitialDelayMillis = HOME_METADATA_BATCH_WINDOW_MILLIS,
+                    enrichCardsWithMetadata = false,
                 )
             }
                 .onFailure { error -> AppLogger.w(TAG, "Home recent updates are unavailable: ${error.message}") }
@@ -376,6 +379,7 @@ class HomeRepository(
         cardMetadataVisibleCount: Int = 6,
         cardMetadataPrefetchDelayMillis: Long = 250L,
         cardMetadataInitialDelayMillis: Long = 0,
+        enrichCardsWithMetadata: Boolean = false,
     ): List<Anime> =
         // Home renders only one short row. Parsing the 100-item pagination snapshot here delayed
         // first paint even though 88 entries were immediately discarded; the catalog keeps its
@@ -386,10 +390,15 @@ class HomeRepository(
             cardMetadataVisibleCount = cardMetadataVisibleCount,
             cardMetadataPrefetchDelayMillis = cardMetadataPrefetchDelayMillis,
             cardMetadataInitialDelayMillis = cardMetadataInitialDelayMillis,
+            enrichCardsWithMetadata = enrichCardsWithMetadata,
         )
 
     private suspend fun loadRecentlyUpdatedCatalog(forceRefresh: Boolean = false): List<Anime> {
-        return searchRepository.latest(limit = HOME_FULL_SECTION_LIMIT, forceRefresh = forceRefresh)
+        return searchRepository.latest(
+            limit = HOME_FULL_SECTION_LIMIT,
+            forceRefresh = forceRefresh,
+            enrichCardsWithMetadata = false,
+        )
     }
 
     suspend fun loadTrendingPage(
@@ -406,6 +415,7 @@ class HomeRepository(
                 typeAliases = listOfNotNull(filter.typeAlias),
             ),
             allowEmptyQuery = true,
+            enrichCardsWithMetadata = false,
         )
         AppLogger.d(TAG, "loadTrendingPage: got ${catalog.size} items from getCatalog")
         return catalog

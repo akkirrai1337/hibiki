@@ -86,6 +86,7 @@ class SearchViewModel(
                     query = activeQuery,
                     limit = SEARCH_PAGE_SIZE,
                     offset = 0,
+                    enrichCardsWithMetadata = false,
                 )
             }
             if (activeQuery != uiState.value.query.trim()) return
@@ -131,6 +132,7 @@ class SearchViewModel(
                         query = query,
                         limit = SEARCH_PAGE_SIZE,
                         offset = content.items.size,
+                        enrichCardsWithMetadata = false,
                     )
                 }
                 if (query != uiState.value.query.trim()) return@launch

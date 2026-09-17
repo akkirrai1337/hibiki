@@ -7,7 +7,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Search
@@ -34,12 +36,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.core.design.UiDimens
-import org.akkirrai.hibiki.core.design.component.anime.searchStateVerticalListContent
-import org.akkirrai.hibiki.core.design.component.anime.LibraryStatusPosterFooter
-import org.akkirrai.hibiki.core.design.component.anime.rememberLibraryStatusByAnimeId
+import org.akkirrai.hibiki.core.design.component.anime.PORTRAIT_GRID_COLUMNS
+import org.akkirrai.hibiki.core.design.component.anime.PortraitGridSpacing
+import org.akkirrai.hibiki.core.design.component.anime.searchStatePosterGridContent
 import org.akkirrai.hibiki.core.model.Anime
 import org.akkirrai.hibiki.core.model.SearchUiState
-import org.akkirrai.hibiki.core.model.buildCardMeta
 
 @Composable
 fun SearchScreen(
@@ -48,17 +49,15 @@ fun SearchScreen(
     modifier: Modifier = Modifier
 ) {
     val state by viewModel.uiState.collectAsState()
-    val announcementLabel = stringResource(R.string.anime_meta_announcement)
-    val movieLabel = stringResource(R.string.anime_meta_movie)
     val loadMoreLabel = stringResource(R.string.action_more)
     val idleTitle = stringResource(R.string.search_start_title)
     val idleMessage = stringResource(R.string.search_idle)
     val emptyTitle = stringResource(R.string.home_search_empty_title)
     val emptyMessage = stringResource(R.string.search_empty)
     val retryLabel = stringResource(R.string.search_retry)
-    val libraryStatusByAnimeId = rememberLibraryStatusByAnimeId()
 
-    LazyColumn(
+    LazyVerticalGrid(
+        columns = GridCells.Fixed(PORTRAIT_GRID_COLUMNS),
         modifier = modifier.fillMaxSize(),
         contentPadding = PaddingValues(
             start = UiDimens.ScreenPadding,
@@ -66,9 +65,10 @@ fun SearchScreen(
             end = UiDimens.ScreenPadding,
             bottom = UiDimens.ScreenPadding
         ),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        verticalArrangement = Arrangement.spacedBy(PortraitGridSpacing),
+        horizontalArrangement = Arrangement.spacedBy(PortraitGridSpacing),
     ) {
-        item {
+        item(span = { GridItemSpan(maxLineSpan) }) {
             SearchBar(
                 query = state.query,
                 onQueryChange = viewModel::onQueryChange,
@@ -76,10 +76,9 @@ fun SearchScreen(
             )
         }
 
-        searchStateVerticalListContent(
+        searchStatePosterGridContent(
             state = state.result,
             onAnimeClick = onAnimeClick,
-            metaText = { anime -> buildSearchMeta(anime, announcementLabel, movieLabel) },
             onLoadMore = viewModel::loadMore,
             loadMoreLabel = loadMoreLabel,
             resultsCountLabel = { count ->
@@ -88,19 +87,11 @@ fun SearchScreen(
             idleTitle = idleTitle,
             idleMessage = idleMessage,
             idleIcon = Icons.Outlined.Search,
-            idleTopPadding = 64.dp,
             emptyTitle = emptyTitle,
             emptyMessage = emptyMessage,
             emptyIcon = Icons.Outlined.SearchOff,
-            errorModifier = Modifier.padding(top = 24.dp),
             errorActionLabel = retryLabel,
             onErrorActionClick = viewModel::search,
-            loadMoreModifier = Modifier.padding(top = 6.dp, bottom = 8.dp),
-            posterFooterContent = { anime ->
-                libraryStatusByAnimeId[anime.id]?.let { category ->
-                    LibraryStatusPosterFooter(category)
-                }
-            },
         )
     }
 }
@@ -152,16 +143,5 @@ private fun SearchBar(
             disabledIndicatorColor = MaterialTheme.colorScheme.surfaceContainer,
             cursorColor = MaterialTheme.colorScheme.primary
         )
-    )
-}
-
-private fun buildSearchMeta(
-    anime: Anime,
-    announcementLabel: String,
-    movieLabel: String,
-): String {
-    return anime.buildCardMeta(
-        announcementLabel = announcementLabel,
-        movieLabel = movieLabel,
     )
 }

@@ -26,8 +26,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.LazyGridState
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -94,15 +97,14 @@ import org.akkirrai.hibiki.core.design.component.AppCenteredLoading
 import org.akkirrai.hibiki.core.design.component.AppMessageState
 import org.akkirrai.hibiki.core.design.component.search.AppSearchTopBar
 import org.akkirrai.hibiki.core.design.component.AppTopScrim
-import org.akkirrai.hibiki.core.design.component.anime.verticalAnimeListContent
+import org.akkirrai.hibiki.core.design.component.anime.PORTRAIT_GRID_COLUMNS
+import org.akkirrai.hibiki.core.design.component.anime.PortraitGridSpacing
+import org.akkirrai.hibiki.core.design.component.anime.animePosterGridContent
 import org.akkirrai.hibiki.core.design.component.anime.animeDetailsSharedCardModifier
 import org.akkirrai.hibiki.core.design.component.anime.animeDetailsSharedPosterModifier
-import org.akkirrai.hibiki.core.design.component.anime.LibraryStatusPosterFooter
-import org.akkirrai.hibiki.core.design.component.anime.rememberLibraryStatusByAnimeId
 import org.akkirrai.hibiki.core.log.AppLogger
 import org.akkirrai.hibiki.core.model.Anime
 import org.akkirrai.hibiki.core.model.AnimeSearchFilters
-import org.akkirrai.hibiki.core.model.buildCardMeta
 import org.akkirrai.hibiki.core.source.AnimeSourceRegistry
 import org.akkirrai.hibiki.feature.home.AnimeSearchFiltersSheet
 import org.akkirrai.hibiki.app.settings.withAppPreferencesLanguage
@@ -154,9 +156,8 @@ fun CatalogScreen(
             )
         }
     }
-    val listState = rememberLazyListState()
+    val listState = rememberLazyGridState()
     val pullToRefreshState = rememberPullToRefreshState()
-    val libraryStatusByAnimeId = rememberLibraryStatusByAnimeId()
     val sharedCardModifier: @Composable (Anime) -> Modifier = { anime ->
         animeDetailsSharedCardModifier(anime.id, sharedTransitionScope, animatedVisibilityScope)
     }
@@ -174,8 +175,6 @@ fun CatalogScreen(
         if (!state.isLoading) hasLoadedOnce = true
     }
     val isSortVisible = hasLoadedOnce && isSortScrollVisible
-    val announcementLabel = stringResource(R.string.anime_meta_announcement)
-    val movieLabel = stringResource(R.string.anime_meta_movie)
     val availableSorts = remember(state.filterCatalog?.capabilities) {
         state.filterCatalog?.capabilities?.let(::availableCatalogSorts) ?: CatalogSort.entries
     }
@@ -268,10 +267,7 @@ fun CatalogScreen(
                         listUiState = listUiState,
                         contentTopPadding = catalogContentTopPadding,
                         bottomContentPadding = bottomContentPadding,
-                        announcementLabel = announcementLabel,
-                        movieLabel = movieLabel,
                         onAnimeClick = openAnime,
-                        libraryStatusByAnimeId = libraryStatusByAnimeId,
                         onRetryLoadMore = viewModel::loadMore,
                         sharedCardModifier = sharedCardModifier,
                         sharedPosterModifier = sharedPosterModifier,
@@ -357,19 +353,17 @@ private data class CatalogAnimeListUiState(
 
 @Composable
 private fun CatalogAnimeListContent(
-    listState: androidx.compose.foundation.lazy.LazyListState,
+    listState: LazyGridState,
     listUiState: CatalogAnimeListUiState,
     contentTopPadding: androidx.compose.ui.unit.Dp,
     bottomContentPadding: androidx.compose.ui.unit.Dp,
-    announcementLabel: String,
-    movieLabel: String,
     onAnimeClick: (Anime) -> Unit,
-    libraryStatusByAnimeId: Map<String, org.akkirrai.hibiki.core.source.LibraryCategory>,
     onRetryLoadMore: () -> Unit,
     sharedCardModifier: @Composable (Anime) -> Modifier,
     sharedPosterModifier: @Composable (Anime) -> Modifier,
 ) {
-    LazyColumn(
+    LazyVerticalGrid(
+        columns = GridCells.Fixed(PORTRAIT_GRID_COLUMNS),
         state = listState,
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(
@@ -378,10 +372,11 @@ private fun CatalogAnimeListContent(
             end = UiDimens.ScreenPadding,
             bottom = bottomContentPadding + UiDimens.ScreenPadding,
         ),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(PortraitGridSpacing),
+        horizontalArrangement = Arrangement.spacedBy(PortraitGridSpacing),
     ) {
         if (listUiState.description != null) {
-            item(key = "catalog_description") {
+            item(key = "catalog_description", span = { GridItemSpan(maxLineSpan) }) {
                 Text(
                     text = listUiState.description,
                     style = MaterialTheme.typography.bodyMedium,
@@ -391,27 +386,15 @@ private fun CatalogAnimeListContent(
             }
         }
 
-        verticalAnimeListContent(
-            items = listUiState.items,
-            metaText = { anime -> anime.buildCardMeta(
-                    announcementLabel = announcementLabel,
-                    movieLabel = movieLabel,
-                    maxSubtitleParts = 2,
-                    separator = " • ",
-            ) },
+        animePosterGridContent(
+            anime = listUiState.items,
             onAnimeClick = onAnimeClick,
-            metadataLoadingIds = listUiState.pendingCardMetadata,
-            posterFooterContent = { anime ->
-                libraryStatusByAnimeId[anime.id]?.let { category ->
-                    LibraryStatusPosterFooter(category)
-                }
-            },
             sharedCardModifier = sharedCardModifier,
             sharedPosterModifier = sharedPosterModifier,
         )
 
         if (listUiState.isLoadingMore) {
-            item(key = "catalog_loading_more") {
+            item(key = "catalog_loading_more", span = { GridItemSpan(maxLineSpan) }) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -427,7 +410,7 @@ private fun CatalogAnimeListContent(
         }
 
         if (listUiState.loadMoreError != null) {
-            item(key = "catalog_load_more_error") {
+            item(key = "catalog_load_more_error", span = { GridItemSpan(maxLineSpan) }) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -456,7 +439,7 @@ private fun CatalogAnimeListContent(
 
 @Composable
 private fun CatalogPaginationEffect(
-    listState: androidx.compose.foundation.lazy.LazyListState,
+    listState: LazyGridState,
     state: CatalogUiState,
     onLoadMore: () -> Unit,
 ) {
@@ -479,7 +462,7 @@ private fun CatalogPaginationEffect(
 
 @Composable
 private fun CatalogSortVisibilityEffect(
-    listState: androidx.compose.foundation.lazy.LazyListState,
+    listState: LazyGridState,
     onVisibilityChange: (Boolean) -> Unit,
 ) {
     LaunchedEffect(listState) {

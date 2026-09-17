@@ -5,6 +5,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.defaultMinSize
@@ -15,9 +16,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -32,6 +35,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import java.util.Locale
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.core.design.UiDimens
 import org.akkirrai.hibiki.core.model.Anime
@@ -50,6 +54,9 @@ fun PosterCard(
     titleOverflow: TextOverflow = TextOverflow.Clip,
     reservedTitleLines: Int? = null,
     reserveMetaLine: Boolean = false,
+    /** Source-provided score only. List screens deliberately do not wait for aggregators. */
+    showRating: Boolean = false,
+    posterOverlayContent: (@Composable BoxScope.() -> Unit)? = null,
     sharedCardModifier: Modifier = Modifier,
     sharedPosterModifier: Modifier = Modifier,
 ) {
@@ -85,7 +92,12 @@ fun PosterCard(
         ),
         verticalArrangement = Arrangement.spacedBy(UiDimens.SmallSpacing)
     ) {
-        PosterArtwork(anime = anime, modifier = sharedPosterModifier)
+        PosterArtwork(
+            anime = anime,
+            showRating = showRating,
+            overlayContent = posterOverlayContent,
+            modifier = sharedPosterModifier,
+        )
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -110,7 +122,7 @@ fun PosterCard(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
-            } else {
+            } else if (reserveMetaLine) {
                 Text(
                     text = " ",
                     style = MaterialTheme.typography.bodySmall,
@@ -137,6 +149,8 @@ fun AnimePosterCardItem(
     titleOverflow: TextOverflow = TextOverflow.Clip,
     reservedTitleLines: Int? = null,
     reserveMetaLine: Boolean = false,
+    showRating: Boolean = false,
+    posterOverlayContent: (@Composable BoxScope.() -> Unit)? = null,
     sharedCardModifier: Modifier = Modifier,
     sharedPosterModifier: Modifier = Modifier,
 ) {
@@ -150,6 +164,8 @@ fun AnimePosterCardItem(
         titleOverflow = titleOverflow,
         reservedTitleLines = reservedTitleLines,
         reserveMetaLine = reserveMetaLine,
+        showRating = showRating,
+        posterOverlayContent = posterOverlayContent,
         sharedCardModifier = sharedCardModifier,
         sharedPosterModifier = sharedPosterModifier,
         modifier = modifier
@@ -161,6 +177,8 @@ fun AnimePosterCardItem(
 @Composable
 private fun PosterArtwork(
     anime: Anime,
+    showRating: Boolean,
+    overlayContent: (@Composable BoxScope.() -> Unit)?,
     modifier: Modifier = Modifier
 ) {
     Box(
@@ -177,6 +195,35 @@ private fun PosterArtwork(
             modifier = Modifier.fillMaxSize(),
             placeholder = { PosterPlaceholder() }
         )
+        anime.ratings.firstOrNull()?.value?.takeIf { showRating }?.let { rating ->
+            Surface(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(6.dp),
+                shape = RoundedCornerShape(10.dp),
+                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.88f),
+                contentColor = MaterialTheme.colorScheme.onSurface,
+            ) {
+                androidx.compose.foundation.layout.Row(
+                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp),
+                    horizontalArrangement = Arrangement.spacedBy(2.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Star,
+                        contentDescription = null,
+                        modifier = Modifier.height(10.dp),
+                        tint = MaterialTheme.colorScheme.tertiary,
+                    )
+                    Text(
+                        text = String.format(Locale.US, "%.1f", rating),
+                        style = MaterialTheme.typography.labelSmall,
+                        maxLines = 1,
+                    )
+                }
+            }
+        }
+        overlayContent?.invoke(this)
     }
 }
 

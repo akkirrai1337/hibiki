@@ -97,6 +97,7 @@ class CatalogRepository(
                 ),
                 allowEmptyQuery = true,
                 forceRefresh = forceRefresh,
+                enrichCardsWithMetadata = false,
             )
         }
 
