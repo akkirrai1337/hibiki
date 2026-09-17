@@ -201,6 +201,7 @@ fun DetailsScreen(
     contentPadding: PaddingValues = PaddingValues(),
     sharedTransitionScope: SharedTransitionScope? = null,
     animatedVisibilityScope: AnimatedVisibilityScope? = null,
+    sharedTransitionOrigin: String = "default",
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
@@ -526,7 +527,7 @@ fun DetailsScreen(
         with(sharedTransitionScope) {
             Modifier.sharedBounds(
                 sharedContentState = rememberSharedContentState(
-                    AnimeDetailsTransition.cardKey(anime.id),
+                    AnimeDetailsTransition.cardKey(anime.id, sharedTransitionOrigin),
                 ),
                 animatedVisibilityScope = animatedVisibilityScope,
                 enter = fadeIn(tween(500)),
@@ -546,7 +547,7 @@ fun DetailsScreen(
         with(sharedTransitionScope) {
             Modifier.sharedBounds(
                 sharedContentState = rememberSharedContentState(
-                    AnimeDetailsTransition.posterKey(anime.id),
+                    AnimeDetailsTransition.posterKey(anime.id, sharedTransitionOrigin),
                 ),
                 animatedVisibilityScope = animatedVisibilityScope,
                 resizeMode = SharedTransitionScope.ResizeMode.RemeasureToBounds,

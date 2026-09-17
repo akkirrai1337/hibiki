@@ -23,11 +23,12 @@ object AnimeNavType {
     const val STATUS_ARG = "status"
     const val POSTER_ARG = "poster"
     const val POSTER_FALLBACK_ARG = "posterFallback"
+    const val DETAILS_TRANSITION_ORIGIN_ARG = "transitionOrigin"
     const val SOURCE_TITLE_ARG = "sourceTitle"
     const val DOWNLOAD_MODE_ARG = "downloadMode"
 
     const val DETAILS_PATTERN =
-        "$DETAILS_ROUTE/{$ID_ARG}?$TITLE_ARG={$TITLE_ARG}&$SUBTITLE_ARG={$SUBTITLE_ARG}&$EPISODES_ARG={$EPISODES_ARG}&$STATUS_ARG={$STATUS_ARG}&$POSTER_ARG={$POSTER_ARG}&$POSTER_FALLBACK_ARG={$POSTER_FALLBACK_ARG}"
+        "$DETAILS_ROUTE/{$ID_ARG}?$TITLE_ARG={$TITLE_ARG}&$SUBTITLE_ARG={$SUBTITLE_ARG}&$EPISODES_ARG={$EPISODES_ARG}&$STATUS_ARG={$STATUS_ARG}&$POSTER_ARG={$POSTER_ARG}&$POSTER_FALLBACK_ARG={$POSTER_FALLBACK_ARG}&$DETAILS_TRANSITION_ORIGIN_ARG={$DETAILS_TRANSITION_ORIGIN_ARG}"
 
     const val WATCH_SOURCES_PATTERN =
         "$WATCH_SOURCES_ROUTE/{$ID_ARG}?$TITLE_ARG={$TITLE_ARG}&$DOWNLOAD_MODE_ARG={$DOWNLOAD_MODE_ARG}"
@@ -38,7 +39,7 @@ object AnimeNavType {
     const val PLAYER_PATTERN =
         "$PLAYER_ROUTE/{$SOURCE_ID_ARG}?$EPISODE_ID_ARG={$EPISODE_ID_ARG}&$EPISODE_NUMBER_ARG={$EPISODE_NUMBER_ARG}"
 
-    fun createDetailsRoute(anime: Anime): String {
+    fun createDetailsRoute(anime: Anime, transitionOrigin: String = "default"): String {
         return buildString {
             append("$DETAILS_ROUTE/${Uri.encode(anime.id)}")
             append("?$TITLE_ARG=${Uri.encode(anime.title)}")
@@ -47,6 +48,7 @@ object AnimeNavType {
             append("&$STATUS_ARG=${Uri.encode(anime.status)}")
             append("&$POSTER_ARG=${Uri.encode(anime.posterUrl.orEmpty())}")
             append("&$POSTER_FALLBACK_ARG=${Uri.encode(anime.posterFallbackUrl.orEmpty())}")
+            append("&$DETAILS_TRANSITION_ORIGIN_ARG=${Uri.encode(transitionOrigin)}")
         }
     }
 

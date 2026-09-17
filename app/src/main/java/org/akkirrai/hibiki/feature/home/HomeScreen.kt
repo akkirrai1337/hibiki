@@ -184,10 +184,10 @@ fun HomeScreen(
     val searchEmptyMessage = stringResource(R.string.home_search_empty_message)
     val pullToRefreshState = rememberPullToRefreshState()
     val sharedCardModifier: @Composable (Anime) -> Modifier = { anime ->
-        animeDetailsSharedCardModifier(anime.id, sharedTransitionScope, animatedVisibilityScope)
+        animeDetailsSharedCardModifier(anime.id, sharedTransitionScope, animatedVisibilityScope, origin = "home")
     }
     val sharedPosterModifier: @Composable (Anime) -> Modifier = { anime ->
-        animeDetailsSharedPosterModifier(anime.id, sharedTransitionScope, animatedVisibilityScope)
+        animeDetailsSharedPosterModifier(anime.id, sharedTransitionScope, animatedVisibilityScope, origin = "home")
     }
     val selectedSourceId = LocalAppPreferencesState.current.animeSource
     val noSourcesInstalled = AnimeSourceRegistry.sources.isEmpty()

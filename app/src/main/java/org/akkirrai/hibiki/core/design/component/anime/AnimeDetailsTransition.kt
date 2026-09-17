@@ -8,9 +8,9 @@ import androidx.compose.ui.Modifier
 
 /** Shared-element keys for the Home feed to Details navigation transition. */
 internal object AnimeDetailsTransition {
-    fun cardKey(animeId: String): String = "anime_details_card_$animeId"
+    fun cardKey(animeId: String, origin: String): String = "anime_details_card_${origin}_$animeId"
 
-    fun posterKey(animeId: String): String = "anime_details_poster_$animeId"
+    fun posterKey(animeId: String, origin: String): String = "anime_details_poster_${origin}_$animeId"
 }
 
 @OptIn(ExperimentalSharedTransitionApi::class)
@@ -19,10 +19,11 @@ internal fun animeDetailsSharedCardModifier(
     animeId: String,
     sharedTransitionScope: SharedTransitionScope?,
     animatedVisibilityScope: AnimatedVisibilityScope?,
+    origin: String = DEFAULT_DETAILS_TRANSITION_ORIGIN,
 ): Modifier = if (sharedTransitionScope != null && animatedVisibilityScope != null) {
     with(sharedTransitionScope) {
         Modifier.sharedBounds(
-            sharedContentState = rememberSharedContentState(AnimeDetailsTransition.cardKey(animeId)),
+            sharedContentState = rememberSharedContentState(AnimeDetailsTransition.cardKey(animeId, origin)),
             animatedVisibilityScope = animatedVisibilityScope,
             resizeMode = SharedTransitionScope.ResizeMode.RemeasureToBounds,
             // The app bottom bar is a sibling of the navigation host. Rendering this card in the
@@ -41,10 +42,11 @@ internal fun animeDetailsSharedPosterModifier(
     animeId: String,
     sharedTransitionScope: SharedTransitionScope?,
     animatedVisibilityScope: AnimatedVisibilityScope?,
+    origin: String = DEFAULT_DETAILS_TRANSITION_ORIGIN,
 ): Modifier = if (sharedTransitionScope != null && animatedVisibilityScope != null) {
     with(sharedTransitionScope) {
         Modifier.sharedBounds(
-            sharedContentState = rememberSharedContentState(AnimeDetailsTransition.posterKey(animeId)),
+            sharedContentState = rememberSharedContentState(AnimeDetailsTransition.posterKey(animeId, origin)),
             animatedVisibilityScope = animatedVisibilityScope,
             resizeMode = SharedTransitionScope.ResizeMode.RemeasureToBounds,
             renderInOverlayDuringTransition = false,
@@ -53,3 +55,5 @@ internal fun animeDetailsSharedPosterModifier(
 } else {
     Modifier
 }
+
+internal const val DEFAULT_DETAILS_TRANSITION_ORIGIN = "default"

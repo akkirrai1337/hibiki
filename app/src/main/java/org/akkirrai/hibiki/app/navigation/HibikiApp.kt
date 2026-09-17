@@ -198,7 +198,7 @@ private fun HibikiNavHost(
                     viewModel = homeViewModel,
                     onAnimeClick = { anime ->
                         navController.runIfCurrent(backStackEntry) {
-                            navController.navigate(AnimeNavType.createDetailsRoute(anime))
+                            navController.navigate(AnimeNavType.createDetailsRoute(anime, transitionOrigin = "home"))
                         }
                     },
                     onOpenSources = {
@@ -263,7 +263,7 @@ private fun HibikiNavHost(
                 CatalogScreen(
                     onAnimeClick = { anime ->
                         navController.runIfCurrent(backStackEntry) {
-                            navController.navigate(AnimeNavType.createDetailsRoute(anime))
+                            navController.navigate(AnimeNavType.createDetailsRoute(anime, transitionOrigin = "catalog"))
                         }
                     },
                     onOpenSources = {
@@ -473,6 +473,10 @@ private fun HibikiNavHost(
                 navArgument(AnimeNavType.POSTER_FALLBACK_ARG) {
                     type = NavType.StringType
                     defaultValue = ""
+                },
+                navArgument(AnimeNavType.DETAILS_TRANSITION_ORIGIN_ARG) {
+                    type = NavType.StringType
+                    defaultValue = "default"
                 }
             ),
             enterTransition = { appScreenEnterTransition() },
@@ -526,6 +530,9 @@ private fun HibikiNavHost(
                     },
                     sharedTransitionScope = sharedTransitionScope,
                     animatedVisibilityScope = this,
+                    sharedTransitionOrigin = backStackEntry.arguments
+                        ?.getString(AnimeNavType.DETAILS_TRANSITION_ORIGIN_ARG)
+                        ?: "default",
                     modifier = baseScreenModifier,
                 )
             }

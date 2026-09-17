@@ -159,10 +159,10 @@ fun CatalogScreen(
     val listState = rememberLazyGridState()
     val pullToRefreshState = rememberPullToRefreshState()
     val sharedCardModifier: @Composable (Anime) -> Modifier = { anime ->
-        animeDetailsSharedCardModifier(anime.id, sharedTransitionScope, animatedVisibilityScope)
+        animeDetailsSharedCardModifier(anime.id, sharedTransitionScope, animatedVisibilityScope, origin = "catalog")
     }
     val sharedPosterModifier: @Composable (Anime) -> Modifier = { anime ->
-        animeDetailsSharedPosterModifier(anime.id, sharedTransitionScope, animatedVisibilityScope)
+        animeDetailsSharedPosterModifier(anime.id, sharedTransitionScope, animatedVisibilityScope, origin = "catalog")
     }
     var isFilterSheetOpen by remember { mutableStateOf(false) }
     var isSortMenuOpen by remember { mutableStateOf(false) }
