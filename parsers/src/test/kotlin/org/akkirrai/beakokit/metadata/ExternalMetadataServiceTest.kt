@@ -40,34 +40,6 @@ class ExternalMetadataServiceTest {
     }
 
     @Test
-    fun `concurrent cache misses for one entry share one provider request`() = runBlocking {
-        val gate = CompletableDeferred<Unit>()
-        var requests = 0
-        val client = HttpClient(MockEngine {
-            requests++
-            gate.await()
-            respond(
-                """{"data":{"id":"1","attributes":{"canonicalTitle":"Frieren","status":"finished"}}}""",
-                HttpStatusCode.OK,
-            )
-        })
-        try {
-            val service = ExternalMetadataService(client, InMemoryStore())
-            val reference = MetadataReference(MetadataProviderId.KITSU, externalId = 1)
-
-            val results = List(2) {
-                async(start = CoroutineStart.UNDISPATCHED) { service.entryFor(reference) }
-            }
-            gate.complete(Unit)
-
-            assertEquals(listOf(1, 1), results.awaitAll().map { it?.externalId })
-            assertEquals(1, requests)
-        } finally {
-            client.close()
-        }
-    }
-
-    @Test
     fun `batch cache lookup falls through a binding whose media was evicted`() {
         val media = ExternalMetadata(
             provider = MetadataProviderId.MAL,
@@ -92,53 +64,6 @@ class ExternalMetadataServiceTest {
                     listOf(MetadataProviderId.ANILIST, MetadataProviderId.MAL),
                 ),
             )
-        } finally {
-            client.close()
-        }
-    }
-
-    @Test
-    fun `repeated candidate set skips a third spelling`() = runBlocking {
-        var requests = 0
-        val client = HttpClient(MockEngine {
-            requests++
-            respond(
-                """{"data":[{"id":"1","attributes":{"canonicalTitle":"Unrelated title","status":"finished"}}]}""",
-                HttpStatusCode.OK,
-            )
-        })
-        try {
-            val service = ExternalMetadataService(client, InMemoryStore())
-            val title = AnimeTitle(
-                id = "anichi:1",
-                originalName = "Re:ZERO -Starting Life in Another World- Season 3",
-            )
-
-            assertEquals(null, service.metadataFor(title, listOf(MetadataProviderId.KITSU)))
-            assertEquals(2, requests)
-        } finally {
-            client.close()
-        }
-    }
-
-    @Test
-    fun `automatic card match pins its provider for the details page`() = runBlocking {
-        val client = HttpClient(MockEngine {
-            respond(
-                """{"data":[{"id":"1","attributes":{"canonicalTitle":"Frieren","status":"finished"}}]}""",
-                HttpStatusCode.OK,
-            )
-        })
-        val store = InMemoryStore()
-        try {
-            val service = ExternalMetadataService(client, store)
-
-            service.metadataFor(
-                AnimeTitle(id = "anichi:frieren", originalName = "Frieren"),
-                listOf(MetadataProviderId.KITSU, MetadataProviderId.ANILIST),
-            )
-
-            assertEquals(MetadataProviderId.KITSU, store.readDisplayProvider("anichi:frieren"))
         } finally {
             client.close()
         }

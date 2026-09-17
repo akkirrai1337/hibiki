@@ -46,7 +46,6 @@ class ExternalMetadataService(
 ) {
     private val anilist = AniListClient(client)
     private val mal = MalClient(client, malClientId)
-    private val kitsu = KitsuClient(client)
     private val inFlight = ConcurrentHashMap<String, InFlightLookup>()
     /** An aggregator card is often tapped twice while navigation is starting. Keep that from
      * becoming two identical provider reads when its cached entry has expired or was evicted. */
@@ -60,7 +59,7 @@ class ExternalMetadataService(
      * The first pass only reads what is already on record - a match written when a card was
      * resolved from an aggregator's catalog, say - across *every* provider in [order], not just the
      * first. Only once none of them has anything recorded does the second pass fall back to a live
-     * search, again in [order]. Without this split, a title already pinned to (say) Kitsu by the
+     * search, again in [order]. Without this split, a title already pinned to a provider by the
      * entry screen could still be re-guessed from AniList because AniList happens to be preferred -
      * landing on a different show with a similar name and showing a different cover than the one
      * just tapped.
@@ -192,7 +191,7 @@ class ExternalMetadataService(
         return null
     }
 
-    /** One entry by id or by Kitsu slug, for the picker's paste-a-link path - the way a title gets
+    /** One entry by id, for the picker's paste-a-link path - the way a title gets
      * rebound while a provider's search is down. */
     suspend fun entryFor(reference: MetadataReference): ExternalMetadata? {
         reference.externalId?.let { externalId ->
@@ -210,24 +209,17 @@ class ExternalMetadataService(
             }
         }
 
-        val key = when {
-            reference.externalId != null -> "${reference.provider.id}:id:${reference.externalId}"
-            reference.slug != null -> "${reference.provider.id}:slug:${reference.slug}"
-            else -> return null
-        }
+        val externalId = reference.externalId ?: return null
+        val key = "${reference.provider.id}:id:$externalId"
         while (true) {
             val mine = CompletableDeferred<ExternalMetadata?>()
             val existing = inFlightEntries.putIfAbsent(key, mine)
             if (existing == null) {
                 try {
-                    val media = when {
-                        reference.slug != null && reference.provider == MetadataProviderId.KITSU -> kitsu.fetchBySlug(reference.slug)
-                        reference.externalId != null -> fetchById(reference.provider, reference.externalId)
-                        else -> null
-                    }
+                    val media = fetchById(reference.provider, externalId)
                     if (media != null) store.writeMedia(media, nowMillis())
                     mine.complete(media)
-                    return media ?: reference.externalId?.let { store.readMedia(reference.provider, it)?.media }
+                    return media ?: store.readMedia(reference.provider, externalId)?.media
                 } catch (error: Throwable) {
                     mine.completeExceptionally(error)
                     throw error
@@ -262,7 +254,6 @@ class ExternalMetadataService(
             val results = runCatching {
                 when (provider) {
                     MetadataProviderId.ANILIST -> anilist.browse(request)
-                    MetadataProviderId.KITSU -> kitsu.browse(request)
                     MetadataProviderId.MAL -> null
                 }
             }.getOrNull() ?: continue
@@ -335,7 +326,7 @@ class ExternalMetadataService(
     /**
      * Pins [entry]'s provider as the one this title is described by from now on: the card that was just
      * opened is what the title page has to show. Without it the title page asks the preferred provider
-     * first, and a match already recorded there for the same show - Kitsu's, when the card came from
+     * first, and a match already recorded there for the same show, when the card came from
      * AniList - brings a different poster than the one that was tapped. The entry itself is recorded as
      * that provider's match too, so the title page reads it straight from the store.
      */
@@ -358,7 +349,6 @@ class ExternalMetadataService(
     private fun crossIdsOf(entry: ExternalMetadata): List<Pair<MetadataProviderId, Int>> = listOfNotNull(
         entry.anilistId?.let { MetadataProviderId.ANILIST to it },
         entry.malId?.let { MetadataProviderId.MAL to it },
-        entry.kitsuId?.let { MetadataProviderId.KITSU to it },
     ).filterNot { it.first == entry.provider }
 
     /** The recorded match for one entry, read backwards. A "no match" row can never be selected
@@ -538,16 +528,14 @@ class ExternalMetadataService(
      * searching for the name again.
      *
      * Worth a request of its own because search is the fragile, heavily rate-limited half of every
-     * one of these APIs, and the half that guesses; a lookup by id is neither. AniList and Kitsu both
-     * index MAL ids and both publish one, so a title matched through any provider can be bound to the
-     * others exactly.
+     * one of these APIs, and the half that guesses; a lookup by id is neither. AniList indexes MAL
+     * ids, so a title matched through either provider can be bound to the other exactly.
      */
     private suspend fun crossLookup(titleId: String, provider: MetadataProviderId): ExternalMetadata? {
         val malId = knownMalId(titleId) ?: return null
         return when (provider) {
             MetadataProviderId.MAL -> mal.fetchById(malId)
             MetadataProviderId.ANILIST -> anilist.fetchByMalId(malId)
-            MetadataProviderId.KITSU -> kitsu.fetchByMalId(malId)
         }
     }
 
@@ -568,7 +556,6 @@ class ExternalMetadataService(
         val pairs = listOf(
             MetadataProviderId.ANILIST to media.anilistId,
             MetadataProviderId.MAL to media.malId,
-            MetadataProviderId.KITSU to media.kitsuId,
         )
         for ((provider, externalId) in pairs) {
             if (provider == media.provider || externalId == null) continue
@@ -583,7 +570,7 @@ class ExternalMetadataService(
      * The order a live search tries providers in. A foreground lookup keeps the user's preference -
      * it is the title on screen. A background one (a page of cards) goes to whichever provider's
      * queue frees up first, ties keeping preference, so a page spreads by each provider's actual
-     * capacity instead of evenly: Kitsu takes more, the slowest queue (Jikan's) takes less.
+     * capacity instead of evenly, so the slower queue (Jikan's) takes less.
      */
     private suspend fun liveSearchOrder(order: List<MetadataProviderId>): List<MetadataProviderId> {
         if (currentCoroutineContext()[MetadataPriority]?.background != true) return order
@@ -591,7 +578,6 @@ class ExternalMetadataService(
             when (provider) {
                 MetadataProviderId.ANILIST -> anilist.estimatedWaitMillis()
                 MetadataProviderId.MAL -> mal.estimatedWaitMillis()
-                MetadataProviderId.KITSU -> kitsu.estimatedWaitMillis()
             }
         }
     }
@@ -627,13 +613,11 @@ class ExternalMetadataService(
     private suspend fun fetchById(provider: MetadataProviderId, externalId: Int): ExternalMetadata? = when (provider) {
         MetadataProviderId.ANILIST -> anilist.fetchById(externalId)
         MetadataProviderId.MAL -> mal.fetchById(externalId)
-        MetadataProviderId.KITSU -> kitsu.fetchById(externalId)
     }
 
     private suspend fun searchProvider(provider: MetadataProviderId, query: String): List<ScoredEntry>? = when (provider) {
         MetadataProviderId.ANILIST -> anilist.search(query)
         MetadataProviderId.MAL -> mal.search(query)
-        MetadataProviderId.KITSU -> kitsu.search(query)
     }
 
     private fun ttlFor(media: ExternalMetadata): Long =

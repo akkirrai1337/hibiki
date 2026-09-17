@@ -36,7 +36,7 @@ private suspend inline fun <reified T> HttpResponse.decode(): T? =
 /**
  * AniList's GraphQL endpoint.
  *
- * Note for anyone wondering why a screen is describing itself from MAL or Kitsu: AniList disabled
+ * Note for anyone wondering why a screen is describing itself from MAL: AniList disabled
  * this API outright while this was written ("temporarily disabled due to severe stability issues",
  * HTTP 403 on every query), which is exactly the case the service's provider fallback exists for.
  */
@@ -170,7 +170,7 @@ class AniListClient(private val client: HttpClient) {
     /**
      * A page of AniList's catalog. Its "trending" is genuinely trending - what people are watching
      * and talking about this week - rather than a lifetime popularity ranking, which is the one
-     * thing it does better than Kitsu for a catalog.
+     * thing it does better than MAL for a catalog.
      */
     suspend fun browse(request: ExternalCatalogRequest): List<ExternalMetadata>? {
         val (nowSeason, nowYear) = seasonNow()
@@ -323,106 +323,6 @@ class MalOfficialClient(private val client: HttpClient, private val clientId: St
     private companion object {
         const val BASE_URL = "https://api.myanimelist.net/v2"
         const val CLIENT_ID_HEADER = "X-MAL-CLIENT-ID"
-    }
-}
-
-/** Kitsu's public JSON:API. No key, no account. */
-class KitsuClient(private val client: HttpClient) {
-    // Kitsu publishes no hard rate limit, so this is a courtesy pace rather than a documented one.
-    private val queue = MetadataRequestQueue(minIntervalMillis = 400, burst = 5)
-    private val byId = RequestCoalescer<Int, ExternalMetadata?>()
-    private val bySlug = RequestCoalescer<String, ExternalMetadata?>()
-    private val byMalId = RequestCoalescer<Int, ExternalMetadata?>()
-    private val searches = RequestCoalescer<String, List<ScoredEntry>?>()
-
-
-    fun estimatedWaitMillis(): Long = queue.estimatedWaitMillis()
-
-    private suspend inline fun <reified T> get(path: String): T? = queue.run(
-        // JSON:API's own media type, which is what Kitsu's documentation asks for.
-        request = { client.get(BASE_URL + path) { header(HttpHeaders.Accept, "application/vnd.api+json") } },
-        parse = { it.decode<T>() },
-    )
-
-    suspend fun fetchById(kitsuId: Int): ExternalMetadata? = byId.load(kitsuId) {
-        val body = get<KitsuSingleResponse>("/anime/$kitsuId?include=$KITSU_INCLUDE") ?: return@load null
-        body.data?.toExternalMetadata(body.included.orEmpty())
-    }
-
-    /** Kitsu's web URLs name a title by slug, so a pasted link resolves through this rather than by
-     * id. */
-    suspend fun fetchBySlug(slug: String): ExternalMetadata? = bySlug.load(slug.trim().lowercase()) {
-        val body = get<KitsuListResponse>("/anime?filter[slug]=${slug.urlEncoded()}&include=$KITSU_INCLUDE") ?: return@load null
-        body.data.orEmpty().firstOrNull()?.toExternalMetadata(body.included.orEmpty())
-    }
-
-    /** Kitsu indexes the other providers' ids as first-class records, so a title already matched
-     * elsewhere can be bound here exactly, with no search and no guessing. */
-    suspend fun fetchByMalId(malId: Int): ExternalMetadata? = byMalId.load(malId) {
-        val body = get<KitsuMappingsResponse>("/mappings?filter[externalSite]=myanimelist/anime&filter[externalId]=$malId")
-            ?: return@load null
-        val kitsuId = body.data.orEmpty().firstNotNullOfOrNull { it.relationships?.item?.data?.id?.toIntOrNull() }
-            ?: return@load null
-        fetchById(kitsuId)
-    }
-
-    /**
-     * A page of Kitsu's catalog.
-     *
-     * "Trending" is its own endpoint with no paging and no filters of its own, so a request for a
-     * later page of it has nothing to return - the catalog screen stops there rather than
-     * pretending.
-     */
-    suspend fun browse(request: ExternalCatalogRequest): List<ExternalMetadata>? {
-        val query = request.query?.trim()?.takeIf { it.isNotEmpty() }
-        if (query == null && request.mode == ExternalCatalogRequest.Mode.TRENDING) {
-            // A fixed list rather than something to page through: a later page has nothing to return.
-            if (request.offset > 0) return emptyList()
-            return get<KitsuListResponse>("/trending/anime?limit=${request.limit}&include=$KITSU_INCLUDE")?.entries()
-        }
-        val listing = when {
-            // A text search pages like any other listing. Kitsu cannot filter it - the service never
-            // asks it to, see FILTERABLE_CATALOG_PROVIDERS.
-            query != null -> "/anime?filter[text]=${query.urlEncoded()}"
-            request.mode == ExternalCatalogRequest.Mode.SEASON -> {
-                val (nowSeason, nowYear) = seasonNow()
-                "/anime?filter[season]=${(request.season ?: nowSeason).id}&filter[seasonYear]=${request.seasonYear ?: nowYear}&sort=-userCount"
-            }
-            // Kitsu's own popularity ranking, a lifetime count rather than a recent one - the
-            // difference between this and "trending" above.
-            else -> "/anime?sort=-userCount"
-        }
-        // Kitsu refuses a listing page larger than 20 with a 400 - and the catalog's own page is larger -
-        // so a bigger window is read in pages of 20 from the same offset and stitched back together.
-        val collected = mutableListOf<ExternalMetadata>()
-        var offset = request.offset
-        while (collected.size < request.limit) {
-            val pageLimit = minOf(MAX_LISTING_PAGE, request.limit - collected.size)
-            val page = get<KitsuListResponse>("$listing&page[limit]=$pageLimit&page[offset]=$offset&include=$KITSU_INCLUDE")
-                ?.entries()
-                ?: return if (collected.isEmpty()) null else collected
-            collected += page
-            if (page.size < pageLimit) break
-            offset += page.size
-        }
-        return collected
-    }
-
-    private fun KitsuListResponse.entries(): List<ExternalMetadata> {
-        val included = included.orEmpty()
-        return data.orEmpty().map { it.toExternalMetadata(included) }
-    }
-
-    suspend fun search(name: String): List<ScoredEntry>? = searches.load(name.trim().lowercase()) {
-        val body = get<KitsuListResponse>("/anime?filter[text]=${name.urlEncoded()}&page[limit]=10&include=$KITSU_INCLUDE")
-            ?: return@load null
-        val included = body.included.orEmpty()
-        body.data.orEmpty().map { ScoredEntry(it.toMatchCandidate(), it.toExternalMetadata(included)) }
-    }
-
-    private companion object {
-        const val BASE_URL = "https://kitsu.io/api/edge"
-        const val MAX_LISTING_PAGE = 20
     }
 }
 

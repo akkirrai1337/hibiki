@@ -404,7 +404,7 @@
     <string name="details_metadata_described_manual">Метадані з %1$s · вибрано вручну</string>
     <string name="details_metadata_not_matched">Запис метаданих не підібрано</string>
     <string name="details_metadata_picker_title">Запис метаданих</string>
-    <string name="details_metadata_picker_hint">Знайдіть або вставте посилання AniList / MAL / Kitsu</string>
+    <string name="details_metadata_picker_hint">Знайдіть або вставте посилання AniList / MAL</string>
     <string name="details_metadata_picker_placeholder">Назва, посилання або id</string>
     <string name="details_metadata_picker_search">Знайти</string>
     <string name="details_metadata_picker_searching">Шукаю…</string>

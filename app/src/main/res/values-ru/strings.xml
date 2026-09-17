@@ -410,7 +410,7 @@
     <string name="details_metadata_described_manual">Метаданные из %1$s · выбрано вручную</string>
     <string name="details_metadata_not_matched">Запись метаданных не подобрана</string>
     <string name="details_metadata_picker_title">Запись метаданных</string>
-    <string name="details_metadata_picker_hint">Найдите или вставьте ссылку AniList / MAL / Kitsu</string>
+    <string name="details_metadata_picker_hint">Найдите или вставьте ссылку AniList / MAL</string>
     <string name="details_metadata_picker_placeholder">Название, ссылка или id</string>
     <string name="details_metadata_picker_search">Найти</string>
     <string name="details_metadata_picker_searching">Ищу…</string>

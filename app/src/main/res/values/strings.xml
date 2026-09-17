@@ -412,7 +412,7 @@
     <string name="details_metadata_described_manual">Described from %1$s · picked by hand</string>
     <string name="details_metadata_not_matched">Not matched to a metadata entry</string>
     <string name="details_metadata_picker_title">Metadata entry</string>
-    <string name="details_metadata_picker_hint">Search, or paste an AniList / MAL / Kitsu link</string>
+    <string name="details_metadata_picker_hint">Search, or paste an AniList / MAL link</string>
     <string name="details_metadata_picker_placeholder">Title, link, or id</string>
     <string name="details_metadata_picker_search">Search</string>
     <string name="details_metadata_picker_searching">Looking…</string>

@@ -7,7 +7,7 @@ import kotlinx.coroutines.ensureActive
 import java.util.concurrent.ConcurrentHashMap
 
 /** Shares one in-progress request by key. Unlike [RequestBatcher], this is for endpoints that cannot
- * carry several keys in one HTTP request (MAL and Kitsu text search, for example). */
+ * carry several keys in one HTTP request (AniList lookups, for example). */
 internal class RequestCoalescer<K, V> {
     private val inFlight = ConcurrentHashMap<K, CompletableDeferred<V>>()
 

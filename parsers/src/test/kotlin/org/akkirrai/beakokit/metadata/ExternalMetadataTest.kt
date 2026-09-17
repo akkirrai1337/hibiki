@@ -162,12 +162,12 @@ class ExternalMetadataTest {
     @Test
     fun `puts the preferred provider first and the others behind it when distribution is enabled`() {
         assertEquals(
-            listOf(MetadataProviderId.ANILIST, MetadataProviderId.MAL, MetadataProviderId.KITSU),
+            listOf(MetadataProviderId.ANILIST, MetadataProviderId.MAL),
             metadataProviderOrder(ExternalMetadataPreferences(fallbackEnabled = true), "anichi", true),
         )
         assertEquals(
-            listOf(MetadataProviderId.KITSU, MetadataProviderId.ANILIST, MetadataProviderId.MAL),
-            metadataProviderOrder(ExternalMetadataPreferences(provider = MetadataProviderId.KITSU, fallbackEnabled = true), "anichi", true),
+            listOf(MetadataProviderId.MAL, MetadataProviderId.ANILIST),
+            metadataProviderOrder(ExternalMetadataPreferences(provider = MetadataProviderId.MAL, fallbackEnabled = true), "anichi", true),
         )
     }
 

@@ -9,13 +9,13 @@ import org.junit.Test
 class ExternalEntryTitlesTest {
     @Test
     fun `external entry id round trips without colliding with source ids`() {
-        val id = externalEntryId(MetadataProviderId.KITSU, 7442)
+        val id = externalEntryId(MetadataProviderId.ANILIST, 7442)
 
-        assertEquals("hibiki-entry:kitsu:7442", id)
-        assertEquals(MetadataProviderId.KITSU to 7442, decodeExternalEntryId(id))
+        assertEquals("hibiki-entry:anilist:7442", id)
+        assertEquals(MetadataProviderId.ANILIST to 7442, decodeExternalEntryId(id))
         assertNull(decodeExternalEntryId("initial-d-1"))
         assertNull(decodeExternalEntryId("hibiki-entry:unknown:7442"))
-        assertNull(decodeExternalEntryId("hibiki-entry:kitsu:not-a-number"))
+        assertNull(decodeExternalEntryId("hibiki-entry:anilist:not-a-number"))
     }
 
     @Test

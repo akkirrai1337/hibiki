@@ -20,7 +20,7 @@ object AndroidHttpClientFactory {
 
     /**
      * For the metadata aggregators only. No retries: the shared client's retry sat inside
-     * MetadataRequestQueue's request, so a 429 from Jikan or Kitsu was slept on (Retry-After, up to
+     * MetadataRequestQueue's request, so a 429 from Jikan was slept on (Retry-After, up to
      * 30s, twice) instead of reaching the queue's stand-down, while the queue kept admitting more
      * requests into the same throttle - and each such request held a card-match slot for up to a
      * minute. Short timeouts for the same reason: a lookup that slow is worth less than the source's

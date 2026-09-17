@@ -10,9 +10,9 @@ import kotlin.math.roundToInt
  * External metadata: describing a source's titles from a metadata aggregator instead of from the
  * source's own pages. A source that admits its own metadata is the weaker half of what it returns
  * declares `useExternalMetadata` in its manifest, and the app fills in name, description, poster,
- * genres, score and airing from AniList, MAL or Kitsu.
+ * genres, score and airing from AniList or MAL.
  *
- * This file is the provider-neutral core - the shape all three normalize into, how a source title
+ * This file is the provider-neutral core - the shape both normalize into, how a source title
  * is matched to an entry, and which fields that entry is then allowed to replace. Each provider's
  * own response mapping is its own file, and the network and cache live beside them. Everything here
  * is pure, because matching rules and merge rules are the two things worth testing and neither
@@ -24,8 +24,7 @@ import kotlin.math.roundToInt
 @Serializable
 enum class MetadataProviderId {
     ANILIST,
-    MAL,
-    KITSU;
+    MAL;
 
     /** How this provider's score is labelled in [AnimeTitle.ratings] - the same shape a source uses
      * for its own ("Shikimori", "MAL", ...). */
@@ -33,7 +32,6 @@ enum class MetadataProviderId {
         get() = when (this) {
             ANILIST -> "AniList"
             MAL -> "MAL"
-            KITSU -> "Kitsu"
         }
 
     /** The wire name, shared with the desktop client and with anything stored on disk. */
@@ -63,7 +61,6 @@ data class ExternalMetadata(
      * every one of these APIs. */
     val anilistId: Int? = null,
     val malId: Int? = null,
-    val kitsuId: Int? = null,
     val romajiName: String? = null,
     val englishName: String? = null,
     val nativeName: String? = null,
@@ -79,11 +76,11 @@ data class ExternalMetadata(
     val type: String? = null,
     val status: String? = null,
     val episodeCount: Int? = null,
-    /** Out of 10, converted at the provider edge - AniList and Kitsu score out of 100, MAL out of
+    /** Out of 10, converted at the provider edge - AniList scores out of 100, MAL out of
      * 10, and the details screen renders every rating through one formatter. */
     val score: Double? = null,
     val scoreVotes: Int? = null,
-    /** MAL and Kitsu publish one; AniList has no equivalent field at all. */
+    /** MAL publishes one; AniList has no equivalent field at all. */
     val ageRating: String? = null,
     /** Unix seconds, matching [AnimeTitle.nextEpisodeAt]. MAL publishes no such timestamp, so a
      * title described from MAL keeps whatever countdown its source reported. */
@@ -138,7 +135,7 @@ fun metadataProviderOrder(
     return listOf(preferences.provider) + MetadataProviderId.entries.filterNot { it == preferences.provider }
 }
 
-/** What an aggregator-driven catalog asks for. Deliberately small: these are the three shapes a
+/** What an aggregator-driven catalog asks for. Deliberately small: these are the shapes a
  * catalog screen actually offers, not a general query language over three different APIs. */
 data class ExternalCatalogRequest(
     val mode: Mode,
@@ -168,9 +165,7 @@ data class ExternalCatalogRequest(
             statuses.isNotEmpty() || excludedStatuses.isNotEmpty() || yearFrom != null || yearTo != null
 }
 
-/** The providers whose catalog can be narrowed by genre, type, status and year. Kitsu's categories are
- * a vocabulary of their own rather than AniList's genres, so a filtered catalog is AniList's alone
- * instead of one whose genre filter quietly means something else on a fallback. */
+/** The provider whose catalog can be narrowed by genre, type, status and year. */
 val FILTERABLE_CATALOG_PROVIDERS = listOf(MetadataProviderId.ANILIST)
 
 /** AniList's genre set, fixed on its side, minus Hentai - the catalog only ever asks for non-adult
@@ -201,7 +196,7 @@ fun seasonNow(now: java.time.LocalDate = java.time.LocalDate.now()): Pair<AnimeS
 
 /** Which providers can be browsed rather than only looked up. MAL through Jikan has nothing worth
  * calling a trending endpoint, so it stays a description provider. */
-val CATALOG_PROVIDERS = listOf(MetadataProviderId.KITSU, MetadataProviderId.ANILIST)
+val CATALOG_PROVIDERS = listOf(MetadataProviderId.ANILIST)
 
 /**
  * Whether an aggregator-driven catalog has anything to ask, given the providers allowed for a
@@ -244,22 +239,19 @@ fun sourceSearchQueriesFor(entry: ExternalMetadata, limit: Int = 2): List<String
         .distinctBy(String::lowercase)
         .take(limit)
 
-/** One provider's entry, as identified by the user rather than by the matcher. Kitsu's own web URLs
- * name a title by slug rather than by id, so a reference carries one or the other. */
+/** One provider's entry, as identified by the user rather than by the matcher. */
 data class MetadataReference(
     val provider: MetadataProviderId,
     val externalId: Int? = null,
-    val slug: String? = null,
 )
 
 private val ANILIST_LINK = Regex("""anilist\.co/(?:anime|manga)/(\d+)""", RegexOption.IGNORE_CASE)
 private val MAL_LINK = Regex("""myanimelist\.net/anime/(\d+)""", RegexOption.IGNORE_CASE)
-private val KITSU_LINK = Regex("""kitsu\.(?:io|app)/anime/([A-Za-z0-9-]+)""", RegexOption.IGNORE_CASE)
 private val BARE_ID = Regex("""^\d+$""")
 
 /**
  * Reads a provider entry out of whatever was pasted into the manual-rebind box: an AniList, MAL or
- * Kitsu page URL, or a bare id belonging to [defaultProvider].
+ * page URL, or a bare id belonging to [defaultProvider].
  *
  * A URL carries the provider with it, which is the point - pasting the page you are looking at is
  * the one way to fix a wrong match that works even while a provider's *search* is down, which is
@@ -270,14 +262,6 @@ fun parseMetadataReference(input: String, defaultProvider: MetadataProviderId): 
     if (text.isEmpty()) return null
     ANILIST_LINK.find(text)?.let { return MetadataReference(MetadataProviderId.ANILIST, it.groupValues[1].toIntOrNull()) }
     MAL_LINK.find(text)?.let { return MetadataReference(MetadataProviderId.MAL, it.groupValues[1].toIntOrNull()) }
-    KITSU_LINK.find(text)?.let { match ->
-        val id = match.groupValues[1]
-        return if (BARE_ID.matches(id)) {
-            MetadataReference(MetadataProviderId.KITSU, id.toIntOrNull())
-        } else {
-            MetadataReference(MetadataProviderId.KITSU, slug = id)
-        }
-    }
     // A bare number is an id for whichever provider is currently in charge - the ids are unrelated
     // between them, so guessing another would bind the title to a different show entirely.
     if (BARE_ID.matches(text)) return MetadataReference(defaultProvider, text.toIntOrNull())
@@ -288,7 +272,6 @@ fun parseMetadataReference(input: String, defaultProvider: MetadataProviderId): 
 fun metadataEntryUrl(provider: MetadataProviderId, externalId: Int): String = when (provider) {
     MetadataProviderId.ANILIST -> "https://anilist.co/anime/$externalId"
     MetadataProviderId.MAL -> "https://myanimelist.net/anime/$externalId"
-    MetadataProviderId.KITSU -> "https://kitsu.app/anime/$externalId"
 }
 
 /** Below this a match is treated as no match at all. A prefix-only name hit that also contradicts
@@ -309,7 +292,7 @@ private val BLANK_LINES = Regex("""\n{3,}""")
  *
  * All three need this, for different reasons: AniList descriptions are HTML, including
  * `<span class="markdown_spoiler">` blocks holding actual plot spoilers, which have to *go* rather
- * than merely lose their tags; MAL and Kitsu synopses are plain text but carry an attribution tail.
+ * than merely lose their tags; MAL synopses are plain text but carry an attribution tail.
  */
 fun sanitizeDescription(raw: String?): String? {
     if (raw.isNullOrBlank()) return null
@@ -389,7 +372,7 @@ fun searchQueriesFor(anime: AnimeTitle, limit: Int = 3): List<String> {
         .filter(String::isNotBlank)
     val queries = mutableListOf<String>()
     for (name in names) {
-        // Dashes used as brackets break a text search outright: Kitsu answers that one with an
+        // Dashes used as brackets break a text search outright: some providers answer that with an
         // unrelated show, and with the dashes flattened it answers with the right one. Stripped
         // before the season suffix is, because the punctuation is the more common blocker.
         val plain = name.replace(SOURCE_TAGS, "").replace(BRACKET_DASHES, " ").replace(REPEATED_SPACE, " ")
