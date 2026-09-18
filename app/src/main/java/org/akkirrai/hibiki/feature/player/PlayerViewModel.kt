@@ -387,7 +387,12 @@ class PlayerViewModel(
             }
             result
                 .onSuccess { options ->
-                    val episodes = repository.getEpisodes(state.currentSourceId)
+                // Opening the player settings already resolves its own options above. Do not
+                // repeat the full episode-list request just to populate the "Episodes" entry:
+                // the list from the screen that opened this player is kept by the repository.
+                // A cold/deep-linked player still falls back to the source exactly once.
+                val episodes = repository.getCachedEpisodes(state.currentSourceId)
+                    ?: repository.getEpisodes(state.currentSourceId)
                     settingsLoadingKey = null
                     _uiState.update {
                         it.copy(
