@@ -19,7 +19,6 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
-import org.akkirrai.beakokit.api.SourceException
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.app.di.hibikiDependencies
 import org.akkirrai.hibiki.app.settings.AppPreferences
@@ -28,6 +27,7 @@ import org.akkirrai.hibiki.core.log.PerfLogger
 import org.akkirrai.hibiki.core.model.Anime
 import org.akkirrai.hibiki.core.model.AnimeSearchFilters
 import org.akkirrai.hibiki.core.model.SearchUiState
+import org.akkirrai.hibiki.core.source.toSearchErrorMessage
 
 class HomeViewModel(
     internal val repository: HomeRepository,
@@ -196,11 +196,7 @@ class HomeViewModel(
                 throwable,
             )
             if (activeQuery != uiState.value.searchQuery.trim()) return
-            val message = when (throwable) {
-                is SourceException -> throwable.message ?: appString(R.string.error_source_generic)
-                else -> throwable.message ?: appString(R.string.error_search_failed)
-            }
-            _uiState.update { it.copy(searchResult = SearchUiState.Error(message)) }
+            _uiState.update { it.copy(searchResult = SearchUiState.Error(throwable.toSearchErrorMessage(appContext))) }
         }
     }
 
@@ -255,11 +251,7 @@ class HomeViewModel(
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (throwable: Throwable) {
-                val message = when (throwable) {
-                    is SourceException ->
-                        throwable.message ?: appString(R.string.error_source_generic)
-                    else -> throwable.message ?: appString(R.string.error_search_failed)
-                }
+                val message = throwable.toSearchErrorMessage(appContext)
                 _uiState.update { state ->
                     val current = state.searchResult as? SearchUiState.Content
                         ?: return@update state

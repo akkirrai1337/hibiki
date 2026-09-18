@@ -1,7 +1,6 @@
 package org.akkirrai.hibiki.feature.search
 
 import android.content.Context
-import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -14,12 +13,12 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import org.akkirrai.beakokit.api.SourceException
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.app.di.hibikiDependencies
 import org.akkirrai.hibiki.app.settings.AppPreferences
 import org.akkirrai.hibiki.core.model.SearchUiState
 import org.akkirrai.hibiki.core.source.AnimeSearchRepository
+import org.akkirrai.hibiki.core.source.toSearchErrorMessage
 
 class SearchViewModel(
     private val repository: AnimeSearchRepository,
@@ -103,11 +102,7 @@ class SearchViewModel(
             throw cancelled
         } catch (throwable: Throwable) {
             if (activeQuery != uiState.value.query.trim()) return
-            val message = when (throwable) {
-                is SourceException -> throwable.message ?: appString(R.string.error_source_generic)
-                else -> throwable.message ?: appString(R.string.error_search_failed)
-            }
-            _uiState.update { it.copy(result = SearchUiState.Error(message)) }
+            _uiState.update { it.copy(result = SearchUiState.Error(throwable.toSearchErrorMessage(appContext))) }
         }
     }
 
@@ -178,8 +173,6 @@ class SearchViewModel(
         }
     }
 
-    private fun appString(@StringRes resId: Int): String = appContext.getString(resId)
-
     private fun loadFilterCatalog() {
         viewModelScope.launch {
             _uiState.update { it.copy(isFilterCatalogLoading = true) }
@@ -199,7 +192,7 @@ class SearchViewModel(
 
     private companion object {
         const val SEARCH_DEBOUNCE_MS = 450L
-        const val MIN_QUERY_LENGTH = 2
+        const val MIN_QUERY_LENGTH = 3
         const val SEARCH_PAGE_SIZE = 20
     }
 }

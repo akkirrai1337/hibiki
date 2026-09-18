@@ -136,7 +136,7 @@
     <string name="search_filters_format_novel">Роман</string>
     <string name="search_filters_format_one_shot">Ваншот</string>
     <string name="search_start_title">Почніть пошук</string>
-    <string name="search_idle">Введіть назву аніме, щоб знайти його в підключеному джерелі.</string>
+    <string name="search_idle">Введіть щонайменше 3 символи, щоб шукати в підключеному джерелі.</string>
     <string name="search_empty">Нічого не знайдено. Спробуйте інший запит або коротшу назву.</string>
     <string name="search_retry">Спробувати ще раз</string>
     <string name="action_open_sources">Перейти до джерел</string>
@@ -347,7 +347,11 @@
     <string name="yummy_account_api_key_enabled_hint_short">Стабільний доступ до API</string>
     <string name="yummy_account_api_key_disabled_hint_short">Доступно після входу</string>
     <string name="error_source_generic">Помилка джерела</string>
-    <string name="error_search_failed">Помилка пошуку</string>
+    <string name="error_search_failed">Не вдалося виконати пошук. Спробуйте ще раз.</string>
+    <string name="error_search_unavailable">Джерело зараз не відповідає. Перевірте з’єднання та спробуйте ще раз.</string>
+    <string name="error_search_access">Джерело заборонило пошук. Увійдіть знову або спробуйте пізніше.</string>
+    <string name="error_search_rate_limited">Забагато запитів до джерела. Спробуйте за хвилину.</string>
+    <string name="error_search_invalid_response">Джерело повернуло некоректну відповідь. Спробуйте пізніше.</string>
     <string name="details_voiceovers_not_found">Озвучень поки не знайдено</string>
     <string name="details_episodes_not_found">Серій поки не знайдено</string>
     <string name="details_no_episodes_for_download">Немає серій для завантаження</string>

@@ -140,7 +140,7 @@
     <string name="search_filters_format_novel">Novel</string>
     <string name="search_filters_format_one_shot">One Shot</string>
     <string name="search_start_title">Start searching</string>
-    <string name="search_idle">Enter an anime title to find series in the connected source.</string>
+    <string name="search_idle">Enter at least 3 characters to search the connected source.</string>
     <string name="search_empty">Nothing found. Try another query or a shorter title.</string>
     <string name="search_retry">Retry</string>
     <string name="action_open_sources">Go to sources</string>
@@ -358,7 +358,11 @@
     <string name="yummy_account_api_key_enabled_hint_short">Stable API access</string>
     <string name="yummy_account_api_key_disabled_hint_short">Available after sign-in</string>
     <string name="error_source_generic">Source error</string>
-    <string name="error_search_failed">Search failed</string>
+    <string name="error_search_failed">Could not complete the search. Please try again.</string>
+    <string name="error_search_unavailable">The source is not responding right now. Check your connection and try again.</string>
+    <string name="error_search_access">The source denied access to search. Sign in again or try later.</string>
+    <string name="error_search_rate_limited">Too many requests to the source. Please try again in a moment.</string>
+    <string name="error_search_invalid_response">The source returned an invalid response. Please try again later.</string>
 
     <string name="details_voiceovers_not_found">No voiceovers found yet</string>
     <string name="details_episodes_not_found">No episodes found yet</string>
