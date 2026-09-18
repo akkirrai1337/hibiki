@@ -57,6 +57,12 @@ class SearchViewModel(
         scheduleSearch(immediate = true)
     }
 
+    /** Receives text typed into another surface (currently Catalog) and starts immediately. */
+    fun startSearch(query: String) {
+        _uiState.update { it.copy(query = query) }
+        scheduleSearch(immediate = true)
+    }
+
     private fun scheduleSearch(immediate: Boolean) {
         searchJob?.cancel()
         if (currentSearchQuery() == null) {

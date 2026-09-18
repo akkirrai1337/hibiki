@@ -76,6 +76,7 @@ import org.akkirrai.hibiki.feature.library.LibraryScreen
 import org.akkirrai.hibiki.feature.player.EpisodesScreen
 import org.akkirrai.hibiki.feature.player.PlayerScreen
 import org.akkirrai.hibiki.feature.player.WatchSourcesScreen
+import org.akkirrai.hibiki.feature.search.SearchScreen
 import org.akkirrai.hibiki.feature.settings.SettingsScreen
 import org.akkirrai.hibiki.feature.sources.SourceExtensionsScreen
 import org.akkirrai.hibiki.app.settings.LocalAppLanguage
@@ -266,6 +267,11 @@ private fun HibikiNavHost(
                             navController.navigate(AnimeNavType.createDetailsRoute(anime, transitionOrigin = "catalog"))
                         }
                     },
+                    onSearch = { query ->
+                        navController.runIfCurrent(backStackEntry) {
+                            navController.navigate(AnimeNavType.createSearchRoute(query))
+                        }
+                    },
                     onOpenSources = {
                         navController.runIfCurrent(backStackEntry) {
                             navController.navigateTopLevelDestination(
@@ -283,6 +289,29 @@ private fun HibikiNavHost(
                     sharedTransitionScope = sharedTransitionScope,
                     animatedVisibilityScope = this,
                     modifier = topLevelScreenModifier,
+                )
+            }
+        }
+        composable(
+            route = AnimeNavType.SEARCH_PATTERN,
+            arguments = listOf(navArgument(AnimeNavType.QUERY_ARG) {
+                type = NavType.StringType
+                defaultValue = ""
+            }),
+            enterTransition = { appScreenEnterTransition() },
+            exitTransition = { appScreenExitTransition() },
+            popEnterTransition = { appScreenPopEnterTransition() },
+            popExitTransition = { appScreenPopExitTransition() },
+        ) { backStackEntry ->
+            DestinationScreenContainer {
+                SearchScreen(
+                    initialQuery = backStackEntry.arguments?.getString(AnimeNavType.QUERY_ARG).orEmpty(),
+                    onAnimeClick = { anime ->
+                        navController.runIfCurrent(backStackEntry) {
+                            navController.navigate(AnimeNavType.createDetailsRoute(anime, transitionOrigin = "search"))
+                        }
+                    },
+                    modifier = screenModifier,
                 )
             }
         }

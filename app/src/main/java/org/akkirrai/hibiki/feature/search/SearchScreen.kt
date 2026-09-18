@@ -21,6 +21,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -44,11 +45,15 @@ import org.akkirrai.hibiki.core.model.SearchUiState
 
 @Composable
 fun SearchScreen(
+    initialQuery: String = "",
     viewModel: SearchViewModel = viewModel(factory = SearchViewModel.Factory(LocalContext.current)),
     onAnimeClick: (Anime) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val state by viewModel.uiState.collectAsState()
+    LaunchedEffect(initialQuery) {
+        if (initialQuery.isNotBlank() && initialQuery != state.query) viewModel.startSearch(initialQuery)
+    }
     val loadMoreLabel = stringResource(R.string.action_more)
     val idleTitle = stringResource(R.string.search_start_title)
     val idleMessage = stringResource(R.string.search_idle)

@@ -119,6 +119,7 @@ import me.saket.cascade.rememberCascadeState
 @Composable
 fun CatalogScreen(
     onAnimeClick: (Anime) -> Unit,
+    onSearch: (String) -> Unit = {},
     onOpenSources: () -> Unit = {},
     onOpenDownloads: () -> Unit = {},
     modifier: Modifier = Modifier,
@@ -294,7 +295,13 @@ fun CatalogScreen(
         ) {
             AppSearchTopBar(
                 query = state.query,
-                onQueryChange = viewModel::updateQuery,
+                // Catalog search was another implementation of the regular source search, with
+                // its own paging and error behavior. Hand text off on the first edit instead so
+                // searching always happens on the dedicated screen.
+                onQueryChange = { query ->
+                    if (query.isNotBlank()) onSearch(query)
+                    else viewModel.updateQuery("")
+                },
                 onClear = { viewModel.updateQuery("") },
                 onFilterClick = { isFilterSheetOpen = true },
                 showFilter = showFilterControl,
