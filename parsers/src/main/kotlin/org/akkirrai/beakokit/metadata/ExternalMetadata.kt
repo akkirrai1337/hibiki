@@ -522,9 +522,9 @@ private fun preferExternal(external: List<String>, own: List<String>): List<Stri
  * Not replaced, on purpose:
  * - `id`, [AnimeTitle.availableEpisodeCount], and everything playback-related: the source is the
  *   only thing that knows what it has actually uploaded.
- * - all title names: the source owns the identifier that playback opens, so its wording remains
- *   on every card and details page. Replacing it with an aggregator title can create a card that
- *   looks playable even when that provider entry has no counterpart at the source.
+ * - all title names and poster artwork: the source owns the identifier that playback opens, so its
+ *   wording and cover remain on every card and details page. Replacing either with an aggregator
+ *   value can make a playable source title look like a different provider entry.
  * - [AnimeTitle.relatedAnime]/[AnimeTitle.franchiseAnime]/[AnimeTitle.similarAnime]: their ids
  *   address *this source's* catalog, and a provider's ids would make every one of those cards a dead
  *   link.
@@ -533,7 +533,7 @@ fun mergeExternalMetadata(anime: AnimeTitle, external: ExternalMetadata?): Anime
     if (external == null) return anime
     return anime.copy(
         description = preferExternal(external.description, anime.description),
-        posterUrl = preferExternal(external.posterUrl, anime.posterUrl),
+        posterUrl = anime.posterUrl ?: external.posterUrl,
         bannerUrl = preferExternal(external.bannerUrl, anime.bannerUrl),
         genres = preferExternal(external.genres, anime.genres),
         studios = preferExternal(external.studios, anime.studios),

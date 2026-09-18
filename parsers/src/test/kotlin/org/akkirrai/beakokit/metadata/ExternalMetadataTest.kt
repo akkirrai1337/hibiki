@@ -228,6 +228,16 @@ class ExternalMetadataTest {
     }
 
     @Test
+    fun `keeps the source poster even when the provider has a different cover`() {
+        val source = title { copy(posterUrl = "https://source/poster.jpg") }
+
+        assertEquals(
+            "https://source/poster.jpg",
+            mergeExternalMetadata(source, external { copy(posterUrl = "https://anilist/poster.jpg") }).posterUrl,
+        )
+    }
+
+    @Test
     fun `uses dedicated aggregator banner without replacing it with a poster`() {
         val source = title { copy(bannerUrl = "https://source/banner.jpg") }
         val merged = mergeExternalMetadata(source, external { copy(bannerUrl = "https://anilist/banner.jpg") })

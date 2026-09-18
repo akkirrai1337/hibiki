@@ -811,7 +811,10 @@ private fun DetailHeroSection(
     // Without a banner there is no artwork the poster/title need to clear, so the band it used to
     // occupy shrinks instead of staying behind as empty background. Everything below just moves up
     // with it, keeping the hero's own proportions intact.
-    val hasHeroMedia = anime.trailer?.playbackUrl != null || !anime.bannerUrl.isNullOrBlank() ||
+    // The card can carry a source banner while getDetails() is still resolving the richer
+    // aggregator banner. Do not briefly paint that first image and replace it a moment later:
+    // reserve the hero with its loading shimmer until the final details model is available.
+    val hasHeroMedia = isDetailsLoading || anime.trailer?.playbackUrl != null || !anime.bannerUrl.isNullOrBlank() ||
         (resumeState != null && resumeFrame != null)
     BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
         // Stop frames retain the exact surface ratio they were captured with. Resize the whole
@@ -840,6 +843,7 @@ private fun DetailHeroSection(
             if (hasHeroMedia) {
                 DetailHeroMedia(
                     anime = anime,
+                    isDetailsLoading = isDetailsLoading,
                     resumeState = resumeState,
                     resumeFrame = resumeFrame,
                     onResumeClick = onResumeClick,
@@ -1224,6 +1228,7 @@ private fun DetailHeroBackdrop(
 @Composable
 private fun DetailHeroMedia(
     anime: Anime,
+    isDetailsLoading: Boolean,
     resumeState: TitleWatchState?,
     resumeFrame: File?,
     onResumeClick: (TitleWatchState) -> Unit,
@@ -1234,7 +1239,11 @@ private fun DetailHeroMedia(
     val imageUrl = trailer?.thumbnailUrl ?: anime.bannerUrl ?: anime.posterUrl
     val fallbackUrl = anime.posterUrl ?: anime.posterFallbackUrl
     val hasResumeFrame = resumeState != null && resumeFrame != null
-    val hasBannerImage = !hasResumeFrame && (!imageUrl.isNullOrBlank() || !fallbackUrl.isNullOrBlank())
+    // Do not load the source card's transient artwork while the final details request is still
+    // in flight. Otherwise a source banner can visibly crossfade into an aggregator banner.
+    val deferBannerArtwork = isDetailsLoading && !hasResumeFrame
+    val hasBannerImage = !hasResumeFrame && !deferBannerArtwork &&
+        (!imageUrl.isNullOrBlank() || !fallbackUrl.isNullOrBlank())
     var isBannerLoaded by remember(imageUrl, fallbackUrl) { mutableStateOf(!hasBannerImage) }
     // The shared-element transition from a catalog card hands this composable a fresh instance
     // once it settles, resetting isBannerLoaded to false even though Coil already has this exact
@@ -1256,7 +1265,7 @@ private fun DetailHeroMedia(
             .background(MaterialTheme.colorScheme.surfaceContainer),
         contentAlignment = Alignment.Center,
     ) {
-        if (!hasResumeFrame) {
+        if (!hasResumeFrame && !deferBannerArtwork) {
             NetworkImage(
                 imageUrl = imageUrl,
                 fallbackUrl = fallbackUrl,
@@ -1280,7 +1289,7 @@ private fun DetailHeroMedia(
         }
 
         AnimatedVisibility(
-            visible = showBannerSkeleton,
+            visible = deferBannerArtwork || showBannerSkeleton,
             enter = fadeIn(animationSpec = tween(120)),
             exit = fadeOut(animationSpec = tween(180)),
         ) {

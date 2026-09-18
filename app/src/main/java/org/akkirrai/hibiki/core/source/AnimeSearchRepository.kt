@@ -769,7 +769,7 @@ class AnimeSearchRepository(
     }
 
     private fun RelatedAnimeTitle.describedWith(external: ExternalMetadata): RelatedAnimeTitle = copy(
-        posterUrl = external.posterUrl ?: posterUrl,
+        posterUrl = posterUrl ?: external.posterUrl,
         year = external.year ?: year,
         type = external.type ?: type,
         episodeCount = external.episodeCount ?: episodeCount,
