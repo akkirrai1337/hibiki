@@ -247,6 +247,11 @@
     <string name="watch_player_settings_voiceover">Voiceover</string>
     <string name="watch_player_settings_player">Player</string>
     <string name="watch_player_settings_quality">Quality</string>
+    <string name="watch_player_settings_subtitles">Subtitles</string>
+    <string name="watch_player_subtitles_off">Off</string>
+    <string name="watch_player_subtitles_add">Add subtitle file</string>
+    <string name="watch_player_subtitles_custom">Custom</string>
+    <string name="watch_player_subtitles_track">Subtitle %1$d</string>
     <string name="watch_player_settings_on">On</string>
     <string name="watch_player_settings_off">Off</string>
     <string name="watch_player_fallback_name">Player</string>

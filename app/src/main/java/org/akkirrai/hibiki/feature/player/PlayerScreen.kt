@@ -12,9 +12,11 @@ import android.content.IntentFilter
 import android.content.pm.ActivityInfo
 import android.content.pm.PackageManager
 import android.graphics.drawable.Icon
+import android.net.Uri
 import android.os.Build
 import android.os.Looper
 import android.os.SystemClock
+import android.provider.OpenableColumns
 import android.view.LayoutInflater
 import android.view.TextureView
 import android.view.View
@@ -39,6 +41,8 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
@@ -236,6 +240,11 @@ fun PlayerScreen(
     var playlistVisible by remember { mutableStateOf(false) }
     var settingsVisible by remember { mutableStateOf(false) }
     var settingsDestination by remember { mutableStateOf(PlayerSettingsDestination.Root) }
+    var customSubtitle by remember(sourceId, episodeId) { mutableStateOf<LocalSubtitle?>(null) }
+    var selectedSubtitleUrl by remember(state.currentSourceId, state.currentEpisodeId, state.playback?.streamUrl) {
+        mutableStateOf(state.playback?.subtitles?.firstOrNull()?.url)
+    }
+    var preparedPlaybackKey by remember { mutableStateOf<String?>(null) }
     var controlsInteractionTick by remember { mutableIntStateOf(0) }
     var unlockButtonInteractionTick by remember { mutableIntStateOf(0) }
     val isPlayingState = remember { mutableStateOf(true) }
@@ -272,9 +281,65 @@ fun PlayerScreen(
     var restoreWindowUi by restoreWindowUiState
     val autoSkipSegments = preferencesState.autoSkipSegments
     val autoPlayNextEpisode = preferencesState.autoPlayNextEpisode
-    val subtitleTracksAvailable = state.playback?.subtitles?.isNotEmpty() == true
+    val subtitleTracksAvailable = state.playback?.subtitles?.isNotEmpty() == true || customSubtitle != null
     var subtitlesEnabled by remember(state.currentSourceId, state.currentEpisodeId, state.playback?.streamUrl) {
         mutableStateOf(subtitleTracksAvailable)
+    }
+    val subtitlePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        uri?.let {
+            val subtitle = LocalSubtitle(
+                uri = it,
+                label = context.subtitleDisplayName(it),
+                mimeType = subtitleMimeType(context, it),
+            )
+            customSubtitle = subtitle
+            selectedSubtitleUrl = subtitle.uri.toString()
+            subtitlesEnabled = true
+            settingsVisible = true
+            settingsDestination = PlayerSettingsDestination.Subtitles
+        }
+    }
+    val subtitleValues = buildList {
+        add(
+            SelectableValue(
+                id = SUBTITLES_OFF_ID,
+                label = stringResource(R.string.watch_player_subtitles_off),
+                selected = selectedSubtitleUrl == null,
+                onClick = {
+                    selectedSubtitleUrl = null
+                    subtitlesEnabled = false
+                },
+            )
+        )
+        state.playback?.subtitles?.forEachIndexed { index, subtitle ->
+            add(
+                SelectableValue(
+                    id = subtitle.url,
+                    label = subtitle.label?.takeIf(String::isNotBlank)
+                        ?: subtitle.language?.takeIf(String::isNotBlank)
+                        ?: stringResource(R.string.watch_player_subtitles_track, index + 1),
+                    selected = selectedSubtitleUrl == subtitle.url,
+                    onClick = {
+                        selectedSubtitleUrl = subtitle.url
+                        subtitlesEnabled = true
+                    },
+                )
+            )
+        }
+        customSubtitle?.let { subtitle ->
+            add(
+                SelectableValue(
+                    id = subtitle.uri.toString(),
+                    label = subtitle.label,
+                    description = stringResource(R.string.watch_player_subtitles_custom),
+                    selected = selectedSubtitleUrl == subtitle.uri.toString(),
+                    onClick = {
+                        selectedSubtitleUrl = subtitle.uri.toString()
+                        subtitlesEnabled = true
+                    },
+                )
+            )
+        }
     }
     val subtitleLinesState = remember { mutableStateOf(emptyList<String>()) }
     LaunchedEffect(preferencesState.playbackSpeed) {
@@ -522,6 +587,10 @@ fun PlayerScreen(
         exoPlayer = exoPlayer,
         context = context,
         state = state,
+        selectedSubtitleUrl = selectedSubtitleUrl,
+        customSubtitle = customSubtitle,
+        previousPlaybackKey = preparedPlaybackKey,
+        onPlaybackPrepared = { preparedPlaybackKey = it },
         playbackSpeed = playbackSpeed,
         onPrepare = { playerPrepareStartedAt.longValue = SystemClock.elapsedRealtime() },
         keepControlsVisible = { keepControlsVisible() },
@@ -963,12 +1032,8 @@ fun PlayerScreen(
                     subtitlesEnabled = subtitlesEnabled,
                     onSubtitlesClick = {
                         keepControlsVisible()
-                        val enabled = !subtitlesEnabled
-                        exoPlayer.trackSelectionParameters = exoPlayer.trackSelectionParameters
-                            .buildUpon()
-                            .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, !enabled)
-                            .build()
-                        subtitlesEnabled = enabled
+                        settingsVisible = true
+                        settingsDestination = PlayerSettingsDestination.Subtitles
                     },
                     settingsEnabled = true,
                     onSettingsClick = {
@@ -1141,6 +1206,7 @@ fun PlayerScreen(
                     selectedPlayerName = state.selectedPlayerName,
                     selectedQualityLabel = state.selectedQualityLabel ?: state.playback?.qualityLabel,
                     availableQualityLabels = state.availableQualityLabels,
+                    subtitleValues = subtitleValues,
                     autoSkipSegments = autoSkipSegments,
                     autoPlayNextEpisode = autoPlayNextEpisode,
                     options = state.settingsOptions,
@@ -1172,6 +1238,9 @@ fun PlayerScreen(
                         runPlaybackSwitch(preservePosition = true) { resumePositionMs ->
                             viewModel.selectQuality(quality, resumePositionMs)
                         }
+                    },
+                    onAddCustomSubtitle = {
+                        subtitlePicker.launch(SUBTITLE_MIME_TYPES)
                     },
                     onAutoSkipSegmentsChange = { enabled ->
                         keepControlsVisible()
@@ -1562,6 +1631,7 @@ private fun PlayerSettingsSheet(
     selectedPlayerName: String?,
     selectedQualityLabel: String?,
     availableQualityLabels: List<String>,
+    subtitleValues: List<SelectableValue>,
     autoSkipSegments: Boolean,
     autoPlayNextEpisode: Boolean,
     options: org.akkirrai.hibiki.core.model.PlaybackSettingsOptions,
@@ -1571,6 +1641,7 @@ private fun PlayerSettingsSheet(
     onSelectVoiceover: (WatchSource) -> Unit,
     onSelectPlayer: (String?) -> Unit,
     onSelectQuality: (String?) -> Unit,
+    onAddCustomSubtitle: () -> Unit,
     onAutoSkipSegmentsChange: (Boolean) -> Unit,
     onAutoPlayNextEpisodeChange: (Boolean) -> Unit,
 ) {
@@ -1617,6 +1688,7 @@ private fun PlayerSettingsSheet(
         voiceoverValues = voiceoverValues,
         playerValues = playerValues,
         qualityValues = qualityValues,
+        subtitleValues = subtitleValues,
         autoSkipSegments = autoSkipSegments,
         autoPlayNextEpisode = autoPlayNextEpisode,
         onNavigate = onNavigate,
@@ -1665,6 +1737,8 @@ private fun PlayerSettingsSheet(
                         voiceoverValues = voiceoverValues,
                         playerValues = playerValues,
                         qualityValues = qualityValues,
+                        subtitleValues = subtitleValues,
+                        onAddCustomSubtitle = onAddCustomSubtitle,
                     )
                 }
             }
@@ -1858,12 +1932,24 @@ private fun playerSettingsRootEntries(
     voiceoverValues: List<SelectableValue>,
     playerValues: List<SelectableValue>,
     qualityValues: List<SelectableValue>,
+    subtitleValues: List<SelectableValue>,
     autoSkipSegments: Boolean,
     autoPlayNextEpisode: Boolean,
     onNavigate: (PlayerSettingsDestination) -> Unit,
     onAutoSkipSegmentsChange: (Boolean) -> Unit,
     onAutoPlayNextEpisodeChange: (Boolean) -> Unit,
 ): List<PlayerSettingsEntryItem> = buildList {
+    add(
+        PlayerSettingsEntryItem(
+            id = PlayerSettingsDestination.Subtitles.name,
+            title = stringResource(R.string.watch_player_settings_subtitles),
+            value = subtitleValues.firstSelectedLabelOrDefault(
+                defaultLabel = stringResource(R.string.watch_player_subtitles_off),
+            ),
+            icon = Icons.Outlined.Subtitles,
+            onClick = { onNavigate(PlayerSettingsDestination.Subtitles) },
+        )
+    )
     if (voiceoverValues.size > 1) {
         add(
             PlayerSettingsEntryItem(
@@ -1939,6 +2025,8 @@ private fun androidx.compose.foundation.lazy.LazyListScope.playerSettingsItems(
     voiceoverValues: List<SelectableValue>,
     playerValues: List<SelectableValue>,
     qualityValues: List<SelectableValue>,
+    subtitleValues: List<SelectableValue>,
+    onAddCustomSubtitle: () -> Unit,
 ) {
     when (destination) {
         PlayerSettingsDestination.Root -> items(rootEntries, key = PlayerSettingsEntryItem::id) { entry ->
@@ -1953,6 +2041,17 @@ private fun androidx.compose.foundation.lazy.LazyListScope.playerSettingsItems(
         PlayerSettingsDestination.Voiceover -> playerSettingsChoices(voiceoverValues)
         PlayerSettingsDestination.Player -> playerSettingsChoices(playerValues)
         PlayerSettingsDestination.Quality -> playerSettingsChoices(qualityValues)
+        PlayerSettingsDestination.Subtitles -> {
+            item(key = "add_custom_subtitle") {
+                PlayerSettingsEntry(
+                    title = stringResource(R.string.watch_player_subtitles_add),
+                    value = "",
+                    icon = Icons.Outlined.Subtitles,
+                    onClick = onAddCustomSubtitle,
+                )
+            }
+            playerSettingsChoices(subtitleValues)
+        }
     }
 }
 
@@ -1973,6 +2072,7 @@ private enum class PlayerSettingsDestination(
     Voiceover(R.string.watch_player_settings_voiceover, Icons.Outlined.RecordVoiceOver),
     Player(R.string.watch_player_settings_player, Icons.Outlined.VideoSettings),
     Quality(R.string.watch_player_settings_quality, Icons.Outlined.HighQuality),
+    Subtitles(R.string.watch_player_settings_subtitles, Icons.Outlined.Subtitles),
 }
 
 @Composable
@@ -2950,11 +3050,15 @@ private fun PlayerMediaPreparationEffect(
     exoPlayer: ExoPlayer,
     context: Context,
     state: PlayerUiState,
+    selectedSubtitleUrl: String?,
+    customSubtitle: LocalSubtitle?,
+    previousPlaybackKey: String?,
+    onPlaybackPrepared: (String) -> Unit,
     playbackSpeed: Float,
     onPrepare: () -> Unit,
     keepControlsVisible: () -> Unit,
 ) {
-    LaunchedEffect(state.playback) {
+    LaunchedEffect(state.playback, selectedSubtitleUrl, customSubtitle) {
         val playback = state.playback
         if (playback == null) {
             exoPlayer.pause()
@@ -2987,13 +3091,31 @@ private fun PlayerMediaPreparationEffect(
             return@LaunchedEffect
         }
         keepControlsVisible()
+        val playbackKey = "${state.currentSourceId}|${state.currentEpisodeId}|${playback.streamUrl}"
+        val resumePositionMs = exoPlayer.currentPosition.takeIf {
+            previousPlaybackKey == playbackKey && it > 0L
+        } ?: 0L
+        val resumeWhenReady = exoPlayer.playWhenReady
         exoPlayer.stop()
         exoPlayer.clearMediaItems()
-        exoPlayer.setMediaSource(playback.toMediaSource(context, offline = state.isPlayingOffline))
+        exoPlayer.setMediaSource(
+            playback.toMediaSource(
+                context = context,
+                offline = state.isPlayingOffline,
+                selectedSubtitleUrl = selectedSubtitleUrl,
+                customSubtitle = customSubtitle,
+            ),
+        )
+        exoPlayer.trackSelectionParameters = exoPlayer.trackSelectionParameters
+            .buildUpon()
+            .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, selectedSubtitleUrl == null)
+            .build()
         exoPlayer.playbackParameters = PlaybackParameters(playbackSpeed)
         onPrepare()
         exoPlayer.prepare()
-        exoPlayer.playWhenReady = true
+        if (resumePositionMs > 0L) exoPlayer.seekTo(resumePositionMs)
+        exoPlayer.playWhenReady = resumeWhenReady || resumePositionMs == 0L
+        onPlaybackPrepared(playbackKey)
     }
 }
 
@@ -3027,7 +3149,12 @@ private fun playbackDataSourceFactory(
     OfflineMediaCache.buildPlaybackDataSourceFactory(context, headers, resourceHeadersByUrl)
 }
 
-private fun PlaybackStream.toMediaSource(context: Context, offline: Boolean = false): MediaSource {
+private fun PlaybackStream.toMediaSource(
+    context: Context,
+    offline: Boolean = false,
+    selectedSubtitleUrl: String? = null,
+    customSubtitle: LocalSubtitle? = null,
+): MediaSource {
     // Download requests contain the primary stream only. Never attach separately resolved audio
     // or subtitle URLs while offline: they are not guaranteed to be in the download cache and a
     // missing optional track must not make the saved video unplayable.
@@ -3038,11 +3165,31 @@ private fun PlaybackStream.toMediaSource(context: Context, offline: Boolean = fa
     ) else {
         this
     }
+    val subtitleTracks = playback.subtitles.map { subtitle ->
+        MediaSubtitle(
+            url = subtitle.url,
+            label = subtitle.label,
+            language = subtitle.language,
+            headers = subtitle.headers,
+            mimeType = TEXT_VTT,
+            isLocal = false,
+        )
+    } + listOfNotNull(customSubtitle?.let { subtitle ->
+        MediaSubtitle(
+            url = subtitle.uri.toString(),
+            label = subtitle.label,
+            language = null,
+            headers = emptyMap(),
+            mimeType = subtitle.mimeType,
+            isLocal = true,
+        )
+    })
     val dataSourceFactory = playbackDataSourceFactory(
         context = context,
         offline = offline,
         headers = playback.headers,
-        resourceHeadersByUrl = playback.subtitles.associate { subtitle -> subtitle.url to subtitle.headers },
+        resourceHeadersByUrl = subtitleTracks.filterNot(MediaSubtitle::isLocal)
+            .associate { subtitle -> subtitle.url to subtitle.headers },
     )
     val mediaItem = MediaItem.Builder()
         .setUri(playback.streamUrl.toUri())
@@ -3075,17 +3222,13 @@ private fun PlaybackStream.toMediaSource(context: Context, offline: Boolean = fa
                 ),
             )
         }
-        playback.subtitles.forEach { subtitle ->
+        subtitleTracks.forEach { subtitle ->
             val configuration = MediaItem.SubtitleConfiguration.Builder(subtitle.url.toUri())
-                .setMimeType(TEXT_VTT)
+                .setMimeType(subtitle.mimeType)
                 .setLabel(subtitle.label)
                 .setLanguage(subtitle.language)
                 .setSelectionFlags(
-                    if (
-                        subtitle.language.equals("eng", ignoreCase = true) ||
-                        subtitle.language.equals("en", ignoreCase = true) ||
-                        subtitle.label.equals("English", ignoreCase = true)
-                    ) {
+                    if (subtitle.url == selectedSubtitleUrl) {
                         C.SELECTION_FLAG_DEFAULT
                     } else {
                         0
@@ -3094,13 +3237,51 @@ private fun PlaybackStream.toMediaSource(context: Context, offline: Boolean = fa
                 .build()
             add(
                 SingleSampleMediaSource.Factory(
-                    playbackDataSourceFactory(context, offline, subtitle.headers.ifEmpty { playback.headers }),
+                    if (subtitle.isLocal) {
+                        DefaultDataSource.Factory(context)
+                    } else {
+                        playbackDataSourceFactory(context, offline, subtitle.headers.ifEmpty { playback.headers })
+                    },
                 ).createMediaSource(configuration, C.TIME_UNSET),
             )
         }
     }
     return if (sources.size == 1) videoSource else MergingMediaSource(*sources.toTypedArray())
 }
+
+private data class LocalSubtitle(
+    val uri: Uri,
+    val label: String,
+    val mimeType: String,
+)
+
+private data class MediaSubtitle(
+    val url: String,
+    val label: String?,
+    val language: String?,
+    val headers: Map<String, String>,
+    val mimeType: String,
+    val isLocal: Boolean,
+)
+
+private fun Context.subtitleDisplayName(uri: Uri): String {
+    contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { cursor ->
+        val index = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+        if (index >= 0 && cursor.moveToFirst()) {
+            cursor.getString(index)?.trim()?.takeIf(String::isNotBlank)?.let { return it }
+        }
+    }
+    return uri.lastPathSegment?.substringAfterLast('/')?.takeIf(String::isNotBlank)
+        ?: "Subtitle"
+}
+
+private fun subtitleMimeType(context: Context, uri: Uri): String {
+    val name = context.subtitleDisplayName(uri).lowercase()
+    return if (name.endsWith(".srt")) MimeTypes.APPLICATION_SUBRIP else TEXT_VTT
+}
+
+private const val SUBTITLES_OFF_ID = "subtitles-off"
+private val SUBTITLE_MIME_TYPES = arrayOf("text/vtt", "application/x-subrip", "text/plain")
 
 /** Generic visible WebView adapter for extensions that need browser session playback. */
 @Composable
