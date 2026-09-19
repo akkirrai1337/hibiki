@@ -62,9 +62,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
-import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -83,6 +80,7 @@ import androidx.compose.ui.unit.dp
 import android.content.Intent
 import android.net.Uri
 import coil.compose.AsyncImage
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
@@ -98,7 +96,6 @@ import org.akkirrai.hibiki.core.log.AppLogger
 import org.akkirrai.hibiki.core.network.AndroidHttpClientFactory
 import org.akkirrai.hibiki.core.source.AnimeSourceRegistry
 import org.akkirrai.hibiki.core.source.extension.ExtensionMarketplaceClient
-import org.akkirrai.hibiki.core.source.extension.ExtensionMarketplaceException
 import org.akkirrai.hibiki.core.source.extension.MarketplaceExtension
 import org.akkirrai.hibiki.core.source.extension.isExtensionVersionNewer
 import org.akkirrai.hibiki.core.source.extension.SourceExtensionUpdateChecker
@@ -229,7 +226,9 @@ fun SourceExtensionsScreen(
                 async {
                     url to try {
                         RepoFetchResult.Loaded(ExtensionMarketplaceClient(marketplaceHttpClient, url).fetchIndex().extensions)
-                    } catch (error: ExtensionMarketplaceException) {
+                    } catch (error: CancellationException) {
+                        throw error
+                    } catch (error: Exception) {
                         RepoFetchResult.Error(error.message ?: error.toString())
                     }
                 }
@@ -239,21 +238,10 @@ fun SourceExtensionsScreen(
     }
 
     LaunchedEffect(repositoryRefreshSignal, sourceRepositoryUrls) { loadRepositories(sourceRepositoryUrls) }
-    LaunchedEffect(sourceRepositoryUrls) { updateChecker.refresh(sourceRepositoryUrls) }
-
-    // This screen's composable stays alive across bottom-nav tab switches (the NavHost restores
-    // rather than recreates it, so its `remember`ed state survives) - without this, the
-    // marketplace index fetched once on first visit would keep showing whatever versions were
-    // current back then for the rest of the process' life, no matter how many times the user
-    // navigates away and back into Sources looking for an update.
-    val lifecycleOwner = LocalLifecycleOwner.current
-    DisposableEffect(lifecycleOwner) {
-        val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME) repositoryRefreshSignal++
-        }
-        lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
-    }
+    // Do not make a second request purely for the bottom-navigation badge: this screen already
+    // fetched the index for an explicit visit or a manual refresh, so use that same snapshot.
+    // In particular, app startup and returning from the background must remain fully offline.
+    LaunchedEffect(mergedExtensions) { updateChecker.updateFrom(mergedExtensions) }
 
     LaunchedEffect(selectedTab) {
         if (pagerState.currentPage != selectedTab) {

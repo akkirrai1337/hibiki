@@ -80,7 +80,6 @@ import org.akkirrai.hibiki.feature.search.SearchScreen
 import org.akkirrai.hibiki.feature.settings.SettingsScreen
 import org.akkirrai.hibiki.feature.sources.SourceExtensionsScreen
 import org.akkirrai.hibiki.app.settings.LocalAppLanguage
-import org.akkirrai.hibiki.app.settings.LocalAppPreferencesState
 import org.akkirrai.hibiki.core.source.extension.SourceExtensionUpdateChecker
 
 @OptIn(ExperimentalSharedTransitionApi::class)
@@ -95,10 +94,8 @@ fun HibikiApp(
     val context = LocalContext.current
     val discordRpcManager = remember(context) { DiscordRpcManager.get(context) }
     val appLanguage = LocalAppLanguage.current
-    val sourceRepositoryUrls = LocalAppPreferencesState.current.sourceRepositoryUrls
     val sourceUpdateChecker = remember(context) { SourceExtensionUpdateChecker.get(context) }
     val sourceUpdateCount by sourceUpdateChecker.updateCount.collectAsState()
-    LaunchedEffect(sourceRepositoryUrls) { sourceUpdateChecker.refresh(sourceRepositoryUrls) }
     val destinations = TopLevelDestination.entries
     val currentBackStackEntry = navController.currentBackStackEntryAsState()
     val currentDestination = currentBackStackEntry.value?.destination
