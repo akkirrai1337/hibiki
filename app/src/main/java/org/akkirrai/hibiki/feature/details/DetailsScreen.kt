@@ -808,14 +808,32 @@ private fun DetailHeroSection(
     )
     val posterExpandedHeight = 200.dp
     val detailsHeight = 180.dp
+    val bannerImageUrl = anime.trailer?.takeIf { it.playbackUrl != null }?.thumbnailUrl ?: anime.bannerUrl
+    val hasDedicatedBannerImage = !bannerImageUrl.isNullOrBlank()
+    val hasResumeFrame = resumeState != null && resumeFrame != null
+    // A missing (or broken) banner must not leave a permanently shimmering empty hero. The timer
+    // begins again only when the final details model supplies a new banner URL, so a slow metadata
+    // response still gets one honest chance to load its artwork.
+    var isBannerLoaded by remember(anime.id, bannerImageUrl) { mutableStateOf(false) }
+    var isBannerLoadTimedOut by remember(anime.id, bannerImageUrl, isDetailsLoading) {
+        mutableStateOf(false)
+    }
+    LaunchedEffect(isDetailsLoading, bannerImageUrl, hasResumeFrame, isBannerLoaded) {
+        val shouldWaitForBanner = !hasResumeFrame && !isBannerLoaded &&
+            (isDetailsLoading || hasDedicatedBannerImage)
+        if (shouldWaitForBanner) {
+            delay(BANNER_LOAD_TIMEOUT_MILLIS)
+            isBannerLoadTimedOut = true
+        }
+    }
     // Without a banner there is no artwork the poster/title need to clear, so the band it used to
     // occupy shrinks instead of staying behind as empty background. Everything below just moves up
     // with it, keeping the hero's own proportions intact.
     // The card can carry a source banner while getDetails() is still resolving the richer
     // aggregator banner. Do not briefly paint that first image and replace it a moment later:
     // reserve the hero with its loading shimmer until the final details model is available.
-    val hasHeroMedia = isDetailsLoading || anime.trailer?.playbackUrl != null || !anime.bannerUrl.isNullOrBlank() ||
-        (resumeState != null && resumeFrame != null)
+    val hasHeroMedia = hasResumeFrame || isBannerLoaded ||
+        (!isBannerLoadTimedOut && (isDetailsLoading || hasDedicatedBannerImage))
     BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
         // Stop frames retain the exact surface ratio they were captured with. Resize the whole
         // hero around that frame, rather than keeping a fixed 224dp banner and exposing whatever
@@ -848,6 +866,7 @@ private fun DetailHeroSection(
                     resumeFrame = resumeFrame,
                     onResumeClick = onResumeClick,
                     onTrailerClick = onTrailerClick,
+                    onBannerLoaded = { isBannerLoaded = true },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(bannerHeight),
@@ -1233,32 +1252,17 @@ private fun DetailHeroMedia(
     resumeFrame: File?,
     onResumeClick: (TitleWatchState) -> Unit,
     onTrailerClick: () -> Unit,
+    onBannerLoaded: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val trailer = anime.trailer?.takeIf { it.playbackUrl != null }
     val imageUrl = trailer?.thumbnailUrl ?: anime.bannerUrl ?: anime.posterUrl
-    val fallbackUrl = anime.posterUrl ?: anime.posterFallbackUrl
     val hasResumeFrame = resumeState != null && resumeFrame != null
     // Do not load the source card's transient artwork while the final details request is still
     // in flight. Otherwise a source banner can visibly crossfade into an aggregator banner.
     val deferBannerArtwork = isDetailsLoading && !hasResumeFrame
-    val hasBannerImage = !hasResumeFrame && !deferBannerArtwork &&
-        (!imageUrl.isNullOrBlank() || !fallbackUrl.isNullOrBlank())
-    var isBannerLoaded by remember(imageUrl, fallbackUrl) { mutableStateOf(!hasBannerImage) }
-    // The shared-element transition from a catalog card hands this composable a fresh instance
-    // once it settles, resetting isBannerLoaded to false even though Coil already has this exact
-    // image in memory from the transition a frame earlier - showing the skeleton immediately makes
-    // that near-instant cache hit read as a visible flicker instead of a seamless landing. Same
-    // debounce idea as PosterImage's placeholder guard.
-    var showBannerSkeleton by remember(imageUrl, fallbackUrl) { mutableStateOf(false) }
-    LaunchedEffect(isBannerLoaded, imageUrl, fallbackUrl) {
-        if (!isBannerLoaded) {
-            delay(BANNER_SKELETON_FLASH_GUARD_MILLIS)
-            showBannerSkeleton = true
-        } else {
-            showBannerSkeleton = false
-        }
-    }
+    val hasBannerImage = !hasResumeFrame && !deferBannerArtwork && !imageUrl.isNullOrBlank()
+    var isBannerLoaded by remember(imageUrl) { mutableStateOf(!hasBannerImage) }
     Box(
         modifier = modifier
             .clipToBounds()
@@ -1268,7 +1272,6 @@ private fun DetailHeroMedia(
         if (!hasResumeFrame && !deferBannerArtwork) {
             NetworkImage(
                 imageUrl = imageUrl,
-                fallbackUrl = fallbackUrl,
                 contentDescription = null,
                 // Only sample the poster for the title's accent color, not a trailer thumbnail --
                 // trailer stills are usually screenshots with a different color character, and the
@@ -1284,12 +1287,15 @@ private fun DetailHeroMedia(
                             scaleY = 1.025f
                         }
                     },
-                onImageLoaded = { isBannerLoaded = true },
+                onImageLoaded = {
+                    isBannerLoaded = true
+                    onBannerLoaded()
+                },
             )
         }
 
         AnimatedVisibility(
-            visible = deferBannerArtwork || showBannerSkeleton,
+            visible = deferBannerArtwork || !isBannerLoaded,
             enter = fadeIn(animationSpec = tween(120)),
             exit = fadeOut(animationSpec = tween(180)),
         ) {
@@ -2295,7 +2301,7 @@ private fun findResumeWatchState(
     )
 }
 
-private const val BANNER_SKELETON_FLASH_GUARD_MILLIS = 120L
+private const val BANNER_LOAD_TIMEOUT_MILLIS = 1_000L
 
 
 @Composable
