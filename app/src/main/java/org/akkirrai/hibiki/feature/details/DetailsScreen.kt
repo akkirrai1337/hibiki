@@ -790,29 +790,11 @@ private fun DetailHeroSection(
     val bannerImageUrl = anime.trailer?.takeIf { it.playbackUrl != null }?.thumbnailUrl ?: anime.bannerUrl
     val hasDedicatedBannerImage = !bannerImageUrl.isNullOrBlank()
     val hasResumeFrame = resumeState != null && resumeFrame != null
-    // A missing (or broken) banner must not leave a permanently shimmering empty hero. The timer
-    // begins again only when the final details model supplies a new banner URL, so a slow metadata
-    // response still gets one honest chance to load its artwork.
-    var isBannerLoaded by remember(anime.id, bannerImageUrl) { mutableStateOf(false) }
-    var isBannerLoadTimedOut by remember(anime.id, bannerImageUrl, isDetailsLoading) {
-        mutableStateOf(false)
-    }
-    LaunchedEffect(isDetailsLoading, bannerImageUrl, hasResumeFrame, isBannerLoaded) {
-        val shouldWaitForBanner = !hasResumeFrame && !isBannerLoaded &&
-            (isDetailsLoading || hasDedicatedBannerImage)
-        if (shouldWaitForBanner) {
-            delay(BANNER_LOAD_TIMEOUT_MILLIS)
-            isBannerLoadTimedOut = true
-        }
-    }
-    // Without a banner there is no artwork the poster/title need to clear, so the band it used to
-    // occupy shrinks instead of staying behind as empty background. Everything below just moves up
-    // with it, keeping the hero's own proportions intact.
-    // The card can carry a source banner while getDetails() is still resolving the richer
-    // aggregator banner. Do not briefly paint that first image and replace it a moment later:
-    // reserve the hero with its loading shimmer until the final details model is available.
-    val hasHeroMedia = hasResumeFrame || isBannerLoaded ||
-        (!isBannerLoadTimedOut && (isDetailsLoading || hasDedicatedBannerImage))
+    // Banner metadata can arrive substantially later than the title's source details. Keep the
+    // final hero geometry reserved for the whole request, but leave it blank: a timer-based
+    // fallback used to collapse this area and then grow it again when the banner finally arrived.
+    // Once the request settles, only a genuine banner (or a resume frame) keeps the wide hero.
+    val hasHeroMedia = hasResumeFrame || isDetailsLoading || hasDedicatedBannerImage
     BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
         // Stop frames retain the exact surface ratio they were captured with. Resize the whole
         // hero around that frame, rather than keeping a fixed 224dp banner and exposing whatever
@@ -836,20 +818,28 @@ private fun DetailHeroSection(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(heroHeight),
-        ) {
+            ) {
             if (hasHeroMedia) {
-                DetailHeroMedia(
-                    anime = anime,
-                    isDetailsLoading = isDetailsLoading,
-                    resumeState = resumeState,
-                    resumeFrame = resumeFrame,
-                    onResumeClick = onResumeClick,
-                    onTrailerClick = onTrailerClick,
-                    onBannerLoaded = { isBannerLoaded = true },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(bannerHeight),
-                )
+                if (isDetailsLoading && !hasResumeFrame) {
+                    // Keep the final geometry while details resolve. A neutral shared shimmer
+                    // communicates loading without pretending that a source banner is final.
+                    AppShimmerBlock(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(bannerHeight),
+                    )
+                } else {
+                    DetailHeroMedia(
+                        anime = anime,
+                        resumeState = resumeState,
+                        resumeFrame = resumeFrame,
+                        onResumeClick = onResumeClick,
+                        onTrailerClick = onTrailerClick,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(bannerHeight),
+                    )
+                }
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -1226,21 +1216,16 @@ private fun DetailHeroBackdrop(
 @Composable
 private fun DetailHeroMedia(
     anime: Anime,
-    isDetailsLoading: Boolean,
     resumeState: TitleWatchState?,
     resumeFrame: File?,
     onResumeClick: (TitleWatchState) -> Unit,
     onTrailerClick: () -> Unit,
-    onBannerLoaded: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val trailer = anime.trailer?.takeIf { it.playbackUrl != null }
     val imageUrl = trailer?.thumbnailUrl ?: anime.bannerUrl ?: anime.posterUrl
     val hasResumeFrame = resumeState != null && resumeFrame != null
-    // Do not load the source card's transient artwork while the final details request is still
-    // in flight. Otherwise a source banner can visibly crossfade into an aggregator banner.
-    val deferBannerArtwork = isDetailsLoading && !hasResumeFrame
-    val hasBannerImage = !hasResumeFrame && !deferBannerArtwork && !imageUrl.isNullOrBlank()
+    val hasBannerImage = !hasResumeFrame && !imageUrl.isNullOrBlank()
     var isBannerLoaded by remember(imageUrl) { mutableStateOf(!hasBannerImage) }
     Box(
         modifier = modifier
@@ -1248,7 +1233,7 @@ private fun DetailHeroMedia(
             .background(MaterialTheme.colorScheme.surfaceContainer),
         contentAlignment = Alignment.Center,
     ) {
-        if (!hasResumeFrame && !deferBannerArtwork) {
+        if (!hasResumeFrame) {
             NetworkImage(
                 imageUrl = imageUrl,
                 contentDescription = null,
@@ -1265,16 +1250,15 @@ private fun DetailHeroMedia(
                             scaleX = 1.025f
                             scaleY = 1.025f
                         }
-                    },
+                },
                 onImageLoaded = {
                     isBannerLoaded = true
-                    onBannerLoaded()
                 },
             )
         }
 
         AnimatedVisibility(
-            visible = deferBannerArtwork || !isBannerLoaded,
+            visible = !isBannerLoaded,
             enter = fadeIn(animationSpec = tween(120)),
             exit = fadeOut(animationSpec = tween(180)),
         ) {
@@ -2279,9 +2263,6 @@ private fun findResumeWatchState(
         updatedAt = latest.updatedAt,
     )
 }
-
-private const val BANNER_LOAD_TIMEOUT_MILLIS = 1_000L
-
 
 @Composable
 private fun buildSourceSelectorLabel(
