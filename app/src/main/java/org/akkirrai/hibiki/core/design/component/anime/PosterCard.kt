@@ -27,6 +27,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
@@ -56,6 +57,8 @@ fun PosterCard(
     reserveMetaLine: Boolean = false,
     /** Source-provided score only. List screens deliberately do not wait for aggregators. */
     showRating: Boolean = false,
+    /** Browse surfaces place the title over the poster, preserving a compact two-column grid. */
+    titleOverlay: Boolean = false,
     posterOverlayContent: (@Composable BoxScope.() -> Unit)? = null,
     sharedCardModifier: Modifier = Modifier,
     sharedPosterModifier: Modifier = Modifier,
@@ -95,41 +98,44 @@ fun PosterCard(
         PosterArtwork(
             anime = anime,
             showRating = showRating,
+            titleOverlay = anime.title.takeIf { titleOverlay },
             overlayContent = posterOverlayContent,
             modifier = sharedPosterModifier,
         )
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .defaultMinSize(minHeight = reservedTextHeight),
-            verticalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
-            AnimeTitleText(
-                text = anime.title,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurface,
-                minLines = 1,
-                baseMaxLines = titleBaseMaxLines,
-                extraLongTitleLines = titleExtraLongTitleLines,
-                overflow = titleOverflow,
-            )
-            if (metaText.isNotBlank()) {
-                Text(
-                    text = metaText,
+        if (!titleOverlay) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .defaultMinSize(minHeight = reservedTextHeight),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                AnimeTitleText(
+                    text = anime.title,
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = MaterialTheme.colorScheme.onSurface,
                     minLines = 1,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    baseMaxLines = titleBaseMaxLines,
+                    extraLongTitleLines = titleExtraLongTitleLines,
+                    overflow = titleOverflow,
                 )
-            } else if (reserveMetaLine) {
-                Text(
-                    text = " ",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Color.Transparent,
-                    minLines = 1,
-                    maxLines = 1,
-                )
+                if (metaText.isNotBlank()) {
+                    Text(
+                        text = metaText,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        minLines = 1,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                } else if (reserveMetaLine) {
+                    Text(
+                        text = " ",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.Transparent,
+                        minLines = 1,
+                        maxLines = 1,
+                    )
+                }
             }
         }
     }
@@ -150,6 +156,7 @@ fun AnimePosterCardItem(
     reservedTitleLines: Int? = null,
     reserveMetaLine: Boolean = false,
     showRating: Boolean = false,
+    titleOverlay: Boolean = false,
     posterOverlayContent: (@Composable BoxScope.() -> Unit)? = null,
     sharedCardModifier: Modifier = Modifier,
     sharedPosterModifier: Modifier = Modifier,
@@ -165,6 +172,7 @@ fun AnimePosterCardItem(
         reservedTitleLines = reservedTitleLines,
         reserveMetaLine = reserveMetaLine,
         showRating = showRating,
+        titleOverlay = titleOverlay,
         posterOverlayContent = posterOverlayContent,
         sharedCardModifier = sharedCardModifier,
         sharedPosterModifier = sharedPosterModifier,
@@ -178,6 +186,7 @@ fun AnimePosterCardItem(
 private fun PosterArtwork(
     anime: Anime,
     showRating: Boolean,
+    titleOverlay: String?,
     overlayContent: (@Composable BoxScope.() -> Unit)?,
     modifier: Modifier = Modifier
 ) {
@@ -222,6 +231,29 @@ private fun PosterArtwork(
                     )
                 }
             }
+        }
+        titleOverlay?.let { title ->
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .height(84.dp)
+                    .background(
+                        Brush.verticalGradient(
+                            listOf(Color.Transparent, Color.Black.copy(alpha = 0.86f)),
+                        ),
+                    ),
+            )
+            Text(
+                text = title,
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .padding(horizontal = 10.dp, vertical = 9.dp),
+                style = MaterialTheme.typography.titleSmall,
+                color = Color.White,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
         }
         overlayContent?.invoke(this)
     }

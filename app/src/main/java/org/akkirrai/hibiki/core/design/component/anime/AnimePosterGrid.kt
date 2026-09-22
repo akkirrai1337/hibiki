@@ -16,8 +16,9 @@ import org.akkirrai.hibiki.core.design.component.search.AppSearchPlaceholder
 import org.akkirrai.hibiki.core.model.Anime
 import org.akkirrai.hibiki.core.model.SearchUiState
 
-/** Every browse surface uses the same compact portrait grid: three columns at most. */
+/** Search keeps a dense grid; Home and Catalog use [BROWSE_GRID_COLUMNS] for larger cards. */
 const val PORTRAIT_GRID_COLUMNS = 3
+const val BROWSE_GRID_COLUMNS = 2
 val PortraitGridSpacing: Dp = 12.dp
 
 fun LazyGridScope.animePosterGridContent(
@@ -25,6 +26,7 @@ fun LazyGridScope.animePosterGridContent(
     onAnimeClick: (Anime) -> Unit,
     onAnimeLongClick: ((Anime) -> Unit)? = null,
     posterFooterContent: (@Composable (Anime) -> Unit)? = null,
+    titleOverlay: Boolean = false,
     sharedCardModifier: @Composable (Anime) -> Modifier = { Modifier },
     sharedPosterModifier: @Composable (Anime) -> Modifier = { Modifier },
 ) {
@@ -39,6 +41,7 @@ fun LazyGridScope.animePosterGridContent(
             titleExtraLongTitleLines = 0,
             reservedTitleLines = 2,
             showRating = true,
+            titleOverlay = titleOverlay,
             posterOverlayContent = posterFooterContent?.let { footer -> { footer(item) } },
             sharedCardModifier = sharedCardModifier(item),
             sharedPosterModifier = sharedPosterModifier(item),
@@ -62,6 +65,7 @@ fun LazyGridScope.searchStatePosterGridContent(
     onErrorActionClick: (() -> Unit)? = null,
     loadMoreLoadingLabel: String? = null,
     posterFooterContent: (@Composable (Anime) -> Unit)? = null,
+    titleOverlay: Boolean = false,
     sharedCardModifier: @Composable (Anime) -> Modifier = { Modifier },
     sharedPosterModifier: @Composable (Anime) -> Modifier = { Modifier },
 ) {
@@ -96,6 +100,7 @@ fun LazyGridScope.searchStatePosterGridContent(
                 anime = state.items,
                 onAnimeClick = onAnimeClick,
                 posterFooterContent = posterFooterContent,
+                titleOverlay = titleOverlay,
                 sharedCardModifier = sharedCardModifier,
                 sharedPosterModifier = sharedPosterModifier,
             )

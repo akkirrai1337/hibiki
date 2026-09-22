@@ -130,10 +130,10 @@ import org.akkirrai.hibiki.core.design.component.anime.AnimeTitleText
 import org.akkirrai.hibiki.core.design.component.anime.animeDetailsSharedCardModifier
 import org.akkirrai.hibiki.core.design.component.anime.animeDetailsSharedPosterModifier
 import org.akkirrai.hibiki.core.design.component.anime.AnimePosterCardItem
+import org.akkirrai.hibiki.core.design.component.anime.BROWSE_GRID_COLUMNS
 import org.akkirrai.hibiki.core.design.component.anime.AnimeSourceBadge
 import org.akkirrai.hibiki.core.design.component.anime.PosterImage
 import org.akkirrai.hibiki.core.design.component.SectionHeader
-import org.akkirrai.hibiki.core.design.component.anime.PORTRAIT_GRID_COLUMNS
 import org.akkirrai.hibiki.core.design.component.anime.PortraitGridSpacing
 import org.akkirrai.hibiki.core.design.component.anime.searchStatePosterGridContent
 import org.akkirrai.hibiki.core.design.component.anime.VerticalAnimeListItem
@@ -247,7 +247,7 @@ fun HomeScreen(
             ) { searchActive ->
                 if (searchActive) {
                     LazyVerticalGrid(
-                        columns = GridCells.Fixed(PORTRAIT_GRID_COLUMNS),
+                        columns = GridCells.Fixed(BROWSE_GRID_COLUMNS),
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(
                             start = UiDimens.ScreenPadding,
@@ -269,6 +269,7 @@ fun HomeScreen(
                             emptyTitle = searchEmptyTitle,
                             emptyMessage = searchEmptyMessage,
                             emptyIcon = Icons.Outlined.SearchOff,
+                            titleOverlay = true,
                             sharedCardModifier = sharedCardModifier,
                             sharedPosterModifier = sharedPosterModifier,
                         )
@@ -957,7 +958,7 @@ private fun AnimeSection(
             modifier = Modifier.padding(horizontal = UiDimens.ScreenPadding),
             verticalArrangement = Arrangement.spacedBy(PortraitGridSpacing),
         ) {
-            items.chunked(PORTRAIT_GRID_COLUMNS).forEach { rowItems ->
+            items.chunked(BROWSE_GRID_COLUMNS).forEach { rowItems ->
                 Row(horizontalArrangement = Arrangement.spacedBy(PortraitGridSpacing)) {
                     rowItems.forEach { anime ->
                         AnimePosterCardItem(
@@ -971,11 +972,12 @@ private fun AnimeSection(
                             titleOverflow = TextOverflow.Ellipsis,
                             reservedTitleLines = 2,
                             showRating = true,
+                            titleOverlay = true,
                             sharedCardModifier = sharedCardModifier(anime),
                             sharedPosterModifier = sharedPosterModifier(anime),
                         )
                     }
-                    repeat(PORTRAIT_GRID_COLUMNS - rowItems.size) {
+                    repeat(BROWSE_GRID_COLUMNS - rowItems.size) {
                         Spacer(modifier = Modifier.weight(1f))
                     }
                 }

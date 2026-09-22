@@ -37,7 +37,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.core.design.UiDimens
-import org.akkirrai.hibiki.core.design.component.anime.PORTRAIT_GRID_COLUMNS
+import org.akkirrai.hibiki.core.design.component.anime.BROWSE_GRID_COLUMNS
 import org.akkirrai.hibiki.core.design.component.anime.PortraitGridSpacing
 import org.akkirrai.hibiki.core.design.component.anime.searchStatePosterGridContent
 import org.akkirrai.hibiki.core.model.Anime
@@ -62,7 +62,7 @@ fun SearchScreen(
     val retryLabel = stringResource(R.string.search_retry)
 
     LazyVerticalGrid(
-        columns = GridCells.Fixed(PORTRAIT_GRID_COLUMNS),
+        columns = GridCells.Fixed(BROWSE_GRID_COLUMNS),
         modifier = modifier.fillMaxSize(),
         contentPadding = PaddingValues(
             start = UiDimens.ScreenPadding,
@@ -95,6 +95,7 @@ fun SearchScreen(
             emptyTitle = emptyTitle,
             emptyMessage = emptyMessage,
             emptyIcon = Icons.Outlined.SearchOff,
+            titleOverlay = true,
             errorActionLabel = retryLabel,
             onErrorActionClick = viewModel::search,
         )

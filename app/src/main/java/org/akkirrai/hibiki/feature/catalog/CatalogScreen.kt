@@ -97,7 +97,7 @@ import org.akkirrai.hibiki.core.design.component.AppCenteredLoading
 import org.akkirrai.hibiki.core.design.component.AppMessageState
 import org.akkirrai.hibiki.core.design.component.search.AppSearchTopBar
 import org.akkirrai.hibiki.core.design.component.AppTopScrim
-import org.akkirrai.hibiki.core.design.component.anime.PORTRAIT_GRID_COLUMNS
+import org.akkirrai.hibiki.core.design.component.anime.BROWSE_GRID_COLUMNS
 import org.akkirrai.hibiki.core.design.component.anime.PortraitGridSpacing
 import org.akkirrai.hibiki.core.design.component.anime.animePosterGridContent
 import org.akkirrai.hibiki.core.design.component.anime.animeDetailsSharedCardModifier
@@ -370,7 +370,7 @@ private fun CatalogAnimeListContent(
     sharedPosterModifier: @Composable (Anime) -> Modifier,
 ) {
     LazyVerticalGrid(
-        columns = GridCells.Fixed(PORTRAIT_GRID_COLUMNS),
+        columns = GridCells.Fixed(BROWSE_GRID_COLUMNS),
         state = listState,
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(
@@ -396,6 +396,7 @@ private fun CatalogAnimeListContent(
         animePosterGridContent(
             anime = listUiState.items,
             onAnimeClick = onAnimeClick,
+            titleOverlay = true,
             sharedCardModifier = sharedCardModifier,
             sharedPosterModifier = sharedPosterModifier,
         )
