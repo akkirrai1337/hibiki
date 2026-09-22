@@ -2320,8 +2320,11 @@ private fun buildHeroInfo(anime: Anime, localizedEpisodeWord: String): HeroInfo 
         ?.value
         ?.toIntOrNull()
 
-    val episodes = rawEpisodes
-        .takeIf { episodeCount == null || episodeCount > 0 }
+    // Sources disagree on whether this is "12 episodes", "12 episodes total", or a release
+    // progress string. The information chip is a count, so keep its wording stable everywhere.
+    val episodes = episodeCount
+        ?.takeIf { it > 0 }
+        ?.let { "$it $localizedEpisodeWord" }
         .orEmpty()
 
     val status = anime.status.takeUnless { it.isBlank() || it == UNKNOWN_VALUE }.orEmpty()
@@ -2523,6 +2526,14 @@ internal fun isOngoingStatus(status: String): Boolean {
 }
 
 internal fun extractNextEpisodeNumber(episodesLabel: String): Int? {
+    // "N episodes total" is a planned total supplied by metadata providers, not the number
+    // currently released by the selected source. Inferring N + 1 from it produces an incorrect
+    // next-episode label for ongoing titles (for example, a source with episodes 1..13 and a
+    // provider total of 14). In that case the countdown remains useful, but its ordinal is not
+    // known until the source episode list is opened.
+    if (Regex("""\b(total|всего)\b""", RegexOption.IGNORE_CASE).containsMatchIn(episodesLabel)) {
+        return null
+    }
     val releasedEpisodes = Regex("""\d+""")
         .find(episodesLabel)
         ?.value

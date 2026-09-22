@@ -18,6 +18,8 @@ class DetailsScreenLogicTest {
     fun `next episode number follows released episode count`() {
         assertEquals(12, extractNextEpisodeNumber("11 of 24 episodes"))
         assertEquals(4, extractNextEpisodeNumber("3 серии вышло"))
+        assertEquals(null, extractNextEpisodeNumber("14 episodes total"))
+        assertEquals(null, extractNextEpisodeNumber("14 серий всего"))
         assertEquals(null, extractNextEpisodeNumber("Не выбрано"))
     }
 
