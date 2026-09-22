@@ -156,12 +156,10 @@ import org.akkirrai.hibiki.core.model.formatEpisodeNumber
 import org.akkirrai.hibiki.core.model.formatPlaybackTime
 import org.akkirrai.hibiki.core.model.isWatchedToEnd
 import org.akkirrai.hibiki.core.model.RelatedAnime
-import org.akkirrai.hibiki.feature.catalog.rememberEntryOpener
 import org.akkirrai.hibiki.core.model.TitleWatchState
 import org.akkirrai.hibiki.core.model.WatchSource
 import org.akkirrai.hibiki.core.model.WatchSourceSelection
 import org.akkirrai.hibiki.core.source.AnimeSearchRepository
-import org.akkirrai.hibiki.core.source.withAggregatorFranchiseMetadata
 import org.akkirrai.hibiki.core.source.withRelatedMetadata
 import org.akkirrai.hibiki.core.source.AnimeSourceDescriptor
 import org.akkirrai.hibiki.core.source.AnimeSourceRegistry
@@ -240,16 +238,7 @@ fun DetailsScreen(
         saved.firstVisibleItemIndex == 0 && saved.firstVisibleItemScrollOffset == 0
     } ?: true
     val searchRepository = remember(dependencies) { dependencies.animeSearchRepository() }
-    val franchiseEntryResolver = remember(dependencies) { dependencies.catalogRepository() }
-    DisposableEffect(franchiseEntryResolver) {
-        onDispose(franchiseEntryResolver::close)
-    }
-    val onResolvedRelatedAnimeClick = rememberEntryOpener(
-        repository = franchiseEntryResolver,
-        onOpen = onRelatedAnimeClick,
-    )
     val relatedMetadata by searchRepository.relatedMetadata.collectAsState()
-    val aggregatorFranchiseMetadata by searchRepository.aggregatorFranchiseMetadata.collectAsState()
     val libraryRepository = remember(dependencies) { dependencies.libraryRepository() }
     val offlineTitleMetadataRepository = remember(dependencies) { dependencies.offlineTitleMetadataRepository() }
     val watchStateRepository = remember(dependencies) { dependencies.watchStateRepository() }
@@ -480,15 +469,12 @@ fun DetailsScreen(
     val uiModel = remember(
         currentAnime,
         relatedMetadata,
-        aggregatorFranchiseMetadata,
         heroInfo,
         description,
         sourceDescriptor.contentFeatures,
     ) {
         buildDetailsUiModel(
-            anime = currentAnime
-                .withRelatedMetadata(relatedMetadata)
-                .withAggregatorFranchiseMetadata(aggregatorFranchiseMetadata),
+            anime = currentAnime.withRelatedMetadata(relatedMetadata),
             hero = heroInfo,
             description = description,
             contentFeatures = sourceDescriptor.contentFeatures,
@@ -673,13 +659,6 @@ fun DetailsScreen(
                                         items = section.items,
                                         title = stringResource(R.string.details_related),
                                         onAnimeClick = onRelatedAnimeClick,
-                                    )
-                                }
-                                is FranchiseSection -> {
-                                    RelatedAnimeList(
-                                        items = section.items,
-                                        title = stringResource(R.string.details_franchise),
-                                        onAnimeClick = onResolvedRelatedAnimeClick,
                                     )
                                 }
                                 is SimilarSection -> {
