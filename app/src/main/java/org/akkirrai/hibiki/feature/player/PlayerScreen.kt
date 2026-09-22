@@ -150,10 +150,12 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MimeTypes.TEXT_VTT
+import androidx.media3.common.MimeTypes.TEXT_SSA
 import androidx.media3.common.MimeTypes
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.PlaybackParameters
 import androidx.media3.common.Player
+import androidx.media3.common.TrackSelectionOverride
 import androidx.media3.common.VideoSize
 import androidx.media3.common.text.CueGroup
 import androidx.media3.datasource.DataSource
@@ -595,6 +597,13 @@ fun PlayerScreen(
         playbackSpeed = playbackSpeed,
         onPrepare = { playerPrepareStartedAt.longValue = SystemClock.elapsedRealtime() },
         keepControlsVisible = { keepControlsVisible() },
+    )
+
+    PlayerSubtitleSelectionEffect(
+        exoPlayer = exoPlayer,
+        playback = state.playback,
+        selectedSubtitleUrl = selectedSubtitleUrl,
+        customSubtitle = customSubtitle,
     )
 
     LaunchedEffect(state.pendingSeekMs, state.currentEpisodeId, state.currentSourceId) {
@@ -3085,7 +3094,9 @@ private fun PlayerMediaPreparationEffect(
     onPrepare: () -> Unit,
     keepControlsVisible: () -> Unit,
 ) {
-    LaunchedEffect(state.playback, selectedSubtitleUrl, customSubtitle) {
+    // A track choice is applied independently below. Recreating the source for every subtitle
+    // toggle made the video buffer and resume from the start.
+    LaunchedEffect(state.playback, customSubtitle) {
         val playback = state.playback
         if (playback == null) {
             exoPlayer.pause()
@@ -3304,11 +3315,49 @@ private fun Context.subtitleDisplayName(uri: Uri): String {
 
 private fun subtitleMimeType(context: Context, uri: Uri): String {
     val name = context.subtitleDisplayName(uri).lowercase()
-    return if (name.endsWith(".srt")) MimeTypes.APPLICATION_SUBRIP else TEXT_VTT
+    return when {
+        name.endsWith(".ass") || name.endsWith(".ssa") -> TEXT_SSA
+        name.endsWith(".srt") -> MimeTypes.APPLICATION_SUBRIP
+        else -> TEXT_VTT
+    }
+}
+
+@Composable
+private fun PlayerSubtitleSelectionEffect(
+    exoPlayer: ExoPlayer,
+    playback: PlaybackStream?,
+    selectedSubtitleUrl: String?,
+    customSubtitle: LocalSubtitle?,
+) {
+    LaunchedEffect(exoPlayer, playback?.streamUrl, selectedSubtitleUrl, customSubtitle) {
+        val selectedLabel = when (selectedSubtitleUrl) {
+            customSubtitle?.uri?.toString() -> customSubtitle?.label
+            else -> playback?.subtitles
+                ?.firstOrNull { it.url == selectedSubtitleUrl }
+                ?.label
+        }
+        val parameters = exoPlayer.trackSelectionParameters.buildUpon()
+            .clearOverridesOfType(C.TRACK_TYPE_TEXT)
+            .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, selectedSubtitleUrl == null)
+        if (selectedSubtitleUrl != null) {
+            exoPlayer.currentTracks.groups
+                .firstNotNullOfOrNull { group ->
+                    if (group.type != C.TRACK_TYPE_TEXT) return@firstNotNullOfOrNull null
+                    (0 until group.length).firstOrNull { index ->
+                        group.getTrackFormat(index).label == selectedLabel
+                    }?.let { index -> TrackSelectionOverride(group.mediaTrackGroup, listOf(index)) }
+                }
+                ?.let(parameters::setOverrideForType)
+        }
+        exoPlayer.trackSelectionParameters = parameters.build()
+    }
 }
 
 private const val SUBTITLES_OFF_ID = "subtitles-off"
-private val SUBTITLE_MIME_TYPES = arrayOf("text/vtt", "application/x-subrip", "text/plain")
+// DocumentsUI commonly classifies .ass files as application/octet-stream, so a MIME-only filter
+// makes valid subtitle files unselectable. The extension is resolved in [subtitleMimeType] after
+// selection instead.
+private val SUBTITLE_MIME_TYPES = arrayOf("*/*")
 
 /** Generic visible WebView adapter for extensions that need browser session playback. */
 @Composable
