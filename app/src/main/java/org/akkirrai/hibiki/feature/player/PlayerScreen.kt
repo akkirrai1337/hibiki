@@ -45,6 +45,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectDragGestures
@@ -1028,9 +1029,20 @@ fun PlayerScreen(
                         keepControlsVisible()
                         appPreferences.setVideoScaleMode(videoScaleMode.next())
                     },
-                    subtitlesAvailable = subtitleTracksAvailable,
                     subtitlesEnabled = subtitlesEnabled,
                     onSubtitlesClick = {
+                        keepControlsVisible()
+                        val nextSubtitleUrl = if (subtitlesEnabled) {
+                            null
+                        } else {
+                            selectedSubtitleUrl
+                                ?: state.playback?.subtitles?.firstOrNull()?.url
+                                ?: customSubtitle?.uri?.toString()
+                        }
+                        selectedSubtitleUrl = nextSubtitleUrl
+                        subtitlesEnabled = nextSubtitleUrl != null
+                    },
+                    onSubtitlesLongClick = {
                         keepControlsVisible()
                         settingsVisible = true
                         settingsDestination = PlayerSettingsDestination.Subtitles
@@ -2121,9 +2133,9 @@ private fun PlayerBottomOverlay(
     onSliderValueChangeFinished: () -> Unit,
     videoScaleMode: VideoScaleMode,
     onVideoScaleModeClick: () -> Unit,
-    subtitlesAvailable: Boolean,
     subtitlesEnabled: Boolean,
     onSubtitlesClick: () -> Unit,
+    onSubtitlesLongClick: () -> Unit,
     settingsEnabled: Boolean,
     onSettingsClick: () -> Unit,
     pictureInPictureEnabled: Boolean,
@@ -2200,26 +2212,11 @@ private fun PlayerBottomOverlay(
                             tint = Color.White,
                         )
                     }
-                    if (subtitlesAvailable) {
-                        AppFilledIconButton(
-                            onClick = onSubtitlesClick,
-                            modifier = Modifier.size(46.dp),
-                            style = AppFilledIconButtonStyle.DarkOverlay,
-                        ) {
-                            Icon(
-                                imageVector = if (subtitlesEnabled) {
-                                    Icons.Outlined.SubtitlesOff
-                                } else {
-                                    Icons.Outlined.Subtitles
-                                },
-                                contentDescription = stringResource(
-                                    if (subtitlesEnabled) R.string.watch_player_subtitles_disable
-                                    else R.string.watch_player_subtitles_enable,
-                                ),
-                                tint = Color.White,
-                            )
-                        }
-                    }
+                    PlayerSubtitleButton(
+                        enabled = subtitlesEnabled,
+                        onClick = onSubtitlesClick,
+                        onLongClick = onSubtitlesLongClick,
+                    )
                     AppFilledIconButton(
                         onClick = onLockClick,
                         modifier = Modifier.size(46.dp),
@@ -2259,6 +2256,36 @@ private fun PlayerBottomOverlay(
             }
         }
 
+    }
+}
+
+@Composable
+private fun PlayerSubtitleButton(
+    enabled: Boolean,
+    onClick: () -> Unit,
+    onLongClick: () -> Unit,
+) {
+    Surface(
+        modifier = Modifier
+            .size(46.dp)
+            .clip(CircleShape)
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = onLongClick,
+            ),
+        shape = CircleShape,
+        color = Color.Black.copy(alpha = 0.58f),
+        contentColor = Color.White,
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Icon(
+                imageVector = if (enabled) Icons.Outlined.SubtitlesOff else Icons.Outlined.Subtitles,
+                contentDescription = stringResource(
+                    if (enabled) R.string.watch_player_subtitles_disable
+                    else R.string.watch_player_subtitles_enable,
+                ),
+            )
+        }
     }
 }
 
