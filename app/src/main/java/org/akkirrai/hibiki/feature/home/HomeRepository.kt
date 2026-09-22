@@ -51,9 +51,6 @@ class HomeRepository(
     @Volatile
     private var currentHomeSelectionSeed: Long? = null
 
-    @Volatile
-    private var pendingHomeCatalog: PendingHomeCatalog? = null
-
     private val appContext = context.applicationContext
     private val appPreferences = AppPreferences(appContext)
     private val sourceManager = sourceManager ?: AnimeSourceRuntimeManager(appContext, client)
@@ -75,7 +72,6 @@ class HomeRepository(
         ensureInternetConnection()
         cachedHomeContent = null
         cachedRecentUpdates = null
-        pendingHomeCatalog = null
         currentHomeSelectionSeed = Random.nextLong()
         AppLogger.d(TAG, "refreshHomeState: advanced home selection seed to $currentHomeSelectionSeed")
         return loadHomeState(forceRefresh = true)
@@ -110,11 +106,11 @@ class HomeRepository(
         } else {
             0
         }
-        AppLogger.d(TAG, "loadHomeState: calling first catalog page(limit=$HOME_FIRST_PAINT_WINDOW_SIZE, offset=$trendingOffset, lang=$languageKey)")
+        AppLogger.d(TAG, "loadHomeState: calling catalog page(limit=$HOME_TRENDING_WINDOW_SIZE, offset=$trendingOffset, lang=$languageKey)")
         val catalog = retryOnColdStartNetworkFailure {
             searchRepository.search(
                 AnimeSearchRequest(
-                    limit = HOME_FIRST_PAINT_WINDOW_SIZE,
+                    limit = HOME_TRENDING_WINDOW_SIZE,
                     offset = trendingOffset,
                     sort = AnimeSearchSort.RATING,
                 ),
@@ -146,14 +142,7 @@ class HomeRepository(
             trending = trending,
             recentlyUpdated = emptyList(),
         )
-        pendingHomeCatalog = PendingHomeCatalog(
-            selectionSeed = selectionSeed,
-            languageKey = languageKey,
-            sourceId = selectedSourceId(),
-            offset = trendingOffset,
-            initialItems = catalog,
-        )
-        AppLogger.d(TAG, "loadHomeState: first paint content ready — featured=${featuredAnime.size}, trending=${trending.size}")
+        AppLogger.d(TAG, "loadHomeState: catalog content ready — featured=${featuredAnime.size}, trending=${trending.size}")
 
         val recentlyWatched = loadRecentlyWatchedAnime()
         return HomeUiState(
@@ -245,7 +234,7 @@ class HomeRepository(
                 .getOrDefault(emptyList())
         }
         val continueAnime = async { loadContinueAnime() }
-        val trending = async { loadRemainingHomeCatalog(forceRefresh) }
+        val trending = async { cachedHomeContent?.trending.orEmpty() }
         val loadedRecentlyUpdated = recentlyUpdated.await()
         cachedHomeContent?.let { cached ->
             cachedHomeContent = cached.copy(recentlyUpdated = loadedRecentlyUpdated)
@@ -255,45 +244,6 @@ class HomeRepository(
             recentlyUpdated = loadedRecentlyUpdated,
             trending = trending.await(),
         )
-    }
-
-    /** Fills the rest of the 24-title home window after the first eight cards are on screen. */
-    private suspend fun loadRemainingHomeCatalog(forceRefresh: Boolean): List<Anime> {
-        val pending = pendingHomeCatalog ?: return cachedHomeContent?.trending.orEmpty()
-        if (pending.sourceId != selectedSourceId() || pending.languageKey != "${selectedSourceId().value}:${sourceLanguage()}") {
-            return cachedHomeContent?.trending.orEmpty()
-        }
-        val remainingLimit = HOME_TRENDING_WINDOW_SIZE - pending.initialItems.size
-        if (remainingLimit <= 0) return cachedHomeContent?.trending.orEmpty()
-
-        val remaining = runCatching {
-            retryOnColdStartNetworkFailure {
-                searchRepository.search(
-                    AnimeSearchRequest(
-                        limit = remainingLimit,
-                        offset = pending.offset + pending.initialItems.size,
-                        sort = AnimeSearchSort.RATING,
-                    ),
-                    allowEmptyQuery = true,
-                    forceRefresh = forceRefresh,
-                    cardMetadataVisibleCount = 0,
-                    cardMetadataPrefetchDelayMillis = HOME_BACKGROUND_METADATA_DELAY_MILLIS,
-                    cardMetadataInitialDelayMillis = HOME_METADATA_BATCH_WINDOW_MILLIS,
-                )
-            }
-        }.onFailure { error ->
-            AppLogger.w(TAG, "Home remaining catalog is unavailable: ${error.message}")
-        }.getOrDefault(emptyList())
-
-        val cached = cachedHomeContent ?: return emptyList()
-        val filledTrending = (cached.trending + remaining
-            .shuffled(Random(pending.selectionSeed xor TRENDING_ROTATION_SEED_SALT))
-            .filterNot { it.id in cached.featuredAnime.map(Anime::id).toSet() })
-            .distinctBy(Anime::id)
-            .take(HOME_SECTION_LIMIT)
-        cachedHomeContent = cached.copy(trending = filledTrending)
-        pendingHomeCatalog = null
-        return filledTrending
     }
 
     private fun loadContinueAnimeFromStorage(): Anime? {
@@ -519,7 +469,6 @@ class HomeRepository(
         const val RECENTLY_WATCHED_LIMIT = 15
         const val HOME_FULL_SECTION_LIMIT = 100
         const val HOME_TRENDING_WINDOW_SIZE = 24
-        const val HOME_FIRST_PAINT_WINDOW_SIZE = 8
         // The first source page, remaining catalog and latest row normally arrive within this
         // window. Their metadata can then fill AniList batches instead of starting three waves.
         const val HOME_METADATA_BATCH_WINDOW_MILLIS = 300L
@@ -549,14 +498,6 @@ class HomeRepository(
         val continueAnime: Anime?,
         val recentlyUpdated: List<Anime>,
         val trending: List<Anime>,
-    )
-
-    private data class PendingHomeCatalog(
-        val selectionSeed: Long,
-        val languageKey: String,
-        val sourceId: SourceId,
-        val offset: Int,
-        val initialItems: List<Anime>,
     )
 
     private data class CachedSourceAnime(
