@@ -9,12 +9,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.currentCoroutineContext
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.supervisorScope
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeout
@@ -296,8 +291,12 @@ class AnimeWatchRepository(
             lastResolutionError = SourceException("Playback resolution timed out")
         }
         browserPageCandidate?.let { return it }
-        val (resolved, resolvedPayload) = resolvedCandidate
-            ?: throw lastResolutionError ?: SourceException(appString(R.string.watch_error_no_players))
+        val (resolved, resolvedPayload) = resolvedCandidate ?: run {
+            if (!requiredPlayerName.isNullOrBlank()) {
+                throw SourceException(appString(R.string.watch_error_selected_player_unavailable))
+            }
+            throw lastResolutionError ?: SourceException(appString(R.string.watch_error_no_players))
+        }
         AppLogger.d(
             TAG,
             "validated stream: player=${resolved.link.playerName}, type=${resolved.validation.streamType}, " +
@@ -347,22 +346,6 @@ class AnimeWatchRepository(
         preferredPlayerName: String? = null,
         preferredQuality: String? = null,
     ): ResolvedPlayerStream {
-        // KAA exposes all servers for the selected episode in one response. If the title details
-        // are already present, resolving that response directly is both the fastest candidate and
-        // avoids fetching the optional all-locale playlist just to discover its player names.
-        if (knownKickAssPayload(sourceId, episodeId) != null) {
-            return ResolvedPlayerStream(
-                playerName = null,
-                playback = resolveStream(
-                    sourceId = sourceId,
-                    episodeId = episodeId,
-                    forceRefresh = forceRefresh,
-                    excludedStreamUrls = excludedStreamUrls,
-                    preferredPlayerName = preferredPlayerName,
-                    preferredQuality = preferredQuality,
-                ),
-            )
-        }
         val playerNames = getPlaybackSettingsOptions(sourceId, episodeId)
             .links
             .mapNotNull { it.playerName?.trim()?.takeIf(String::isNotBlank) }
@@ -370,57 +353,22 @@ class AnimeWatchRepository(
 
         val rememberedPlayer = preferredPlayerName
             ?.takeIf { preferred -> playerNames.any { matchesPreferredPlayer(it, preferred) } }
-        if (rememberedPlayer != null) {
-            try {
-                return ResolvedPlayerStream(
-                    playerName = rememberedPlayer,
-                    playback = resolveStream(
-                        sourceId = sourceId,
-                        episodeId = episodeId,
-                        forceRefresh = forceRefresh,
-                        excludedStreamUrls = excludedStreamUrls,
-                        preferredQuality = preferredQuality,
-                        requiredPlayerName = rememberedPlayer,
-                    ),
-                )
-            } catch (error: CancellationException) {
-                throw error
-            } catch (error: Throwable) {
-                AppLogger.w(TAG, "Remembered download player failed; racing all players: player=$rememberedPlayer", error)
-            }
-        }
-
-        if (playerNames.size <= 1) {
-            val playerName = playerNames.firstOrNull()
-            return ResolvedPlayerStream(
-                playerName = playerName,
-                playback = resolveStream(
-                    sourceId = sourceId,
-                    episodeId = episodeId,
-                    forceRefresh = forceRefresh,
-                    excludedStreamUrls = excludedStreamUrls,
-                    preferredPlayerName = playerName,
-                    preferredQuality = preferredQuality,
-                    requiredPlayerName = playerName,
-                ),
-            )
-        }
-
-        val (playerName, playback) = raceFirstSuccessful(
-            candidates = playerNames,
-            hedgeDelayMillis = PLAYER_RACE_HEDGE_DELAY_MS,
-        ) { candidate ->
-            resolveStream(
+        // Automatic startup resolves exactly one player. Racing every embed put needless load on
+        // the source and made a non-cancellable losing resolver hold the winning stream hostage.
+        // Alternatives stay available through the Player settings sheet.
+        val playerName = rememberedPlayer ?: playerNames.firstOrNull()
+        return ResolvedPlayerStream(
+            playerName = playerName,
+            playback = resolveStream(
                 sourceId = sourceId,
                 episodeId = episodeId,
                 forceRefresh = forceRefresh,
                 excludedStreamUrls = excludedStreamUrls,
-                preferredPlayerName = candidate,
+                preferredPlayerName = playerName,
                 preferredQuality = preferredQuality,
-                requiredPlayerName = candidate,
-            )
-        }
-        return ResolvedPlayerStream(playerName = playerName, playback = playback)
+                requiredPlayerName = playerName,
+            ),
+        )
     }
 
     suspend fun getPlaybackSettingsOptions(
@@ -895,68 +843,14 @@ class AnimeWatchRepository(
         const val EPISODE_NUMBER_EPSILON = 0.001
         const val PLAYER_LINK_DISCOVERY_TIMEOUT_MS = 12_000L
         const val FALLBACK_RESOLVE_TIMEOUT_MS = 12_000L
-        const val EPISODE_RESOLUTION_TIMEOUT_MS = 25_000L
-        // Start the next automatic player quickly when the first embed is still negotiating ads,
-        // challenges or a dead CDN. The winner cancels the rest, so this cuts visible startup
-        // latency without changing player priority or waiting for a full per-player timeout.
-        const val PLAYER_RACE_HEDGE_DELAY_MS = 250L
+        const val EPISODE_RESOLUTION_TIMEOUT_MS = 15_000L
         // BROWSER-resolved players can fall back to WebViewStreamRelay when a CDN blocks a plain
         // HTTP client, which adds real WebView round-trips (JS fetch + base64 bridge) to both
         // resolution and validation - both budgets were tuned before that path existed and are too
         // tight for it, silently timing the whole attempt out with no error surfaced to the user.
         const val AUTO_RESOLVE_TIMEOUT_MS = 15_000L
-        const val PREFERRED_RESOLVE_TIMEOUT_MS = 20_000L
-        const val DIRECT_AUTO_RESOLVE_TIMEOUT_MS = 35_000L
-        const val DIRECT_PREFERRED_RESOLVE_TIMEOUT_MS = 45_000L
+        const val PREFERRED_RESOLVE_TIMEOUT_MS = 15_000L
+        const val DIRECT_AUTO_RESOLVE_TIMEOUT_MS = 15_000L
+        const val DIRECT_PREFERRED_RESOLVE_TIMEOUT_MS = 15_000L
     }
-}
-
-internal suspend fun <Candidate, Value> raceFirstSuccessful(
-    candidates: List<Candidate>,
-    hedgeDelayMillis: Long = 0L,
-    attempt: suspend (Candidate) -> Value,
-): Pair<Candidate, Value> = supervisorScope {
-    require(candidates.isNotEmpty())
-    require(hedgeDelayMillis >= 0L)
-    val results = Channel<Result<Pair<Candidate, Value>>>(capacity = candidates.size)
-    val startGates = List(candidates.size) { CompletableDeferred<Unit>() }
-    startGates.first().complete(Unit)
-    val hedgeTimers = startGates.indices.drop(1).map { index ->
-        launch {
-            delay(index * hedgeDelayMillis)
-            startGates[index].complete(Unit)
-        }
-    }
-    val jobs = candidates.mapIndexed { index, candidate ->
-        launch {
-            startGates[index].await()
-            val result = try {
-                Result.success(candidate to attempt(candidate))
-            } catch (error: CancellationException) {
-                currentCoroutineContext().ensureActive()
-                Result.failure(error)
-            } catch (error: Throwable) {
-                Result.failure(error)
-            }
-            if (result.isFailure) {
-                startGates.getOrNull(index + 1)?.complete(Unit)
-            }
-            results.send(result)
-        }
-    }
-
-    var firstError: Throwable? = null
-    repeat(candidates.size) {
-        val result = results.receive()
-        result.getOrNull()?.let { resolved ->
-            jobs.forEach { it.cancel() }
-            hedgeTimers.forEach { it.cancel() }
-            return@supervisorScope resolved
-        }
-        if (firstError == null) firstError = result.exceptionOrNull()
-    }
-
-    hedgeTimers.forEach { it.cancel() }
-    results.close()
-    throw firstError ?: IllegalStateException("No candidate completed successfully")
 }

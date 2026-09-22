@@ -259,6 +259,7 @@
     <string name="watch_error_voiceover_not_found">Voiceover not found</string>
     <string name="watch_error_episode_not_found">Episode not found</string>
     <string name="watch_error_no_players">No available players for the selected voiceover</string>
+    <string name="watch_error_selected_player_unavailable">This player did not provide a stream in time. Open Player settings to choose another player.</string>
     <string name="watch_error_extractor_missing">%1$s: extractor missing</string>
     <string name="watch_error_timeout">%1$s: timeout</string>
     <string name="watch_error_open_player_failed">Failed to open player</string>
