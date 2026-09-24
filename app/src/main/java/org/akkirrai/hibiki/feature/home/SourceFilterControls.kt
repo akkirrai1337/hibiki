@@ -19,6 +19,21 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.RecordVoiceOver
+import androidx.compose.material.icons.rounded.AutoAwesome
+import androidx.compose.material.icons.rounded.CalendarMonth
+import androidx.compose.material.icons.rounded.FormatListNumbered
+import androidx.compose.material.icons.rounded.Movie
+import androidx.compose.material.icons.rounded.MusicNote
+import androidx.compose.material.icons.rounded.NewReleases
+import androidx.compose.material.icons.rounded.Public
+import androidx.compose.material.icons.rounded.Sort
+import androidx.compose.material.icons.rounded.SortByAlpha
+import androidx.compose.material.icons.rounded.Star
+import androidx.compose.material.icons.rounded.TrendingUp
+import androidx.compose.material.icons.rounded.Tv
+import androidx.compose.material.icons.rounded.Update
+import androidx.compose.material.icons.rounded.VideoLibrary
+import androidx.compose.material.icons.rounded.Videocam
 import androidx.compose.material.icons.outlined.Subtitles
 import androidx.compose.material.icons.outlined.Videocam
 import androidx.compose.ui.res.stringResource
@@ -53,7 +68,7 @@ fun SourceFilterControls(
     values: Map<String, String>,
     onValuesChange: (Map<String, String>) -> Unit,
 ) {
-    filters.filterNot(::isYearFilter).forEach { def -> SourceFilter(def, values, onValuesChange) }
+    filters.filterNot(::isYearFilter).inDisplayOrder().forEach { def -> SourceFilter(def, values, onValuesChange) }
 }
 
 @Composable
@@ -114,6 +129,7 @@ private fun SourceFilter(
                 },
                 id = { it.toString() },
                 text = { appFilterOptionText(def.options[it]) },
+                optionIcon = chipIconsFor(def).let { iconFor -> if (iconFor == null) null else ({ index -> iconFor(def.options[index]) }) },
                 // A long list (genres, tags) is lettered and collapsed like the app's own genre filter.
                 maxCollapsedItems = if (sortKey != null) COLLAPSED_CHIP_COUNT else null,
                 maxCollapsedGroups = if (sortKey != null) COLLAPSED_GROUP_COUNT else null,
@@ -143,6 +159,7 @@ private fun SourceFilter(
                 text = { index ->
                     if (index == selectedIndex) "${def.options[index]} ${if (ascending) "↑" else "↓"}" else def.options[index]
                 },
+                optionIcon = chipIconsFor(def).let { iconFor -> if (iconFor == null) null else ({ index -> iconFor(def.options[index]) }) },
                 allowExclusion = false,
                 optionSortKey = def.options.sortKeyOrNull(),
             )
@@ -267,6 +284,7 @@ private fun GroupedChipFilter(
         },
         id = { it.key },
         text = { appFilterOptionText(it.title) },
+        optionIcon = chipIconsFor(def).let { iconFor -> if (iconFor == null) null else ({ child -> iconFor(child.title) }) },
         maxCollapsedItems = if (long) COLLAPSED_CHIP_COUNT else null,
         maxCollapsedGroups = if (long) COLLAPSED_GROUP_COUNT else null,
         allowExclusion = def.children.any { it.type == SourceFilterType.TRISTATE },
@@ -297,7 +315,7 @@ private fun isYearFilter(def: SourceFilterDef): Boolean =
 private val YEAR_FILTER_TITLES = setOf("year", "years", "release year", "year of release", "год", "рік", "год выпуска", "рік випуску")
 
 /**
- * Icons for options that name a season, a media type, a release status or a sub/dub language, matched
+ * Icons for options that name a season, a release status or a sub/dub language, matched
  * on the option's name. A drawable id or a vector; null when the name is not one of those.
  */
 private fun optionIcon(option: String): Any? = when (option.trim().lowercase()) {
@@ -305,14 +323,6 @@ private fun optionIcon(option: String): Any? = when (option.trim().lowercase()) 
     "spring" -> R.drawable.animite_spring
     "summer" -> R.drawable.animite_summer
     "fall", "autumn" -> R.drawable.animite_fall
-    "tv" -> R.drawable.animite_tv
-    "ona" -> R.drawable.animite_ona
-    "ova" -> R.drawable.animite_ova
-    "movie", "film" -> R.drawable.animite_movie
-    "special" -> R.drawable.animite_special
-    "tv short" -> R.drawable.animite_tv_short
-    "music" -> R.drawable.animite_music
-    "one shot", "one-shot" -> R.drawable.animite_one_shot
     "finished airing", "finished", "completed", "ended" -> R.drawable.animite_finished
     "currently airing", "airing", "ongoing", "releasing" -> R.drawable.animite_releasing
     "not yet aired", "not yet released", "upcoming", "announced" -> R.drawable.animite_not_yet_released
@@ -323,6 +333,62 @@ private fun optionIcon(option: String): Any? = when (option.trim().lowercase()) 
     "raw" -> Icons.Outlined.Videocam
     else -> null
 }
+
+/** Type names, as the small icon each one gets on its chip. */
+private fun typeChipIcon(option: String): ImageVector? = when (option.trim().lowercase()) {
+    "movie", "film" -> Icons.Rounded.Movie
+    "music" -> Icons.Rounded.MusicNote
+    "ona" -> Icons.Rounded.Public
+    "ova" -> Icons.Rounded.Videocam
+    "special" -> Icons.Rounded.AutoAwesome
+    "tv" -> Icons.Rounded.Tv
+    "tv short" -> Icons.Rounded.VideoLibrary
+    else -> null
+}
+
+/** Sort orders, matched on words in their name so "Latest Updated" and "Updated" get the same icon. */
+private fun sortChipIcon(option: String): ImageVector? {
+    val t = option.trim().lowercase()
+    return when {
+        "updated" in t || "update" in t -> Icons.Rounded.Update
+        "added" in t || "newest" in t || "latest" in t || "new" in t -> Icons.Rounded.NewReleases
+        "score" in t || "rating" in t || "rated" in t -> Icons.Rounded.Star
+        "name" in t || "title" in t || "a-z" in t || "alphab" in t -> Icons.Rounded.SortByAlpha
+        "release" in t || "date" in t || "year" in t || "aired" in t -> Icons.Rounded.CalendarMonth
+        "view" in t || "popular" in t || "trend" in t -> Icons.Rounded.TrendingUp
+        "episode" in t -> Icons.Rounded.FormatListNumbered
+        "default" in t || "relevan" in t -> Icons.Rounded.Sort
+        else -> null
+    }
+}
+
+private fun chipIconsFor(def: SourceFilterDef): ((String) -> ImageVector?)? {
+    val title = def.title.lowercase()
+    return when {
+        listOf("sort", "order", "сортир", "порядок").any(title::contains) -> ::sortChipIcon
+        listOf("type", "format", "тип", "формат").any(title::contains) -> ::typeChipIcon
+        else -> null
+    }
+}
+
+// Where each kind of filter sits in the window; anything else follows in the order the source gave it.
+private fun filterRank(def: SourceFilterDef): Int {
+    val t = def.title.lowercase()
+    return when {
+        listOf("sort", "order", "сортир", "порядок").any(t::contains) -> 0
+        listOf("season", "сезон").any(t::contains) -> 1
+        listOf("genre", "tag", "categor", "жанр", "теги").any(t::contains) -> 2
+        listOf("status", "статус").any(t::contains) -> 3
+        listOf("language", "lang", "audio", "язык", "мова").any(t::contains) -> 4
+        listOf("type", "format", "тип", "формат").any(t::contains) -> 5
+        else -> 6
+    }
+}
+
+/** Reorders top-level filters, unless the source laid them out with headers or separators of its own. */
+private fun List<SourceFilterDef>.inDisplayOrder(): List<SourceFilterDef> =
+    if (any { it.type == SourceFilterType.HEADER || it.type == SourceFilterType.SEPARATOR }) this
+    else sortedBy(::filterRank)
 
 @Composable
 private fun Any.asVector(): ImageVector = if (this is ImageVector) this else ImageVector.vectorResource(this as Int)
