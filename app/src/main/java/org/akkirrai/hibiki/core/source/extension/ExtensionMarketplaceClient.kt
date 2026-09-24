@@ -1,53 +1,52 @@
 package org.akkirrai.hibiki.core.source.extension
 
 import io.ktor.client.HttpClient
+import io.ktor.client.call.body
 import io.ktor.client.request.HttpRequestBuilder
 import io.ktor.client.request.get
 import io.ktor.client.request.headers
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.HttpHeaders
 import io.ktor.http.isSuccess
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
+import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
-import org.akkirrai.beakokit.extension.ScriptExtensionManifest
-import org.akkirrai.beakokit.extension.PlayerResolverExtensionManifest
+import kotlinx.serialization.json.JsonArray
 import java.net.URI
 
-@Serializable
+/** What the extension list shows for one extension, whether it comes from a repository or is installed. */
 data class MarketplaceExtension(
     val id: String,
     val name: String,
     val version: String,
-    val author: String? = null,
-    val website: String? = null,
     val iconUrl: String? = null,
     val lang: String,
-    val capabilities: List<String> = emptyList(),
-    val resolverDependencies: List<String> = emptyList(),
     val isNsfw: Boolean = false,
-    val type: String = "source",
-    val manifestUrl: String,
 )
 
+/** One entry in the APK index format used by Aniyomi/Mihon-compatible repositories. */
 @Serializable
-data class MarketplaceIndex(
-    val schemaVersion: Int,
-    val extensions: List<MarketplaceExtension> = emptyList(),
+data class ApkRepositoryExtension(
+    val name: String,
+    val pkg: String,
+    val apk: String,
+    val lang: String = "",
+    val version: String = "",
+    val nsfw: Int = 0,
+    @Transient val downloadUrl: String = "",
+    @Transient val iconUrl: String = "",
 )
 
 class ExtensionMarketplaceException(message: String, cause: Throwable? = null) : Exception(message, cause)
 
 /**
- * Fetches the hibiki-sources marketplace index and individual extension manifests over plain
- * HTTP(S). Both are served by raw.githubusercontent.com as `text/plain`, so ktor's
- * ContentNegotiation won't auto-deserialize them (it only fires on a matching Content-Type) -
- * every response is read with `bodyAsText()` and decoded manually instead.
- *
- * Each hibiki-sources extension is published as two files, `<id>.manifest.json` (metadata only)
- * and `<id>.js` (the actual payload) - kept apart so the JS is real, readable, indented source in
- * the repo instead of an escaped one-line JSON string. [fetchManifest] fetches both and merges
- * them into the single manifest+payload JSON [org.akkirrai.beakokit.extension.ScriptExtensionRepository.install]
- * expects on-device; that merge is the only place a full single-file manifest ever exists again.
+ * Fetches an Aniyomi/Mihon-style extension repository (an `index.min.json` array next to `apk/`
+ * and `icon/` folders) and downloads its APKs over HTTPS. raw.githubusercontent.com serves these as
+ * `text/plain`, so ktor's ContentNegotiation would not deserialize them; every response is read
+ * with `bodyAsText()` and decoded manually instead.
  */
 class ExtensionMarketplaceClient(
     private val client: HttpClient,
@@ -55,46 +54,64 @@ class ExtensionMarketplaceClient(
 ) {
     private val json = Json { ignoreUnknownKeys = true }
 
-    suspend fun fetchIndex(): MarketplaceIndex {
+    /** Loads the repository index and resolves each extension's APK and icon URLs. */
+    suspend fun fetchCatalog(): List<ApkRepositoryExtension> {
         val response = getHttps(indexUrl, "Repository index")
         if (!response.status.isSuccess()) {
             throw ExtensionMarketplaceException("Repository index request failed: HTTP ${response.status.value}")
         }
-        return runCatching { json.decodeFromString(MarketplaceIndex.serializer(), response.bodyAsText()) }
-            .getOrElse { error -> throw ExtensionMarketplaceException("Repository index is invalid", error) }
-    }
-
-    /** Fetches `<id>.manifest.json` + `<id>.js` and merges them into one manifest+payload JSON. */
-    suspend fun fetchManifest(extension: MarketplaceExtension): String {
-        val metadataJson = fetchText(extension.manifestUrl, "manifest for '${extension.id}'")
-        val metadata = runCatching { json.decodeFromString(ScriptExtensionManifest.serializer(), metadataJson) }
-            .getOrElse { error -> throw ExtensionMarketplaceException("Manifest for '${extension.id}' is invalid", error) }
-
-        val payload = metadata.payload.takeIf(String::isNotBlank)
-            ?: fetchText(payloadUrlFor(extension.manifestUrl), "payload for '${extension.id}'")
-
-        return json.encodeToString(ScriptExtensionManifest.serializer(), metadata.copy(payload = payload))
-    }
-
-    suspend fun fetchPlayerResolverManifest(extension: MarketplaceExtension): String {
-        val metadataJson = fetchText(extension.manifestUrl, "resolver manifest for '${extension.id}'")
-        val metadata = runCatching {
-            json.decodeFromString(PlayerResolverExtensionManifest.serializer(), metadataJson)
-        }.getOrElse { error -> throw ExtensionMarketplaceException("Resolver manifest for '${extension.id}' is invalid", error) }
-        val payload = metadata.payload.takeIf(String::isNotBlank)
-            ?: fetchText(payloadUrlFor(extension.manifestUrl), "resolver payload for '${extension.id}'")
-        return json.encodeToString(PlayerResolverExtensionManifest.serializer(), metadata.copy(payload = payload))
-    }
-
-    private suspend fun fetchText(url: String, label: String): String {
-        val response = getHttps(url, label)
-        if (!response.status.isSuccess()) {
-            throw ExtensionMarketplaceException("Request for $label failed: HTTP ${response.status.value}")
+        return try {
+            val root = json.parseToJsonElement(response.bodyAsText())
+            check(root is JsonArray) { "not an APK extension index" }
+            json.decodeFromJsonElement(ListSerializer(ApkRepositoryExtension.serializer()), root)
+                .map { extension ->
+                    extension.copy(
+                        downloadUrl = resolveApkUrl(extension.apk),
+                        iconUrl = resolveRepositoryAssetUrl("icon/${extension.pkg}.png"),
+                    )
+                }
+        } catch (error: Exception) {
+            throw ExtensionMarketplaceException("Repository index is invalid or uses an unsupported format", error)
         }
-        return response.bodyAsText()
     }
 
-    /** An extension's executable manifest and payload must never travel over a mutable HTTP hop. */
+    suspend fun downloadApk(extension: ApkRepositoryExtension, target: java.io.File) {
+        val url = extension.downloadUrl.ifBlank { resolveApkUrl(extension.apk) }
+        var response = getHttps(url, "APK for '${extension.name}'")
+        if (response.status.value == 404 && extension.apk.isFileNameOnly()) {
+            response.bodyAsText()
+            val siblingUrl = resolveIndexSiblingApkUrl(extension.apk)
+            if (siblingUrl != url) response = getHttps(siblingUrl, "APK for '${extension.name}'")
+        }
+        if (!response.status.isSuccess()) {
+            throw ExtensionMarketplaceException("APK download failed: HTTP ${response.status.value}")
+        }
+        val bytes = response.body<ByteArray>()
+        withContext(Dispatchers.IO) { target.writeBytes(bytes) }
+        if (target.length() == 0L) {
+            target.delete()
+            throw ExtensionMarketplaceException("Downloaded APK is empty")
+        }
+    }
+
+    private fun resolveApkUrl(apkPath: String): String = runCatching {
+        val path = URI(apkPath)
+        if (path.isAbsolute) return path.toString()
+        val relativePath = if (apkPath.isFileNameOnly()) "apk/$apkPath" else apkPath
+        URI(indexUrl).resolve(relativePath).toString()
+    }.getOrElse { throw ExtensionMarketplaceException("APK path is invalid: $apkPath", it) }
+
+    private fun resolveIndexSiblingApkUrl(apkPath: String): String = runCatching {
+        URI(indexUrl).resolve(apkPath).toString()
+    }.getOrElse { throw ExtensionMarketplaceException("APK path is invalid: $apkPath", it) }
+
+    private fun resolveRepositoryAssetUrl(path: String): String = runCatching {
+        URI(indexUrl).resolve(path).toString()
+    }.getOrElse { throw ExtensionMarketplaceException("Repository asset path is invalid: $path", it) }
+
+    private fun String.isFileNameOnly(): Boolean =
+        isNotBlank() && !contains('/') && !contains('\\') && !startsWith("https://", ignoreCase = true)
+
     private suspend fun getHttps(url: String, label: String) = client.get(stableRepositoryUrl(url)) {
         requireHttpsUrl(url, label)
         noCacheHeaders()
@@ -128,14 +145,6 @@ class ExtensionMarketplaceClient(
         url.parameters.append("cachebust", System.currentTimeMillis().toString())
     }
 
-    /** `.../extensions/<id>.manifest.json` -> `.../extensions/<id>.js`, hibiki-sources' file-pairing convention. */
-    private fun payloadUrlFor(manifestUrl: String): String {
-        if (manifestUrl.endsWith(MANIFEST_SUFFIX)) {
-            return manifestUrl.removeSuffix(MANIFEST_SUFFIX) + ".js"
-        }
-        throw ExtensionMarketplaceException("Manifest URL doesn't follow the <id>$MANIFEST_SUFFIX convention: $manifestUrl")
-    }
-
     /**
      * GitHub Raw can keep the short branch form (`.../main/...`) stale after a branch update.
      * The fully-qualified branch ref follows the same branch but reliably reaches the fresh
@@ -146,9 +155,12 @@ class ExtensionMarketplaceClient(
     }
 
     companion object {
-        const val DEFAULT_INDEX_URL =
+        /** The repository offered by default: Yuzono's Aniyomi anime extensions. */
+        const val DEFAULT_INDEX_URL = "https://raw.githubusercontent.com/yuzono/anime-repo/repo/index.min.json"
+
+        /** The repository Hibiki shipped with before it moved to Aniyomi extensions; replaced on upgrade. */
+        const val LEGACY_INDEX_URL =
             "https://raw.githubusercontent.com/akkirrai1337/hibiki-sources/main/repository/index.json"
-        private const val MANIFEST_SUFFIX = ".manifest.json"
         private val GITHUB_RAW_MAIN_URL = Regex(
             "^(https://raw\\.githubusercontent\\.com/[^/]+/[^/]+)/main/(.+)$",
         )

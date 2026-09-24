@@ -3,7 +3,6 @@ package org.akkirrai.hibiki.core.source.extension
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.respond
-import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.headersOf
 import kotlinx.coroutines.runBlocking
@@ -23,13 +22,11 @@ class ExtensionMarketplaceClientTest {
 
     @Test
     fun `GitHub Raw main URLs use the fully qualified branch reference`() {
-        val client = ExtensionMarketplaceClient(textPlainClient("{}"))
+        val client = ExtensionMarketplaceClient(textPlainClient("[]"))
 
         assertEquals(
-            "https://raw.githubusercontent.com/akkirrai1337/hibiki-sources/refs/heads/main/repository/index.json",
-            client.stableRepositoryUrl(
-                "https://raw.githubusercontent.com/akkirrai1337/hibiki-sources/main/repository/index.json",
-            ),
+            "https://raw.githubusercontent.com/example/repo/refs/heads/main/index.min.json",
+            client.stableRepositoryUrl("https://raw.githubusercontent.com/example/repo/main/index.min.json"),
         )
         assertEquals(
             "https://example.com/repository/index.json",
@@ -38,54 +35,88 @@ class ExtensionMarketplaceClientTest {
     }
 
     @Test
-    fun `fetchIndex decodes a text-plain-served index`() = runBlocking {
+    fun `the default repository is the Aniyomi anime extensions one`() {
+        assertEquals(
+            "https://raw.githubusercontent.com/yuzono/anime-repo/repo/index.min.json",
+            ExtensionMarketplaceClient.DEFAULT_INDEX_URL,
+        )
+    }
+
+    @Test
+    fun `fetchCatalog decodes a text-plain-served APK index and resolves apk and icon urls`() = runBlocking {
         val client = textPlainClient(
             """
-            {
-              "schemaVersion": 1,
-              "extensions": [
-                {
-                  "id": "animevost",
-                  "name": "AnimeVost",
-                  "version": "1.0.0",
-                  "lang": "ru",
-                  "capabilities": ["LATEST_RELEASES", "PLAYBACK"],
-                  "manifestUrl": "https://example.com/animevost.json"
-                }
-              ]
-            }
+            [
+              {
+                "name": "Aniyomi: AnimeOnsen",
+                "pkg": "eu.kanade.tachiyomi.animeextension.all.animeonsen",
+                "apk": "aniyomi-all.animeonsen-v14.10.apk",
+                "lang": "all",
+                "version": "14.10",
+                "nsfw": 0
+              }
+            ]
             """.trimIndent(),
         )
-        val index = ExtensionMarketplaceClient(client).fetchIndex()
+        val extensions = ExtensionMarketplaceClient(client, "https://example.com/repo/index.min.json").fetchCatalog()
 
-        assertEquals(1, index.schemaVersion)
-        assertEquals(listOf("animevost"), index.extensions.map { it.id })
+        assertEquals(1, extensions.size)
+        val extension = extensions.single()
+        assertEquals("eu.kanade.tachiyomi.animeextension.all.animeonsen", extension.pkg)
+        assertEquals("https://example.com/repo/apk/aniyomi-all.animeonsen-v14.10.apk", extension.downloadUrl)
+        assertEquals(
+            "https://example.com/repo/icon/eu.kanade.tachiyomi.animeextension.all.animeonsen.png",
+            extension.iconUrl,
+        )
         client.close()
     }
 
     @Test
-    fun `fetchIndex throws on a non-success status`() = runBlocking {
+    fun `fetchCatalog throws on a non-success status`() = runBlocking {
         val client = textPlainClient("not found", status = HttpStatusCode.NotFound)
-        assertThrowsMarketplaceException { ExtensionMarketplaceClient(client).fetchIndex() }
+        assertThrowsMarketplaceException { ExtensionMarketplaceClient(client).fetchCatalog() }
         client.close()
     }
 
     @Test
-    fun `fetchIndex throws on invalid JSON instead of crashing`() = runBlocking {
+    fun `fetchCatalog throws on invalid JSON instead of crashing`() = runBlocking {
         val client = textPlainClient("<html>not json</html>")
-        assertThrowsMarketplaceException { ExtensionMarketplaceClient(client).fetchIndex() }
+        assertThrowsMarketplaceException { ExtensionMarketplaceClient(client).fetchCatalog() }
         client.close()
     }
 
     @Test
-    fun `fetchIndex rejects a non-HTTPS repository URL`() = runBlocking {
-        val client = textPlainClient("{}")
-
-        assertThrowsMarketplaceException {
-            ExtensionMarketplaceClient(client, "http://example.com/repository/index.json").fetchIndex()
-        }
-
+    fun `fetchCatalog rejects an index that is not an APK array`() = runBlocking {
+        val client = textPlainClient("""{"schemaVersion":1,"extensions":[]}""")
+        assertThrowsMarketplaceException { ExtensionMarketplaceClient(client).fetchCatalog() }
         client.close()
+    }
+
+    @Test
+    fun `fetchCatalog rejects a non-HTTPS repository URL`() = runBlocking {
+        val client = textPlainClient("[]")
+        assertThrowsMarketplaceException {
+            ExtensionMarketplaceClient(client, "http://example.com/repository/index.min.json").fetchCatalog()
+        }
+        client.close()
+    }
+
+    @Test
+    fun `isExtensionVersionNewer compares dotted versions numerically`() {
+        assertTrue(isExtensionVersionNewer("1.1.0", "1.0.0"))
+        assertTrue(isExtensionVersionNewer("2.0.0", "1.9.9"))
+        assertTrue(isExtensionVersionNewer("14.10", "14.9"))
+        assertTrue(!isExtensionVersionNewer("1.0.0", "1.0.0"))
+        assertTrue(!isExtensionVersionNewer("1.0.0", "1.1.0"))
+        assertTrue(!isExtensionVersionNewer("not-a-version", "1.0.0"))
+    }
+
+    @Test
+    fun `an update is offered only for an installed extension with a newer version`() {
+        val extension = ApkRepositoryExtension(name = "X", pkg = "pkg.x", apk = "x.apk", version = "14.11")
+        assertTrue(extension.isUpdateAvailable(mapOf("pkg.x" to "14.10")))
+        assertTrue(!extension.isUpdateAvailable(mapOf("pkg.x" to "14.11")))
+        assertTrue(!extension.isUpdateAvailable(emptyMap()))
     }
 
     private suspend fun assertThrowsMarketplaceException(block: suspend () -> Unit) {
@@ -95,87 +126,5 @@ class ExtensionMarketplaceClientTest {
         } catch (expected: ExtensionMarketplaceException) {
             // expected
         }
-    }
-
-    @Test
-    fun `fetchManifest fetches the manifest and its sibling js payload and merges them`() = runBlocking {
-        val client = HttpClient(
-            MockEngine { request ->
-                val body = when (request.url.toString().substringBefore('?')) {
-                    "https://example.com/animevost.manifest.json" ->
-                        """{"id":"animevost","name":"AnimeVost","version":"1.0.0","lang":"ru","capabilities":["LATEST_RELEASES","PLAYBACK"]}"""
-                    "https://example.com/animevost.js" -> "var Provider = {};"
-                    else -> error("Unexpected request: ${request.url}")
-                }
-                respond(content = body, status = HttpStatusCode.OK, headers = headersOf("Content-Type", "text/plain; charset=utf-8"))
-            },
-        )
-        val extension = MarketplaceExtension(
-            id = "animevost",
-            name = "AnimeVost",
-            version = "1.0.0",
-            lang = "ru",
-            manifestUrl = "https://example.com/animevost.manifest.json",
-        )
-
-        val merged = ExtensionMarketplaceClient(client).fetchManifest(extension)
-
-        assertTrue(merged.contains("\"id\":\"animevost\""))
-        assertTrue(merged.contains("var Provider = {};"))
-        client.close()
-    }
-
-    @Test
-    fun `fetchManifest skips the payload fetch when the manifest already inlines it`() = runBlocking {
-        val client = HttpClient(
-            MockEngine { request ->
-                assertEquals(
-                    "https://example.com/animevost.manifest.json",
-                    request.url.toString().substringBefore('?'),
-                )
-                respond(
-                    content = """{"id":"animevost","name":"AnimeVost","version":"1.0.0","lang":"ru","capabilities":["LATEST_RELEASES","PLAYBACK"],"payload":"var Provider = {};"}""",
-                    status = HttpStatusCode.OK,
-                    headers = headersOf("Content-Type", "text/plain; charset=utf-8"),
-                )
-            },
-        )
-        val extension = MarketplaceExtension(
-            id = "animevost",
-            name = "AnimeVost",
-            version = "1.0.0",
-            lang = "ru",
-            manifestUrl = "https://example.com/animevost.manifest.json",
-        )
-
-        val merged = ExtensionMarketplaceClient(client).fetchManifest(extension)
-
-        assertTrue(merged.contains("var Provider = {};"))
-        client.close()
-    }
-
-    @Test
-    fun `fetchManifest rejects a non-HTTPS manifest URL`() = runBlocking {
-        val client = textPlainClient("{}")
-        val extension = MarketplaceExtension(
-            id = "animevost",
-            name = "AnimeVost",
-            version = "1.0.0",
-            lang = "ru",
-            manifestUrl = "http://example.com/animevost.manifest.json",
-        )
-
-        assertThrowsMarketplaceException { ExtensionMarketplaceClient(client).fetchManifest(extension) }
-
-        client.close()
-    }
-
-    @Test
-    fun `isExtensionVersionNewer compares basic semver`() {
-        assertTrue(isExtensionVersionNewer("1.1.0", "1.0.0"))
-        assertTrue(isExtensionVersionNewer("2.0.0", "1.9.9"))
-        assertTrue(!isExtensionVersionNewer("1.0.0", "1.0.0"))
-        assertTrue(!isExtensionVersionNewer("1.0.0", "1.1.0"))
-        assertTrue(!isExtensionVersionNewer("not-a-version", "1.0.0"))
     }
 }

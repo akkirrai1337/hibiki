@@ -22,7 +22,6 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.11.0")
     implementation("org.jsoup:jsoup:1.21.2")
-    implementation("org.mozilla:rhino:1.7.15")
 
     testImplementation(kotlin("test"))
     testImplementation("io.ktor:ktor-client-mock:3.5.0")

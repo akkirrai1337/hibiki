@@ -482,11 +482,18 @@ class AppPreferences(context: Context) {
 
         private fun readSourceRepositoryUrls(prefs: SharedPreferences): List<String> {
             if (!prefs.contains(KEY_SOURCE_REPOSITORY_URLS)) return listOf(ExtensionMarketplaceClient.DEFAULT_INDEX_URL)
+            // The script-extension repository Hibiki used to ship with cannot be read any more; a
+            // user who still has it stored gets the Aniyomi repository in its place.
             return prefs.getString(KEY_SOURCE_REPOSITORY_URLS, "")
                 .orEmpty()
                 .split("\n")
                 .map(String::trim)
                 .filter(String::isNotBlank)
+                .map { url ->
+                    if (url == ExtensionMarketplaceClient.LEGACY_INDEX_URL) ExtensionMarketplaceClient.DEFAULT_INDEX_URL else url
+                }
+                .distinct()
+                .ifEmpty { listOf(ExtensionMarketplaceClient.DEFAULT_INDEX_URL) }
         }
 
         private fun normalizePlaybackSpeed(speed: Float): Float {

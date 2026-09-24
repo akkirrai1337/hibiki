@@ -1,6 +1,20 @@
 package org.akkirrai.hibiki.feature.sources
 
+import android.app.Activity
+import android.content.Intent
+import android.net.Uri
+import android.os.Build
+import android.provider.Settings
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -38,6 +52,7 @@ import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ElevatedCard
@@ -77,13 +92,15 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import android.content.Intent
-import android.net.Uri
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import coil.compose.AsyncImage
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import org.akkirrai.beakokit.api.SourceId
@@ -96,15 +113,19 @@ import org.akkirrai.hibiki.core.log.AppLogger
 import org.akkirrai.hibiki.core.network.AndroidHttpClientFactory
 import org.akkirrai.hibiki.core.source.AnimeSourceRegistry
 import org.akkirrai.hibiki.core.source.extension.ExtensionMarketplaceClient
+import org.akkirrai.hibiki.core.source.extension.ApkRepositoryExtension
+import org.akkirrai.hibiki.core.source.extension.ApkExtensionInstaller
+import org.akkirrai.hibiki.core.source.extension.PreparedApkExtensionInstall
+import org.akkirrai.hibiki.core.source.extension.InstalledApkExtensions
+import org.akkirrai.hibiki.core.source.extension.InstalledApkExtensionInfo
 import org.akkirrai.hibiki.core.source.extension.MarketplaceExtension
 import org.akkirrai.hibiki.core.source.extension.isExtensionVersionNewer
 import org.akkirrai.hibiki.core.source.extension.SourceExtensionUpdateChecker
 import org.akkirrai.hibiki.core.source.extension.isUpdateAvailable
 
 /**
- * Sources tab: the "Extensions" page browses `hibiki-sources`' marketplace index over the
- * network and installs extensions via [AnimeSourceRegistry.installScriptExtension] - no
- * APK/PackageManager step involved. The "Sources" page only presents the repository itself.
+ * Sources tab: the "Extensions" page browses repositories and installs script and Android APK
+ * extensions. APKs are installed by Android and kept privately for Hibiki's compatible source loader.
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -122,15 +143,20 @@ fun SourceExtensionsScreen(
     var selectedLanguages by remember { mutableStateOf(emptySet<String>()) }
     var addRepositoryDialogOpen by remember { mutableStateOf(false) }
     var repositoryPendingRemovalUrl by remember { mutableStateOf<String?>(null) }
+    var selectedRepositoryUrl by rememberSaveable { mutableStateOf<String?>(null) }
     var repositoryRefreshSignal by remember { mutableStateOf(0) }
     val marketplaceHttpClient = remember { AndroidHttpClientFactory.create() }
     DisposableEffect(marketplaceHttpClient) { onDispose { marketplaceHttpClient.close() } }
-    val marketplaceClient = remember(marketplaceHttpClient) { ExtensionMarketplaceClient(marketplaceHttpClient) }
     var repoStates by remember { mutableStateOf<Map<String, RepoFetchResult>>(emptyMap()) }
-    var installingExtensionIds by remember { mutableStateOf(emptySet<String>()) }
-    var extensionInstallErrors by remember { mutableStateOf(emptyMap<String, String>()) }
-    LaunchedEffect(installingExtensionIds.isNotEmpty()) {
-        onInstallationActiveChanged(installingExtensionIds.isNotEmpty())
+    var installingApkPackages by remember { mutableStateOf(emptySet<String>()) }
+    var apkInstallErrors by remember { mutableStateOf(emptyMap<String, String>()) }
+    var pendingApkInstallPackage by rememberSaveable { mutableStateOf<String?>(null) }
+    var pendingApkInstallPath by rememberSaveable { mutableStateOf<String?>(null) }
+    var awaitingApkInstallPermission by rememberSaveable { mutableStateOf(false) }
+    var pendingApkUninstallPackage by rememberSaveable { mutableStateOf<String?>(null) }
+    var installedApkExtensions by remember { mutableStateOf<Map<String, InstalledApkExtensionInfo>>(emptyMap()) }
+    LaunchedEffect(installingApkPackages.isNotEmpty()) {
+        onInstallationActiveChanged(installingApkPackages.isNotEmpty())
     }
 
     val preferences = LocalAppPreferences.current
@@ -142,78 +168,130 @@ fun SourceExtensionsScreen(
 
     val pagerState = rememberPagerState(initialPage = 0) { if (onboarding) 1 else 2 }
     val tabScope = rememberCoroutineScope()
-
-    val mergedExtensions = remember(sourceRepositoryUrls, repoStates) {
-        sourceRepositoryUrls
-            .mapNotNull { url -> (repoStates[url] as? RepoFetchResult.Loaded)?.extensions }
-            .flatten()
-            .distinctBy(MarketplaceExtension::id)
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val pendingApkInstall = remember(pendingApkInstallPackage, pendingApkInstallPath) {
+        val packageName = pendingApkInstallPackage
+        val path = pendingApkInstallPath
+        if (packageName != null && path != null) {
+            PendingApkInstall(packageName, PreparedApkExtensionInstall(packageName, java.io.File(path)))
+        } else {
+            null
+        }
     }
-    // Which repository each installed-or-installable id should be considered to "belong" to, for
-    // ScriptExtensionRepository/PlayerResolverExtensionRepository's cross-repository overwrite
-    // guard - first repository in sourceRepositoryUrls order wins an id, mirroring the distinctBy
-    // above exactly, so a later/third-party repository can never claim an id an earlier one (e.g.
-    // the built-in default) already serves.
-    val originByExtensionId = remember(sourceRepositoryUrls, repoStates) {
+
+    suspend fun refreshInstalledApkExtensions() {
+        installedApkExtensions = withContext(kotlinx.coroutines.Dispatchers.IO) {
+            InstalledApkExtensions.scan(context)
+        }
+    }
+
+    val packageInstallLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartActivityForResult(),
+    ) { result ->
+        val pending = pendingApkInstall ?: return@rememberLauncherForActivityResult
+        tabScope.launch {
+            try {
+                if (result.resultCode == Activity.RESULT_OK) {
+                    val hadNoSources = AnimeSourceRegistry.sources.isEmpty()
+                    withContext(kotlinx.coroutines.Dispatchers.IO) {
+                        ApkExtensionInstaller.completeSystemInstall(context, pending.prepared)
+                    }
+                    refreshInstalledApkExtensions()
+                    AnimeSourceRegistry.refreshApkExtensions(context)
+                    if (hadNoSources) {
+                        AnimeSourceRegistry.sources.firstOrNull()?.let { preferences.setAnimeSource(it.id) }
+                    }
+                } else {
+                    ApkExtensionInstaller.cancelSystemInstall(pending.prepared)
+                }
+            } catch (error: Exception) {
+                ApkExtensionInstaller.cancelSystemInstall(pending.prepared)
+                AppLogger.w("SourceExtensions", "APK installation failed for ${pending.packageName}", error)
+                apkInstallErrors = apkInstallErrors +
+                    (pending.packageName to (error.message ?: context.getString(R.string.source_extensions_apk_install_failed)))
+            } finally {
+                pendingApkInstallPackage = null
+                pendingApkInstallPath = null
+                awaitingApkInstallPermission = false
+                installingApkPackages = installingApkPackages - pending.packageName
+            }
+        }
+    }
+
+    val packageUninstallLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartActivityForResult(),
+    ) { result ->
+        val packageName = pendingApkUninstallPackage ?: return@rememberLauncherForActivityResult
+        pendingApkUninstallPackage = null
+        if (result.resultCode == Activity.RESULT_OK) {
+            tabScope.launch {
+                withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    ApkExtensionInstaller.completeSystemUninstall(context, packageName)
+                }
+                refreshInstalledApkExtensions()
+                AnimeSourceRegistry.refreshApkExtensions(context)
+            }
+        }
+    }
+
+    LaunchedEffect(context) { refreshInstalledApkExtensions() }
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                tabScope.launch {
+                    refreshInstalledApkExtensions()
+                    AnimeSourceRegistry.refreshApkExtensions(context)
+                    val pending = pendingApkInstall
+                    if (awaitingApkInstallPermission && pending != null) {
+                        if (ApkExtensionInstaller.canRequestPackageInstalls(context)) {
+                            awaitingApkInstallPermission = false
+                            packageInstallLauncher.launch(
+                                ApkExtensionInstaller.packageInstallIntent(context, pending.prepared),
+                            )
+                        } else {
+                            ApkExtensionInstaller.cancelSystemInstall(pending.prepared)
+                            pendingApkInstallPackage = null
+                            pendingApkInstallPath = null
+                            awaitingApkInstallPermission = false
+                            installingApkPackages = installingApkPackages - pending.packageName
+                            apkInstallErrors = apkInstallErrors +
+                                (pending.packageName to context.getString(R.string.source_extensions_apk_allow_installs))
+                        }
+                    }
+                }
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
+    val apkRepositoryExtensions = remember(repoStates) {
+        repoStates.values
+            .filterIsInstance<RepoFetchResult.Loaded>()
+            .flatMap(RepoFetchResult.Loaded::extensions)
+            .distinctBy(ApkRepositoryExtension::pkg)
+    }
+    // Which repository serves each package, so an update is downloaded from the one that lists it.
+    val repositoryUrlByPackage = remember(sourceRepositoryUrls, repoStates) {
         val origins = mutableMapOf<String, String>()
         sourceRepositoryUrls.forEach { url ->
             (repoStates[url] as? RepoFetchResult.Loaded)?.extensions?.forEach { extension ->
-                origins.putIfAbsent(extension.id, url)
+                origins.putIfAbsent(extension.pkg, url)
             }
         }
         origins
     }
-    // A source only fetches its resolverDependencies on install/update (onInstall/onUpdateAll
-    // below) - a source installed before a dependency was added to its manifest, or before its
-    // Kotlin fallback was retired in favor of the resolver entirely, would otherwise be stuck
-    // silently missing a resolver forever with no error pointing at why, since the marketplace only
-    // ever surfaces this as an "update available" badge when the resolver is outdated, not when
-    // it's absent. Silently backfills any missing resolver the moment the repository index is
-    // available, so an existing install self-heals without the user having to reinstall anything.
-    LaunchedEffect(mergedExtensions) {
-        if (mergedExtensions.isEmpty()) return@LaunchedEffect
-        val installedSourceIds = AnimeSourceRegistry.installedScriptExtensionVersions().keys
-        val installedResolverIds = AnimeSourceRegistry.installedPlayerResolverVersions().keys
-        mergedExtensions
-            .asSequence()
-            .filter { it.type == "source" && it.id in installedSourceIds }
-            .flatMap { it.resolverDependencies }
-            .distinct()
-            .filterNot { it in installedResolverIds }
-            .forEach { resolverId ->
-                val resolver = mergedExtensions.firstOrNull { it.id == resolverId && it.type == "player-resolver" }
-                    ?: return@forEach
-                runCatching {
-                    AnimeSourceRegistry.installPlayerResolverExtension(
-                        marketplaceClient.fetchPlayerResolverManifest(resolver),
-                        originByExtensionId[resolver.id].orEmpty(),
-                    )
-                }.onFailure { error ->
-                    AppLogger.w("SourceExtensions", "reconcile: failed to backfill resolver $resolverId", error)
-                }
-            }
-    }
-    val sourceExtensions = mergedExtensions.filter { it.type == "source" }
-    // Player-resolver extensions have no lang field at all (index.json defaults it to "" - see
-    // build_index.py) and language filtering only makes sense for sources anyway, so this must
-    // come from sourceExtensions, not every mergedExtensions entry - otherwise that blank default
-    // shows up as an empty, unlabeled toggle in the language filter dialog.
-    val extensionLanguages = sourceExtensions.map(MarketplaceExtension::lang).distinct().sorted()
+    val extensionLanguages = apkRepositoryExtensions.map(ApkRepositoryExtension::lang).distinct().sorted()
+    val selectedRepositoryExtensions = selectedRepositoryUrl
+        ?.let { repoStates[it] as? RepoFetchResult.Loaded }
+        ?.extensions
+    val repositoryFilterLanguages = selectedRepositoryExtensions
+        ?.map(ApkRepositoryExtension::lang)?.distinct()?.sorted()
+        ?: extensionLanguages
+    val showLanguageFilter = selectedRepositoryUrl == null && pagerState.currentPage == 0 ||
+        selectedRepositoryExtensions != null
 
-    // Extensions tab still consumes the flat Loading/Error/Loaded shape it always has - derived
-    // here from the per-repository results so SourceRepositoryList/MarketplaceExtensionRow don't
-    // need to know repositories are plural.
-    val repositoryLoadState: RepositoryLoadState = when {
-        sourceRepositoryUrls.any { repoStates[it] is RepoFetchResult.Loaded } ->
-            RepositoryLoadState.Loaded(sourceExtensions)
-        sourceRepositoryUrls.isNotEmpty() && sourceRepositoryUrls.all { repoStates[it] is RepoFetchResult.Error } ->
-            RepositoryLoadState.Error(
-                sourceRepositoryUrls.mapNotNull { (repoStates[it] as? RepoFetchResult.Error)?.message }
-                    .distinct()
-                    .joinToString("; "),
-            )
-        else -> RepositoryLoadState.Loading
-    }
+    val installedApkLoadErrors = AnimeSourceRegistry.apkExtensionLoadErrors()
 
     suspend fun loadRepositories(urls: List<String>) {
         if (urls.isEmpty()) {
@@ -225,7 +303,7 @@ fun SourceExtensionsScreen(
             urls.map { url ->
                 async {
                     url to try {
-                        RepoFetchResult.Loaded(ExtensionMarketplaceClient(marketplaceHttpClient, url).fetchIndex().extensions)
+                        RepoFetchResult.Loaded(ExtensionMarketplaceClient(marketplaceHttpClient, url).fetchCatalog())
                     } catch (error: CancellationException) {
                         throw error
                     } catch (error: Exception) {
@@ -241,7 +319,9 @@ fun SourceExtensionsScreen(
     // Do not make a second request purely for the bottom-navigation badge: this screen already
     // fetched the index for an explicit visit or a manual refresh, so use that same snapshot.
     // In particular, app startup and returning from the background must remain fully offline.
-    LaunchedEffect(mergedExtensions) { updateChecker.updateFrom(mergedExtensions) }
+    LaunchedEffect(apkRepositoryExtensions, installedApkExtensions) {
+        updateChecker.updateFrom(apkRepositoryExtensions)
+    }
 
     LaunchedEffect(selectedTab) {
         if (pagerState.currentPage != selectedTab) {
@@ -253,16 +333,77 @@ fun SourceExtensionsScreen(
             .distinctUntilChanged()
             .collect { selectedTab = it }
     }
-    BackHandler(enabled = searchOpen) {
-        query = ""
-        searchOpen = false
+    BackHandler(enabled = searchOpen || selectedRepositoryUrl != null) {
+        if (searchOpen) {
+            query = ""
+            searchOpen = false
+        } else {
+            selectedRepositoryUrl = null
+        }
     }
     val invalidRepositoryUrlMessage = stringResource(R.string.source_extensions_repositories_invalid_url)
+    val apkInstallFailedMessage = stringResource(R.string.source_extensions_apk_install_failed)
 
+    val installApkExtension: (String, ApkRepositoryExtension) -> Unit = { repositoryUrl, extension ->
+        installingApkPackages = installingApkPackages + extension.pkg
+        apkInstallErrors = apkInstallErrors - extension.pkg
+        tabScope.launch {
+            try {
+                val prepared = ApkExtensionInstaller.prepareSystemInstall(
+                    context = context,
+                    client = marketplaceHttpClient,
+                    indexUrl = repositoryUrl,
+                    extension = extension,
+                )
+                pendingApkInstallPackage = prepared.packageName
+                pendingApkInstallPath = prepared.apkFile.absolutePath
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O &&
+                    !ApkExtensionInstaller.canRequestPackageInstalls(context)
+                ) {
+                    awaitingApkInstallPermission = true
+                    context.startActivity(
+                        Intent(
+                            Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
+                            Uri.parse("package:${context.packageName}"),
+                        ),
+                    )
+                } else {
+                    packageInstallLauncher.launch(ApkExtensionInstaller.packageInstallIntent(context, prepared))
+                }
+            } catch (error: Exception) {
+                AppLogger.w("SourceExtensions", "APK installation failed for ${extension.pkg}", error)
+                apkInstallErrors = apkInstallErrors +
+                    (extension.pkg to (error.message ?: apkInstallFailedMessage))
+                pendingApkInstall?.takeIf { it.packageName == extension.pkg }?.let {
+                    ApkExtensionInstaller.cancelSystemInstall(it.prepared)
+                    pendingApkInstallPackage = null
+                    pendingApkInstallPath = null
+                }
+                awaitingApkInstallPermission = false
+                installingApkPackages = installingApkPackages - extension.pkg
+            }
+        }
+    }
+
+    val uninstallApkExtension: (String) -> Unit = { packageName ->
+        if (ApkExtensionInstaller.wasInstalledBySystem(context, packageName)) {
+            pendingApkUninstallPackage = packageName
+            packageUninstallLauncher.launch(ApkExtensionInstaller.packageUninstallIntent(packageName))
+        } else {
+            ApkExtensionInstaller.removePrivateCopy(context, packageName)
+            tabScope.launch {
+                refreshInstalledApkExtensions()
+                AnimeSourceRegistry.refreshApkExtensions(context)
+            }
+        }
+    }
     Column(modifier = modifier.fillMaxSize()) {
         SourceExtensionsToolbar(
+            title = selectedRepositoryUrl?.let(::repositoryTitle)
+                ?: stringResource(R.string.nav_sources),
+            onBack = selectedRepositoryUrl?.let { { selectedRepositoryUrl = null } },
             searchOpen = searchOpen,
-            showFilter = pagerState.currentPage == 0,
+            showFilter = showLanguageFilter,
             filterCount = selectedLanguages.size,
             query = query,
             onQueryChange = { query = it },
@@ -272,129 +413,132 @@ fun SourceExtensionsScreen(
                 searchOpen = false
             },
             onFilterClick = { languageFilterOpen = true },
-            showAddRepository = pagerState.currentPage == 1,
+            showAddRepository = selectedRepositoryUrl == null && pagerState.currentPage == 1,
             onAddRepository = { addRepositoryDialogOpen = true },
             onRefresh = {
                 repositoryRefreshSignal++
             },
         )
-        if (!onboarding) PrimaryTabRow(
-            selectedTabIndex = pagerState.currentPage,
-            containerColor = MaterialTheme.colorScheme.background,
-        ) {
-            Tab(
-                selected = pagerState.currentPage == 0,
-                onClick = { tabScope.launch { pagerState.animateScrollToPage(0) } },
-                text = {
-                    Text(
-                        text = stringResource(R.string.source_extensions_tab_extensions),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                },
-            )
-            Tab(
-                selected = pagerState.currentPage == 1,
-                onClick = { tabScope.launch { pagerState.animateScrollToPage(1) } },
-                text = {
-                    Text(
-                        text = stringResource(R.string.source_extensions_tab_sources),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                },
-            )
-        }
-        HorizontalPager(
-            state = pagerState,
+        AnimatedContent(
+            targetState = selectedRepositoryUrl,
             modifier = Modifier.weight(1f),
-        ) { page ->
-            if (page == 0) {
-                SourceRepositoryList(
-                    bottomContentPadding = bottomContentPadding,
-                    query = query,
-                    state = repositoryLoadState,
-                    selectedLanguages = selectedLanguages,
-                    hideNsfwSources = appPreferencesState.hideNsfwSources,
-                    selectedSource = selectedSource,
-                    installingIds = installingExtensionIds,
-                    installErrors = extensionInstallErrors,
-                    onUpdateAll = { extensions -> extensions.forEach { extension ->
-                        installingExtensionIds = installingExtensionIds + extension.id
-                        extensionInstallErrors = extensionInstallErrors - extension.id
-                        tabScope.launch {
-                            try {
-                                extension.resolverDependencies.forEach { resolverId ->
-                                    val resolver = mergedExtensions.firstOrNull {
-                                        it.id == resolverId && it.type == "player-resolver"
-                                    } ?: error("Required resolver '$resolverId' is not present in this repository")
-                                    AnimeSourceRegistry.installPlayerResolverExtension(
-                                        marketplaceClient.fetchPlayerResolverManifest(resolver),
-                                        originByExtensionId[resolver.id].orEmpty(),
-                                    )
-                                }
-                                AnimeSourceRegistry.installScriptExtension(
-                                    marketplaceClient.fetchManifest(extension),
-                                    originByExtensionId[extension.id].orEmpty(),
-                                )
-                            } catch (error: Exception) {
-                                extensionInstallErrors = extensionInstallErrors +
-                                    (extension.id to (error.message ?: error.toString()))
-                            } finally {
-                                installingExtensionIds = installingExtensionIds - extension.id
-                                updateChecker.updateFrom(mergedExtensions)
+            transitionSpec = {
+                if (targetState != null) {
+                    slideInHorizontally(animationSpec = tween(240)) { it / 3 } + fadeIn(tween(180)) togetherWith
+                        slideOutHorizontally(animationSpec = tween(200)) { -it / 6 } + fadeOut(tween(120))
+                } else {
+                    slideInHorizontally(animationSpec = tween(240)) { -it / 3 } + fadeIn(tween(180)) togetherWith
+                        slideOutHorizontally(animationSpec = tween(200)) { it / 6 } + fadeOut(tween(120))
+                }
+            },
+            label = "SourceRepositoryNavigation",
+        ) { repositoryUrl ->
+            if (repositoryUrl != null) {
+                when (val result = repoStates[repositoryUrl]) {
+                    is RepoFetchResult.Loaded -> ApkRepositoryList(
+                        repositoryUrl = repositoryUrl,
+                        extensions = result.extensions,
+                        bottomContentPadding = bottomContentPadding,
+                        query = query,
+                        selectedLanguages = selectedLanguages,
+                        hideNsfwSources = appPreferencesState.hideNsfwSources,
+                        selectedSource = selectedSource,
+                        installingPackages = installingApkPackages,
+                        installErrors = apkInstallErrors,
+                        installedExtensions = installedApkExtensions,
+                        onInstall = installApkExtension,
+                        onSelect = { packageName ->
+                            AnimeSourceRegistry.sourceIdsForApkPackage(packageName).firstOrNull()?.let { sourceId ->
+                                preferences.setAnimeSource(sourceId)
+                                haptic.performHapticFeedback(HapticFeedbackType.SegmentTick)
                             }
-                        }
-                    } },
-                    onRetry = { tabScope.launch { loadRepositories(sourceRepositoryUrls) } },
-                    onInstall = { extension ->
-                        installingExtensionIds = installingExtensionIds + extension.id
-                        extensionInstallErrors = extensionInstallErrors - extension.id
-                        // Installing doesn't select a source on its own -- if this is the first
-                        // source the user has ever installed, select it automatically so Home and
-                        // Catalog (both already listening for AppPreferences.animeSourceChanges)
-                        // load right away instead of sitting on their earlier no-source error.
-                        val hadNoSources = AnimeSourceRegistry.sources.isEmpty()
-                        tabScope.launch {
-                            try {
-                                extension.resolverDependencies.forEach { resolverId ->
-                                    val resolver = mergedExtensions.firstOrNull {
-                                        it.id == resolverId && it.type == "player-resolver"
-                                    } ?: error("Required resolver '$resolverId' is not present in this repository")
-                                    AnimeSourceRegistry.installPlayerResolverExtension(
-                                        marketplaceClient.fetchPlayerResolverManifest(resolver),
-                                        originByExtensionId[resolver.id].orEmpty(),
-                                    )
-                                }
-                                AnimeSourceRegistry.installScriptExtension(
-                                    marketplaceClient.fetchManifest(extension),
-                                    originByExtensionId[extension.id].orEmpty(),
-                                )
-                                if (hadNoSources) {
-                                    preferences.setAnimeSource(SourceId(extension.id))
-                                }
-                            } catch (error: Exception) {
-                                extensionInstallErrors = extensionInstallErrors +
-                                    (extension.id to (error.message ?: error.toString()))
-                            } finally {
-                                installingExtensionIds = installingExtensionIds - extension.id
-                                updateChecker.updateFrom(mergedExtensions)
-                            }
-                        }
-                    },
-                    onSelect = { sourceId ->
-                        preferences.setAnimeSource(SourceId(sourceId))
-                        haptic.performHapticFeedback(HapticFeedbackType.SegmentTick)
-                    },
-                    onUninstall = { sourceId -> AnimeSourceRegistry.uninstallScriptExtension(SourceId(sourceId)) },
-                )
+                        },
+                        onUninstall = uninstallApkExtension,
+                    )
+                    is RepoFetchResult.Error -> SourceRepositoryMessage(
+                        message = stringResource(R.string.source_extensions_repository_error),
+                        detail = result.message,
+                        onRetry = { tabScope.launch { loadRepositories(listOf(repositoryUrl)) } },
+                    )
+                    RepoFetchResult.Loading, null ->
+                        SourceRepositoryMessage(stringResource(R.string.source_extensions_repository_loading))
+                }
             } else {
-                RepositoriesList(
-                    urls = sourceRepositoryUrls,
-                    repoStates = repoStates,
-                    bottomContentPadding = bottomContentPadding,
-                    onRemove = { url -> repositoryPendingRemovalUrl = url },
-                )
+                Column(Modifier.fillMaxSize()) {
+                    if (!onboarding) PrimaryTabRow(
+                        selectedTabIndex = pagerState.currentPage,
+                        containerColor = MaterialTheme.colorScheme.background,
+                    ) {
+                        Tab(
+                            selected = pagerState.currentPage == 0,
+                            onClick = { tabScope.launch { pagerState.animateScrollToPage(0) } },
+                            text = {
+                                Text(
+                                    text = stringResource(R.string.source_extensions_tab_extensions),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                            },
+                        )
+                        Tab(
+                            selected = pagerState.currentPage == 1,
+                            onClick = { tabScope.launch { pagerState.animateScrollToPage(1) } },
+                            text = {
+                                Text(
+                                    text = stringResource(R.string.source_extensions_tab_sources),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                            },
+                        )
+                    }
+                    HorizontalPager(
+                        state = pagerState,
+                        modifier = Modifier.weight(1f),
+                    ) { page ->
+                        if (page == 0) {
+                            InstalledSourcesList(
+                                bottomContentPadding = bottomContentPadding,
+                                query = query,
+                                selectedLanguages = selectedLanguages,
+                                hideNsfwSources = appPreferencesState.hideNsfwSources,
+                                selectedSource = selectedSource,
+                                installingPackages = installingApkPackages,
+                                installErrors = apkInstallErrors,
+                                installedApkExtensions = installedApkExtensions,
+                                apkRepositoryExtensions = apkRepositoryExtensions,
+                                apkLoadErrors = installedApkLoadErrors,
+                                onUpdate = { extension ->
+                                    repositoryUrlByPackage[extension.pkg]?.let { installApkExtension(it, extension) }
+                                },
+                                onSelect = { sourceId ->
+                                    preferences.setAnimeSource(SourceId(sourceId))
+                                    haptic.performHapticFeedback(HapticFeedbackType.SegmentTick)
+                                },
+                                onUninstall = { sourceId ->
+                                    val packageName = if (sourceId.startsWith(APK_PACKAGE_ROW_PREFIX)) {
+                                        sourceId.removePrefix(APK_PACKAGE_ROW_PREFIX)
+                                    } else {
+                                        AnimeSourceRegistry.apkPackageForSource(SourceId(sourceId))
+                                    }
+                                    packageName?.let(uninstallApkExtension)
+                                },
+                            )
+                        } else {
+                            RepositoriesList(
+                                urls = sourceRepositoryUrls,
+                                repoStates = repoStates,
+                                bottomContentPadding = bottomContentPadding,
+                                onOpen = { url ->
+                                    query = ""
+                                    searchOpen = false
+                                    selectedRepositoryUrl = url
+                                },
+                                onRemove = { url -> repositoryPendingRemovalUrl = url },
+                            )
+                        }
+                    }
+                }
             }
         }
     }
@@ -411,7 +555,7 @@ fun SourceExtensionsScreen(
                     invalidRepositoryUrlMessage
                 } else {
                     runCatching {
-                        ExtensionMarketplaceClient(marketplaceHttpClient, url).fetchIndex()
+                        ExtensionMarketplaceClient(marketplaceHttpClient, url).fetchCatalog()
                     }.exceptionOrNull()?.message
                 }
             },
@@ -431,7 +575,7 @@ fun SourceExtensionsScreen(
 
     if (languageFilterOpen) {
         SourceLanguageFilterDialog(
-            languages = extensionLanguages,
+            languages = (repositoryFilterLanguages + selectedLanguages).distinct().sorted(),
             selectedLanguages = selectedLanguages,
             onLanguageToggle = { language ->
                 selectedLanguages = if (language in selectedLanguages) {
@@ -447,6 +591,8 @@ fun SourceExtensionsScreen(
 
 @Composable
 private fun SourceExtensionsToolbar(
+    title: String,
+    onBack: (() -> Unit)?,
     searchOpen: Boolean,
     showFilter: Boolean,
     filterCount: Int,
@@ -463,7 +609,7 @@ private fun SourceExtensionsToolbar(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 8.dp)
-            .height(56.dp),
+            .height(52.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (searchOpen) {
@@ -480,15 +626,27 @@ private fun SourceExtensionsToolbar(
                 onClear = { onQueryChange("") },
                 showFilter = false,
                 placeholderResId = R.string.onboarding_source_search,
+                barHeight = 50.dp,
                 modifier = Modifier.weight(1f),
             )
         } else {
+            if (onBack != null) {
+                IconButton(onClick = onBack) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
+                        contentDescription = stringResource(R.string.cd_back),
+                        tint = MaterialTheme.colorScheme.onBackground,
+                    )
+                }
+            }
             Text(
-                text = stringResource(R.string.nav_sources),
+                text = title,
                 modifier = Modifier.weight(1f).padding(horizontal = 8.dp),
-                style = MaterialTheme.typography.headlineSmall,
+                style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onBackground,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
             )
             IconButton(onClick = onOpenSearch) {
                 Icon(
@@ -619,173 +777,386 @@ private fun sourceLanguagePresentation(language: String): SourceLanguagePresenta
     else -> SourceLanguagePresentation(language.uppercase(), language.uppercase())
 }
 
-private sealed interface RepositoryLoadState {
-    data object Loading : RepositoryLoadState
-    data class Error(val message: String) : RepositoryLoadState
-    data class Loaded(val extensions: List<MarketplaceExtension>) : RepositoryLoadState
-}
-
 /** One connected repository's own fetch outcome - kept separate per URL so one broken repository
  * doesn't blank out extensions from the others in the merged [RepositoryLoadState] Extensions
  * tab consumes. */
 private sealed interface RepoFetchResult {
     data object Loading : RepoFetchResult
     data class Error(val message: String) : RepoFetchResult
-    data class Loaded(val extensions: List<MarketplaceExtension>) : RepoFetchResult
+    data class Loaded(val extensions: List<ApkRepositoryExtension>) : RepoFetchResult
+}
+
+private fun ApkRepositoryExtension.toMarketplaceExtension() = MarketplaceExtension(
+    id = pkg,
+    name = name,
+    version = version,
+    iconUrl = iconUrl,
+    lang = lang,
+    isNsfw = nsfw != 0,
+)
+
+private data class PendingApkInstall(
+    val packageName: String,
+    val prepared: PreparedApkExtensionInstall,
+)
+
+@Composable
+private fun ApkRepositoryExtensionRow(
+    repositoryUrl: String,
+    extension: ApkRepositoryExtension,
+    installingPackages: Set<String>,
+    installErrors: Map<String, String>,
+    installedExtensions: Map<String, InstalledApkExtensionInfo>,
+    selectedSource: SourceId,
+    onInstall: (String, ApkRepositoryExtension) -> Unit,
+    onSelect: (String) -> Unit,
+    onUninstall: () -> Unit,
+) {
+    val installed = installedExtensions[extension.pkg]
+        ?.takeIf(InstalledApkExtensionInfo::isSystemInstalled)
+    val sourceIds = AnimeSourceRegistry.sourceIdsForApkPackage(extension.pkg)
+    MarketplaceExtensionRow(
+        extension = extension.toMarketplaceExtension(),
+        installedVersion = installed?.versionName,
+        installing = extension.pkg in installingPackages,
+        installingLabel = stringResource(R.string.source_extensions_apk_installing),
+        errorMessage = installErrors[extension.pkg],
+        selected = sourceIds.any { it == selectedSource },
+        selectable = sourceIds.isNotEmpty(),
+        onInstall = { onInstall(repositoryUrl, extension) },
+        onSelect = { onSelect(extension.pkg) },
+        onUninstall = onUninstall,
+    )
 }
 
 @Composable
-private fun SourceRepositoryList(
+private fun ApkRepositoryList(
+    repositoryUrl: String,
+    extensions: List<ApkRepositoryExtension>,
     bottomContentPadding: Dp,
     query: String,
-    state: RepositoryLoadState,
     selectedLanguages: Set<String>,
     hideNsfwSources: Boolean,
     selectedSource: SourceId,
-    installingIds: Set<String>,
+    installingPackages: Set<String>,
     installErrors: Map<String, String>,
-    onUpdateAll: (List<MarketplaceExtension>) -> Unit,
-    onRetry: () -> Unit,
-    onInstall: (MarketplaceExtension) -> Unit,
+    installedExtensions: Map<String, InstalledApkExtensionInfo>,
+    onInstall: (String, ApkRepositoryExtension) -> Unit,
     onSelect: (String) -> Unit,
     onUninstall: (String) -> Unit,
 ) {
+    var uninstallDialogExtension by remember { mutableStateOf<ApkRepositoryExtension?>(null) }
+    val visibleExtensions = remember(extensions, query, selectedLanguages, hideNsfwSources) {
+        extensions.filter { extension ->
+            val matchesQuery = query.isBlank() || extension.name.contains(query, ignoreCase = true) ||
+                extension.pkg.contains(query, ignoreCase = true)
+            val matchesLanguage = selectedLanguages.isEmpty() || extension.lang in selectedLanguages
+            val matchesContentRating = !hideNsfwSources || extension.nsfw == 0
+            matchesQuery && matchesLanguage && matchesContentRating
+        }
+    }
+    if (visibleExtensions.isEmpty()) {
+        SourceRepositoryMessage(stringResource(R.string.source_extensions_repository_empty))
+        return
+    }
+    val installed = visibleExtensions.filter { installedExtensions[it.pkg]?.isSystemInstalled == true }
+    val updates = installed.filter { extension ->
+        isExtensionVersionNewer(extension.version, installedExtensions.getValue(extension.pkg).versionName)
+    }
+    val upToDate = installed - updates.toSet()
+    val available = visibleExtensions.filterNot { installedExtensions[it.pkg]?.isSystemInstalled == true }
+    LazyColumn(
+        modifier = Modifier.fillMaxSize().padding(top = 8.dp),
+        contentPadding = PaddingValues(
+            start = 16.dp,
+            end = 16.dp,
+            top = 8.dp,
+            bottom = bottomContentPadding + 16.dp,
+        ),
+    ) {
+        if (updates.isNotEmpty()) {
+            item(key = "apk_available_updates") {
+                SourceExtensionSectionHeader(
+                    title = stringResource(R.string.source_extensions_updates_section),
+                    action = {
+                        OutlinedButton(onClick = { updates.forEach { onInstall(repositoryUrl, it) } }) {
+                            Icon(
+                                imageVector = Icons.Outlined.Refresh,
+                                contentDescription = null,
+                                modifier = Modifier.padding(end = 6.dp).size(18.dp),
+                            )
+                            Text(stringResource(R.string.source_extensions_update_all))
+                        }
+                    },
+                )
+            }
+        }
+        items(updates, key = ApkRepositoryExtension::pkg) { extension ->
+            ApkRepositoryExtensionRow(
+                repositoryUrl = repositoryUrl,
+                extension = extension,
+                installingPackages = installingPackages,
+                installErrors = installErrors,
+                installedExtensions = installedExtensions,
+                selectedSource = selectedSource,
+                onInstall = onInstall,
+                onSelect = onSelect,
+                onUninstall = { uninstallDialogExtension = extension },
+            )
+        }
+        if (upToDate.isNotEmpty()) {
+            item(key = "apk_installed_extensions") {
+                SourceExtensionSectionHeader(
+                    title = stringResource(R.string.source_extensions_installed_section, upToDate.size),
+                    separatedFromPrevious = updates.isNotEmpty(),
+                )
+            }
+        }
+        items(upToDate, key = ApkRepositoryExtension::pkg) { extension ->
+            ApkRepositoryExtensionRow(
+                repositoryUrl = repositoryUrl,
+                extension = extension,
+                installingPackages = installingPackages,
+                installErrors = installErrors,
+                installedExtensions = installedExtensions,
+                selectedSource = selectedSource,
+                onInstall = onInstall,
+                onSelect = onSelect,
+                onUninstall = { uninstallDialogExtension = extension },
+            )
+        }
+        if (available.isNotEmpty()) {
+            item(key = "apk_available_extensions") {
+                SourceExtensionSectionHeader(
+                    title = stringResource(R.string.source_extensions_available_section, available.size),
+                    separatedFromPrevious = installed.isNotEmpty(),
+                )
+            }
+        }
+        items(available, key = ApkRepositoryExtension::pkg) { extension ->
+            ApkRepositoryExtensionRow(
+                repositoryUrl = repositoryUrl,
+                extension = extension,
+                installingPackages = installingPackages,
+                installErrors = installErrors,
+                installedExtensions = installedExtensions,
+                selectedSource = selectedSource,
+                onInstall = onInstall,
+                onSelect = onSelect,
+                onUninstall = { uninstallDialogExtension = extension },
+            )
+        }
+    }
+    uninstallDialogExtension?.let { extension ->
+        AlertDialog(
+            onDismissRequest = { uninstallDialogExtension = null },
+            title = { Text(stringResource(R.string.source_extensions_apk_uninstall_title)) },
+            text = { Text(stringResource(R.string.source_extensions_apk_uninstall_message, extension.name)) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        onUninstall(extension.pkg)
+                        uninstallDialogExtension = null
+                    },
+                ) { Text(stringResource(R.string.source_extensions_uninstall)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { uninstallDialogExtension = null }) {
+                    Text(stringResource(R.string.action_cancel))
+                }
+            },
+        )
+    }
+}
+
+private data class InstalledApkSourceEntry(
+    val extension: MarketplaceExtension,
+    val packageName: String,
+    val installedVersion: String,
+    val repositoryEntry: ApkRepositoryExtension? = null,
+    val loadError: String? = null,
+    val selectable: Boolean = true,
+)
+
+private const val APK_PACKAGE_ROW_PREFIX = "apk-package:"
+
+@Composable
+private fun InstalledSourcesList(
+    bottomContentPadding: Dp,
+    query: String,
+    selectedLanguages: Set<String>,
+    hideNsfwSources: Boolean,
+    selectedSource: SourceId,
+    installingPackages: Set<String>,
+    installErrors: Map<String, String>,
+    installedApkExtensions: Map<String, InstalledApkExtensionInfo>,
+    apkRepositoryExtensions: List<ApkRepositoryExtension>,
+    apkLoadErrors: Map<String, String>,
+    onUpdate: (ApkRepositoryExtension) -> Unit,
+    onSelect: (String) -> Unit,
+    onUninstall: (String) -> Unit,
+) {
+    var settingsSheetSourceId by rememberSaveable { mutableStateOf<String?>(null) }
+    val installedVersions = installedApkExtensions
+        .filterValues(InstalledApkExtensionInfo::isSystemInstalled)
+        .mapValues { it.value.versionName }
+
+    // Sources of extensions that loaded; the repository index supplies the name's icon and any newer version.
+    val loadedSources = AnimeSourceRegistry.sources.mapNotNull { descriptor ->
+        val packageName = AnimeSourceRegistry.apkPackageForSource(descriptor.id) ?: return@mapNotNull null
+        val apkInfo = installedApkExtensions[packageName]
+            ?.takeIf(InstalledApkExtensionInfo::isSystemInstalled)
+            ?: return@mapNotNull null
+        val repositoryEntry = apkRepositoryExtensions.firstOrNull { it.pkg == packageName }
+        val updateAvailable = repositoryEntry?.isUpdateAvailable(installedVersions) == true
+        InstalledApkSourceEntry(
+            extension = MarketplaceExtension(
+                id = descriptor.id.value,
+                name = descriptor.name,
+                // The row compares this with the installed version to decide whether to offer an update.
+                version = if (updateAvailable) repositoryEntry!!.version else apkInfo.versionName,
+                // An APK source has no icon of its own; the repository index carries it.
+                iconUrl = descriptor.iconUrl ?: repositoryEntry?.iconUrl,
+                lang = descriptor.language.tag,
+            ),
+            packageName = packageName,
+            installedVersion = apkInfo.versionName,
+            repositoryEntry = repositoryEntry,
+        )
+    }
+    val representedPackages = loadedSources.mapTo(mutableSetOf(), InstalledApkSourceEntry::packageName)
+    // Installed APKs that produced no usable source: shown with the reason, so they can be removed or fixed.
+    val failedSources = installedApkExtensions.mapNotNull { (packageName, info) ->
+        if (!info.isSystemInstalled || packageName in representedPackages) return@mapNotNull null
+        val repositoryEntry = apkRepositoryExtensions.firstOrNull { it.pkg == packageName }
+        val errorMessage = apkLoadErrors[packageName]
+            ?: if (!info.isTrusted) {
+                "APK signing certificate is not trusted by Hibiki."
+            } else {
+                "Installed APK did not register a usable anime source."
+            }
+        InstalledApkSourceEntry(
+            extension = MarketplaceExtension(
+                id = "$APK_PACKAGE_ROW_PREFIX$packageName",
+                name = repositoryEntry?.name ?: packageName,
+                version = info.versionName,
+                iconUrl = repositoryEntry?.iconUrl,
+                lang = repositoryEntry?.lang?.ifBlank { "all" } ?: "all",
+                isNsfw = (repositoryEntry?.nsfw ?: 0) != 0,
+            ),
+            packageName = packageName,
+            installedVersion = info.versionName,
+            repositoryEntry = repositoryEntry,
+            loadError = errorMessage,
+            selectable = false,
+        )
+    }
+    val entries = (loadedSources + failedSources).filter { entry ->
+        val matchesQuery = query.isBlank() ||
+            entry.extension.name.contains(query, ignoreCase = true) ||
+            entry.extension.id.contains(query, ignoreCase = true)
+        val matchesLanguage = selectedLanguages.isEmpty() || entry.extension.lang in selectedLanguages
+        val matchesContentRating = !hideNsfwSources || !entry.extension.isNsfw
+        matchesQuery && matchesLanguage && matchesContentRating
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(top = 8.dp),
     ) {
-        when (state) {
-            is RepositoryLoadState.Loading -> SourceRepositoryMessage(stringResource(R.string.source_extensions_repository_loading))
-            is RepositoryLoadState.Error -> SourceRepositoryMessage(
-                message = stringResource(R.string.source_extensions_repository_error),
-                detail = state.message,
-                onRetry = onRetry,
-            )
-            is RepositoryLoadState.Loaded -> {
-                val installedVersions = AnimeSourceRegistry.installedScriptExtensionVersions()
-                val installedResolverVersions = AnimeSourceRegistry.installedPlayerResolverVersions()
-                val extensionsListState = rememberLazyListState()
-                val visibleExtensions = state.extensions.filter { extension ->
-                    val matchesQuery = query.isBlank() ||
-                        extension.name.contains(query, ignoreCase = true) ||
-                        extension.id.contains(query, ignoreCase = true)
-                    val matchesLanguage = selectedLanguages.isEmpty() || extension.lang in selectedLanguages
-                    val matchesContentRating = !hideNsfwSources || !extension.isNsfw
-                    extension.type == "source" && matchesQuery && matchesLanguage && matchesContentRating
-                }
-                if (visibleExtensions.isEmpty()) {
-                    SourceRepositoryMessage(stringResource(R.string.source_extensions_repository_empty))
-                } else {
-                    val installedExtensions = visibleExtensions.filter { it.id in installedVersions }
-                    val updateAvailableExtensions = installedExtensions.filter { extension ->
-                        extension.isUpdateAvailable(installedVersions, installedResolverVersions, state.extensions)
+        if (entries.isEmpty()) {
+            SourceRepositoryMessage(stringResource(R.string.source_extensions_installed_empty))
+        } else {
+            val updates = entries.filter { it.repositoryEntry?.isUpdateAvailable(installedVersions) == true }
+            val upToDate = entries - updates.toSet()
+            // The nav-bar reservation belongs in the LazyColumn's own contentPadding (like
+            // CatalogScreen/LibraryScreen do), not on a wrapping Column: padding a Column shrinks its
+            // measured height, so the list would inset its content by the same amount a second time.
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(
+                    start = 16.dp,
+                    end = 16.dp,
+                    top = 8.dp,
+                    bottom = bottomContentPadding + 16.dp,
+                ),
+            ) {
+                if (updates.isNotEmpty()) {
+                    item(key = "available_updates") {
+                        SourceExtensionSectionHeader(title = stringResource(R.string.source_extensions_updates_section))
                     }
-                    val upToDateExtensions = installedExtensions - updateAvailableExtensions.toSet()
-                    val availableExtensions = visibleExtensions.filterNot { it.id in installedVersions }
-                    // The nav-bar reservation belongs in the LazyColumn's own contentPadding (like
-                    // CatalogScreen/LibraryScreen do), not on this wrapping Column - padding a
-                    // Column shrinks its measured height, so the LazyColumn's fillMaxSize() sizes
-                    // itself to (screen - bottomContentPadding) and then *also* insets its content
-                    // by the same amount a second time, needlessly cramming the list into a
-                    // shorter viewport than it needs and making the last row look clipped right
-                    // above the floating bottom bar instead of scrolling clear of it.
-                    LazyColumn(
-                        state = extensionsListState,
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(
-                            start = 16.dp,
-                            end = 16.dp,
-                            top = 8.dp,
-                            bottom = bottomContentPadding + 16.dp,
-                        ),
-                    ) {
-                        if (updateAvailableExtensions.isNotEmpty()) {
-                            item(key = "available_updates") {
-                                SourceExtensionSectionHeader(
-                                    title = stringResource(R.string.source_extensions_updates_section),
-                                    action = {
-                                        OutlinedButton(onClick = { onUpdateAll(updateAvailableExtensions) }) {
-                                            Icon(
-                                                imageVector = Icons.Outlined.Refresh,
-                                                contentDescription = null,
-                                                modifier = Modifier.padding(end = 6.dp).size(18.dp),
-                                            )
-                                            Text(stringResource(R.string.source_extensions_update_all))
-                                        }
-                                    },
-                                )
-                            }
-                        }
-                        items(updateAvailableExtensions, key = MarketplaceExtension::id) { extension ->
-                            MarketplaceExtensionItem(
-                                extension = extension,
-                                installedVersions = installedVersions,
-                                installedResolverVersions = installedResolverVersions,
-                                stateExtensions = state.extensions,
-                                installingIds = installingIds,
-                                installErrors = installErrors,
-                                selectedSource = selectedSource,
-                                onInstall = onInstall,
-                                onSelect = onSelect,
-                                onUninstall = onUninstall,
-                            )
-                        }
-                        if (upToDateExtensions.isNotEmpty()) {
-                            item(key = "installed_extensions") {
-                                SourceExtensionSectionHeader(
-                                    title = stringResource(
-                                        R.string.source_extensions_installed_section,
-                                        upToDateExtensions.size,
-                                    ),
-                                    separatedFromPrevious = updateAvailableExtensions.isNotEmpty(),
-                                )
-                            }
-                        }
-                        items(upToDateExtensions, key = MarketplaceExtension::id) { extension ->
-                            MarketplaceExtensionItem(
-                                extension = extension,
-                                installedVersions = installedVersions,
-                                installedResolverVersions = installedResolverVersions,
-                                stateExtensions = state.extensions,
-                                installingIds = installingIds,
-                                installErrors = installErrors,
-                                selectedSource = selectedSource,
-                                onInstall = onInstall,
-                                onSelect = onSelect,
-                                onUninstall = onUninstall,
-                            )
-                        }
-                        if (availableExtensions.isNotEmpty()) {
-                            item(key = "available_extensions") {
-                                SourceExtensionSectionHeader(
-                                    title = stringResource(
-                                        R.string.source_extensions_available_section,
-                                        availableExtensions.size,
-                                    ),
-                                    separatedFromPrevious = installedExtensions.isNotEmpty(),
-                                )
-                            }
-                        }
-                        items(availableExtensions, key = MarketplaceExtension::id) { extension ->
-                            MarketplaceExtensionItem(
-                                extension = extension,
-                                installedVersions = installedVersions,
-                                installedResolverVersions = installedResolverVersions,
-                                stateExtensions = state.extensions,
-                                installingIds = installingIds,
-                                installErrors = installErrors,
-                                selectedSource = selectedSource,
-                                onInstall = onInstall,
-                                onSelect = onSelect,
-                                onUninstall = onUninstall,
-                            )
-                        }
+                    items(updates, key = { "apk_${it.extension.id}" }) { entry ->
+                        InstalledSourceRow(
+                            entry = entry,
+                            installing = entry.packageName in installingPackages,
+                            errorMessage = entry.loadError ?: installErrors[entry.packageName],
+                            selectedSource = selectedSource,
+                            onUpdate = onUpdate,
+                            onSelect = onSelect,
+                            onUninstall = onUninstall,
+                            onOpenSettings = { settingsSheetSourceId = it },
+                        )
+                    }
+                }
+                if (upToDate.isNotEmpty()) {
+                    item(key = "installed_extensions") {
+                        SourceExtensionSectionHeader(
+                            title = stringResource(R.string.source_extensions_installed_section, upToDate.size),
+                            separatedFromPrevious = updates.isNotEmpty(),
+                        )
+                    }
+                    items(upToDate, key = { "apk_${it.extension.id}" }) { entry ->
+                        InstalledSourceRow(
+                            entry = entry,
+                            installing = entry.packageName in installingPackages,
+                            errorMessage = entry.loadError ?: installErrors[entry.packageName],
+                            selectedSource = selectedSource,
+                            onUpdate = onUpdate,
+                            onSelect = onSelect,
+                            onUninstall = onUninstall,
+                            onOpenSettings = { settingsSheetSourceId = it },
+                        )
                     }
                 }
             }
         }
     }
+
+    settingsSheetSourceId?.let { id ->
+        ExtensionSettingsSheet(
+            sourceId = SourceId(id),
+            title = remember(id) { AnimeSourceRegistry.descriptor(SourceId(id)).name },
+            onDismissRequest = { settingsSheetSourceId = null },
+        )
+    }
+}
+
+@Composable
+private fun InstalledSourceRow(
+    entry: InstalledApkSourceEntry,
+    installing: Boolean,
+    errorMessage: String?,
+    selectedSource: SourceId,
+    onUpdate: (ApkRepositoryExtension) -> Unit,
+    onSelect: (String) -> Unit,
+    onUninstall: (String) -> Unit,
+    onOpenSettings: (String) -> Unit,
+) {
+    MarketplaceExtensionRow(
+        extension = entry.extension,
+        installedVersion = entry.installedVersion,
+        installing = installing,
+        errorMessage = errorMessage,
+        selected = entry.extension.id == selectedSource.value,
+        selectable = entry.selectable,
+        onInstall = { entry.repositoryEntry?.let(onUpdate) },
+        onSelect = { onSelect(entry.extension.id) },
+        onUninstall = { onUninstall("$APK_PACKAGE_ROW_PREFIX${entry.packageName}") },
+        onOpenSettings = AnimeSourceRegistry.apkSourceSettings(SourceId(entry.extension.id))?.let {
+            { onOpenSettings(entry.extension.id) }
+        },
+    )
 }
 
 @Composable
@@ -822,47 +1193,11 @@ private fun SourceExtensionSectionHeader(
 }
 
 @Composable
-private fun MarketplaceExtensionItem(
-    extension: MarketplaceExtension,
-    installedVersions: Map<String, String>,
-    installedResolverVersions: Map<String, String>,
-    stateExtensions: List<MarketplaceExtension>,
-    installingIds: Set<String>,
-    installErrors: Map<String, String>,
-    selectedSource: SourceId,
-    onInstall: (MarketplaceExtension) -> Unit,
-    onSelect: (String) -> Unit,
-    onUninstall: (String) -> Unit,
-) {
-    // A resolver dependency can be fixed and re-published without its owning source's own
-    // version changing at all. Reinstalling a source refetches its resolver dependencies, so
-    // surface that update alongside the source's own version update.
-    val resolverUpdateAvailable = extension.resolverDependencies.any { resolverId ->
-        val installed = installedResolverVersions[resolverId] ?: return@any false
-        val available = stateExtensions.firstOrNull {
-            it.id == resolverId && it.type == "player-resolver"
-        }
-        available != null && isExtensionVersionNewer(available.version, installed)
-    }
-    MarketplaceExtensionRow(
-        extension = extension,
-        installedVersion = installedVersions[extension.id],
-        resolverUpdateAvailable = resolverUpdateAvailable,
-        installing = extension.id in installingIds,
-        errorMessage = installErrors[extension.id],
-        selected = installedVersions.containsKey(extension.id) &&
-            extension.id == selectedSource.value,
-        onInstall = { onInstall(extension) },
-        onSelect = { onSelect(extension.id) },
-        onUninstall = { onUninstall(extension.id) },
-    )
-}
-
-@Composable
 private fun RepositoriesList(
     urls: List<String>,
     repoStates: Map<String, RepoFetchResult>,
     bottomContentPadding: Dp,
+    onOpen: (String) -> Unit,
     onRemove: (String) -> Unit,
 ) {
     Column(
@@ -887,6 +1222,7 @@ private fun RepositoriesList(
                         url = url,
                         state = repoStates[url],
                         removable = url != ExtensionMarketplaceClient.DEFAULT_INDEX_URL,
+                        onClick = { onOpen(url) },
                         onRemove = { onRemove(url) },
                         modifier = Modifier.padding(vertical = 4.dp),
                     )
@@ -901,12 +1237,13 @@ private fun RepositoryCard(
     url: String,
     state: RepoFetchResult?,
     removable: Boolean,
+    onClick: () -> Unit,
     onRemove: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
     val clipboardManager = LocalClipboardManager.current
-    ElevatedCard(modifier = modifier.fillMaxWidth()) {
+    ElevatedCard(modifier = modifier.fillMaxWidth().clickable(onClick = onClick)) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 16.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -921,11 +1258,10 @@ private fun RepositoryCard(
                 )
                 Text(
                     text = when (state) {
-                        is RepoFetchResult.Loaded ->
-                            stringResource(
-                                R.string.source_extensions_repositories_extension_count,
-                                state.extensions.count { it.type == "source" },
-                            )
+                        is RepoFetchResult.Loaded -> stringResource(
+                            R.string.source_extensions_repositories_extension_count,
+                            state.extensions.size,
+                        )
                         is RepoFetchResult.Error -> state.message
                         RepoFetchResult.Loading, null -> stringResource(R.string.source_extensions_repository_loading)
                     },
@@ -968,6 +1304,16 @@ private fun RepositoryCard(
 private fun repositoryDisplayName(url: String): String {
     val match = Regex("""^https?://raw\.githubusercontent\.com/([^/]+)/([^/]+)/""").find(url)
     return match?.let { "${it.groupValues[1]}/${it.groupValues[2]}" } ?: url
+}
+
+private fun repositoryTitle(url: String): String {
+    val uri = Uri.parse(url)
+    val segments = uri.pathSegments
+    return when (uri.host?.lowercase()) {
+        "raw.githubusercontent.com" -> segments.getOrNull(1)
+        "github.com" -> segments.getOrNull(1)
+        else -> null
+    }?.takeIf(String::isNotBlank) ?: repositoryDisplayName(url)
 }
 
 @Composable
@@ -1100,26 +1446,18 @@ private fun SourceRepositoryMessage(
 private fun MarketplaceExtensionRow(
     extension: MarketplaceExtension,
     installedVersion: String?,
-    resolverUpdateAvailable: Boolean,
     installing: Boolean,
+    installingLabel: String? = null,
     errorMessage: String?,
     selected: Boolean,
+    selectable: Boolean = true,
     onInstall: () -> Unit,
     onSelect: () -> Unit,
     onUninstall: () -> Unit,
+    onOpenSettings: (() -> Unit)? = null,
 ) {
-    // A resolver fix can ship without the source's own manifest version changing at all, so the
-    // source-version comparison alone would never surface it - reinstalling the source is also what
-    // refetches its resolverDependencies (see onInstall below), so an available resolver update is
-    // just as much a reason to show "update" here as the source's own version being behind.
-    val upToDate = installedVersion != null &&
-        !isExtensionVersionNewer(extension.version, installedVersion) &&
-        !resolverUpdateAvailable
+    val upToDate = installedVersion != null && !isExtensionVersionNewer(extension.version, installedVersion)
     val versionLabel = when {
-        // The source's own version can be identical on both sides when only its resolver moved -
-        // "1.0.9 → 1.0.9" would just confuse the user, so name what's actually changing instead.
-        installedVersion != null && !upToDate && extension.version == installedVersion ->
-            "$installedVersion (${stringResource(R.string.source_extensions_resolver_update)})"
         installedVersion != null && !upToDate -> "$installedVersion → ${extension.version}"
         installedVersion != null -> installedVersion
         else -> extension.version
@@ -1129,7 +1467,7 @@ private fun MarketplaceExtensionRow(
             modifier = Modifier
                 .fillMaxWidth()
                 .clickable(
-                    enabled = installedVersion != null && !installing,
+                    enabled = installedVersion != null && !installing && selectable,
                     onClick = onSelect,
                 ),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -1179,7 +1517,19 @@ private fun MarketplaceExtensionRow(
                     modifier = Modifier.size(22.dp),
                 )
             }
-            if (installedVersion == null) {
+            if (installing) {
+                Button(onClick = {}, enabled = false) {
+                    if (installingLabel != null) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(16.dp),
+                            strokeWidth = 2.dp,
+                        )
+                        Text(installingLabel, modifier = Modifier.padding(start = 8.dp))
+                    } else {
+                        CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                    }
+                }
+            } else if (installedVersion == null) {
                 Button(onClick = onInstall, enabled = !installing) {
                     Text(stringResource(R.string.source_extensions_install))
                 }
@@ -1189,6 +1539,7 @@ private fun MarketplaceExtensionRow(
                     updateAvailable = !upToDate,
                     onUpdate = onInstall,
                     onUninstall = onUninstall,
+                    onOpenSettings = onOpenSettings,
                 )
             }
         }
@@ -1209,6 +1560,7 @@ private fun ExtensionManageButton(
     updateAvailable: Boolean,
     onUpdate: () -> Unit,
     onUninstall: () -> Unit,
+    onOpenSettings: (() -> Unit)? = null,
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
     Box {
@@ -1225,6 +1577,15 @@ private fun ExtensionManageButton(
                     onClick = {
                         menuExpanded = false
                         onUpdate()
+                    },
+                )
+            }
+            if (onOpenSettings != null) {
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.source_extensions_settings)) },
+                    onClick = {
+                        menuExpanded = false
+                        onOpenSettings()
                     },
                 )
             }

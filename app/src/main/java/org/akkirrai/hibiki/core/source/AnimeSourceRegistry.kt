@@ -5,35 +5,25 @@ import androidx.annotation.DrawableRes
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import io.ktor.client.HttpClient
 import org.akkirrai.beakokit.api.AnimeKey
-import org.akkirrai.beakokit.api.SourceCatalog
 import org.akkirrai.beakokit.api.SourceCapability
 import org.akkirrai.beakokit.api.SourceId
 import org.akkirrai.beakokit.api.SourceInfo
 import org.akkirrai.beakokit.api.SourceLanguage
-import org.akkirrai.beakokit.api.SourceCatalogEntry
-import org.akkirrai.beakokit.api.context.DefaultSourceContext
-import org.akkirrai.hibiki.core.source.extension.AndroidExtensionStorage
-import org.akkirrai.beakokit.api.context.SourceConfig
-import org.akkirrai.beakokit.api.context.SourceLogLevel
-import org.akkirrai.beakokit.api.context.SourceLogger
-import org.akkirrai.beakokit.api.execution.SourceExecutionPolicy
-import org.akkirrai.beakokit.api.health.SourceHealthReporter
-import org.akkirrai.beakokit.extension.InvalidScriptExtension
-import org.akkirrai.beakokit.extension.ScriptExtensionManifest
-import org.akkirrai.beakokit.extension.ScriptExtensionRepository
-import org.akkirrai.beakokit.extension.PlayerResolverExtensionRepository
-import org.akkirrai.beakokit.api.StreamExtractor
+import org.akkirrai.hibiki.core.source.extension.AniyomiAnimeSourceAdapter
+import org.akkirrai.hibiki.core.source.extension.ApkAnimeExtensionLoader
+import org.akkirrai.hibiki.core.source.extension.LoadedAnimeExtension
+import org.akkirrai.hibiki.core.source.extension.InstalledApkExtensions
 import org.akkirrai.beakokit.model.AnimeSearchFilterCatalog
 import org.akkirrai.hibiki.app.settings.AppPreferences
 import org.akkirrai.hibiki.app.settings.RememberedAnimeSourceAppearance
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.core.log.AppLogger
-import org.akkirrai.hibiki.core.network.AndroidBrowserFetchProvider
-import org.akkirrai.hibiki.core.network.AndroidChallengeSessionProvider
-import java.io.File
 import java.util.concurrent.atomic.AtomicInteger
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 
 data class AnimeSourceDescriptor(
     val info: SourceInfo,
@@ -77,11 +67,10 @@ data class AnimeSourceDescriptor(
 }
 
 /**
- * Registers every anime source Hibiki knows about - all of them are dynamically loaded scripted
- * (JS) extensions now, none compiled in and none installed by default. Call [initialize] once
- * (from application startup) before any UI reads [sources]/[catalog]; without it, [sources] is
- * simply empty - which is exactly what plain JVM unit tests get today, since
- * [ScriptExtensionRepository] takes a plain [File] rather than an Android `Context`.
+ * Registers every anime source Hibiki knows about. All of them are Aniyomi-compatible APK
+ * extensions installed through Android's package installer; none is compiled in and none is
+ * installed by default. Call [initialize] once at application startup; until [refreshApkExtensions]
+ * has run, [sources] is simply empty.
  */
 object AnimeSourceRegistry {
     private data class Registration(
@@ -89,171 +78,153 @@ object AnimeSourceRegistry {
         @param:DrawableRes val iconRes: Int,
         val localizeFilters: (AnimeSearchFilterCatalog, Boolean) -> AnimeSearchFilterCatalog = { catalog, _ -> catalog },
         val normalizeTitleId: (String) -> String = { it },
+        val runtimeSource: org.akkirrai.beakokit.api.AnimeSource,
     ) {
         val descriptor = AnimeSourceDescriptor(info = info, iconRes = iconRes)
     }
 
     @Volatile
-    private var scriptRepository: ScriptExtensionRepository? = null
-    @Volatile
     private var applicationContext: Context? = null
-    private var playerResolverRepository: PlayerResolverExtensionRepository? = null
 
     // Compose state (not just @Volatile) so screens reading `sources`/`catalog` recompose the
     // moment an extension is installed/uninstalled, without needing their own ViewModel plumbing.
     private var registrationsState by mutableStateOf<List<Registration>>(emptyList())
-    private var scriptCatalogEntries by mutableStateOf<List<SourceCatalogEntry>>(emptyList())
-    private var invalidScriptExtensionsState by mutableStateOf<List<InvalidScriptExtension>>(emptyList())
-    private var installedManifestsState by mutableStateOf<List<ScriptExtensionManifest>>(emptyList())
-
-    // Bumped by every refresh() (i.e. every install/uninstall) so long-lived
-    // AnimeSourceRuntimeManager instances (one per repository, surviving across screen
-    // navigation) know a runtime they already created might be running a JS payload that's since
-    // been overwritten on disk, and should be thrown away instead of reused as-is.
+    private var apkRuntimeSourcesState by mutableStateOf<Map<SourceId, org.akkirrai.beakokit.api.AnimeSource>>(emptyMap())
+    private var apkExtensionLoadErrorsState by mutableStateOf<Map<String, String>>(emptyMap())
+    // Retain APK class loaders while their adapters remain registered.
+    private var loadedApkExtensionsState by mutableStateOf<List<LoadedAnimeExtension>>(emptyList())
+    private val apkRefreshMutex = Mutex()
+    // Bumped whenever the set of loaded sources changes, so long-lived AnimeSourceRuntimeManager
+    // instances (one per repository, surviving across screen navigation) discard runtimes they
+    // created for sources that have since been replaced.
     private val extensionGenerationCounter = AtomicInteger(0)
     val extensionGeneration: Int
         get() = extensionGenerationCounter.get()
 
-    /** Points the registry at [extensionsDir] and loads whatever extensions are already installed there. */
-    fun initialize(context: Context, extensionsDir: File) {
+    /** Remembers the application context; call once from application startup. */
+    fun initialize(context: Context) {
         applicationContext = context.applicationContext
-        initialize(extensionsDir)
     }
 
-    fun initialize(extensionsDir: File) {
-        scriptRepository = ScriptExtensionRepository(extensionsDir)
-        playerResolverRepository = PlayerResolverExtensionRepository(extensionsDir)
-        refresh()
-    }
-
-    /** Re-reads every scripted extension from disk; call after installing/uninstalling one. */
-    fun refresh() {
-        val result = scriptRepository?.loadAll() ?: ScriptExtensionRepository.LoadResult.EMPTY
-        invalidScriptExtensionsState = result.invalid
-        scriptCatalogEntries = result.entries
-        registrationsState = result.entries.map(::registrationFor)
-        // From the load above, not a second pass over the same files: each one embeds a source's
-        // whole JS payload, and this runs on the main thread before the first frame.
-        installedManifestsState = result.manifests
-        applicationContext?.let { context ->
-            AppPreferences.rememberAnimeSourceAppearances(
-                context,
-                registrationsState.associate { registration ->
-                    registration.descriptor.id.value to RememberedAnimeSourceAppearance(
-                        name = registration.descriptor.name,
-                        iconUrl = registration.descriptor.iconUrl,
-                    )
-                },
-            )
-        }
-        extensionGenerationCounter.incrementAndGet()
-    }
-
-    fun uninstallScriptExtension(id: SourceId) {
-        scriptRepository?.uninstall(id.value)
-        // A stored token for a source that is no longer installed is only a secret nobody is
-        // watching - it goes with the source.
-        applicationContext?.let { AndroidExtensionStorage.clear(it, id.value) }
-        refresh()
-    }
-
-    /**
-     * Validates and persists a manifest fetched from a repository, then reloads the catalog.
-     * [originRepositoryUrl] identifies which repository this manifest came from, so
-     * [ScriptExtensionRepository.install] can refuse a different repository silently overwriting
-     * an id it doesn't own.
-     */
-    fun installScriptExtension(manifestJson: String, originRepositoryUrl: String) {
-        val repository = scriptRepository
-            ?: error("AnimeSourceRegistry.initialize must be called before installing extensions")
-        repository.install(manifestJson, originRepositoryUrl)
-        refresh()
-    }
-
-    /** Installs a portable player resolver. Resolver files never appear as catalog sources. */
-    fun installPlayerResolverExtension(manifestJson: String, originRepositoryUrl: String) {
-        val repository = playerResolverRepository
-            ?: error("AnimeSourceRegistry.initialize must be called before installing resolvers")
-        repository.install(manifestJson, originRepositoryUrl)
-        extensionGenerationCounter.incrementAndGet()
-    }
-
-    fun createPlayerResolvers(context: Context, client: HttpClient): List<StreamExtractor> {
+    /** Loads only APKs installed by Android's package installer. DEX work runs off the UI thread. */
+    suspend fun refreshApkExtensions(context: Context) {
         val appContext = context.applicationContext
-        return playerResolverRepository?.loadAll(
-            DefaultSourceContext(
-                httpClient = client,
-                preferredLanguages = listOf(SourceLanguage.ENGLISH),
-                logger = SourceLogger { level, message, throwable ->
-                    when (level) {
-                        SourceLogLevel.DEBUG -> AppLogger.d("BeakoKit/resolver", message)
-                        SourceLogLevel.WARNING -> AppLogger.w("BeakoKit/resolver", message, throwable)
-                        SourceLogLevel.ERROR -> AppLogger.e("BeakoKit/resolver", message, throwable)
+        apkRefreshMutex.withLock {
+            val (loaded, adapters, loadErrors) = withContext(Dispatchers.IO) {
+                val loader = ApkAnimeExtensionLoader(appContext)
+                val errors = mutableMapOf<String, String>()
+                val loadedExtensions = InstalledApkExtensions.scan(appContext).toSortedMap().asSequence()
+                    .filter { (_, info) -> info.isSystemInstalled && info.isTrusted }
+                    .mapNotNull { (packageName, _) ->
+                        runCatching { loader.load(packageName) }
+                            .onFailure { error ->
+                                errors[packageName] = error.message ?: error.javaClass.simpleName
+                                AppLogger.w("ApkAnimeExtensions", "Could not load $packageName", error)
+                            }
+                            .getOrNull()
                     }
-                },
-                challengeSessionProvider = AndroidChallengeSessionProvider(appContext),
-                // Regular source scripts have had this since createRuntime() below; resolver
-                // scripts silently defaulted to BrowserFetchProvider.UNSUPPORTED because this call
-                // never set it, so an HTTP-runtime resolver could never actually call browserFetch().
-                browserFetchProvider = AndroidBrowserFetchProvider(appContext),
-                browserRelayProvider = AndroidBrowserRelayProvider(appContext),
-            ),
-        ).orEmpty()
+                    .toList()
+                val adaptationErrors = mutableMapOf<String, String>()
+                val adaptedSources = loadedExtensions.flatMap { extension ->
+                    extension.sources.mapNotNull { source ->
+                        runCatching { AniyomiAnimeSourceAdapter(extension.packageName, source) }
+                            .onFailure { error ->
+                                adaptationErrors[extension.packageName] =
+                                    error.message ?: error.javaClass.simpleName
+                                AppLogger.w(
+                                    "ApkAnimeExtensions",
+                                    "Could not adapt ${extension.packageName}/${source.name}",
+                                    error,
+                                )
+                            }
+                            .getOrNull()
+                    }
+                }
+                loadedExtensions.forEach { extension ->
+                    if (extension.sources.isNotEmpty() && adaptedSources.none { it.packageName == extension.packageName }) {
+                        errors.putIfAbsent(
+                            extension.packageName,
+                            adaptationErrors[extension.packageName] ?: "No compatible catalogue sources were created.",
+                        )
+                    }
+                }
+                Triple(loadedExtensions, adaptedSources, errors + adaptationErrors)
+            }
+            val duplicateIds = adapters.groupingBy { it.info.id }.eachCount().filterValues { it > 1 }.keys
+            if (duplicateIds.isNotEmpty()) {
+                AppLogger.w("ApkAnimeExtensions", "Skipping duplicate adapted source IDs: ${duplicateIds.joinToString()}")
+            }
+            val uniqueAdapters = adapters.distinctBy { it.info.id }
+            withContext(Dispatchers.Main.immediate) {
+                loadedApkExtensionsState = loaded
+                apkExtensionLoadErrorsState = loadErrors
+                apkRuntimeSourcesState = uniqueAdapters.associateBy({ it.info.id }, { it })
+                registrationsState = currentRegistrations()
+                applicationContext?.let { app ->
+                    AppPreferences.rememberAnimeSourceAppearances(
+                        app,
+                        registrationsState.associate { registration ->
+                            registration.descriptor.id.value to RememberedAnimeSourceAppearance(
+                                name = registration.descriptor.name,
+                                iconUrl = registration.descriptor.iconUrl,
+                            )
+                        },
+                    )
+                }
+                extensionGenerationCounter.incrementAndGet()
+            }
+        }
     }
 
-    fun invalidScriptExtensions(): List<InvalidScriptExtension> = invalidScriptExtensionsState
-
-    /** Installed script-extension ids mapped to their installed version, for update checks. */
-    fun installedScriptExtensionVersions(): Map<String, String> =
-        installedManifestsState.associate { it.id to it.version }
-
-    /** Installed player-resolver ids mapped to their installed version. A resolver fix ships to no
-     * one if only its own version is bumped: the updater only surfaces "update available" on the
-     * type=source entry a user can actually see and tap, so the UI needs this to notice when a
-     * source's declared resolver has moved even though the source's own version hasn't. */
-    fun installedPlayerResolverVersions(): Map<String, String> =
-        playerResolverRepository?.installedManifests()?.associate { it.id to it.version }.orEmpty()
-
+    private fun currentRegistrations(): List<Registration> =
+        apkRuntimeSourcesState.map { (id, source) ->
+            Registration(
+                info = source.info,
+                iconRes = R.drawable.animite_media_type_anime,
+                runtimeSource = source,
+            ).also { check(it.info.id == id) }
+        }
 
     val sources: List<AnimeSourceDescriptor>
         get() = registrationsState.map(Registration::descriptor)
 
-    val catalog: SourceCatalog
-        get() = SourceCatalog(scriptCatalogEntries)
-
     fun createRuntime(
         context: Context,
-        client: HttpClient,
         sourceId: SourceId = AppPreferences.readState(context).animeSource,
-        sourceHealthReporter: SourceHealthReporter = HibikiSourceHealth.store.reporter,
-        sourceExecutionPolicy: SourceExecutionPolicy = HibikiSourceHealth.store.executionPolicy,
     ): AnimeSourceRuntime {
-        val appContext = context.applicationContext
         val registration = registration(sourceId)
-        val effectiveCatalog = catalog
-        val source = effectiveCatalog.create(
-            sourceId,
-            createSourceContext(
-                context = appContext,
-                client = client,
-                sourceId = sourceId,
-                catalog = effectiveCatalog,
-                sourceHealthReporter = sourceHealthReporter,
-                sourceExecutionPolicy = sourceExecutionPolicy,
-            ),
-        )
-        val runtime = AnimeSourceRuntime(
+        return AnimeSourceRuntime(
             descriptor = registration.descriptor,
-            source = source,
+            source = registration.runtimeSource,
             localizeFilters = registration.localizeFilters,
             normalizeTitleId = registration.normalizeTitleId,
         )
-        return runtime
     }
 
     /** Descriptor for [sourceId], or null if it isn't currently installed - safe to call from composition. */
     fun descriptorOrNull(sourceId: SourceId): AnimeSourceDescriptor? =
         registrationsState.firstOrNull { it.descriptor.id == sourceId }?.descriptor
+
+    fun sourceIdsForApkPackage(packageName: String): List<SourceId> =
+        apkRuntimeSourcesState.entries
+            .filter { (_, source) ->
+                (source as? AniyomiAnimeSourceAdapter)?.packageName == packageName
+            }
+            .map { it.key }
+
+    fun apkPackageForSource(sourceId: SourceId): String? =
+        (apkRuntimeSourcesState[sourceId] as? AniyomiAnimeSourceAdapter)?.packageName
+
+    /** Settings of an APK source, or null when it has none. */
+    fun apkSourceSettings(sourceId: SourceId): ApkSourceSettings? {
+        val adapter = apkRuntimeSourcesState[sourceId] as? AniyomiAnimeSourceAdapter ?: return null
+        val configurable = adapter.configurableSource ?: return null
+        return ApkSourceSettings(adapter.aniyomiSourceId, configurable)
+    }
+
+    class ApkSourceSettings(val sourceId: Long, val configurable: eu.kanade.tachiyomi.animesource.ConfigurableAnimeSource)
+
+    fun apkExtensionLoadErrors(): Map<String, String> = apkExtensionLoadErrorsState
 
     fun descriptor(sourceId: SourceId): AnimeSourceDescriptor =
         descriptorOrNull(sourceId) ?: error("Anime source is not registered: $sourceId")
@@ -301,43 +272,6 @@ object AnimeSourceRegistry {
     private fun registration(sourceId: SourceId): Registration =
         registrationsState.firstOrNull { it.descriptor.id == sourceId }
             ?: throw NoSourcesInstalledException(sourceId)
-
-    /** Known sources get their dedicated icon/legacy-id hooks; anything else gets a generic look. */
-    private fun registrationFor(entry: SourceCatalogEntry): Registration = when (entry.info.id.value) {
-        "yummy-anime" -> Registration(
-            info = entry.info,
-            iconRes = R.drawable.animite_media_type_anime,
-            normalizeTitleId = YummyIdMigration::normalizeTitleId,
-        )
-        else -> Registration(info = entry.info, iconRes = R.drawable.animite_media_type_anime)
-    }
-
-    private fun createSourceContext(
-        context: Context,
-        client: HttpClient,
-        sourceId: SourceId,
-        catalog: SourceCatalog,
-        sourceHealthReporter: SourceHealthReporter,
-        sourceExecutionPolicy: SourceExecutionPolicy,
-    ): DefaultSourceContext = DefaultSourceContext(
-        httpClient = client,
-        preferredLanguages = listOf(catalog.require(sourceId).primaryLanguage),
-        config = SourceConfig.EMPTY,
-        // Per source, so one source can never read another's session.
-        extensionStorage = AndroidExtensionStorage(context.applicationContext, sourceId.value),
-        logger = SourceLogger { level, message, throwable ->
-            val tag = "BeakoKit/${sourceId.value}"
-            when (level) {
-                SourceLogLevel.DEBUG -> AppLogger.d(tag, message)
-                SourceLogLevel.WARNING -> AppLogger.w(tag, message, throwable)
-                SourceLogLevel.ERROR -> AppLogger.e(tag, message, throwable)
-            }
-        },
-        challengeSessionProvider = AndroidChallengeSessionProvider(context),
-        browserFetchProvider = AndroidBrowserFetchProvider(context),
-        sourceHealthReporter = sourceHealthReporter,
-        sourceExecutionPolicy = sourceExecutionPolicy,
-    )
 }
 
 data class StoredSourceAppearance(

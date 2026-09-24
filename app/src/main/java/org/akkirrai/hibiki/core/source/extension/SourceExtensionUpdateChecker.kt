@@ -2,16 +2,18 @@ package org.akkirrai.hibiki.core.source.extension
 
 import android.content.Context
 import io.ktor.client.HttpClient
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.withContext
 import org.akkirrai.hibiki.core.network.AndroidHttpClientFactory
-import org.akkirrai.hibiki.core.source.AnimeSourceRegistry
 
 /** App-wide update count for the Sources navigation item. */
 class SourceExtensionUpdateChecker private constructor(context: Context) {
+    private val appContext = context.applicationContext
     private val client: HttpClient = AndroidHttpClientFactory.create()
     private val _updateCount = MutableStateFlow(0)
     val updateCount: StateFlow<Int> = _updateCount.asStateFlow()
@@ -20,22 +22,18 @@ class SourceExtensionUpdateChecker private constructor(context: Context) {
         val extensions = coroutineScope {
             repositoryUrls.map { url ->
                 async {
-                    runCatching { ExtensionMarketplaceClient(client, url).fetchIndex().extensions }
+                    runCatching { ExtensionMarketplaceClient(client, url).fetchCatalog() }
                         .getOrDefault(emptyList())
                 }
             }.flatMap { it.await() }
-        }.distinctBy(MarketplaceExtension::id)
+        }.distinctBy(ApkRepositoryExtension::pkg)
         updateFrom(extensions)
     }
 
-    fun updateFrom(extensions: List<MarketplaceExtension>) {
-        val installedVersions = AnimeSourceRegistry.installedScriptExtensionVersions()
-        val installedResolverVersions = AnimeSourceRegistry.installedPlayerResolverVersions()
-        _updateCount.value = extensions
-            .filter { it.type == "source" }
-            .count { extension ->
-                extension.isUpdateAvailable(installedVersions, installedResolverVersions, extensions)
-            }
+    /** Counts installed extensions for which the repositories offer a newer version. */
+    suspend fun updateFrom(extensions: List<ApkRepositoryExtension>) {
+        val installedVersions = withContext(Dispatchers.IO) { installedVersions(appContext) }
+        _updateCount.value = extensions.count { it.isUpdateAvailable(installedVersions) }
     }
 
     companion object {
@@ -45,20 +43,16 @@ class SourceExtensionUpdateChecker private constructor(context: Context) {
         fun get(context: Context): SourceExtensionUpdateChecker = instance ?: synchronized(this) {
             instance ?: SourceExtensionUpdateChecker(context.applicationContext).also { instance = it }
         }
+
+        /** Package name to version name of every extension installed through Android's installer. */
+        fun installedVersions(context: Context): Map<String, String> =
+            InstalledApkExtensions.scan(context)
+                .filterValues(InstalledApkExtensionInfo::isSystemInstalled)
+                .mapValues { it.value.versionName }
     }
 }
 
-fun MarketplaceExtension.isUpdateAvailable(
-    installedVersions: Map<String, String>,
-    installedResolverVersions: Map<String, String>,
-    allExtensions: List<MarketplaceExtension>,
-): Boolean {
-    val installedVersion = installedVersions[id] ?: return false
-    return isExtensionVersionNewer(version, installedVersion) || resolverDependencies.any { resolverId ->
-        val installedResolver = installedResolverVersions[resolverId] ?: return@any false
-        val availableResolver = allExtensions.firstOrNull {
-            it.id == resolverId && it.type == "player-resolver"
-        }
-        availableResolver != null && isExtensionVersionNewer(availableResolver.version, installedResolver)
-    }
+fun ApkRepositoryExtension.isUpdateAvailable(installedVersions: Map<String, String>): Boolean {
+    val installedVersion = installedVersions[pkg] ?: return false
+    return isExtensionVersionNewer(version, installedVersion)
 }

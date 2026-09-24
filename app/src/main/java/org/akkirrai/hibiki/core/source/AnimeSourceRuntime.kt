@@ -137,15 +137,14 @@ class AnimeSourceRuntimeManager(
             ?: runtime(AppPreferences.DEFAULT_ANIME_SOURCE_ID)
 
     // This manager instance (owned by a repository, which in turn outlives a lot of screen
-    // navigation) can hold a runtime compiled from a script extension's JS payload well past the
-    // point that payload gets overwritten on disk by an update - reusing it as-is would keep
-    // running the old code until this manager itself is garbage-collected. Comparing against
-    // AnimeSourceRegistry's generation counter (bumped on every install/uninstall) means an
-    // update takes effect on the very next call instead of requiring an app restart.
+    // navigation) can hold a runtime for an extension that has since been updated or removed.
+    // Comparing against AnimeSourceRegistry's generation counter (bumped whenever the loaded
+    // sources change) means a new version takes effect on the very next call instead of
+    // requiring an app restart.
     fun runtime(sourceId: SourceId): AnimeSourceRuntime {
         val generation = AnimeSourceRegistry.extensionGeneration
         runtimes[sourceId]?.let { cached -> if (cached.generation == generation) return cached.runtime }
-        val fresh = AnimeSourceRegistry.createRuntime(appContext, client, sourceId, sourceHealthReporter)
+        val fresh = AnimeSourceRegistry.createRuntime(appContext, sourceId)
         runtimes[sourceId] = CachedRuntime(fresh, generation)
         return fresh
     }
