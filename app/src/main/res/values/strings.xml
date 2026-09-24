@@ -453,6 +453,8 @@
     <string name="source_extensions_filter_languages">Languages</string>
     <string name="source_extensions_refresh">Refresh</string>
     <string name="source_extensions_manage">Manage</string>
+    <string name="source_extensions_settings">Settings</string>
+    <string name="source_extensions_settings_description">Options provided by the extension itself. They apply to this source only.</string>
     <string name="source_extensions_update">Update</string>
     <string name="source_extensions_resolver_update">player update available</string>
     <string name="source_extensions_uninstall">Uninstall</string>
@@ -467,6 +469,7 @@
     <string name="source_extensions_repository_error">Couldn\'t load the extension repository</string>
     <string name="source_extensions_repository_retry">Retry</string>
     <string name="source_extensions_repository_empty">No extensions available right now</string>
+    <string name="source_extensions_installed_empty">No installed sources yet</string>
     <string name="source_extensions_repositories_add">Add repository</string>
     <string name="source_extensions_repositories_add_hint">Repository index URL</string>
     <string name="source_extensions_repositories_add_disabled">Adding third-party repositories is disabled for now</string>
@@ -476,6 +479,16 @@
     <string name="source_extensions_repositories_remove_confirm_message">Remove %1$s from the repository list? Installed extensions will remain available.</string>
     <string name="source_extensions_repositories_empty">No repositories added yet</string>
     <string name="source_extensions_repositories_extension_count">%1$d extensions</string>
+    <string name="source_extensions_apk_catalog_step_notice">APK extensions are installed by Android and their sources load in hibiki.</string>
+    <string name="source_extensions_apk_install_failed">Could not download or prepare this APK.</string>
+    <string name="source_extensions_apk_allow_installs">Allow Hibiki to install apps in Android settings, then try again.</string>
+    <string name="source_extensions_apk_installing">Installing…</string>
+    <string name="source_extensions_apk_uninstall_title">Remove extension?</string>
+    <string name="source_extensions_apk_uninstall_message">Remove %1$s from hibiki?</string>
+    <string name="source_extensions_apk_trust">Trust extension</string>
+    <string name="source_extensions_apk_trust_title">Trust this extension?</string>
+    <string name="source_extensions_apk_trust_message">This allows hibiki to load code from %1$s. Confirm the signing fingerprint before you trust this extension.</string>
+    <string name="source_extensions_apk_trust_confirm">Trust</string>
     <string name="onboarding_welcome_title">Welcome to hibiki</string>
     <string name="onboarding_welcome_description">Let’s set up the app in a couple of steps so you can start watching right away.</string>
     <string name="onboarding_get_started">Get started</string>

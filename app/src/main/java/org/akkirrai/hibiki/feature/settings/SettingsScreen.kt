@@ -636,7 +636,7 @@ private fun ExternalMetadataSheet(
 }
 
 @Composable
-private fun ExternalMetadataSheetGroup(
+internal fun ExternalMetadataSheetGroup(
     title: String,
     content: @Composable ColumnScope.() -> Unit,
 ) {
@@ -670,7 +670,7 @@ private fun SettingsSection(
 }
 
 @Composable
-private fun SettingsItems(
+internal fun SettingsItems(
     count: Int,
     content: @Composable ColumnScope.(index: Int, shape: Shape) -> Unit,
 ) {
@@ -790,7 +790,7 @@ private fun SettingsSliderItem(
 }
 
 @Composable
-private fun SettingsSwitchItem(
+internal fun SettingsSwitchItem(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     title: String,
     description: String? = null,
@@ -912,7 +912,7 @@ private fun SettingsActionItem(
 }
 
 @Composable
-private fun SettingsItemRow(
+internal fun SettingsItemRow(
     icon: ImageVector,
     shape: Shape,
     onClick: () -> Unit,

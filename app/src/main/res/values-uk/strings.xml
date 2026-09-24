@@ -439,6 +439,8 @@
     <string name="source_extensions_filter_languages">Мови</string>
     <string name="source_extensions_refresh">Оновити</string>
     <string name="source_extensions_manage">Керувати</string>
+    <string name="source_extensions_settings">Налаштування</string>
+    <string name="source_extensions_settings_description">Параметри самого розширення. Діють лише для цього джерела.</string>
     <string name="source_extensions_update">Оновити</string>
     <string name="source_extensions_resolver_update">доступне оновлення плеєра</string>
     <string name="source_extensions_uninstall">Видалити</string>
@@ -453,6 +455,7 @@
     <string name="source_extensions_repository_error">Не вдалося завантажити репозиторій розширень</string>
     <string name="source_extensions_repository_retry">Спробувати ще раз</string>
     <string name="source_extensions_repository_empty">Зараз немає доступних розширень</string>
+    <string name="source_extensions_installed_empty">Немає встановлених джерел</string>
     <string name="source_extensions_repositories_add">Додати репозиторій</string>
     <string name="source_extensions_repositories_add_hint">URL індексу репозиторію</string>
     <string name="source_extensions_repositories_add_disabled">Додавання сторонніх репозиторіїв поки вимкнено</string>
@@ -462,6 +465,16 @@
     <string name="source_extensions_repositories_remove_confirm_message">Видалити %1$s зі списку репозиторіїв? Установлені розширення залишаться доступними.</string>
     <string name="source_extensions_repositories_empty">Репозиторіїв ще не додано</string>
     <string name="source_extensions_repositories_extension_count">Розширень: %1$d</string>
+    <string name="source_extensions_apk_catalog_step_notice">APK-розширення встановлюються Android як окремі застосунки, а їхні джерела завантажуються в hibiki.</string>
+    <string name="source_extensions_apk_install_failed">Не вдалося завантажити або підготувати цей APK.</string>
+    <string name="source_extensions_apk_allow_installs">Дозвольте hibiki встановлювати застосунки в налаштуваннях Android і спробуйте знову.</string>
+    <string name="source_extensions_apk_installing">Встановлення…</string>
+    <string name="source_extensions_apk_uninstall_title">Видалити джерело?</string>
+    <string name="source_extensions_apk_uninstall_message">Видалити %1$s з hibiki?</string>
+    <string name="source_extensions_apk_trust">Довіряти розширенню</string>
+    <string name="source_extensions_apk_trust_title">Довіряти цьому розширенню?</string>
+    <string name="source_extensions_apk_trust_message">Це дозволить hibiki завантажувати код із «%1$s». Перед підтвердженням перевірте відбиток підпису.</string>
+    <string name="source_extensions_apk_trust_confirm">Довіряти</string>
     <string name="onboarding_welcome_title">Ласкаво просимо до hibiki</string>
     <string name="onboarding_welcome_description">Налаштуймо застосунок за кілька кроків, щоб одразу перейти до перегляду.</string>
     <string name="onboarding_get_started">Почати</string>

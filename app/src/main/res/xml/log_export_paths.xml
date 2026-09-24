@@ -3,4 +3,7 @@
     <cache-path
         name="exported_logs"
         path="logs/" />
+    <cache-path
+        name="extension_apks"
+        path="extension-apks/" />
 </paths>
