@@ -252,8 +252,22 @@ fun PlayerScreen(
     var settingsVisible by remember { mutableStateOf(false) }
     var settingsDestination by remember { mutableStateOf(PlayerSettingsDestination.Root) }
     var customSubtitle by remember(sourceId, episodeId) { mutableStateOf<LocalSubtitle?>(null) }
+    // The track the viewer picked last: switching subtitles off and on again returns to it, and the
+    // next episode starts on the same language instead of the first track in the list.
+    var lastSubtitleUrl by remember(state.currentSourceId, state.currentEpisodeId, state.playback?.streamUrl) {
+        mutableStateOf<String?>(null)
+    }
+    var preferredSubtitleLabel by rememberSaveable { mutableStateOf<String?>(null) }
     var selectedSubtitleUrl by remember(state.currentSourceId, state.currentEpisodeId, state.playback?.streamUrl) {
-        mutableStateOf(state.playback?.subtitles?.firstOrNull()?.url)
+        val tracks = state.playback?.subtitles.orEmpty()
+        mutableStateOf(
+            (tracks.firstOrNull { preferredSubtitleLabel != null && it.label == preferredSubtitleLabel } ?: tracks.firstOrNull())?.url,
+        )
+    }
+    LaunchedEffect(selectedSubtitleUrl) {
+        val url = selectedSubtitleUrl ?: return@LaunchedEffect
+        lastSubtitleUrl = url
+        state.playback?.subtitles?.firstOrNull { it.url == url }?.let { preferredSubtitleLabel = it.label }
     }
     var preparedPlaybackKey by remember { mutableStateOf<String?>(null) }
     var controlsInteractionTick by remember { mutableIntStateOf(0) }
@@ -1050,6 +1064,7 @@ fun PlayerScreen(
                             null
                         } else {
                             selectedSubtitleUrl
+                                ?: lastSubtitleUrl
                                 ?: state.playback?.subtitles?.firstOrNull()?.url
                                 ?: customSubtitle?.uri?.toString()
                         }
