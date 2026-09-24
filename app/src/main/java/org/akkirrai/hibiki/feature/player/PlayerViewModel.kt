@@ -1,6 +1,7 @@
 package org.akkirrai.hibiki.feature.player
 
 import android.content.Context
+import android.os.SystemClock
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -37,6 +38,7 @@ class PlayerViewModel(
     private val offlineDownloadRepository: OfflineDownloadRepository,
     private val offlineTitleMetadataRepository: OfflineTitleMetadataRepository,
 ) : ViewModel() {
+    private val viewModelCreatedAt = SystemClock.elapsedRealtime()
     private val titleId = watchTitleIdFromSourceId(sourceId)
     private var loadJob: Job? = null
     private var settingsLoadJob: Job? = null
@@ -56,7 +58,16 @@ class PlayerViewModel(
     val uiState: StateFlow<PlayerUiState> = _uiState.asStateFlow()
 
     init {
+        AppLogger.d(
+            PLAYBACK_LOG_TAG,
+            "[viewmodel.created] sourceId=$sourceId episodeId=$episodeId",
+        )
+        val seekRestoreStartedAt = SystemClock.elapsedRealtime()
         restoreSavedSeek()
+        AppLogger.d(
+            PLAYBACK_LOG_TAG,
+            "[viewmodel.seek_restore] elapsedMs=${SystemClock.elapsedRealtime() - seekRestoreStartedAt}",
+        )
         load()
     }
 
@@ -65,7 +76,13 @@ class PlayerViewModel(
         excludedStreamUrls: Set<String> = emptySet(),
     ) {
         loadJob?.cancel()
+        val loadStartedAt = SystemClock.elapsedRealtime()
         val state = _uiState.value
+        AppLogger.d(
+            PLAYBACK_LOG_TAG,
+            "[viewmodel.load.start] sourceId=${state.currentSourceId} episodeId=${state.currentEpisodeId}, " +
+                "forceRefresh=$forceRefresh sinceViewModelMs=${loadStartedAt - viewModelCreatedAt}",
+        )
         _uiState.update {
             it.copy(
                 isLoading = true,
@@ -81,13 +98,17 @@ class PlayerViewModel(
             )
         }
         loadJob = viewModelScope.launch(Dispatchers.IO) {
+            val offlineEpisodesStartedAt = SystemClock.elapsedRealtime()
             val offlineEpisodes = offlineDownloadRepository.getOfflineEpisodes(state.currentSourceId)
+            val offlineEpisodesElapsedMs = SystemClock.elapsedRealtime() - offlineEpisodesStartedAt
             // A selected KAA source can resolve the requested episode directly. Do not make the
             // initial frame wait for the optional playlist; it is fetched on opening settings.
+            val cachedEpisodesStartedAt = SystemClock.elapsedRealtime()
             val episodesResult = runCatching {
                 offlineEpisodes.takeIf { it.isNotEmpty() }
                     ?: repository.getCachedEpisodes(state.currentSourceId).orEmpty()
             }.throwIfCancelled()
+            val cachedEpisodesElapsedMs = SystemClock.elapsedRealtime() - cachedEpisodesStartedAt
             val currentState = _uiState.value
             if (currentState.currentSourceId != state.currentSourceId || currentState.currentEpisodeId != state.currentEpisodeId) {
                 return@launch
@@ -101,6 +122,7 @@ class PlayerViewModel(
             )
             val effectiveEpisodeId = effectiveEpisode?.id ?: state.currentEpisodeId
             val effectiveEpisodeNumber = effectiveEpisode?.number ?: state.currentEpisodeNumber
+            val offlinePlaybackStartedAt = SystemClock.elapsedRealtime()
             val offlinePlayback = offlineDownloadRepository.getOfflinePlayback(
                     sourceId = state.currentSourceId,
                     episodeId = effectiveEpisodeId,
@@ -114,6 +136,14 @@ class PlayerViewModel(
                     sourceId = state.currentSourceId,
                     episodeIds = listOf(effectiveEpisodeId),
                 )[effectiveEpisodeId] == OfflineEpisodeDownloadState.Completed
+            val offlinePlaybackElapsedMs = SystemClock.elapsedRealtime() - offlinePlaybackStartedAt
+            AppLogger.d(
+                PLAYBACK_LOG_TAG,
+                "[viewmodel.preflight] totalMs=${SystemClock.elapsedRealtime() - loadStartedAt}, " +
+                    "offlineEpisodesMs=$offlineEpisodesElapsedMs offlineCount=${offlineEpisodes.size}, " +
+                    "cachedEpisodesMs=$cachedEpisodesElapsedMs episodeCount=${episodesResult.getOrDefault(emptyList()).size}, " +
+                    "offlinePlaybackMs=$offlinePlaybackElapsedMs hasOffline=${offlinePlayback != null} brokenDownload=$hasBrokenOfflineDownload",
+            )
             if (hasBrokenOfflineDownload) {
                 _uiState.update {
                     it.copy(
@@ -135,6 +165,13 @@ class PlayerViewModel(
             // candidates.
             val unplayable = _uiState.value.failedStreamUrls + excludedStreamUrls
             val offlineCandidate = offlinePlayback?.takeIf { it.streamUrl !in unplayable }
+            val resolutionStartedAt = SystemClock.elapsedRealtime()
+            AppLogger.d(
+                PLAYBACK_LOG_TAG,
+                "[viewmodel.resolve.start] offline=${offlineCandidate != null} " +
+                    "selection=${if (state.selectedPlayerName.isNullOrBlank()) "automatic" else "preferred"} " +
+                    "sinceViewModelMs=${resolutionStartedAt - viewModelCreatedAt}",
+            )
             val playbackResult = runCatching {
                 offlineCandidate
                     ?: if (state.selectedPlayerName.isNullOrBlank() && state.selectedQualityLabel.isNullOrBlank()) {
@@ -162,6 +199,21 @@ class PlayerViewModel(
                     }
             }.throwIfCancelled()
             currentCoroutineContext().ensureActive()
+            playbackResult.onSuccess {
+                AppLogger.d(
+                    PLAYBACK_LOG_TAG,
+                    "[viewmodel.resolve.ready] elapsedMs=${SystemClock.elapsedRealtime() - resolutionStartedAt}, " +
+                        "totalLoadMs=${SystemClock.elapsedRealtime() - loadStartedAt}, " +
+                        "offline=${offlineCandidate != null}, qualities=${it.availableQualityLabels.size}, " +
+                        "subtitles=${it.subtitles.size}",
+                )
+            }.onFailure { error ->
+                AppLogger.w(
+                    PLAYBACK_LOG_TAG,
+                    "[viewmodel.resolve.failed] elapsedMs=${SystemClock.elapsedRealtime() - resolutionStartedAt}, " +
+                        "totalLoadMs=${SystemClock.elapsedRealtime() - loadStartedAt}, error=${error.javaClass.simpleName}",
+                )
+            }
 
             playbackResult
                 .onSuccess { resolvedStream ->

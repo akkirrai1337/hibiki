@@ -21,6 +21,7 @@ import java.util.concurrent.ConcurrentHashMap
 
 class HttpStreamValidator(
     private val client: HttpClient,
+    private val onTiming: ((stage: String, elapsedMs: Long, success: Boolean) -> Unit)? = null,
 ) : StreamValidator {
     private val successfulValidations = ConcurrentHashMap<ValidationKey, CachedValidation>()
 
@@ -28,11 +29,13 @@ class HttpStreamValidator(
         val cacheKey = stream.validationKey()
         successfulValidations[cacheKey]?.let { cached ->
             if (System.currentTimeMillis() - cached.cachedAt < SUCCESS_CACHE_TTL_MS) {
+                onTiming?.invoke("cache_hit", 0L, true)
                 return cached.result
             }
             successfulValidations.remove(cacheKey, cached)
         }
 
+        val validationStartedAt = System.nanoTime()
         val result = try {
             validateVideoAndAudio(stream)
         } catch (error: CancellationException) {
@@ -46,6 +49,7 @@ class HttpStreamValidator(
                 },
             )
         }
+        reportTiming("total", validationStartedAt, result.success)
         if (result.success) {
             successfulValidations[cacheKey] = CachedValidation(result, System.currentTimeMillis())
             trimValidationCache()
@@ -64,7 +68,7 @@ class HttpStreamValidator(
     private suspend fun validateVideoAndAudio(stream: VideoStream): StreamValidationResult = coroutineScope {
         val video = async {
             when (stream.type) {
-                StreamType.HLS -> validateHls(stream)
+                StreamType.HLS -> validateHls(stream, "video")
                 StreamType.MP4 -> validateMp4(stream)
                 StreamType.DASH -> validateDash(stream)
             }
@@ -81,6 +85,7 @@ class HttpStreamValidator(
                         audioHeaders = emptyMap(),
                         subtitles = emptyList(),
                     ),
+                    "audio",
                 )
             }
         }
@@ -119,16 +124,19 @@ class HttpStreamValidator(
             .forEach { (key, value) -> successfulValidations.remove(key, value) }
     }
 
-    private suspend fun validateHls(stream: VideoStream): StreamValidationResult {
+    private suspend fun validateHls(stream: VideoStream, track: String): StreamValidationResult {
+        var requestStartedAt = System.nanoTime()
         val firstResponse = client.get(stream.url) {
             stream.headers.forEach { (name, value) -> header(name, value) }
         }
         if (!firstResponse.status.isSuccess()) {
+            reportTiming("$track.hls_master", requestStartedAt, success = false)
             return failure(stream, firstResponse.status.value, "m3u8 вернул HTTP ${firstResponse.status.value}")
         }
 
         var playlistUrl = firstResponse.call.request.url.toString()
         var playlist = firstResponse.bodyAsText()
+        reportTiming("$track.hls_master", requestStartedAt, success = true)
         if (!playlist.startsWith("#EXTM3U")) {
             return failure(stream, firstResponse.status.value, "Ответ не является HLS playlist")
         }
@@ -136,13 +144,16 @@ class HttpStreamValidator(
         val variant = selectBestVariant(playlist)
         if (variant != null) {
             playlistUrl = resolveUrl(playlistUrl, variant)
+            requestStartedAt = System.nanoTime()
             val mediaResponse = client.get(playlistUrl) {
                 stream.headers.forEach { (name, value) -> header(name, value) }
             }
             if (!mediaResponse.status.isSuccess()) {
+                reportTiming("$track.hls_media_playlist", requestStartedAt, success = false)
                 return failure(stream, mediaResponse.status.value, "media playlist вернул HTTP ${mediaResponse.status.value}")
             }
             playlist = mediaResponse.bodyAsText()
+            reportTiming("$track.hls_media_playlist", requestStartedAt, success = true)
         }
 
         val firstSegment = playlist.lineSequence()
@@ -155,11 +166,17 @@ class HttpStreamValidator(
         // A manifest may be public while its media objects require a cookie, Referer, or a URL
         // signature that has already expired. The player would otherwise discover the 403 only
         // after selecting this candidate, too late for PlaybackResolver to try its relay fallback.
+        requestStartedAt = System.nanoTime()
         val segmentResponse = client.get(resolveUrl(playlistUrl, firstSegment)) {
             stream.headers.forEach { (name, value) -> header(name, value) }
             header(HttpHeaders.Range, "bytes=0-1023")
         }
         val segmentBytes = segmentResponse.bodyAsBytes()
+        reportTiming(
+            "$track.hls_first_segment",
+            requestStartedAt,
+            segmentResponse.status.isSuccess() && segmentBytes.isNotEmpty(),
+        )
         if (!segmentResponse.status.isSuccess() || segmentBytes.isEmpty()) {
             return failure(
                 stream,
@@ -176,6 +193,11 @@ class HttpStreamValidator(
             statusCode = 200,
             message = "m3u8 и первый media segment отдают данные",
         )
+    }
+
+    private fun reportTiming(stage: String, startedAtNanos: Long, success: Boolean) {
+        val elapsedMs = ((System.nanoTime() - startedAtNanos) / 1_000_000L).coerceAtLeast(0L)
+        onTiming?.invoke(stage, elapsedMs, success)
     }
 
     private suspend fun validateMp4(stream: VideoStream): StreamValidationResult {

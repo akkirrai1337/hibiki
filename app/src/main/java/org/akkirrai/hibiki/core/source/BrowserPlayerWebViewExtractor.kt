@@ -252,9 +252,16 @@ class BrowserPlayerWebViewExtractor(
         requiresFrame: Boolean,
     ): BrowserCaptureResult =
         suspendCancellableCoroutine { continuation ->
+            val captureStartedAt = SystemClock.elapsedRealtime()
             val handler = Handler(Looper.getMainLooper())
             val captures = mutableListOf<BrowserCapturedStream>()
             val subtitles = mutableListOf<BrowserCapturedSubtitle>()
+            var firstStreamCapturedAt: Long? = null
+            var lastStreamCapturedAt: Long? = null
+            var firstSubtitleCapturedAt: Long? = null
+            var lastSubtitleCapturedAt: Long? = null
+            var firstPageStartedAt: Long? = null
+            var firstPageFinishedAt: Long? = null
             var webView: WebView? = null
             var frameInjected = false
             var delivered = false
@@ -286,6 +293,17 @@ class BrowserPlayerWebViewExtractor(
                 handler.removeCallbacks(timeout)
                 val result = BrowserStreamSelector.rank(captures)
                 AppLogger.d(TAG, "Finish: captured=${captures.size}, candidates=${result.size}")
+                fun offset(value: Long?): String = value
+                    ?.let { (it - captureStartedAt).coerceAtLeast(0L).toString() }
+                    ?: "none"
+                AppLogger.d(
+                    TAG,
+                    "[browser.capture.summary] elapsedMs=${SystemClock.elapsedRealtime() - captureStartedAt}, " +
+                        "pageStartedMs=${offset(firstPageStartedAt)}, pageFinishedMs=${offset(firstPageFinishedAt)}, " +
+                        "firstStreamMs=${offset(firstStreamCapturedAt)}, lastStreamMs=${offset(lastStreamCapturedAt)}, " +
+                        "firstSubtitleMs=${offset(firstSubtitleCapturedAt)}, lastSubtitleMs=${offset(lastSubtitleCapturedAt)}, " +
+                        "probes=$probes streams=${captures.size} subtitles=${subtitles.size} settleMs=$settleDelayMs",
+                )
                 // Ownership transfers to the caller instead of destroying here: a blocked direct
                 // fetch may still need this same WebView as a relay backend (see WebViewStreamRelay).
                 // shouldInterceptRequest is no longer needed once capture is done, and leaving it
@@ -316,6 +334,9 @@ class BrowserPlayerWebViewExtractor(
                 // candidate; retaining the second copy only resets the settle timer and delays
                 // startup. Distinct audio URLs still remain independent captures.
                 if (BrowserStreamSelector.containsUrl(captures, url)) return
+                val capturedAt = SystemClock.elapsedRealtime()
+                if (firstStreamCapturedAt == null) firstStreamCapturedAt = capturedAt
+                lastStreamCapturedAt = capturedAt
                 captures += BrowserCapturedStream(url, playbackHeaders(url, headers, pageUrl, CookieManager.getInstance().getCookie(url)), origin)
                 AppLogger.d(TAG, "HLS captured: origin=$origin, host=${hostOf(url)}, path=${url.substringBefore('?').takeLast(120)}, total=${captures.size}")
                 // Players commonly request an audio rendition before the video rendition. Wait
@@ -327,6 +348,9 @@ class BrowserPlayerWebViewExtractor(
                 if (delivered) return
                 if (!VTT_URL.matches(url)) return
                 if (subtitles.any { it.url == url }) return
+                val capturedAt = SystemClock.elapsedRealtime()
+                if (firstSubtitleCapturedAt == null) firstSubtitleCapturedAt = capturedAt
+                lastSubtitleCapturedAt = capturedAt
                 subtitles += BrowserCapturedSubtitle(
                     url = url,
                     label = label?.trim()?.takeIf(String::isNotBlank),
@@ -377,8 +401,8 @@ class BrowserPlayerWebViewExtractor(
                 settings.loadsImagesAutomatically = false
                 settings.blockNetworkImage = true
                 // A resolver/source can override the spoofed UA via the PlayerLink's own headers -
-                // same pattern DirectStreamWebViewRelayExtractor and AndroidBrowserRelayProvider
-                // already follow. Needed for at least one BROWSER-runtime site (Alloha) whose own
+                // the same pattern used by DirectStreamWebViewRelayExtractor. Needed for at least
+                // one BROWSER-runtime site (Alloha) whose own
                 // player app throws under the default mobile UA and never mounts a player at all.
                 settings.userAgentString = pageHeaders.entries
                     .firstOrNull { it.key.equals("User-Agent", ignoreCase = true) }
@@ -400,6 +424,10 @@ class BrowserPlayerWebViewExtractor(
                 // page seeing an undefined global instead of the bridge.
                 WebViewStreamRelay.installBridge(this)
                 webViewClient = object : WebViewClient() {
+                    override fun onPageStarted(view: WebView, url: String, favicon: android.graphics.Bitmap?) {
+                        if (firstPageStartedAt == null) firstPageStartedAt = SystemClock.elapsedRealtime()
+                    }
+
                     override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse? {
                         handler.post {
                             val url = request.url.toString()
@@ -418,7 +446,12 @@ class BrowserPlayerWebViewExtractor(
                         // WebView emits one last about:blank completion while it is being torn
                         // down. Ktor's host parser treats that pseudo-URL as a malformed HTTPS
                         // address, so logging lifecycle noise must never be able to crash playback.
-                        AppLogger.d(TAG, "Page finished: host=${browserLogHost(url)}")
+                        val finishedAt = SystemClock.elapsedRealtime()
+                        if (firstPageFinishedAt == null) firstPageFinishedAt = finishedAt
+                        AppLogger.d(
+                            TAG,
+                            "Page finished: host=${browserLogHost(url)}, elapsedMs=${finishedAt - captureStartedAt}",
+                        )
                         if (requiresFrame && !frameInjected) {
                             frameInjected = true
                             view.evaluateJavascript(buildFrameInjectionScript(pageUrl), null)

@@ -226,6 +226,12 @@ fun PlayerScreen(
     ),
 ) {
     val state by viewModel.uiState.collectAsState()
+    LaunchedEffect(sourceId, episodeId) {
+        AppLogger.d(
+            PLAYBACK_LOG_TAG,
+            "[player.screen.composed] sourceId=$sourceId episodeId=$episodeId",
+        )
+    }
     val context = LocalContext.current
     val appPreferences = LocalAppPreferences.current
     val preferencesState = LocalAppPreferencesState.current

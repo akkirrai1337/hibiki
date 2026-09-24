@@ -1,6 +1,7 @@
 package org.akkirrai.hibiki.core.source
 
 import android.content.Context
+import android.os.SystemClock
 import io.ktor.client.HttpClient
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
@@ -83,7 +84,9 @@ class AnimeWatchRepository(
     private val appContext = context?.applicationContext
     private val appPreferences = appContext?.let(::AppPreferences)
     private val sourceManager = sourceManager ?: appContext?.let { AnimeSourceRuntimeManager(it, client) }
-    private val validator = HttpStreamValidator(client)
+    private val validator = HttpStreamValidator(client) { stage, elapsedMs, success ->
+        AppLogger.d(TAG, "[playback.validation.$stage] elapsedMs=$elapsedMs success=$success")
+    }
     @Volatile
     private var extractorsGeneration = -1
     @Volatile
@@ -184,34 +187,67 @@ class AnimeWatchRepository(
         preferredPlayerName: String? = null,
         preferredQuality: String? = null,
         requiredPlayerName: String? = null,
-    ): PlaybackStream {
+    ): PlaybackStream = resolveStreamInternal(
+        sourceId = sourceId,
+        episodeId = episodeId,
+        forceRefresh = forceRefresh,
+        excludedStreamUrls = excludedStreamUrls,
+        preferredPlayerName = preferredPlayerName,
+        preferredQuality = preferredQuality,
+        requiredPlayerName = requiredPlayerName,
+    ).playback
+
+    private suspend fun resolveStreamInternal(
+        sourceId: String,
+        episodeId: String,
+        forceRefresh: Boolean = false,
+        excludedStreamUrls: Set<String> = emptySet(),
+        preferredPlayerName: String? = null,
+        preferredQuality: String? = null,
+        requiredPlayerName: String? = null,
+        selectFirstAvailablePlayer: Boolean = false,
+    ): ResolvedPlayerStream {
+        val resolveStartedAt = SystemClock.elapsedRealtime()
         val cacheKey = "$sourceId:$episodeId:${preferredPlayerName.orEmpty()}:${preferredQuality.orEmpty()}:${requiredPlayerName.orEmpty()}"
         if (!forceRefresh) {
             cachedStreams[cacheKey]
                 ?.takeIf { System.currentTimeMillis() - it.cachedAt < STREAM_CACHE_TTL_MS }
                 ?.takeIf { it.stream.streamUrl !in excludedStreamUrls }
-                ?.let { return it.stream }
+                ?.let {
+                    AppLogger.d(TAG, "[playback.resolve.cache_hit] elapsedMs=${SystemClock.elapsedRealtime() - resolveStartedAt}")
+                    return ResolvedPlayerStream(it.playerName, it.stream)
+                }
         }
 
+        val internetCheckStartedAt = SystemClock.elapsedRealtime()
         ensureInternetConnection()
+        val internetCheckElapsedMs = SystemClock.elapsedRealtime() - internetCheckStartedAt
 
         // KAA's selected source id and episode id already carry everything its player-link API
         // needs. Avoid downloading every locale and episode page merely to start this one episode;
         // the complete list remains lazy for the settings panel. Fall back for any source whose
         // group identity cannot be reconstructed safely.
+        val payloadStartedAt = SystemClock.elapsedRealtime()
         val directPayload = knownKickAssPayload(sourceId, episodeId)
         val payload = directPayload ?: ensureSourcePayload(sourceId)
             ?: throw SourceException(appString(R.string.watch_error_voiceover_not_found))
         val episode = directPayload?.episodes?.single()
             ?: payload.episodes.firstOrNull { it.id == episodeId }
             ?: throw SourceException(appString(R.string.watch_error_episode_not_found))
+        AppLogger.d(
+            TAG,
+            "[playback.payload.ready] internetCheckMs=$internetCheckElapsedMs " +
+                "payloadMs=${SystemClock.elapsedRealtime() - payloadStartedAt}, " +
+                "directEpisode=${directPayload != null} episodeCount=${payload.episodes.size}",
+        )
         // A selected voiceover is an explicit user choice. Trying unrelated sibling groups made
         // a broken provider look like an endless load while spending the entire resolution budget
         // on streams the user did not choose.
         val candidates = listOf(payload to episode)
         val resolver = PlaybackResolver(currentExtractors(), validator)
         var resolvedCandidate: Pair<org.akkirrai.beakokit.playback.ResolvedPlaybackStream, SourcePayload>? = null
-        var browserPageCandidate: PlaybackStream? = null
+        var resolvedPlayerName: String? = null
+        var browserPageCandidate: ResolvedPlayerStream? = null
         var lastResolutionError: Throwable? = null
         try {
             withTimeout(EPISODE_RESOLUTION_TIMEOUT_MS) {
@@ -238,12 +274,40 @@ class AnimeWatchRepository(
                         "Playback attempt ${candidateIndex + 1}/${candidates.size} links ready: " +
                             "count=${rawLinks.size}, elapsedMs=${System.currentTimeMillis() - startedAt}",
                     )
+                    val availableLinks = rawLinks.filterNot { it.url in excludedStreamUrls }
+                    val selectedAutomaticPlayer = if (selectFirstAvailablePlayer) {
+                        val playerNames = prioritizeLinks(
+                            links = availableLinks,
+                            preferredPlayerName = null,
+                            preferredQuality = null,
+                        ).mapNotNull { it.playerName?.trim()?.takeIf(String::isNotBlank) }
+                            .distinctBy(String::lowercase)
+                        preferredPlayerName
+                            ?.takeIf { preferred -> playerNames.any { matchesPreferredPlayer(it, preferred) } }
+                            ?: playerNames.firstOrNull()
+                    } else {
+                        null
+                    }
+                    val effectivePreferredPlayer = if (selectFirstAvailablePlayer) {
+                        selectedAutomaticPlayer
+                    } else {
+                        preferredPlayerName
+                    }
                     val links = prioritizeLinks(
-                        links = rawLinks.filterNot { it.url in excludedStreamUrls },
-                        preferredPlayerName = preferredPlayerName,
+                        links = availableLinks,
+                        preferredPlayerName = effectivePreferredPlayer,
                         preferredQuality = preferredQuality,
                     ).filter { link ->
-                        requiredPlayerName.isNullOrBlank() || matchesPreferredPlayer(link.playerName, requiredPlayerName)
+                        when {
+                            selectFirstAvailablePlayer && !selectedAutomaticPlayer.isNullOrBlank() ->
+                                matchesPreferredPlayer(link.playerName, selectedAutomaticPlayer)
+                            !requiredPlayerName.isNullOrBlank() ->
+                                matchesPreferredPlayer(link.playerName, requiredPlayerName)
+                            else -> true
+                        }
+                    }
+                    if (selectFirstAvailablePlayer) {
+                        AppLogger.d(TAG, "[playback.player.selected] name=${selectedAutomaticPlayer.orEmpty()} links=${links.size}")
                     }
                     if (links.isEmpty()) {
                         AppLogger.d(TAG, "Playback attempt ${candidateIndex + 1}/${candidates.size} skipped: voiceover=${candidatePayload.source.title}, no playable links, elapsedMs=${System.currentTimeMillis() - startedAt}")
@@ -253,25 +317,36 @@ class AnimeWatchRepository(
                     // those resolvers, rendering that page is the playable result; attempting a
                     // second HLS extraction only turns a working embed into a timeout.
                     browserPagePlayback(links, candidatePayload, candidateEpisode)?.let { pagePlayback ->
-                        cachedStreams[cacheKey] = CachedPlaybackStream(pagePlayback, System.currentTimeMillis())
+                        val playerName = links.firstOrNull()?.playerName
+                        cachedStreams[cacheKey] = CachedPlaybackStream(pagePlayback, playerName, System.currentTimeMillis())
                         AppLogger.d(TAG, "Playback attempt ${candidateIndex + 1}/${candidates.size} uses browser-page playback: voiceover=${candidatePayload.source.title}")
-                        browserPageCandidate = pagePlayback
+                        browserPageCandidate = ResolvedPlayerStream(playerName, pagePlayback)
                         break
                     }
                     try {
-                        val candidateResolved = resolver.resolve(
-                            links = links,
-                            excludedStreamUrls = excludedStreamUrls,
-                            preferredQuality = preferredQuality,
-                            attemptTimeoutMillis = { link ->
-                                if (candidatePayload === payload) {
-                                    resolveAttemptTimeoutMillis(preferredPlayerName, link.playerName, link.type)
-                                } else {
-                                    FALLBACK_RESOLVE_TIMEOUT_MS
-                                }
-                            },
-                        )
+                        val extractionStartedAt = SystemClock.elapsedRealtime()
+                        val candidateResolved = try {
+                            resolver.resolve(
+                                links = links,
+                                excludedStreamUrls = excludedStreamUrls,
+                                preferredQuality = preferredQuality,
+                                attemptTimeoutMillis = { link ->
+                                    if (candidatePayload === payload) {
+                                        resolveAttemptTimeoutMillis(preferredPlayerName, link.playerName, link.type)
+                                    } else {
+                                        FALLBACK_RESOLVE_TIMEOUT_MS
+                                    }
+                                },
+                            )
+                        } finally {
+                            AppLogger.d(
+                                TAG,
+                                "[playback.extract_validate] linkCount=${links.size} " +
+                                    "elapsedMs=${SystemClock.elapsedRealtime() - extractionStartedAt}",
+                            )
+                        }
                         resolvedCandidate = candidateResolved to candidatePayload
+                        resolvedPlayerName = candidateResolved.link.playerName
                         AppLogger.d(TAG, "Playback attempt ${candidateIndex + 1}/${candidates.size} succeeded: voiceover=${candidatePayload.source.title}, elapsedMs=${System.currentTimeMillis() - startedAt}")
                         break
                     } catch (error: CancellationException) {
@@ -332,8 +407,13 @@ class AnimeWatchRepository(
             ).map { segment -> segment.toPlaybackSegment() },
             videoId = resolved.link.videoId,
         )
-        cachedStreams[cacheKey] = CachedPlaybackStream(stream = playback, cachedAt = System.currentTimeMillis())
-        return playback
+        val playerName = resolvedPlayerName ?: resolved.link.playerName
+        cachedStreams[cacheKey] = CachedPlaybackStream(
+            stream = playback,
+            playerName = playerName,
+            cachedAt = System.currentTimeMillis(),
+        )
+        return ResolvedPlayerStream(playerName, playback)
     }
 
     suspend fun resolveFastestStream(
@@ -346,28 +426,18 @@ class AnimeWatchRepository(
         preferredPlayerName: String? = null,
         preferredQuality: String? = null,
     ): ResolvedPlayerStream {
-        val playerNames = getPlaybackSettingsOptions(sourceId, episodeId)
-            .links
-            .mapNotNull { it.playerName?.trim()?.takeIf(String::isNotBlank) }
-            .distinctBy(String::lowercase)
-
-        val rememberedPlayer = preferredPlayerName
-            ?.takeIf { preferred -> playerNames.any { matchesPreferredPlayer(it, preferred) } }
         // Automatic startup resolves exactly one player. Racing every embed put needless load on
         // the source and made a non-cancellable losing resolver hold the winning stream hostage.
-        // Alternatives stay available through the Player settings sheet.
-        val playerName = rememberedPlayer ?: playerNames.firstOrNull()
-        return ResolvedPlayerStream(
-            playerName = playerName,
-            playback = resolveStream(
-                sourceId = sourceId,
-                episodeId = episodeId,
-                forceRefresh = forceRefresh,
-                excludedStreamUrls = excludedStreamUrls,
-                preferredPlayerName = playerName,
-                preferredQuality = preferredQuality,
-                requiredPlayerName = playerName,
-            ),
+        // Select from the links already loaded for resolution instead of preloading settings options
+        // (which fetched those same links once before this call).
+        return resolveStreamInternal(
+            sourceId = sourceId,
+            episodeId = episodeId,
+            forceRefresh = forceRefresh,
+            excludedStreamUrls = excludedStreamUrls,
+            preferredPlayerName = preferredPlayerName,
+            preferredQuality = preferredQuality,
+            selectFirstAvailablePlayer = true,
         )
     }
 
@@ -711,18 +781,13 @@ class AnimeWatchRepository(
         val generation = AnimeSourceRegistry.extensionGeneration
         if (extractorsGeneration == generation && activeExtractors.isNotEmpty()) return activeExtractors
 
-        val downloadedResolvers = appContext
-            ?.let { AnimeSourceRegistry.createPlayerResolvers(it, client) }
-            .orEmpty()
-        activeBrowserResolvers = downloadedResolvers.filterIsInstance<BrowserScriptResolver>()
+        // Aniyomi extensions resolve their own embeds, so no page-specific resolvers are loaded.
+        val downloadedResolvers = emptyList<StreamExtractor>()
+        activeBrowserResolvers = emptyList<BrowserScriptResolver>()
         activeExtractors = buildList {
             add(DirectHlsExtractor())
             add(DirectMp4Extractor())
             appContext?.let { add(DirectStreamWebViewRelayExtractor(it)) }
-            // AniBoom/Kodik/Aksor/Vk/Cvh/Sibnet are downloaded resolver extensions now (hibiki-sources
-            // ships and maintains all six); their Kotlin fallbacks were retired once each had a
-            // passing parity test against the fixtures that used to prove the Kotlin version
-            // (see Scripted*ResolverTest in parsers/src/test/kotlin/.../extension/).
             addAll(downloadedResolvers)
             appContext?.let {
                 add(BrowserPlayerWebViewExtractor(it, activeBrowserResolvers, client))
@@ -815,6 +880,7 @@ class AnimeWatchRepository(
 
     private data class CachedPlaybackStream(
         val stream: PlaybackStream,
+        val playerName: String?,
         val cachedAt: Long,
     )
 
@@ -841,9 +907,12 @@ class AnimeWatchRepository(
         const val PLAYER_LINKS_CACHE_TTL_MS = 60_000L
         const val UNAVAILABLE_PROVIDER_TTL_MS = 10 * 60_000L
         const val EPISODE_NUMBER_EPSILON = 0.001
-        const val PLAYER_LINK_DISCOVERY_TIMEOUT_MS = 12_000L
+        // Aniyomi extensions can resolve several host pages before returning links; their
+        // OkHttp requests use a 30s read timeout, so a shorter discovery budget cancels them
+        // while they are still working (observed on the YummyAnime APK source).
+        const val PLAYER_LINK_DISCOVERY_TIMEOUT_MS = 45_000L
         const val FALLBACK_RESOLVE_TIMEOUT_MS = 12_000L
-        const val EPISODE_RESOLUTION_TIMEOUT_MS = 15_000L
+        const val EPISODE_RESOLUTION_TIMEOUT_MS = 60_000L
         // BROWSER-resolved players can fall back to WebViewStreamRelay when a CDN blocks a plain
         // HTTP client, which adds real WebView round-trips (JS fetch + base64 bridge) to both
         // resolution and validation - both budgets were tuned before that path existed and are too
