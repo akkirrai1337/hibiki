@@ -151,26 +151,28 @@ private fun SourceFilter(
         SourceFilterType.SORT -> {
             val selectedIndex = current().substringBefore(':').toIntOrNull()
             val ascending = current().substringAfter(':', "1") == "1"
+            // The direction is the chip's state: an up arrow on a green chip is ascending, a down arrow on
+            // a red one descending. Tapping the chosen option flips it; tapping another picks it ascending.
             AppThreeStateChipFilter(
                 title = def.title,
                 options = def.options.indices.toList(),
-                included = setOfNotNull(selectedIndex?.toString()),
-                excluded = emptySet(),
-                onChange = { included, _ ->
+                included = setOfNotNull(selectedIndex?.takeIf { ascending }?.toString()),
+                excluded = setOfNotNull(selectedIndex?.takeIf { !ascending }?.toString()),
+                onChange = { included, excluded ->
                     val picked = included.firstOrNull { it != selectedIndex?.toString() }
                     when {
                         picked != null -> set("$picked:1")
-                        // Tapping the chosen option flips its direction, like the sort row in Aniyomi.
-                        selectedIndex != null -> set("$selectedIndex:${if (ascending) 0 else 1}")
+                        excluded.isNotEmpty() -> set("${excluded.first()}:0")
+                        selectedIndex != null -> set("$selectedIndex:1")
                     }
                 },
                 id = { it.toString() },
-                text = { index ->
-                    if (index == selectedIndex) "${def.options[index]} ${if (ascending) "↑" else "↓"}" else def.options[index]
-                },
+                text = { index -> def.options[index] },
                 optionIcon = chipIconsFor(def).let { iconFor -> if (iconFor == null) null else ({ index -> iconFor(def.options[index]) }) },
-                allowExclusion = false,
+                allowExclusion = true,
                 optionSortKey = def.options.sortKeyOrNull(),
+                includedPrefix = "↑ ",
+                excludedPrefix = "↓ ",
             )
         }
 

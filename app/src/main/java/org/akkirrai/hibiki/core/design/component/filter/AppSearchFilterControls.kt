@@ -221,6 +221,8 @@ fun <T> AppThreeStateChipFilter(
     allowExclusion: Boolean = true,
     optionSortKey: ((T) -> String)? = null,
     groupByFirstLetter: Boolean = false,
+    includedPrefix: String = "+ ",
+    excludedPrefix: String = "− ",
 ) {
     var showAllOptions by rememberSaveable(title) { mutableStateOf(false) }
     AppCollapsibleFilterSection(title = title, onLongClick = { onChange(emptySet(), emptySet()) }) {
@@ -277,6 +279,8 @@ fun <T> AppThreeStateChipFilter(
                                         optionIcon = optionIcon,
                                         allowExclusion = allowExclusion,
                                         onChange = onChange,
+                                        includedPrefix = includedPrefix,
+                                        excludedPrefix = excludedPrefix,
                                     )
                                 }
                             }
@@ -291,6 +295,8 @@ fun <T> AppThreeStateChipFilter(
                         optionIcon = optionIcon,
                         allowExclusion = allowExclusion,
                         onChange = onChange,
+                        includedPrefix = includedPrefix,
+                        excludedPrefix = excludedPrefix,
                     )
                 }
             }
@@ -320,6 +326,8 @@ private fun <T> AppThreeStateFilterFlowRow(
     optionIcon: @Composable ((T) -> ImageVector?)?,
     allowExclusion: Boolean,
     onChange: (Set<String>, Set<String>) -> Unit,
+    includedPrefix: String,
+    excludedPrefix: String,
 ) {
     FlowRow(
         modifier = Modifier.fillMaxWidth(),
@@ -336,8 +344,8 @@ private fun <T> AppThreeStateFilterFlowRow(
                 else -> MaterialTheme.colorScheme.tertiary
             }
             val prefix = when {
-                includedOption -> "+ "
-                excludedOption -> "− "
+                includedOption -> includedPrefix
+                excludedOption -> excludedPrefix
                 else -> ""
             }
             AppFilterChip(color, optionIcon?.invoke(option), prefix + text(option)) {
