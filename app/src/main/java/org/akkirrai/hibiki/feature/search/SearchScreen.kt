@@ -112,7 +112,9 @@ fun SearchScreen(
                 focusManager.clearFocus(force = true)
                 showFilters = true
             },
-            showFilter = state.filterCatalog?.capabilities?.supportedFilters?.isNotEmpty() ?: false,
+            showFilter = state.filterCatalog?.let {
+                it.capabilities.supportedFilters.isNotEmpty() || it.sourceFilters.isNotEmpty()
+            } ?: false,
             focusRequester = focusRequester,
             modifier = Modifier
                 .align(Alignment.TopCenter)

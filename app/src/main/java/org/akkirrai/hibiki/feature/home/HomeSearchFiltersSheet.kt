@@ -189,6 +189,14 @@ fun AnimeSearchFiltersSheet(
                         )
                     }
 
+                    if (catalog.sourceFilters.isNotEmpty()) {
+                        SourceFilterControls(
+                            filters = catalog.sourceFilters,
+                            values = pendingFilters.sourceFilterValues,
+                            onValuesChange = { pendingFilters = pendingFilters.copy(sourceFilterValues = it) },
+                        )
+                    }
+
                     Spacer(modifier = Modifier.size(8.dp))
                     FlowRow(
                         modifier = Modifier.align(Alignment.CenterHorizontally),

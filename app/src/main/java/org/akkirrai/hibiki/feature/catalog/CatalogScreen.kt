@@ -190,7 +190,9 @@ fun CatalogScreen(
     // actually know the source has nothing to filter by.
     // Hidden until the source has actually said it has filters; otherwise the sheet could only say
     // "unavailable".
-    val showFilterControl = state.filterCatalog?.capabilities?.supportedFilters?.isNotEmpty() ?: false
+    val showFilterControl = state.filterCatalog?.let {
+        it.capabilities.supportedFilters.isNotEmpty() || it.sourceFilters.isNotEmpty()
+    } ?: false
 
     LaunchedEffect(availableSorts, state.selectedSort) {
         if (state.selectedSort !in availableSorts) {

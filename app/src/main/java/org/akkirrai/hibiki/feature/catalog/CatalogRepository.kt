@@ -94,6 +94,7 @@ class CatalogRepository(
                     excludedGenreAliases = filters.excludedGenreAliases.sorted(),
                     yearFrom = filters.yearFrom,
                     yearTo = filters.yearTo,
+                    sourceFilterValues = filters.sourceFilterValues,
                 ),
                 allowEmptyQuery = true,
                 forceRefresh = forceRefresh,

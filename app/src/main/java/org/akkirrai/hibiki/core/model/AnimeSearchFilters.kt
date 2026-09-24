@@ -8,6 +8,8 @@ data class AnimeSearchFilters(
     val excludedGenreAliases: Set<String> = emptySet(),
     val yearFrom: Int? = null,
     val yearTo: Int? = null,
+    /** Values of the filters the source defines itself, see [org.akkirrai.beakokit.model.SourceFilterDef]. */
+    val sourceFilterValues: Map<String, String> = emptyMap(),
 ) {
     fun hasActiveFilters(): Boolean {
         return sortAlias != "relevance" ||
@@ -16,6 +18,7 @@ data class AnimeSearchFilters(
             includedGenreAliases.isNotEmpty() ||
             excludedGenreAliases.isNotEmpty() ||
             yearFrom != null ||
-            yearTo != null
+            yearTo != null ||
+            sourceFilterValues.isNotEmpty()
     }
 }

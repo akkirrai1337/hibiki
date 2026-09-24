@@ -93,6 +93,54 @@ data class AnimeSearchRequest(
     val excludedGenreAliases: List<String> = emptyList(),
     val yearFrom: Int? = null,
     val yearTo: Int? = null,
+    /**
+     * Values of the source-defined filters, keyed by [SourceFilterDef.key] and encoded as described
+     * on [SourceFilterType]. Only filters that differ from their default are present.
+     */
+    val sourceFilterValues: Map<String, String> = emptyMap(),
+)
+
+/** What kind of control a source-defined filter needs, and how its value is encoded as a string. */
+@Serializable
+enum class SourceFilterType {
+    /** A caption; carries no value. */
+    HEADER,
+
+    /** A divider; carries no value. */
+    SEPARATOR,
+
+    /** One of [SourceFilterDef.options]; the value is the selected index. */
+    SELECT,
+
+    /** Free text; the value is the text. */
+    TEXT,
+
+    /** On or off; the value is `true` or `false`. */
+    CHECKBOX,
+
+    /** Ignored, included or excluded; the value is `0`, `1` or `2`. */
+    TRISTATE,
+
+    /** A set of related filters shown together; carries no value of its own. */
+    GROUP,
+
+    /** One of [SourceFilterDef.options] plus a direction; the value is `<index>:<1 ascending|0 descending>` or empty. */
+    SORT,
+}
+
+/**
+ * A filter a source defines for itself (Aniyomi extensions describe theirs at runtime, so they cannot
+ * map onto the fixed type/status/genre/year filters). [key] is stable for one filter list and
+ * addresses the filter when values are sent back with a search.
+ */
+@Serializable
+data class SourceFilterDef(
+    val key: String,
+    val type: SourceFilterType,
+    val title: String,
+    val options: List<String> = emptyList(),
+    val children: List<SourceFilterDef> = emptyList(),
+    val defaultValue: String = "",
 )
 
 @Serializable
@@ -155,6 +203,8 @@ data class AnimeSearchFilterCatalog(
     val statusOptions: List<SearchFilterOption> = emptyList(),
     val genreOptions: List<SearchFilterOption> = emptyList(),
     val capabilities: CatalogCapabilities = CatalogCapabilities.FULL,
+    /** Filters the source defines itself, shown after the fixed ones. */
+    val sourceFilters: List<SourceFilterDef> = emptyList(),
 )
 
 @Deprecated("Use CatalogFeature", ReplaceWith("CatalogFeature"))

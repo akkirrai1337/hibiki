@@ -81,15 +81,19 @@ class AniyomiAnimeSourceAdapter(
         val limit = request.limit.coerceIn(0, MAX_PAGE_SIZE)
         if (limit == 0) return emptyList()
         val offset = request.offset.coerceAtLeast(0)
-        val key = request.query.trim()
+        // The same query with different filters is a different result list, so filters are part of the key.
+        val key = request.query.trim() + "|filters|" + AniyomiFilterMapper.cacheKey(request.sourceFilterValues)
         return guarded("search") { paginationMutex.withLock {
             val cached = pageCache.getOrPut(key) { CachedPages() }
             while (cached.titles.size.toLong() < offset.toLong() + limit && !cached.finished) {
                 val page = if (cached.titles.isEmpty()) 1 else cached.nextPage
-                val result = if (key.isBlank()) {
+                val result = if (request.query.isBlank() && request.sourceFilterValues.isEmpty()) {
                     source.getPopularAnime(page)
                 } else {
-                    source.getSearchAnime(page, key, source.getFilterList())
+                    // A fresh list per request: the extension mutates filter state in place.
+                    val filters = source.getFilterList()
+                    AniyomiFilterMapper.apply(filters, request.sourceFilterValues)
+                    source.getSearchAnime(page, request.query.trim(), filters)
                 }
                 cached.titles += result.animes.map(::toAnimeTitle)
                 cached.nextPage = page + 1
@@ -109,7 +113,9 @@ class AniyomiAnimeSourceAdapter(
         }
     }
 
-    override suspend fun getSearchFilterCatalog(): AnimeSearchFilterCatalog = AnimeSearchFilterCatalog()
+    override suspend fun getSearchFilterCatalog(): AnimeSearchFilterCatalog = AnimeSearchFilterCatalog(
+        sourceFilters = guarded("filters") { AniyomiFilterMapper.describe(source.getFilterList()) },
+    )
 
     override suspend fun getById(id: String): AnimeTitle {
         val anime = SAnime.create().apply {

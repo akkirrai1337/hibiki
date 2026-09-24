@@ -143,6 +143,7 @@ class AnimeSearchRepository(
             request.excludedGenreAliases.isNotEmpty() ||
             request.yearFrom != null ||
             request.yearTo != null ||
+            request.sourceFilterValues.isNotEmpty() ||
             request.sort != AnimeSearchSort.RELEVANCE
         if (normalizedQuery.isBlank() && !hasFilters && !allowEmptyQuery) return emptyList()
 
@@ -828,6 +829,8 @@ class AnimeSearchRepository(
             append(request.yearFrom ?: "")
             append(':')
             append(request.yearTo ?: "")
+            append(':')
+            append(request.sourceFilterValues.toSortedMap().entries.joinToString("|") { "${it.key}=${it.value}" })
         }
     }
 

@@ -188,6 +188,7 @@ class HomeRepository(
                 excludedGenreAliases = filters.excludedGenreAliases.sorted(),
                 yearFrom = filters.yearFrom,
                 yearTo = filters.yearTo,
+                    sourceFilterValues = filters.sourceFilterValues,
             ),
             enrichCardsWithMetadata = false,
         )
