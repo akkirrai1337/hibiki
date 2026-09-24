@@ -69,16 +69,8 @@ fun SourceFilterControls(
     filters: List<SourceFilterDef>,
     values: Map<String, String>,
     onValuesChange: (Map<String, String>) -> Unit,
-    inlineYear: (@Composable () -> Unit)? = null,
 ) {
-    val ordered = filters.filterNot(::isYearFilter).inDisplayOrder()
-    // The app's year slider follows sort, season and genre, and comes before status, language and type.
-    val yearIndex = ordered.indexOfFirst { filterRank(it) > 2 }.let { if (it == -1) ordered.size else it }
-    ordered.forEachIndexed { index, def ->
-        if (index == yearIndex) inlineYear?.invoke()
-        SourceFilter(def, values, onValuesChange)
-    }
-    if (yearIndex == ordered.size) inlineYear?.invoke()
+    filters.inDisplayOrder().forEach { def -> SourceFilter(def, values, onValuesChange) }
 }
 
 @Composable
@@ -90,6 +82,11 @@ private fun SourceFilter(
     fun current() = values[def.key] ?: def.defaultValue
     fun set(value: String) =
         onValuesChange(if (value == def.defaultValue) values - def.key else values + (def.key to value))
+
+    if (isYearFilter(def)) {
+        YearSourceFilter(def, values, onValuesChange)
+        return
+    }
 
     when (def.type) {
         SourceFilterType.HEADER -> Text(
@@ -322,7 +319,7 @@ private fun isPlaceholderOption(option: String?): Boolean {
 
 private const val SORTED_OPTION_MINIMUM = 50
 
-/** The year filter is the app's own range slider; a source's separate year filter would only duplicate it. */
+/** The source's own year filter, which the filter window draws as a slider instead of a wall of chips. */
 private fun isYearFilter(def: SourceFilterDef): Boolean =
     def.title.trim().lowercase() in YEAR_FILTER_TITLES
 
@@ -394,10 +391,11 @@ private fun filterRank(def: SourceFilterDef): Int {
         listOf("sort", "order", "сортир", "порядок").any(t::contains) -> 0
         listOf("season", "сезон").any(t::contains) -> 1
         listOf("genre", "tag", "categor", "жанр", "теги").any(t::contains) -> 2
-        listOf("status", "статус").any(t::contains) -> 3
-        listOf("language", "lang", "audio", "язык", "мова").any(t::contains) -> 4
-        listOf("type", "format", "тип", "формат").any(t::contains) -> 5
-        else -> 6
+        isYearFilter(def) -> 3
+        listOf("status", "статус").any(t::contains) -> 4
+        listOf("language", "lang", "audio", "язык", "мова").any(t::contains) -> 5
+        listOf("type", "format", "тип", "формат").any(t::contains) -> 6
+        else -> 7
     }
 }
 
@@ -478,6 +476,114 @@ private fun AgeRatingSlider(
                 valueRange = 0f..ordered.size.toFloat(),
                 steps = ordered.size - 1,
             )
+        }
+    }
+}
+
+private fun yearOf(title: String): Int? = title.trim().toIntOrNull()?.takeIf { it in 1900..2100 }
+
+/**
+ * A year filter as a slider. A source that takes several years (a group of toggles) gets the app's range
+ * slider; one that takes a single year (a list to choose from) gets a slider with one thumb. Anything
+ * else, such as a free-text year, is not drawn, since a slider could not fill it in.
+ */
+@Composable
+private fun YearSourceFilter(
+    def: SourceFilterDef,
+    values: Map<String, String>,
+    onValuesChange: (Map<String, String>) -> Unit,
+) {
+    val multiple = def.type == SourceFilterType.GROUP &&
+        def.children.all { it.type == SourceFilterType.CHECKBOX || it.type == SourceFilterType.TRISTATE }
+    when {
+        multiple -> {
+            val byYear = def.children.mapNotNull { child -> yearOf(child.title)?.let { it to child } }.sortedBy { it.first }
+            if (byYear.size < 2) return
+            val full = byYear.first().first..byYear.last().first
+            fun on(child: SourceFilterDef) = if (child.type == SourceFilterType.CHECKBOX) "true" else "1"
+            fun isOn(child: SourceFilterDef) = (values[child.key] ?: child.defaultValue) == on(child)
+            val chosen = byYear.filter { isOn(it.second) }.map { it.first }
+            val selected = if (chosen.isEmpty()) full else chosen.min()..chosen.max()
+            YearFilter(
+                selectedRange = selected,
+                yearRange = full,
+                onRangeChange = { range ->
+                    var next = values - def.children.map(SourceFilterDef::key).toSet()
+                    if (range != full) {
+                        byYear.filter { it.first in range }.forEach { (_, child) ->
+                            if (on(child) != child.defaultValue) next = next + (child.key to on(child))
+                        }
+                    }
+                    onValuesChange(next)
+                },
+            )
+        }
+
+        def.type == SourceFilterType.SELECT -> {
+            val defaultIndex = def.defaultValue.toIntOrNull()
+            val byYear = def.options.mapIndexedNotNull { index, title -> yearOf(title)?.let { it to index } }.sortedBy { it.first }
+            if (byYear.size < 2) return
+            val current = (values[def.key] ?: def.defaultValue).toIntOrNull()
+            val position = byYear.indexOfFirst { it.second == current }.let { if (it == -1) 0 else it + 1 }
+            SingleYearSlider(
+                title = def.title,
+                years = byYear.map { it.first },
+                position = position,
+                onPositionChange = { picked ->
+                    val value = if (picked == 0) defaultIndex ?: 0 else byYear[picked - 1].second
+                    onValuesChange(
+                        if (value.toString() == def.defaultValue) values - def.key else values + (def.key to value.toString()),
+                    )
+                },
+            )
+        }
+    }
+}
+
+/** One year out of a list, or none: position 0 is "all years". */
+@Composable
+private fun SingleYearSlider(
+    title: String,
+    years: List<Int>,
+    position: Int,
+    onPositionChange: (Int) -> Unit,
+) {
+    var sliderValue by remember(position) { mutableStateOf(position.toFloat()) }
+    val shown = sliderValue.roundToInt().coerceIn(0, years.size)
+    AppCollapsibleFilterSection(title = title, onLongClick = { onPositionChange(0) }) {
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Text(
+                text = if (shown == 0) stringResource(R.string.search_filters_year_all) else years[shown - 1].toString(),
+                color = if (shown == 0) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(
+                    text = years.first().toString(),
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Slider(
+                    value = sliderValue,
+                    onValueChange = { sliderValue = it },
+                    onValueChangeFinished = {
+                        val picked = sliderValue.roundToInt().coerceIn(0, years.size)
+                        sliderValue = picked.toFloat()
+                        onPositionChange(picked)
+                    },
+                    valueRange = 0f..years.size.toFloat(),
+                    steps = (years.size - 1).coerceAtLeast(0),
+                    modifier = Modifier.weight(1f),
+                )
+                Text(
+                    text = years.last().toString(),
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
+                    fontWeight = FontWeight.SemiBold,
+                )
+            }
         }
     }
 }

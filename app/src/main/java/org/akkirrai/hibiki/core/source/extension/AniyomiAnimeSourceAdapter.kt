@@ -124,6 +124,9 @@ class AniyomiAnimeSourceAdapter(
         // offer sort buttons that change nothing, since a source sorts through its own filters instead.
         capabilities = CatalogCapabilities.FULL.copy(
             supportedSorts = catalogCapabilities.supportedSorts,
+            // The app's year range would be handed to a search that ignores it; a source that can filter by
+            // year has a filter for it, which the filter window shows as a slider.
+            supportedFilters = emptySet(),
             features = catalogCapabilities.features,
         ),
         sourceFilters = guarded("filters") { AniyomiFilterMapper.describe(source.getFilterList()) },
