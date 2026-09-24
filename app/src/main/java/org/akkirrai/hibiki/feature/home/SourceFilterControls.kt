@@ -197,6 +197,26 @@ private fun GroupedChipFilter(
         .filter { it.type == SourceFilterType.TRISTATE && stateOf(it) == "2" }
         .mapTo(mutableSetOf(), SourceFilterDef::key)
     val long = def.children.size >= SORTED_OPTION_MINIMUM
+    if (def.children.size in 2..4 && def.children.all { seasonIconRes(it.title) != null }) {
+        // Seasons are one-of-four, drawn like the app's own type filter. Tapping the pressed one clears it.
+        val pressed = def.children.firstOrNull { it.key in included }
+        AppConnectedToggleFilter(
+            title = def.title,
+            entries = def.children,
+            selected = pressed,
+            onSelected = { picked ->
+                var next = values - def.children.map(SourceFilterDef::key).toSet()
+                if (picked != null && picked.key != pressed?.key) {
+                    val on = if (picked.type == SourceFilterType.CHECKBOX) "true" else "1"
+                    if (on != picked.defaultValue) next = next + (picked.key to on)
+                }
+                onValuesChange(next)
+            },
+            icon = { ImageVector.vectorResource(seasonIconRes(it.title)!!) },
+            text = { appFilterOptionText(it.title) },
+        )
+        return
+    }
 
     AppThreeStateChipFilter(
         title = def.title,
@@ -240,9 +260,17 @@ private const val SORTED_OPTION_MINIMUM = 50
 
 /** The year filter is the app's own range slider; a source's separate year filter would only duplicate it. */
 private fun isYearFilter(def: SourceFilterDef): Boolean =
-    def.type != SourceFilterType.GROUP && def.title.trim().lowercase() in YEAR_FILTER_TITLES
+    def.title.trim().lowercase() in YEAR_FILTER_TITLES
 
 private val YEAR_FILTER_TITLES = setOf("year", "years", "release year", "year of release", "год", "рік", "год выпуска", "рік випуску")
+
+private fun seasonIconRes(option: String): Int? = when (option.trim().lowercase()) {
+    "winter" -> R.drawable.animite_winter
+    "spring" -> R.drawable.animite_spring
+    "summer" -> R.drawable.animite_summer
+    "fall", "autumn" -> R.drawable.animite_fall
+    else -> null
+}
 
 /** Icons the app already has for seasons and media types, matched on the option's name. */
 private fun optionIconRes(option: String): Int? = when (option.trim().lowercase()) {
