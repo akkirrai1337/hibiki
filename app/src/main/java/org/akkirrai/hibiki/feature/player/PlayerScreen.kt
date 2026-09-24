@@ -23,8 +23,6 @@ import android.view.View
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
 import android.view.WindowManager
 import android.view.animation.DecelerateInterpolator
-import android.webkit.WebView
-import android.webkit.WebViewClient
 import androidx.annotation.StringRes
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.AnimatedContent
@@ -99,7 +97,6 @@ import androidx.compose.runtime.MutableLongState
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
@@ -822,10 +819,7 @@ fun PlayerScreen(
             }
     ) {
         if (!isClosing) {
-            val browserPlayback = state.playback?.takeIf { it.streamType == PlaybackStreamType.BROWSER }
-            if (browserPlayback != null) {
-                BrowserPlaybackSurface(browserPlayback, onInteraction = ::keepControlsVisible)
-            } else AndroidView(
+            AndroidView(
                 factory = { viewContext ->
                     (LayoutInflater.from(viewContext)
                         .inflate(R.layout.view_media3_player, null, false) as PlayerView)
@@ -851,7 +845,7 @@ fun PlayerScreen(
 
         PlayerSubtitleOverlay(
             lines = subtitleLinesState.value,
-            visible = subtitlesEnabled && !isAudioOnly && state.playback?.streamType != PlaybackStreamType.BROWSER,
+            visible = subtitlesEnabled && !isAudioOnly,
             controlsVisible = controlsVisible,
             modifier = Modifier.align(Alignment.BottomCenter),
         )
@@ -3127,13 +3121,6 @@ private fun PlayerMediaPreparationEffect(
                 append(playback.audioStreamUrl.safeHost())
             },
         )
-        if (playback.streamType == PlaybackStreamType.BROWSER) {
-            exoPlayer.pause()
-            exoPlayer.stop()
-            exoPlayer.clearMediaItems()
-            keepControlsVisible()
-            return@LaunchedEffect
-        }
         keepControlsVisible()
         val playbackKey = "${state.currentSourceId}|${state.currentEpisodeId}|${playback.streamUrl}"
         val resumePositionMs = exoPlayer.currentPosition.takeIf {
@@ -3242,7 +3229,6 @@ private fun PlaybackStream.toMediaSource(
                 PlaybackStreamType.HLS -> MimeTypes.APPLICATION_M3U8
                 PlaybackStreamType.MP4 -> MimeTypes.VIDEO_MP4
                 PlaybackStreamType.DASH -> MimeTypes.APPLICATION_MPD
-                PlaybackStreamType.BROWSER -> error("Browser playback does not have a Media3 source")
             }
         )
         .build()
@@ -3253,7 +3239,6 @@ private fun PlaybackStream.toMediaSource(
             .createMediaSource(mediaItem)
         PlaybackStreamType.DASH -> DashMediaSource.Factory(dataSourceFactory).createMediaSource(mediaItem)
         PlaybackStreamType.MP4 -> ProgressiveMediaSource.Factory(dataSourceFactory).createMediaSource(mediaItem)
-        PlaybackStreamType.BROWSER -> error("Browser playback does not have a Media3 source")
     }
     val sources = buildList<MediaSource> {
         add(videoSource)
@@ -3364,63 +3349,6 @@ private const val SUBTITLES_OFF_ID = "subtitles-off"
 // makes valid subtitle files unselectable. The extension is resolved in [subtitleMimeType] after
 // selection instead.
 private val SUBTITLE_MIME_TYPES = arrayOf("*/*")
-
-/** Generic visible WebView adapter for extensions that need browser session playback. */
-@Composable
-private fun BrowserPlaybackSurface(playback: PlaybackStream, onInteraction: () -> Unit) {
-    key(playback.streamUrl, playback.browserScript) {
-        AndroidView(
-            factory = { viewContext ->
-                WebView(viewContext).apply {
-                    settings.javaScriptEnabled = true
-                settings.domStorageEnabled = true
-                settings.mediaPlaybackRequiresUserGesture = false
-                settings.allowFileAccess = false
-                setBackgroundColor(android.graphics.Color.BLACK)
-                setOnTouchListener { _, event ->
-                    if (event.action == android.view.MotionEvent.ACTION_UP) onInteraction()
-                    false
-                }
-                webViewClient = object : WebViewClient() {
-                    override fun onPageFinished(view: WebView, url: String) {
-                        playback.browserScript?.takeIf(String::isNotBlank)?.let { script ->
-                                view.evaluateJavascript("$script\n$BROWSER_PAGE_LAYOUT_SCRIPT\n$BROWSER_AUDIO_UNMUTE_SCRIPT", null)
-                            }
-                        }
-                    }
-                    loadUrl(playback.streamUrl, playback.headers)
-                }
-            },
-            onRelease = { it.destroy() },
-            modifier = Modifier.fillMaxSize(),
-        )
-    }
-}
-
-private const val BROWSER_PAGE_LAYOUT_SCRIPT = """
-;(function(){
-  var style=document.createElement('style');
-  style.textContent='html,body{margin:0!important;padding:0!important;width:100%!important;height:100%!important;background:#000!important;overflow:hidden!important}video,iframe{position:fixed!important;inset:0!important;width:100%!important;height:100%!important;border:0!important;background:#000!important;object-fit:contain!important}';
-  (document.head||document.documentElement).appendChild(style);
-})();
-"""
-
-private const val BROWSER_AUDIO_UNMUTE_SCRIPT = """
-;(function(){
-  var attempts=0;
-  var unmute=function(){
-    document.querySelectorAll('video').forEach(function(video){
-      video.muted=false;
-      video.volume=1;
-      var play=video.play();
-      if(play) play.catch(function(){});
-    });
-    if(++attempts>=20) clearInterval(timer);
-  };
-  unmute();
-  var timer=setInterval(unmute,250);
-})();
-"""
 
 private fun String?.safeHost(): String {
     if (this.isNullOrBlank()) return "unknown"

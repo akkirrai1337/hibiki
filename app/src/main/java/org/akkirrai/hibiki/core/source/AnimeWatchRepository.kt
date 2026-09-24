@@ -20,8 +20,6 @@ import org.akkirrai.beakokit.playback.extractor.DirectDashExtractor
 import org.akkirrai.beakokit.playback.extractor.DirectHlsExtractor
 import org.akkirrai.beakokit.playback.extractor.DirectMp4Extractor
 import org.akkirrai.beakokit.playback.PlaybackResolver
-import org.akkirrai.beakokit.extension.BrowserScriptResolver
-import org.akkirrai.beakokit.extension.BrowserPlaybackMode
 import org.akkirrai.beakokit.playback.validation.HttpStreamValidator
 import org.akkirrai.beakokit.model.Episode
 import org.akkirrai.beakokit.model.AnimeTitle
@@ -100,8 +98,6 @@ class AnimeWatchRepository(
     private var extractorsGeneration = -1
     @Volatile
     private var activeExtractors: List<StreamExtractor> = emptyList()
-    @Volatile
-    private var activeBrowserResolvers: List<BrowserScriptResolver> = emptyList()
     private val loadMutex = Mutex()
     private val requestScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
@@ -256,7 +252,6 @@ class AnimeWatchRepository(
         val resolver = PlaybackResolver(currentExtractors(), validator)
         var resolvedCandidate: Pair<org.akkirrai.beakokit.playback.ResolvedPlaybackStream, SourcePayload>? = null
         var resolvedPlayerName: String? = null
-        var browserPageCandidate: ResolvedPlayerStream? = null
         var lastResolutionError: Throwable? = null
         try {
             withTimeout(EPISODE_RESOLUTION_TIMEOUT_MS) {
@@ -330,16 +325,6 @@ class AnimeWatchRepository(
                         AppLogger.d(TAG, "Playback attempt ${candidateIndex + 1}/${candidates.size} skipped: voiceover=${candidatePayload.source.title}, no playable links, elapsedMs=${System.currentTimeMillis() - startedAt}")
                         continue
                     }
-                    // Some providers intentionally keep media inside their browser player. For
-                    // those resolvers, rendering that page is the playable result; attempting a
-                    // second HLS extraction only turns a working embed into a timeout.
-                    browserPagePlayback(links, candidatePayload, candidateEpisode)?.let { pagePlayback ->
-                        val playerName = links.firstOrNull()?.playerName
-                        cachedStreams[cacheKey] = CachedPlaybackStream(pagePlayback, playerName, System.currentTimeMillis())
-                        AppLogger.d(TAG, "Playback attempt ${candidateIndex + 1}/${candidates.size} uses browser-page playback: voiceover=${candidatePayload.source.title}")
-                        browserPageCandidate = ResolvedPlayerStream(playerName, pagePlayback)
-                        break
-                    }
                     try {
                         val extractionStartedAt = SystemClock.elapsedRealtime()
                         val candidateResolved = try {
@@ -382,7 +367,6 @@ class AnimeWatchRepository(
             AppLogger.w(TAG, "Episode playback resolution timed out after ${EPISODE_RESOLUTION_TIMEOUT_MS}ms; attempted ${candidates.size} voiceovers")
             lastResolutionError = SourceException("Playback resolution timed out")
         }
-        browserPageCandidate?.let { return it }
         val (resolved, resolvedPayload) = resolvedCandidate ?: run {
             if (!requiredPlayerName.isNullOrBlank()) {
                 throw SourceException(appString(R.string.watch_error_selected_player_unavailable))
@@ -807,17 +791,11 @@ class AnimeWatchRepository(
         if (extractorsGeneration == generation && activeExtractors.isNotEmpty()) return activeExtractors
 
         // Aniyomi extensions resolve their own embeds, so no page-specific resolvers are loaded.
-        val downloadedResolvers = emptyList<StreamExtractor>()
-        activeBrowserResolvers = emptyList<BrowserScriptResolver>()
         activeExtractors = buildList {
             add(DirectHlsExtractor())
             add(DirectMp4Extractor())
             add(DirectDashExtractor())
             appContext?.let { add(DirectStreamWebViewRelayExtractor(it)) }
-            addAll(downloadedResolvers)
-            appContext?.let {
-                add(BrowserPlayerWebViewExtractor(it, activeBrowserResolvers, client))
-            }
         }
         extractorsGeneration = generation
         return activeExtractors
@@ -837,38 +815,6 @@ class AnimeWatchRepository(
             StreamType.DASH -> PlaybackStreamType.DASH
         }
     }
-
-    private suspend fun browserPagePlayback(
-        links: List<PlayerLink>,
-        payload: SourcePayload,
-        episode: Episode,
-    ): PlaybackStream? {
-        // Refresh installed resolver extensions before deciding. The resolver, not this
-        // repository, carries the provider-specific host and browser action.
-        currentExtractors()
-        val match = links.firstNotNullOfOrNull { link ->
-            activeBrowserResolvers
-                .firstOrNull { it.browserPlaybackMode == BrowserPlaybackMode.PAGE && it.supportsBrowser(link) }
-                ?.let { resolver -> link to resolver }
-        } ?: return null
-        val (link, resolver) = match
-        AppLogger.d(TAG, "browser-page playback: player=${link.playerName.orEmpty()}, host=${link.url.safeHost()}")
-        return PlaybackStream(
-            animeTitle = payload.title.displayName,
-            sourceTitle = payload.source.title,
-            episodeTitle = episode.title?.takeIf(String::isNotBlank)
-                ?: appString(R.string.watch_episode_fallback_title, episode.number.formatEpisodeNumber()),
-            streamUrl = link.url,
-            streamType = PlaybackStreamType.BROWSER,
-            qualityLabel = link.quality,
-            availableQualityLabels = listOfNotNull(link.quality?.trim()?.takeIf(String::isNotBlank)),
-            headers = link.headers,
-            browserScript = resolver.browserScript(link),
-            segments = link.segments.map { it.toPlaybackSegment() },
-            videoId = link.videoId,
-        )
-    }
-
 
     private fun selectPlaybackSegments(
         apiSegments: List<org.akkirrai.beakokit.model.VideoSegment>,
@@ -940,7 +886,7 @@ class AnimeWatchRepository(
         const val PLAYER_LINK_DISCOVERY_TIMEOUT_MS = 45_000L
         const val FALLBACK_RESOLVE_TIMEOUT_MS = 12_000L
         const val EPISODE_RESOLUTION_TIMEOUT_MS = 60_000L
-        // BROWSER-resolved players can fall back to WebViewStreamRelay when a CDN blocks a plain
+        // Direct streams can fall back to WebViewStreamRelay when a CDN blocks a plain
         // HTTP client, which adds real WebView round-trips (JS fetch + base64 bridge) to both
         // resolution and validation - both budgets were tuned before that path existed and are too
         // tight for it, silently timing the whole attempt out with no error surfaced to the user.

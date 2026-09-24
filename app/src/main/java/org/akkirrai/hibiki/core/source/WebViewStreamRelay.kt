@@ -38,12 +38,10 @@ import org.chromium.net.CronetEngine
  * Some CDNs behind Cloudflare-style bot management can tell a plain HTTP client (OkHttp, media3's
  * HttpURLConnection-based data source) apart from a real Chromium TLS handshake regardless of what
  * headers it presents - the fingerprint is set at the TLS layer, before any HTTP header is read.
- * A [BrowserPlayerWebViewExtractor] already runs a real WebView to resolve the stream URL; this
- * relay reuses that same WebView's `fetch()` (a genuine Chromium network request) to actually pull
+ * This relay runs a real WebView and uses its `fetch()` (a genuine Chromium network request) to pull
  * the HLS playlists and segments too, and republishes the bytes over a 127.0.0.1 loopback HTTP
  * server that ExoPlayer connects to instead of the CDN directly. This is a fallback path only
- * (see [BrowserPlayerWebViewExtractor.extractVariants]): a direct URL is tried first and this is
- * only reached when that direct fetch was blocked, so sites without this problem never pay for it.
+ * (see [DirectStreamWebViewRelayExtractor]): a direct URL is tried first and this is only reached when that direct fetch was blocked, so sites without this problem never pay for it.
  */
 internal object WebViewStreamRelay {
     private const val TAG = "WebViewStreamRelay"
@@ -1078,3 +1076,6 @@ internal object WebViewStreamRelay {
     private const val CRONET_READ_TIMEOUT_MS = 30_000
     private const val CRONET_PROVIDER_TIMEOUT_SECONDS = 10L
 }
+
+/** A WebView kept alive by the relay together with the handler for its main-thread work. */
+internal class CaptureSession(val webView: WebView, val handler: Handler)
