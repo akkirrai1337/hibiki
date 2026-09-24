@@ -3322,11 +3322,17 @@ private fun sniffSubtitleMimeType(url: String, headers: Map<String, String>): St
         setRequestProperty("Range", "bytes=0-1023")
     }
     try {
+        val status = connection.responseCode
         val head = connection.inputStream.use { input ->
             val buffer = ByteArray(1024)
             val read = input.read(buffer)
             if (read > 0) String(buffer, 0, read, Charsets.UTF_8) else ""
         }.trimStart { it.isWhitespace() || it == '﻿' }
+        AppLogger.d(
+            PLAYBACK_LOG_TAG,
+            "[player.subtitles.sniff] host=${url.safeHost()} status=$status bytes=${head.length} " +
+                "start=" + head.take(24).map { if (it.isWhitespace()) ' ' else it }.joinToString(""),
+        )
         when {
             head.startsWith("WEBVTT") -> TEXT_VTT
             head.contains("[Script Info]", ignoreCase = true) || head.contains("[V4+ Styles]", ignoreCase = true) -> TEXT_SSA
@@ -3336,7 +3342,8 @@ private fun sniffSubtitleMimeType(url: String, headers: Map<String, String>): St
     } finally {
         connection.disconnect()
     }
-}.getOrNull()
+}.onFailure { AppLogger.d(PLAYBACK_LOG_TAG, "[player.subtitles.sniff] host=${url.safeHost()} failed=${it.javaClass.simpleName}: ${it.message}") }
+    .getOrNull()
 
 private data class LocalSubtitle(
     val uri: Uri,
