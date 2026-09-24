@@ -182,7 +182,9 @@ fun SourceExtensionsScreen(
         }
     }
 
-    var externalExtensionQueue by remember { mutableStateOf<List<ExternalApkExtension>>(emptyList()) }
+    // Extensions installed by something other than Hibiki: listed, but only run once the user trusts them.
+    var externalExtensions by remember { mutableStateOf<List<ExternalApkExtension>>(emptyList()) }
+    var externalToTrust by remember { mutableStateOf<ExternalApkExtension?>(null) }
 
     suspend fun refreshInstalledApkExtensions() {
         val (detection, installed) = withContext(kotlinx.coroutines.Dispatchers.IO) {
@@ -190,7 +192,7 @@ fun SourceExtensionsScreen(
             detection to InstalledApkExtensions.scan(context)
         }
         installedApkExtensions = installed
-        externalExtensionQueue = detection.pending
+        externalExtensions = detection.pending
         if (detection.changed) AnimeSourceRegistry.refreshApkExtensions(context)
     }
 
@@ -430,28 +432,27 @@ fun SourceExtensionsScreen(
             }
         }
     }
-    externalExtensionQueue.firstOrNull()?.let { external ->
+    externalToTrust?.let { external ->
         ExternalExtensionTrustDialog(
             extension = external,
             onTrust = {
-                externalExtensionQueue = externalExtensionQueue - external
+                externalToTrust = null
                 tabScope.launch {
-                    val hadNoSources = AnimeSourceRegistry.sources.isEmpty()
                     val adopted = withContext(kotlinx.coroutines.Dispatchers.IO) { ExternalApkExtensions.adopt(context, external) }
                     if (adopted) {
                         refreshInstalledApkExtensions()
                         AnimeSourceRegistry.refreshApkExtensions(context)
-                        if (hadNoSources) AnimeSourceRegistry.sources.firstOrNull()?.let { preferences.setAnimeSource(it.id) }
+                        // Trusting it was the answer to "use this source", so make it the active one.
+                        AnimeSourceRegistry.sources
+                            .firstOrNull { AnimeSourceRegistry.apkPackageForSource(it.id) == external.packageName }
+                            ?.let { preferences.setAnimeSource(it.id) }
                     } else {
                         apkInstallErrors = apkInstallErrors +
                             (external.packageName to context.getString(R.string.source_extensions_apk_install_failed))
                     }
                 }
             },
-            onDismiss = {
-                ExternalApkExtensions.decline(external)
-                externalExtensionQueue = externalExtensionQueue - external
-            },
+            onDismiss = { externalToTrust = null },
         )
     }
     Column(modifier = modifier.fillMaxSize()) {
@@ -563,14 +564,21 @@ fun SourceExtensionsScreen(
                                 installingPackages = installingApkPackages,
                                 installErrors = apkInstallErrors,
                                 installedApkExtensions = installedApkExtensions,
+                                externalExtensions = externalExtensions,
                                 apkRepositoryExtensions = apkRepositoryExtensions,
                                 apkLoadErrors = installedApkLoadErrors,
                                 onUpdate = { extension ->
                                     repositoryUrlByPackage[extension.pkg]?.let { installApkExtension(it, extension) }
                                 },
                                 onSelect = { sourceId ->
-                                    preferences.setAnimeSource(SourceId(sourceId))
-                                    haptic.performHapticFeedback(HapticFeedbackType.SegmentTick)
+                                    val external = externalExtensions
+                                        .firstOrNull { "$APK_PACKAGE_ROW_PREFIX${it.packageName}" == sourceId }
+                                    if (external != null) {
+                                        externalToTrust = external
+                                    } else {
+                                        preferences.setAnimeSource(SourceId(sourceId))
+                                        haptic.performHapticFeedback(HapticFeedbackType.SegmentTick)
+                                    }
                                 },
                                 onUninstall = { sourceId ->
                                     val packageName = if (sourceId.startsWith(APK_PACKAGE_ROW_PREFIX)) {
@@ -578,7 +586,13 @@ fun SourceExtensionsScreen(
                                     } else {
                                         AnimeSourceRegistry.apkPackageForSource(SourceId(sourceId))
                                     }
-                                    packageName?.let(uninstallApkExtension)
+                                    if (packageName != null && externalExtensions.any { it.packageName == packageName }) {
+                                        // Not Hibiki's install to remove: Android's own uninstall handles it.
+                                        pendingApkUninstallPackage = packageName
+                                        packageUninstallLauncher.launch(ApkExtensionInstaller.packageUninstallIntent(packageName))
+                                    } else {
+                                        packageName?.let(uninstallApkExtension)
+                                    }
                                 },
                             )
                         } else {
@@ -1055,6 +1069,7 @@ private data class InstalledApkSourceEntry(
     val repositoryEntry: ApkRepositoryExtension? = null,
     val loadError: String? = null,
     val selectable: Boolean = true,
+    val settingsAvailable: Boolean = true,
 )
 
 private const val APK_PACKAGE_ROW_PREFIX = "apk-package:"
@@ -1069,6 +1084,7 @@ private fun InstalledSourcesList(
     installingPackages: Set<String>,
     installErrors: Map<String, String>,
     installedApkExtensions: Map<String, InstalledApkExtensionInfo>,
+    externalExtensions: List<ExternalApkExtension>,
     apkRepositoryExtensions: List<ApkRepositoryExtension>,
     apkLoadErrors: Map<String, String>,
     onUpdate: (ApkRepositoryExtension) -> Unit,
@@ -1130,7 +1146,25 @@ private fun InstalledSourcesList(
             selectable = false,
         )
     }
-    val entries = (loadedSources + failedSources).filter { entry ->
+    // Installed elsewhere and not yet trusted: shown like any source, and tapping one asks first.
+    val externalSources = externalExtensions.map { external ->
+        val repositoryEntry = apkRepositoryExtensions.firstOrNull { it.pkg == external.packageName }
+        InstalledApkSourceEntry(
+            extension = MarketplaceExtension(
+                id = "$APK_PACKAGE_ROW_PREFIX${external.packageName}",
+                name = repositoryEntry?.name ?: external.label,
+                version = external.versionName,
+                iconUrl = repositoryEntry?.iconUrl,
+                lang = repositoryEntry?.lang?.ifBlank { "all" } ?: "all",
+                isNsfw = (repositoryEntry?.nsfw ?: 0) != 0,
+            ),
+            packageName = external.packageName,
+            installedVersion = external.versionName,
+            repositoryEntry = null,
+            settingsAvailable = false,
+        )
+    }
+    val entries = (loadedSources + failedSources + externalSources).filter { entry ->
         val matchesQuery = query.isBlank() ||
             entry.extension.name.contains(query, ignoreCase = true) ||
             entry.extension.id.contains(query, ignoreCase = true)
@@ -1233,7 +1267,7 @@ private fun InstalledSourceRow(
         onSelect = { onSelect(entry.extension.id) },
         onUninstall = { onUninstall("$APK_PACKAGE_ROW_PREFIX${entry.packageName}") },
         // Rows for extensions that produced no source carry a package id, not a source id.
-        onOpenSettings = entry.takeIf { it.selectable }?.let { AnimeSourceRegistry.apkSourceSettings(SourceId(it.extension.id)) }?.let {
+        onOpenSettings = entry.takeIf { it.selectable && it.settingsAvailable }?.let { AnimeSourceRegistry.apkSourceSettings(SourceId(it.extension.id)) }?.let {
             { onOpenSettings(entry.extension.id) }
         },
     )

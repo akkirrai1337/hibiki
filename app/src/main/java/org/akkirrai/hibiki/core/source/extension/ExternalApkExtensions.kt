@@ -34,9 +34,6 @@ object ExternalApkExtensions {
         val pending: List<ExternalApkExtension>,
     )
 
-    // Kept for the process only: declining hides the prompt until the next launch rather than for good.
-    private val declined = mutableSetOf<String>()
-
     fun sync(context: Context): Detection {
         val appContext = context.applicationContext
         var changed = false
@@ -48,7 +45,7 @@ object ExternalApkExtensions {
             }
             if (extension.installerPackage == appContext.packageName) {
                 if (adopt(appContext, extension)) changed = true
-            } else if (declineKey(extension) !in declined) {
+            } else {
                 pending += extension
             }
         }
@@ -65,10 +62,6 @@ object ExternalApkExtensions {
     } catch (error: Exception) {
         AppLogger.w("ExternalExtensions", "Could not adopt ${extension.packageName}", error)
         false
-    }
-
-    fun decline(extension: ExternalApkExtension) {
-        declined += declineKey(extension)
     }
 
     /** An extension updated outside Hibiki keeps its trust when the signer is unchanged; refresh the private copy to match. */
@@ -94,8 +87,6 @@ object ExternalApkExtensions {
             staged.delete()
         }
     }
-
-    private fun declineKey(extension: ExternalApkExtension) = "${extension.packageName}:${extension.signingFingerprint}"
 
     @Suppress("DEPRECATION")
     private fun installedExtensions(context: Context): List<ExternalApkExtension> {
