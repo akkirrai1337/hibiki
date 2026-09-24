@@ -625,7 +625,6 @@ fun DetailsScreen(
                     resumeFrame = resumeFrame,
                     resumeFrameAspectRatio = resumeFrameAspectRatio,
                     isTitleDetailsSheetOpen = isTitleDetailsSheetOpen,
-                    listState = listState,
                     onPosterClick = { isPosterPreviewOpen = true },
                     onTitleClick = { isTitleDetailsSheetOpen = true },
                     onLibraryClick = {
@@ -788,7 +787,6 @@ private fun DetailHeroSection(
     resumeFrame: File?,
     resumeFrameAspectRatio: Float?,
     isTitleDetailsSheetOpen: Boolean,
-    listState: LazyListState,
     onPosterClick: () -> Unit,
     onTitleClick: () -> Unit,
     onLibraryClick: () -> Unit,
@@ -800,16 +798,6 @@ private fun DetailHeroSection(
     sharedTextModifier: Modifier = Modifier,
 ) {
     val isUserLibraryCategorySelected = libraryCategory != null && libraryCategory != LibraryCategory.Saved
-    val isAtTop by remember(listState) {
-        derivedStateOf {
-            listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset == 0
-        }
-    }
-    val posterHeightOffset by animateDpAsState(
-        targetValue = if (isAtTop) 0.dp else 28.dp,
-        animationSpec = tween(durationMillis = 750),
-        label = "details_poster_height",
-    )
     val posterExpandedHeight = 200.dp
     val detailsHeight = 180.dp
     val bannerImageUrl = anime.trailer?.takeIf { it.playbackUrl != null }?.thumbnailUrl ?: anime.bannerUrl
@@ -894,13 +882,13 @@ private fun DetailHeroSection(
             }
             PosterHeroInline(
                 anime = anime,
-                height = posterExpandedHeight - posterHeightOffset,
+                height = posterExpandedHeight,
                 onPosterClick = onPosterClick,
                 sharedPosterModifier = sharedPosterModifier,
                 onPosterLoaded = onPosterLoaded,
                 modifier = Modifier
                     .align(Alignment.TopStart)
-                    .offset(y = posterTop + posterHeightOffset)
+                    .offset(y = posterTop)
                     .padding(start = 16.dp),
             )
             DetailHeroTextContent(
@@ -1504,16 +1492,6 @@ private fun DetailContentCard(
                             )
                         }
                     }
-                    anime.producers.takeIf(List<String>::isNotEmpty)?.let { producers ->
-                        item {
-                            DetailInfoPill(
-                                label = stringResource(R.string.details_producers),
-                                value = producers.summarized(),
-                                icon = Icons.Filled.Groups,
-                                accent = MaterialTheme.colorScheme.tertiary,
-                            )
-                        }
-                    }
                     heroInfo.studio.takeIf(String::isNotBlank)?.let { studio ->
                         item {
                             DetailInfoPill(
@@ -1521,6 +1499,16 @@ private fun DetailContentCard(
                                 value = studio,
                                 icon = Icons.Filled.Business,
                                 accent = Color(0xFFFF9800),
+                            )
+                        }
+                    }
+                    anime.producers.takeIf(List<String>::isNotEmpty)?.let { producers ->
+                        item {
+                            DetailInfoPill(
+                                label = stringResource(R.string.details_producers),
+                                value = producers.summarized(),
+                                icon = Icons.Filled.Groups,
+                                accent = MaterialTheme.colorScheme.tertiary,
                             )
                         }
                     }
