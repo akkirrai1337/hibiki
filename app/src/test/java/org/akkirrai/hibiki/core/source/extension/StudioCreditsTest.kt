@@ -28,6 +28,15 @@ class StudioCreditsTest {
     }
 
     @Test
+    fun `studios printed as a footer line are split the same way`() {
+        val parsed = SourceDescriptionFooter.parse("Story.\n\n**Studios:** Lerche, Lerche (**Producers:** Lantis)")
+        val credits = StudioCredits.parse(FooterFacts.from(parsed.facts).studioText)
+        assertEquals("Story.", parsed.text)
+        assertEquals(listOf("Lerche"), credits.studios)
+        assertEquals(listOf("Lantis"), credits.producers)
+    }
+
+    @Test
     fun `blank input is empty`() {
         assertEquals(StudioCredits.Credits(emptyList(), emptyList()), StudioCredits.parse(null))
         assertEquals(StudioCredits.Credits(emptyList(), emptyList()), StudioCredits.parse("  "))

@@ -1446,13 +1446,15 @@ private fun DetailContentCard(
                     contentPadding = PaddingValues(horizontal = DETAIL_INFORMATION_HORIZONTAL_PADDING),
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
-                    item {
-                        DetailInfoPill(
-                            label = stringResource(R.string.details_status),
-                            value = heroInfo.status.ifBlank { stringResource(R.string.search_filters_not_selected) },
-                            icon = Icons.Outlined.Check,
-                            accent = MaterialTheme.colorScheme.tertiary,
-                        )
+                    heroInfo.status.takeIf(String::isNotBlank)?.let { status ->
+                        item {
+                            DetailInfoPill(
+                                label = stringResource(R.string.details_status),
+                                value = status,
+                                icon = Icons.Outlined.Check,
+                                accent = MaterialTheme.colorScheme.tertiary,
+                            )
+                        }
                     }
                     heroInfo.episodes.takeIf(String::isNotBlank)?.let { episodes ->
                         item {

@@ -107,7 +107,9 @@ internal data class FooterFacts(
     val ageRating: String?,
     /** A 0-10 score the source printed in the description, if any. */
     val score: Double?,
-    val studios: List<String>,
+    /** The raw "Studios" / "Producers" text, split later by [StudioCredits]. */
+    val studioText: String?,
+    val producerText: String?,
     val episodeCount: Int?,
     val type: String?,
     val year: Int?,
@@ -150,10 +152,8 @@ internal data class FooterFacts(
             return FooterFacts(
                 ageRating = facts["rating"]?.takeUnless(::isScore),
                 score = parseScore(facts["score"] ?: facts["mal score"] ?: facts["mean score"] ?: facts["rating"]),
-                studios = listOfNotNull(facts["studios"], facts["studio"])
-                    .flatMap { it.split(',', ';') }
-                    .map(String::trim)
-                    .filter(String::isNotBlank),
+                studioText = facts["studios"] ?: facts["studio"],
+                producerText = facts["producers"] ?: facts["producer"],
                 episodeCount = facts["episodes"]?.takeIf { it.all(Char::isDigit) }?.toIntOrNull()?.takeIf { it > 0 },
                 type = facts["type"],
                 year = year,
