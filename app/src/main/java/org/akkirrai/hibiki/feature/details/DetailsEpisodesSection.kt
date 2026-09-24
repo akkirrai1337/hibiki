@@ -136,17 +136,13 @@ internal fun DetailsEpisodesSection(
         }
     }
 
-    Column(modifier = modifier.fillMaxWidth().padding(top = 8.dp, bottom = 8.dp)) {
+    Column(modifier = modifier.fillMaxWidth().padding(top = 24.dp, bottom = 8.dp)) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = DETAIL_CONTENT_START_PADDING),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
-            Text(
-                text = stringResource(R.string.watch_episodes_section_title),
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.SemiBold,
-            )
+            DetailSectionTitle(text = stringResource(R.string.watch_episodes_section_title))
             if (episodes.isNotEmpty()) {
                 Text(
                     text = "$watchedCount / ${episodes.size}",

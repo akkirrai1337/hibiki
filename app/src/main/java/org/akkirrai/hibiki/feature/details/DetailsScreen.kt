@@ -803,11 +803,10 @@ private fun DetailHeroSection(
     val bannerImageUrl = anime.trailer?.takeIf { it.playbackUrl != null }?.thumbnailUrl ?: anime.bannerUrl
     val hasDedicatedBannerImage = !bannerImageUrl.isNullOrBlank()
     val hasResumeFrame = resumeState != null && resumeFrame != null
-    // Banner metadata can arrive substantially later than the title's source details. Keep the
-    // final hero geometry reserved for the whole request, but leave it blank: a timer-based
-    // fallback used to collapse this area and then grow it again when the banner finally arrived.
-    // Once the request settles, only a genuine banner (or a resume frame) keeps the wide hero.
-    val hasHeroMedia = hasResumeFrame || isDetailsLoading || hasDedicatedBannerImage
+    // Only a genuine banner (or a resume frame) earns the wide hero. Reserving it while details
+    // load made every banner-less title start wide and then collapse, so the compact hero is the
+    // stable default and a banner that arrives later is the only thing that grows it.
+    val hasHeroMedia = hasResumeFrame || hasDedicatedBannerImage
     BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
         // Stop frames retain the exact surface ratio they were captured with. Resize the whole
         // hero around that frame, rather than keeping a fixed 224dp banner and exposing whatever
@@ -818,7 +817,10 @@ private fun DetailHeroSection(
             ?: 224.dp
         val heroTopTrim = if (hasHeroMedia) 0.dp else 96.dp
         val posterTop = bannerHeight - 12.dp - heroTopTrim
-        val detailsTop = bannerHeight - heroTopTrim
+        // Without a banner the text block starts level with the poster and is as tall as it, so the
+        // description gets the room instead of being cut short beside the cover.
+        val detailsTop = if (hasHeroMedia) bannerHeight else posterTop
+        val detailsBoxHeight = if (hasHeroMedia) detailsHeight else posterExpandedHeight
         val heroHeight = bannerHeight + 188.dp - heroTopTrim
 
         Column(
@@ -910,7 +912,7 @@ private fun DetailHeroSection(
                         start = 172.dp,
                         end = 16.dp,
                     )
-                    .height(detailsHeight),
+                    .height(detailsBoxHeight),
             )
         }
         Spacer(modifier = Modifier.height(24.dp))
@@ -1593,7 +1595,7 @@ private fun GenrePillsSkeletonRow() {
 }
 
 @Composable
-private fun DetailSectionTitle(
+internal fun DetailSectionTitle(
     text: String,
     modifier: Modifier = Modifier,
 ) {
@@ -2482,7 +2484,7 @@ private fun storeTitleSeedColor(context: Context, key: String, color: Int) {
 private val detailsScreenStateCache = ConcurrentHashMap<String, DetailsScreenSavedState>()
 private val titleSeedColorCache = ConcurrentHashMap<String, Int>()
 private const val TITLE_COLOR_PREFERENCES_NAME = "title_color_cache"
-private val DETAIL_CONTENT_START_PADDING = 24.dp
+internal val DETAIL_CONTENT_START_PADDING = 24.dp
 private val DETAIL_INFORMATION_HORIZONTAL_PADDING = 12.dp
 private val DETAIL_SECTION_VISUAL_ALIGNMENT_OFFSET = 3.dp
 private val DETAIL_SECTION_START_PADDING = DETAIL_CONTENT_START_PADDING + DETAIL_SECTION_VISUAL_ALIGNMENT_OFFSET
