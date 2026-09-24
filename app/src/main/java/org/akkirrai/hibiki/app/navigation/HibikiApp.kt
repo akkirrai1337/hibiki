@@ -217,6 +217,11 @@ private fun HibikiNavHost(
                             navController.navigate(AnimeNavType.createSearchRoute(query))
                         }
                     },
+                    onOpenFilters = {
+                        navController.runIfCurrent(backStackEntry) {
+                            navController.navigate(AnimeNavType.createSearchRoute("", openFilters = true))
+                        }
+                    },
                     isActive = isTopLevelDestination && currentTopLevel == TopLevelDestination.Home,
                     bottomContentPadding = topLevelBottomContentPadding,
                     sharedTransitionScope = sharedTransitionScope,
@@ -296,10 +301,16 @@ private fun HibikiNavHost(
         }
         composable(
             route = AnimeNavType.SEARCH_PATTERN,
-            arguments = listOf(navArgument(AnimeNavType.QUERY_ARG) {
-                type = NavType.StringType
-                defaultValue = ""
-            }),
+            arguments = listOf(
+                navArgument(AnimeNavType.QUERY_ARG) {
+                    type = NavType.StringType
+                    defaultValue = ""
+                },
+                navArgument(AnimeNavType.OPEN_FILTERS_ARG) {
+                    type = NavType.BoolType
+                    defaultValue = false
+                },
+            ),
             enterTransition = { appScreenEnterTransition() },
             exitTransition = { appScreenExitTransition() },
             popEnterTransition = { appScreenPopEnterTransition() },
@@ -327,6 +338,7 @@ private fun HibikiNavHost(
             ) {
                 SearchScreen(
                     initialQuery = backStackEntry.arguments?.getString(AnimeNavType.QUERY_ARG).orEmpty(),
+                    openFiltersOnStart = backStackEntry.arguments?.getBoolean(AnimeNavType.OPEN_FILTERS_ARG) == true,
                     onAnimeClick = { anime ->
                         navController.runIfCurrent(backStackEntry) {
                             navController.navigate(AnimeNavType.createDetailsRoute(anime, transitionOrigin = "search"))

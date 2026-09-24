@@ -153,6 +153,7 @@ fun HomeScreen(
     onOpenSources: () -> Unit = {},
     onOpenDownloads: () -> Unit = {},
     onSearch: (String) -> Unit = {},
+    onOpenFilters: () -> Unit = {},
     isActive: Boolean = true,
     bottomContentPadding: Dp = 96.dp,
     sharedTransitionScope: SharedTransitionScope? = null,
@@ -279,7 +280,9 @@ fun HomeScreen(
             query = "",
             onQueryChange = { query -> if (query.isNotBlank()) onSearch(query) },
             onClear = {},
-            showFilter = false,
+            // The filters live on the search screen, so the button takes the user there with them open.
+            onFilterClick = onOpenFilters,
+            showFilter = true,
             modifier = Modifier
                 .align(Alignment.TopCenter)
                 .fillMaxWidth()

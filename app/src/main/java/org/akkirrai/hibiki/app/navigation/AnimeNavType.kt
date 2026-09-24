@@ -28,6 +28,7 @@ object AnimeNavType {
     const val SOURCE_TITLE_ARG = "sourceTitle"
     const val DOWNLOAD_MODE_ARG = "downloadMode"
     const val QUERY_ARG = "query"
+    const val OPEN_FILTERS_ARG = "filters"
 
     const val DETAILS_PATTERN =
         "$DETAILS_ROUTE/{$ID_ARG}?$TITLE_ARG={$TITLE_ARG}&$SUBTITLE_ARG={$SUBTITLE_ARG}&$EPISODES_ARG={$EPISODES_ARG}&$STATUS_ARG={$STATUS_ARG}&$POSTER_ARG={$POSTER_ARG}&$POSTER_FALLBACK_ARG={$POSTER_FALLBACK_ARG}&$DETAILS_TRANSITION_ORIGIN_ARG={$DETAILS_TRANSITION_ORIGIN_ARG}"
@@ -41,10 +42,10 @@ object AnimeNavType {
     const val PLAYER_PATTERN =
         "$PLAYER_ROUTE/{$SOURCE_ID_ARG}?$EPISODE_ID_ARG={$EPISODE_ID_ARG}&$EPISODE_NUMBER_ARG={$EPISODE_NUMBER_ARG}"
 
-    const val SEARCH_PATTERN = "$SEARCH_ROUTE?$QUERY_ARG={$QUERY_ARG}"
+    const val SEARCH_PATTERN = "$SEARCH_ROUTE?$QUERY_ARG={$QUERY_ARG}&$OPEN_FILTERS_ARG={$OPEN_FILTERS_ARG}"
 
-    fun createSearchRoute(query: String): String =
-        "$SEARCH_ROUTE?$QUERY_ARG=${Uri.encode(query)}"
+    fun createSearchRoute(query: String, openFilters: Boolean = false): String =
+        "$SEARCH_ROUTE?$QUERY_ARG=${Uri.encode(query)}&$OPEN_FILTERS_ARG=$openFilters"
 
     fun createDetailsRoute(anime: Anime, transitionOrigin: String = "default"): String {
         return buildString {

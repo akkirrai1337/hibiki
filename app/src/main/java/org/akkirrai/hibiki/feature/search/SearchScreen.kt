@@ -44,6 +44,7 @@ import org.akkirrai.hibiki.feature.home.AnimeSearchFiltersSheet
 @Composable
 fun SearchScreen(
     initialQuery: String = "",
+    openFiltersOnStart: Boolean = false,
     onAnimeClick: (Anime) -> Unit,
     bottomContentPadding: Dp = UiDimens.ScreenPadding,
     viewModel: SearchViewModel = viewModel(factory = SearchViewModel.Factory(LocalContext.current)),
@@ -58,6 +59,11 @@ fun SearchScreen(
     // Only the first arrival seeds the query; a restored screen keeps what was already typed.
     LaunchedEffect(initialQuery) {
         if (initialQuery.isNotBlank() && state.query.isBlank()) viewModel.startSearch(initialQuery)
+        if (openFiltersOnStart && initialQuery.isBlank()) {
+            // Arrived through the filter button: show the filters, not the keyboard.
+            showFilters = true
+            return@LaunchedEffect
+        }
         runCatching { focusRequester.requestFocus() }
         keyboard?.show()
     }
