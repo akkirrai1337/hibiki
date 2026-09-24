@@ -139,7 +139,10 @@ class AniyomiAnimeSourceAdapter(
         }
         return guarded("details") {
             val details = source.getAnimeDetails(anime)
-            toAnimeTitle(details, fallbackId = id).also { rememberFetchType(it.id, details) }
+            // Some extensions rewrite the URL while loading details (Anichi appends "#<number>"). The title
+            // keeps the id it was asked for: the catalog, the library and the download list all know it by
+            // that id, and a second spelling made one title look like two.
+            toAnimeTitle(details, fallbackId = id).copy(id = id).also { rememberFetchType(it.id, details) }
         }
     }
 

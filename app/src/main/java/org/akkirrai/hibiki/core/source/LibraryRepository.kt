@@ -25,6 +25,31 @@ class LibraryRepository(context: Context) {
 
     init {
         importLegacyLibraryIfPresent(appContext, dao)
+        mergeFragmentDuplicates()
+    }
+
+    /**
+     * An extension that rewrote a title's URL while loading details ("...#8942") used to make the same title
+     * appear under two ids. Where both spellings exist, the fragment one is folded into the plain one.
+     */
+    private fun mergeFragmentDuplicates() {
+        val rows = dao.all()
+        val ids = rows.mapTo(mutableSetOf()) { it.titleId }
+        rows.filter { it.titleId.startsWith("source:") && '#' in it.titleId }.forEach { duplicate ->
+            val baseId = duplicate.titleId.substringBefore('#')
+            if (baseId !in ids) return@forEach
+            database.runInTransaction {
+                val base = dao.entry(baseId) ?: return@runInTransaction
+                dao.upsert(
+                    base.copy(
+                        animeJson = base.animeJson ?: duplicate.animeJson,
+                        categories = (base.categorySet() + duplicate.categorySet()).toStorageValue(),
+                        addedAt = listOfNotNull(base.addedAt, duplicate.addedAt).minOrNull(),
+                    ),
+                )
+                dao.delete(duplicate.titleId)
+            }
+        }
     }
 
     fun getLibraryEntries(): List<LibraryEntry> {
