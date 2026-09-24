@@ -386,6 +386,7 @@ class AniyomiAnimeSourceAdapter(
         val title = runCatching { anime.title }.getOrNull()
             ?.takeIf(String::isNotBlank)
             ?: url
+        val description = SourceDescriptionFooter.parse(anime.description)
         return AnimeTitle(
             id = url,
             originalName = title,
@@ -396,8 +397,15 @@ class AniyomiAnimeSourceAdapter(
                 SAnime.COMPLETED, SAnime.PUBLISHING_FINISHED -> "completed"
                 else -> null
             },
-            description = anime.description,
+            description = description.text,
+            ageRating = description.ageRating,
             genres = anime.getGenres().orEmpty(),
+            // Aniyomi has no studio field; extensions that know it put it in author (or artist).
+            studios = listOfNotNull(anime.author, anime.artist)
+                .flatMap { it.split(',', ';') }
+                .map(String::trim)
+                .filter(String::isNotBlank)
+                .distinct(),
         )
     }
 
