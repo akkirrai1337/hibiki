@@ -664,4 +664,5 @@
     <string name="migration_done_message">Перенесено %1$d из %2$d тайтлов.</string>
     <string name="migration_unmatched">Эти тайтлы не найдены в новом источнике и остались как были:</string>
     <string name="migration_close">Закрыть</string>
+    <string name="source_extensions_language_all">Все языки</string>
 </resources>

@@ -666,4 +666,5 @@
     <string name="migration_done_message">Moved %1$d of %2$d titles.</string>
     <string name="migration_unmatched">These titles were not found in the new source and stay as they were:</string>
     <string name="migration_close">Close</string>
+    <string name="source_extensions_language_all">All languages</string>
 </resources>

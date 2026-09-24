@@ -751,8 +751,13 @@ private fun SourceLanguageFilterDialog(
                     .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                languages.forEach { language ->
-                    val presentation = sourceLanguagePresentation(language)
+                val allLanguagesLabel = stringResource(R.string.source_extensions_language_all)
+                // "All" first, then by English name - the codes themselves are not an order anyone reads.
+                val presentations = languages.associateWith { sourceLanguagePresentation(it, allLanguagesLabel) }
+                languages.sortedWith(
+                    compareBy<String> { it.lowercase() != "all" }.thenBy { presentations.getValue(it).englishName.lowercase() },
+                ).forEach { language ->
+                    val presentation = presentations.getValue(language)
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -792,14 +797,31 @@ private data class SourceLanguagePresentation(
     val englishName: String,
 )
 
-private fun sourceLanguagePresentation(language: String): SourceLanguagePresentation = when (language.lowercase()) {
-    "ru", "russian" -> SourceLanguagePresentation("русский", "Russian")
-    "uk", "ukrainian" -> SourceLanguagePresentation("Українська", "Ukrainian")
-    "en", "english" -> SourceLanguagePresentation("English", "English")
-    "pt", "portuguese" -> SourceLanguagePresentation("Português", "Portuguese")
-    "tr", "turkish" -> SourceLanguagePresentation("Türkçe", "Turkish")
-    "th", "thai" -> SourceLanguagePresentation("ไทย", "Thai")
-    else -> SourceLanguagePresentation(language.uppercase(), language.uppercase())
+/**
+ * A language tag as people read it: its own name and the English one. The platform knows the names
+ * of every real language, so nothing here is a list to keep in step with the repositories; a tag it
+ * does not recognise is shown as itself.
+ */
+private fun sourceLanguagePresentation(language: String, allLanguagesLabel: String): SourceLanguagePresentation {
+    if (language.equals("all", ignoreCase = true)) return SourceLanguagePresentation(allLanguagesLabel, "Multi-language")
+    val locale = java.util.Locale.forLanguageTag(language.replace('_', '-'))
+    // An unknown tag has no display name and comes back as the tag itself (or blank).
+    fun name(inLocale: java.util.Locale): String? =
+        locale.getDisplayName(inLocale).takeIf { it.isNotBlank() && !it.equals(language, ignoreCase = true) }
+            ?.replaceFirstChar { it.titlecase(inLocale) }
+    val english = name(java.util.Locale.ENGLISH)
+    val native = name(locale)
+    return if (english == null) {
+        SourceLanguagePresentation(language.uppercase(), language.uppercase())
+    } else {
+        SourceLanguagePresentation(native ?: english, english)
+    }
+}
+
+/** The short code shown next to a version: the tag in capitals, with Ukrainian as UA (the country people know it by). */
+private fun languageBadge(language: String): String = when (language.lowercase()) {
+    "uk" -> "UA"
+    else -> language.uppercase()
 }
 
 /** One connected repository's own fetch outcome - kept separate per URL so one broken repository
@@ -1516,7 +1538,7 @@ private fun MarketplaceExtensionRow(
                 )
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        text = "${extension.lang.uppercase()} · $versionLabel",
+                        text = "${languageBadge(extension.lang)} · $versionLabel",
                         style = MaterialTheme.typography.bodySmall,
                         color = if (installedVersion != null && !upToDate) {
                             MaterialTheme.colorScheme.primary

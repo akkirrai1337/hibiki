@@ -654,4 +654,5 @@
     <string name="migration_done_message">Перенесено %1$d із %2$d тайтлів.</string>
     <string name="migration_unmatched">Ці тайтли не знайдено в новому джерелі, вони залишилися як були:</string>
     <string name="migration_close">Закрити</string>
+    <string name="source_extensions_language_all">Усі мови</string>
 </resources>
