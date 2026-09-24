@@ -7,6 +7,7 @@ import kotlinx.serialization.protobuf.ProtoBuf
 import org.akkirrai.hibiki.app.di.HibikiDependencies
 import org.akkirrai.hibiki.core.source.AnimeSourceRegistry
 import eu.kanade.tachiyomi.network.JavaScriptEngine
+import org.akkirrai.hibiki.core.model.ReleaseStatusText
 import eu.kanade.tachiyomi.network.NetworkHelper
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -35,6 +36,7 @@ class HibikiApplication : Application() {
         if (!Injekt.hasFactory<ProtoBuf>()) {
             Injekt.addSingleton(ProtoBuf {})
         }
+        ReleaseStatusText.initialize(this)
         NetworkHelper.initialize(this)
         // Extensions fetch these through Injekt.get()/injectLazy() exactly as in Aniyomi.
         if (!Injekt.hasFactory<NetworkHelper>()) {

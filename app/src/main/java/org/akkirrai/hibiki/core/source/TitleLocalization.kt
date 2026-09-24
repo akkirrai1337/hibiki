@@ -1,10 +1,8 @@
 package org.akkirrai.hibiki.core.source
 
+import android.content.Context
 import org.akkirrai.beakokit.model.AnimeReleaseStatus
+import org.akkirrai.hibiki.core.model.ReleaseStatusText
 
-fun AnimeReleaseStatus.localizedDisplayName(preferEnglish: Boolean): String = when (this) {
-    AnimeReleaseStatus.ONGOING -> if (preferEnglish) "Ongoing" else "Онгоинг"
-    AnimeReleaseStatus.RELEASED -> if (preferEnglish) "Released" else "Вышел"
-    AnimeReleaseStatus.ANNOUNCEMENT -> if (preferEnglish) "Announcement" else "Анонс"
-    AnimeReleaseStatus.UNKNOWN -> if (preferEnglish) "Unknown" else "Неизвестно"
-}
+/** The status name from string resources, in the app language. */
+fun AnimeReleaseStatus.localizedDisplayName(context: Context): String = ReleaseStatusText.label(context, this)

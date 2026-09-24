@@ -9,6 +9,7 @@ import org.akkirrai.beakokit.api.PlaybackGroup
 import org.akkirrai.beakokit.api.PlaybackSource
 import org.akkirrai.beakokit.api.LatestSource
 import org.akkirrai.beakokit.model.AnimeSearchFilter
+import org.akkirrai.beakokit.model.AnimeReleaseStatus
 import org.akkirrai.beakokit.model.AnimeSearchFilterCatalog
 import org.akkirrai.beakokit.model.AnimeSearchSort
 import org.akkirrai.beakokit.model.AnimeSearchRequest
@@ -99,6 +100,7 @@ class AnimeSourceRuntimeTest {
             source = source,
             localizeFilters = { catalog, _ -> catalog },
             normalizeTitleId = { it },
+            statusLabel = { status -> if (status == AnimeReleaseStatus.ONGOING) "Онгоинг" else status.name },
         )
 
     private class FakePlaybackAnimeSource : FakeAnimeSource(), PlaybackSource {

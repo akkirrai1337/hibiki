@@ -150,6 +150,8 @@ import org.akkirrai.hibiki.core.design.component.anime.AnimeTitleText
 import org.akkirrai.hibiki.core.design.component.anime.AnimeDetailsTransition
 import org.akkirrai.hibiki.core.design.component.anime.PosterImage
 import org.akkirrai.hibiki.core.model.Anime
+import org.akkirrai.hibiki.core.model.ReleaseStatusText
+import org.akkirrai.beakokit.model.AnimeReleaseStatus
 import org.akkirrai.hibiki.core.model.AnimeRating
 import org.akkirrai.hibiki.core.model.EpisodeWatchProgress
 import org.akkirrai.hibiki.core.model.formatEpisodeNumber
@@ -2341,9 +2343,8 @@ private fun watchSourcesAvailable(
 }
 
 private fun isAnnouncementStatus(status: String, episodesLabel: String = ""): Boolean {
-    val values = listOf(status, episodesLabel).map { it.trim().lowercase(Locale.getDefault()) }
-    return values.any { value ->
-        value == "анонс" || value == "announcement" || value == "announced" || value == "anons"
+    return listOf(status, episodesLabel).any {
+        ReleaseStatusText.parse(it) == AnimeReleaseStatus.ANNOUNCEMENT
     }
 }
 

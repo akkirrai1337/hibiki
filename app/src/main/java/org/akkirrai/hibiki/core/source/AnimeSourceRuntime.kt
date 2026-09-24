@@ -11,6 +11,7 @@ import org.akkirrai.beakokit.api.PlaybackSource
 import org.akkirrai.beakokit.api.LatestSource
 import org.akkirrai.beakokit.api.SourceId
 import org.akkirrai.beakokit.api.health.SourceHealthReporter
+import org.akkirrai.beakokit.model.AnimeReleaseStatus
 import org.akkirrai.beakokit.model.AnimeSearchFilterCatalog
 import org.akkirrai.beakokit.model.AnimeSearchRequest
 import org.akkirrai.beakokit.model.AnimeTitle
@@ -25,6 +26,8 @@ class AnimeSourceRuntime internal constructor(
     val source: AnimeSource,
     private val localizeFilters: (AnimeSearchFilterCatalog, Boolean) -> AnimeSearchFilterCatalog,
     private val normalizeTitleId: (String) -> String,
+    /** Status names shown in the status filter, from string resources in the app language. */
+    private val statusLabel: (AnimeReleaseStatus) -> String = { it.name.lowercase().replaceFirstChar(Char::uppercase) },
 ) {
     private val latestSource = source as? LatestSource
     private val playbackSource = source as? PlaybackSource
@@ -62,7 +65,7 @@ class AnimeSourceRuntime internal constructor(
     }
 
     suspend fun filterCatalog(preferEnglish: Boolean): AnimeSearchFilterCatalog =
-        localizeFilters(source.getSearchFilterCatalog(), preferEnglish).sanitized(preferEnglish)
+        localizeFilters(source.getSearchFilterCatalog(), preferEnglish).sanitized(preferEnglish, statusLabel)
 
     internal suspend fun getPlaybackGroups(title: AnimeTitle): List<PlaybackGroup> =
         playbackSource?.getPlaybackGroups(title.copy(id = nativeId(title.id))).orEmpty()
@@ -152,12 +155,15 @@ class AnimeSourceRuntimeManager(
     private data class CachedRuntime(val runtime: AnimeSourceRuntime, val generation: Int)
 }
 
-private fun AnimeSearchFilterCatalog.sanitized(preferEnglish: Boolean): AnimeSearchFilterCatalog = copy(
+private fun AnimeSearchFilterCatalog.sanitized(
+    preferEnglish: Boolean,
+    statusLabel: (AnimeReleaseStatus) -> String,
+): AnimeSearchFilterCatalog = copy(
     sortOptions = sortOptions.sanitizeOptions(preferEnglish),
     typeOptions = typeOptions.takeIf { capabilities.supports(org.akkirrai.beakokit.model.AnimeSearchFilter.TYPE) }
         .orEmpty().sanitizeOptions(preferEnglish),
     statusOptions = statusOptions.takeIf { capabilities.supports(org.akkirrai.beakokit.model.AnimeSearchFilter.STATUS) }
-        .orEmpty().sanitizeOptions(preferEnglish, isStatus = true),
+        .orEmpty().sanitizeOptions(preferEnglish, statusLabel = statusLabel),
     genreOptions = genreOptions.takeIf {
         capabilities.supports(org.akkirrai.beakokit.model.AnimeSearchFilter.INCLUDED_GENRES) ||
             capabilities.supports(org.akkirrai.beakokit.model.AnimeSearchFilter.EXCLUDED_GENRES)
@@ -166,13 +172,13 @@ private fun AnimeSearchFilterCatalog.sanitized(preferEnglish: Boolean): AnimeSea
 
 private fun List<SearchFilterOption>.sanitizeOptions(
     preferEnglish: Boolean,
-    isStatus: Boolean = false,
+    statusLabel: ((AnimeReleaseStatus) -> String)? = null,
 ): List<SearchFilterOption> = mapNotNull { option ->
     val id = option.id.trim()
     if (id.isBlank()) return@mapNotNull null
     val rawTitle = option.title.trim()
     val title = when {
-        isStatus -> canonicalStatusLabel(id, rawTitle, preferEnglish)
+        statusLabel != null -> canonicalStatusLabel(id, rawTitle, statusLabel)
         rawTitle.isBlank() || rawTitle == id -> id.humanizedAlias()
         else -> rawTitle
     }
@@ -182,18 +188,12 @@ private fun List<SearchFilterOption>.sanitizeOptions(
         ?.let { option.copy(id = id, title = it) }
 }.distinctBy(SearchFilterOption::id)
 
-private fun canonicalStatusLabel(id: String, title: String, preferEnglish: Boolean): String {
-    return when (listOf(id, title).joinToString(" ").trim().lowercase()) {
-        "ongoing", "is_ongoing" -> if (preferEnglish) "Ongoing" else "Онгоинг"
-        "released", "completed", "is_not_ongoing" -> if (preferEnglish) "Released" else "Вышло"
-        "announcement", "announced" -> if (preferEnglish) "Announcement" else "Анонс"
-        else -> when (title.trim().lowercase()) {
-            "ongoing", "is_ongoing" -> if (preferEnglish) "Ongoing" else "Онгоинг"
-            "released", "completed", "is_not_ongoing" -> if (preferEnglish) "Released" else "Вышло"
-            "announcement", "announced" -> if (preferEnglish) "Announcement" else "Анонс"
-            else -> title.takeIf(String::isNotBlank) ?: id.humanizedAlias()
-        }
-    }
+/** A recognised status gets its resource label; an unrecognised one keeps the source's own words. */
+private fun canonicalStatusLabel(id: String, title: String, statusLabel: (AnimeReleaseStatus) -> String): String {
+    val status = listOf(id, title)
+        .map(AnimeReleaseStatus::from)
+        .firstOrNull { it != AnimeReleaseStatus.UNKNOWN }
+    return status?.let(statusLabel) ?: title.takeIf(String::isNotBlank) ?: id.humanizedAlias()
 }
 
 private fun String.humanizedAlias(): String =

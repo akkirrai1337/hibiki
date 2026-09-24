@@ -1,5 +1,7 @@
 package org.akkirrai.hibiki.core.model
 
+import org.akkirrai.beakokit.model.AnimeReleaseStatus
+
 import java.util.Locale
 
 private val META_SPLIT_REGEX = Regex("\\s*[•·|]\\s*")
@@ -47,8 +49,7 @@ fun Anime.buildLibraryMeta(
 }
 
 fun Anime.isAnnouncement(): Boolean {
-    val values = listOf(status, episodesLabel).map { it.trim().lowercase() }
-    return values.any { it == "анонс" || it == "announcement" || it == "announced" || it == "anons" }
+    return listOf(status, episodesLabel).any { ReleaseStatusText.parse(it) == AnimeReleaseStatus.ANNOUNCEMENT }
 }
 
 private const val UNKNOWN_META_VALUE = "Unknown"

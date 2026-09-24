@@ -198,6 +198,7 @@ object AnimeSourceRegistry {
             source = registration.runtimeSource,
             localizeFilters = registration.localizeFilters,
             normalizeTitleId = registration.normalizeTitleId,
+            statusLabel = { status -> status.localizedDisplayName(context) },
         )
     }
 

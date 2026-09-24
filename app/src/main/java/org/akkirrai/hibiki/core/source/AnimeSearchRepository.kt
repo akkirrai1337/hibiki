@@ -37,6 +37,7 @@ import org.akkirrai.beakokit.model.AnimeSearchFilterCatalog
 import org.akkirrai.beakokit.model.AnimeSearchRequest
 import org.akkirrai.beakokit.model.AnimeSearchSort
 import org.akkirrai.beakokit.model.AnimeReleaseStatus
+import org.akkirrai.hibiki.core.model.ReleaseStatusText
 import org.akkirrai.beakokit.model.AnimeTitle
 import org.akkirrai.beakokit.model.AnimeTrailerTitle
 import org.akkirrai.beakokit.model.RelatedAnimeTitle
@@ -385,10 +386,12 @@ class AnimeSearchRepository(
         val posterUrl = posterUrl ?: fallback?.posterUrl
         val sourcePosterFallbackUrl = posterFallbackUrl
             ?.takeIf { it.isNotBlank() && it != posterUrl }
-        val resolvedStatus = releaseStatus.localizedDisplayName(preferEnglish)
+        val statusLabel = appContext?.let(releaseStatus::localizedDisplayName)
+            ?: releaseStatus.name.lowercase().replaceFirstChar(Char::uppercase)
+        val resolvedStatus = statusLabel
             .takeUnless { releaseStatus == AnimeReleaseStatus.UNKNOWN }
             ?: fallback?.status
-            ?: if (preferEnglish) "Unknown" else "Неизвестно"
+            ?: statusLabel
         return Anime(
             id = canonicalId,
             title = displayName,
@@ -480,8 +483,7 @@ class AnimeSearchRepository(
     }
 
     private fun String?.isAnnouncementStatus(): Boolean {
-        val normalized = orEmpty().trim().lowercase()
-        return normalized == "анонс" || normalized == "announcement" || normalized == "announced" || normalized == "anons"
+        return ReleaseStatusText.parse(this) == AnimeReleaseStatus.ANNOUNCEMENT
     }
 
     private fun AnimeTitle.buildEpisodesLabel(
