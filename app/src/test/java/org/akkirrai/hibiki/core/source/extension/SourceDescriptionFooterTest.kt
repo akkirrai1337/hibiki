@@ -40,6 +40,29 @@ class SourceDescriptionFooterTest {
     }
 
     @Test
+    fun `a lone score line becomes a score, not an age rating`() {
+        val parsed = SourceDescriptionFooter.parse("The story.\n\nScore: 6.14")
+        assertEquals("The story.", parsed.text)
+        assertNull(parsed.ageRating)
+        assertEquals(6.14, FooterFacts.from(parsed.facts).score!!, 0.001)
+    }
+
+    @Test
+    fun `a numeric rating is a score and a textual one is an age rating`() {
+        val numeric = SourceDescriptionFooter.parse("Story.\n**Rating:** 8.5/10")
+        assertNull(numeric.ageRating)
+        assertEquals(8.5, FooterFacts.from(numeric.facts).score!!, 0.001)
+        assertNull(FooterFacts.from(SourceDescriptionFooter.parse("Story.\n**Rating:** PG-13").facts).score)
+        assertEquals(7.8, FooterFacts.from(mapOf("score" to "78")).score!!, 0.001)
+    }
+
+    @Test
+    fun `a plain colon line with an ordinary key stays in the story`() {
+        val text = "Note: this is prose.\nAnd more."
+        assertEquals(text, SourceDescriptionFooter.parse(text).text)
+    }
+
+    @Test
     fun `a plain description is untouched`() {
         val parsed = SourceDescriptionFooter.parse("Just a story.\nWith two lines.")
         assertEquals("Just a story.\nWith two lines.", parsed.text)
