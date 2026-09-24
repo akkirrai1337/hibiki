@@ -159,7 +159,13 @@ import org.akkirrai.hibiki.core.model.formatPlaybackTime
 import org.akkirrai.hibiki.core.model.isWatchedToEnd
 import org.akkirrai.hibiki.core.model.RelatedAnime
 import org.akkirrai.hibiki.core.model.TitleWatchState
+import org.akkirrai.hibiki.core.model.WatchEpisode
 import org.akkirrai.hibiki.core.model.WatchSource
+import org.akkirrai.hibiki.core.source.watchTitleIdFromSourceId
+import org.akkirrai.hibiki.feature.player.EpisodesUiState
+import org.akkirrai.hibiki.feature.player.EpisodesViewModel
+import org.akkirrai.hibiki.feature.player.resolveEpisodeAutoScrollIndex
+import androidx.lifecycle.viewmodel.compose.viewModel
 import org.akkirrai.hibiki.core.model.WatchSourceSelection
 import org.akkirrai.hibiki.core.source.AnimeSearchRepository
 import org.akkirrai.hibiki.core.source.withRelatedMetadata
@@ -197,6 +203,7 @@ fun DetailsScreen(
     onRelatedAnimeClick: (Anime) -> Unit,
     onOpenSources: (Anime) -> Unit,
     onOpenSingleSource: (Anime, WatchSource) -> Unit,
+    onPlayEpisode: (Anime, WatchSource, WatchEpisode) -> Unit,
     onResumePlayback: (TitleWatchState) -> Unit,
     contentPadding: PaddingValues = PaddingValues(),
     sharedTransitionScope: SharedTransitionScope? = null,
@@ -486,6 +493,50 @@ fun DetailsScreen(
         sourceDescriptor.supportsPlayback &&
             !isAnnouncementStatus(heroInfo.status, currentAnime.episodesLabel)
     }
+    // The sources this title can be watched from, resolved up front so its episodes can be listed
+    // right on this page. null while resolving; a title with none keeps the old "Watch" flow.
+    var inlineSources by remember(anime.id) { mutableStateOf<List<WatchSource>?>(null) }
+    var inlineSourceId by remember(anime.id) { mutableStateOf<String?>(null) }
+    LaunchedEffect(anime.id, canWatch) {
+        if (!canWatch) return@LaunchedEffect
+        val offline = withContext(Dispatchers.IO) { offlineDownloadRepository.getOfflineSources(anime.id) }
+        val loaded = try {
+            withContext(Dispatchers.IO) { animeWatchRepository.loadSources(animeId = anime.id) {} }
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Exception) {
+            emptyList()
+        }
+        val sources = loaded.ifEmpty { offline }
+        val saved = withContext(Dispatchers.IO) { watchStateRepository.getSelectedSource(anime.id).sourceId }
+        inlineSources = sources
+        inlineSourceId = sources.firstOrNull { it.sourceId == saved }?.sourceId ?: sources.firstOrNull()?.sourceId
+    }
+    val episodesViewModel = inlineSourceId?.let { id ->
+        viewModel<EpisodesViewModel>(
+            key = "details-episodes:$id",
+            factory = EpisodesViewModel.Factory(sourceId = id, context = context),
+        )
+    }
+    val episodesState = episodesViewModel?.uiState?.collectAsState()
+
+    // With the episode list on this page the primary button plays what you would watch next;
+    // without one (no source resolved yet, or none exists) it falls back to the sources flow.
+    fun startWatching() {
+        val source = inlineSources?.firstOrNull { it.sourceId == inlineSourceId }
+        val items = (episodesState?.value?.result as? EpisodesUiState.Content)?.items
+        if (source == null || items.isNullOrEmpty()) {
+            openWatchSources()
+            return
+        }
+        screenScope.launch {
+            val progress = withContext(Dispatchers.IO) {
+                watchStateRepository.getEpisodeProgressForSource(watchTitleIdFromSourceId(source.sourceId), source.sourceId)
+            }
+            val index = resolveEpisodeAutoScrollIndex(items, progress) ?: 0
+            onPlayEpisode(currentAnimeState, source, items[index])
+        }
+    }
     val fallbackColorScheme = MaterialTheme.colorScheme
     val resolvedTitleSeedColor = titleSeedColor
     val titleColorScheme = if (resolvedTitleSeedColor == null) {
@@ -595,7 +646,7 @@ fun DetailsScreen(
                     onLibraryClick = {
                         isLibrarySheetOpen = true
                     },
-                    onPrimaryClick = { openWatchSources() },
+                    onPrimaryClick = { startWatching() },
                     onResumeClick = onResumePlayback,
                     onTrailerClick = {
                         currentAnime.trailer?.playbackUrl?.let(uriHandler::openUri)
@@ -642,6 +693,33 @@ fun DetailsScreen(
                             },
                         )
                     }
+                }
+            }
+
+            item {
+                val sources = inlineSources
+                val selected = sources?.firstOrNull { it.sourceId == inlineSourceId }
+                val episodesUi = episodesState?.value
+                if (canWatch && !sources.isNullOrEmpty() && selected != null && episodesUi != null) {
+                    DetailsEpisodesSection(
+                        anime = currentAnime,
+                        sources = sources,
+                        selectedSource = selected,
+                        state = episodesUi.result,
+                        onSelectSource = { source ->
+                            inlineSourceId = source.sourceId
+                            // A season or source picked here is the one the player and resume should use.
+                            watchStateRepository.saveSelectedSource(
+                                titleId = currentAnimeState.id,
+                                sourceId = source.sourceId,
+                                sourceTitle = source.title,
+                                quality = source.qualityLabel,
+                                autoSelect = false,
+                            )
+                        },
+                        onRetry = { episodesViewModel?.load() },
+                        onEpisodeClick = { episode -> onPlayEpisode(currentAnimeState, selected, episode) },
+                    )
                 }
             }
 

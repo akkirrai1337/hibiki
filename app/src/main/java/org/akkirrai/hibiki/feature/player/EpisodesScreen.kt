@@ -109,10 +109,10 @@ import org.akkirrai.hibiki.core.source.watchTitleIdFromSourceId
 import org.akkirrai.hibiki.feature.details.isOngoingStatus
 import org.akkirrai.hibiki.feature.details.rememberNextEpisodeEta
 
-private const val EPISODES_PAGE_SIZE = 24
+internal const val EPISODES_PAGE_SIZE = 24
 private const val EPISODE_ROW_ANIMATION_DURATION_MILLIS = 220
 
-private val EpisodeRowCornerRadius = 17.dp
+internal val EpisodeRowCornerRadius = 17.dp
 private val EpisodeNumberTileSize = 52.dp
 private val EpisodeNumberTileCornerRadius = 15.dp
 private val EpisodeWatchedBadgeSize = 18.dp
@@ -419,7 +419,7 @@ fun EpisodesScreen(
  * row instead of a floating badge. Not clickable: there's nothing to play yet.
  */
 @Composable
-private fun UpcomingEpisodeRow(
+internal fun UpcomingEpisodeRow(
     episodeNumber: Int,
     countdownText: String,
     shape: RoundedCornerShape,
@@ -478,7 +478,7 @@ private fun UpcomingEpisodeCountdownChip(text: String) {
 }
 
 @Composable
-private fun ShowMoreEpisodesRow(
+internal fun ShowMoreEpisodesRow(
     shape: RoundedCornerShape,
     onClick: () -> Unit,
 ) {
@@ -500,7 +500,7 @@ private fun ShowMoreEpisodesRow(
 }
 
 @Composable
-private fun EpisodeRow(
+internal fun EpisodeRow(
     episode: WatchEpisode,
     progress: EpisodeWatchProgress?,
     status: EpisodeProgressStatus,
@@ -804,7 +804,7 @@ private fun EpisodeDownloadAction(
     }
 }
 
-private fun resolveEpisodeStatus(
+internal fun resolveEpisodeStatus(
     progress: EpisodeWatchProgress?,
 ): EpisodeProgressStatus {
     return when {
@@ -908,7 +908,7 @@ private fun formatEpisodeTile(number: Double): String {
     return text.takeIf { '.' in it } ?: text.padStart(2, '0')
 }
 
-private fun OfflineEpisodeDownloadState.keepsTitleSaved(): Boolean {
+internal fun OfflineEpisodeDownloadState.keepsTitleSaved(): Boolean {
     return when (this) {
         OfflineEpisodeDownloadState.NotDownloaded,
         OfflineEpisodeDownloadState.Failed -> false

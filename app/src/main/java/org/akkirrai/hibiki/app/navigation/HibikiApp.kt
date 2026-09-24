@@ -568,6 +568,24 @@ private fun HibikiNavHost(
                             )
                         }
                     },
+                    onPlayEpisode = { anime, source, episode ->
+                        navController.runIfCurrent(backStackEntry) {
+                            watchStateRepository.saveSelectedSource(
+                                titleId = anime.id,
+                                sourceId = source.sourceId,
+                                sourceTitle = source.title,
+                                quality = source.qualityLabel,
+                                autoSelect = false,
+                            )
+                            navController.navigateSingleTopTo(
+                                AnimeNavType.createPlayerRoute(
+                                    sourceId = source.sourceId,
+                                    episodeId = episode.id,
+                                    episodeNumber = episode.number,
+                                )
+                            )
+                        }
+                    },
                     onResumePlayback = { progress ->
                         navController.runIfCurrent(backStackEntry) {
                             navController.navigateSingleTopTo(
