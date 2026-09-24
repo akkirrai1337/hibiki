@@ -21,6 +21,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.RecordVoiceOver
 import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.CalendarMonth
+import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.FormatListNumbered
 import androidx.compose.material.icons.rounded.Movie
 import androidx.compose.material.icons.rounded.MusicNote
@@ -349,7 +350,7 @@ private fun typeChipIcon(option: String): ImageVector? = when (option.trim().low
     "ona" -> Icons.Rounded.Public
     "ova" -> Icons.Rounded.Videocam
     "special" -> Icons.Rounded.AutoAwesome
-    "tv" -> Icons.Rounded.Tv
+    "tv", "tv show", "tv shows", "tv series", "series" -> Icons.Rounded.Tv
     "tv short" -> Icons.Rounded.VideoLibrary
     else -> null
 }
@@ -358,6 +359,7 @@ private fun typeChipIcon(option: String): ImageVector? = when (option.trim().low
 private fun sortChipIcon(option: String): ImageVector? {
     val t = option.trim().lowercase()
     return when {
+        "favorit" in t || "favourit" in t -> Icons.Rounded.Favorite
         "updated" in t || "update" in t -> Icons.Rounded.Update
         "added" in t || "newest" in t || "latest" in t || "new" in t -> Icons.Rounded.NewReleases
         "score" in t || "rating" in t || "rated" in t -> Icons.Rounded.Star
