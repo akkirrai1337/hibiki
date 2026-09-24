@@ -74,6 +74,7 @@ import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowLeft
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.HighQuality
 import androidx.compose.material.icons.filled.FastForward
+import androidx.compose.material.icons.filled.Subtitles
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.LockOpen
 import androidx.compose.material.icons.outlined.PlayCircle
@@ -173,6 +174,9 @@ import androidx.media3.exoplayer.text.TextRenderer
 import androidx.media3.session.MediaSession
 import androidx.media3.ui.PlayerView
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.Dispatchers
@@ -197,6 +201,7 @@ import org.akkirrai.hibiki.core.log.AppLogger
 import org.akkirrai.hibiki.core.model.PlaybackSegment
 import org.akkirrai.hibiki.core.model.PlaybackSegmentType
 import org.akkirrai.hibiki.core.model.PlaybackStream
+import org.akkirrai.hibiki.core.model.PlaybackSubtitle
 import org.akkirrai.hibiki.core.model.PlaybackStreamType
 import org.akkirrai.hibiki.core.model.WatchEpisode
 import org.akkirrai.hibiki.core.model.WatchSource
@@ -2288,7 +2293,7 @@ private fun PlayerSubtitleButton(
     ) {
         Box(contentAlignment = Alignment.Center) {
             Icon(
-                imageVector = if (enabled) Icons.Outlined.SubtitlesOff else Icons.Outlined.Subtitles,
+                imageVector = if (enabled) Icons.Filled.Subtitles else Icons.Outlined.Subtitles,
                 contentDescription = stringResource(
                     if (enabled) R.string.watch_player_subtitles_disable
                     else R.string.watch_player_subtitles_enable,
@@ -3127,6 +3132,8 @@ private fun PlayerMediaPreparationEffect(
             previousPlaybackKey == playbackKey && it > 0L
         } ?: 0L
         val resumeWhenReady = exoPlayer.playWhenReady
+        // Extensions report a track's URL but not its format, and ASS, SRT and WebVTT need different parsers.
+        val subtitleMimeTypes = if (state.isPlayingOffline) emptyMap() else sniffSubtitleMimeTypes(playback.subtitles)
         exoPlayer.stop()
         exoPlayer.clearMediaItems()
         exoPlayer.setMediaSource(
@@ -3135,6 +3142,7 @@ private fun PlayerMediaPreparationEffect(
                 offline = state.isPlayingOffline,
                 selectedSubtitleUrl = selectedSubtitleUrl,
                 customSubtitle = customSubtitle,
+                subtitleMimeTypes = subtitleMimeTypes,
             ),
         )
         exoPlayer.trackSelectionParameters = exoPlayer.trackSelectionParameters
@@ -3185,6 +3193,7 @@ private fun PlaybackStream.toMediaSource(
     offline: Boolean = false,
     selectedSubtitleUrl: String? = null,
     customSubtitle: LocalSubtitle? = null,
+    subtitleMimeTypes: Map<String, String> = emptyMap(),
 ): MediaSource {
     // Download requests contain the primary stream only. Never attach separately resolved audio
     // or subtitle URLs while offline: they are not guaranteed to be in the download cache and a
@@ -3202,7 +3211,7 @@ private fun PlaybackStream.toMediaSource(
             label = subtitle.label,
             language = subtitle.language,
             headers = subtitle.headers,
-            mimeType = TEXT_VTT,
+            mimeType = subtitleMimeTypes[subtitle.url] ?: subtitleMimeTypeFromUrl(subtitle.url) ?: TEXT_VTT,
             isLocal = false,
         )
     } + listOfNotNull(customSubtitle?.let { subtitle ->
@@ -3277,6 +3286,56 @@ private fun PlaybackStream.toMediaSource(
     }
     return if (sources.size == 1) videoSource else MergingMediaSource(*sources.toTypedArray())
 }
+
+private fun subtitleMimeTypeFromUrl(url: String): String? {
+    val path = url.substringBefore('?').substringBefore('#').lowercase()
+    return when {
+        path.endsWith(".vtt") -> TEXT_VTT
+        path.endsWith(".ass") || path.endsWith(".ssa") -> TEXT_SSA
+        path.endsWith(".srt") -> MimeTypes.APPLICATION_SUBRIP
+        else -> null
+    }
+}
+
+/** Reads the start of each remote track whose URL does not name its format and tells the format from the content. */
+private suspend fun sniffSubtitleMimeTypes(subtitles: List<PlaybackSubtitle>): Map<String, String> =
+    coroutineScope {
+        subtitles
+            .filter { subtitleMimeTypeFromUrl(it.url) == null }
+            .map { subtitle ->
+                async(Dispatchers.IO) {
+                    subtitle.url to (sniffSubtitleMimeType(subtitle.url, subtitle.headers) ?: TEXT_VTT)
+                }
+            }
+            .awaitAll()
+            .toMap()
+    }
+
+private val SRT_START = Regex("""^\d+\s*\r?\n\d{1,2}:\d{2}:\d{2}[,.]\d{1,3}""")
+
+private fun sniffSubtitleMimeType(url: String, headers: Map<String, String>): String? = runCatching {
+    val connection = (java.net.URL(url).openConnection() as java.net.HttpURLConnection).apply {
+        connectTimeout = 4_000
+        readTimeout = 4_000
+        headers.forEach { (name, value) -> setRequestProperty(name, value) }
+        setRequestProperty("Range", "bytes=0-1023")
+    }
+    try {
+        val head = connection.inputStream.use { input ->
+            val buffer = ByteArray(1024)
+            val read = input.read(buffer)
+            if (read > 0) String(buffer, 0, read, Charsets.UTF_8) else ""
+        }.trimStart { it.isWhitespace() || it == '﻿' }
+        when {
+            head.startsWith("WEBVTT") -> TEXT_VTT
+            head.contains("[Script Info]", ignoreCase = true) || head.contains("[V4+ Styles]", ignoreCase = true) -> TEXT_SSA
+            SRT_START.containsMatchIn(head) -> MimeTypes.APPLICATION_SUBRIP
+            else -> null
+        }
+    } finally {
+        connection.disconnect()
+    }
+}.getOrNull()
 
 private data class LocalSubtitle(
     val uri: Uri,
