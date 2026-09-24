@@ -120,6 +120,7 @@ import org.akkirrai.hibiki.core.source.extension.InstalledApkExtensions
 import org.akkirrai.hibiki.core.source.extension.InstalledApkExtensionInfo
 import org.akkirrai.hibiki.core.source.extension.MarketplaceExtension
 import org.akkirrai.hibiki.core.source.extension.isExtensionVersionNewer
+import org.akkirrai.hibiki.core.source.extension.RepositoryCatalogCache
 import org.akkirrai.hibiki.core.source.extension.SourceExtensionUpdateChecker
 import org.akkirrai.hibiki.core.source.extension.isUpdateAvailable
 
@@ -293,17 +294,19 @@ fun SourceExtensionsScreen(
 
     val installedApkLoadErrors = AnimeSourceRegistry.apkExtensionLoadErrors()
 
+    /** Downloads the index of each of [urls]. A repository that already has an index keeps showing it meanwhile and if the fetch fails. */
     suspend fun loadRepositories(urls: List<String>) {
-        if (urls.isEmpty()) {
-            repoStates = emptyMap()
-            return
-        }
-        repoStates = urls.associateWith { RepoFetchResult.Loading }
+        if (urls.isEmpty()) return
+        repoStates = repoStates + urls
+            .filter { repoStates[it] !is RepoFetchResult.Loaded }
+            .associateWith { RepoFetchResult.Loading }
         val results = coroutineScope {
             urls.map { url ->
                 async {
                     url to try {
-                        RepoFetchResult.Loaded(ExtensionMarketplaceClient(marketplaceHttpClient, url).fetchCatalog())
+                        val extensions = ExtensionMarketplaceClient(marketplaceHttpClient, url).fetchCatalog()
+                        withContext(kotlinx.coroutines.Dispatchers.IO) { RepositoryCatalogCache.put(context, url, extensions) }
+                        RepoFetchResult.Loaded(extensions)
                     } catch (error: CancellationException) {
                         throw error
                     } catch (error: Exception) {
@@ -312,10 +315,32 @@ fun SourceExtensionsScreen(
                 }
             }.awaitAll()
         }
-        repoStates = results.toMap()
+        repoStates = repoStates + results.filter { (url, result) ->
+            result is RepoFetchResult.Loaded || repoStates[url] !is RepoFetchResult.Loaded
+        }
     }
 
-    LaunchedEffect(repositoryRefreshSignal, sourceRepositoryUrls) { loadRepositories(sourceRepositoryUrls) }
+    // The installed list needs no network: icons and update info come from the last index fetched
+    // for each repository (memory or disk). The network is used only when a repository has no index
+    // yet, when the repositories tab or one repository is open and its index is stale, in onboarding
+    // (where the list is what to install), or when the user presses refresh.
+    val browsingRepositories = onboarding || pagerState.currentPage == 1 || selectedRepositoryUrl != null
+    var handledRefreshSignal by remember { mutableStateOf(0) }
+    LaunchedEffect(sourceRepositoryUrls, browsingRepositories, repositoryRefreshSignal) {
+        val forced = repositoryRefreshSignal != handledRefreshSignal
+        handledRefreshSignal = repositoryRefreshSignal
+        val cached = withContext(kotlinx.coroutines.Dispatchers.IO) {
+            sourceRepositoryUrls.associateWith { RepositoryCatalogCache.get(context, it) }
+        }
+        repoStates = repoStates.filterKeys { it in sourceRepositoryUrls } + cached.mapNotNull { (url, snapshot) ->
+            snapshot?.let { url to RepoFetchResult.Loaded(it.extensions) }
+        }.filter { (url, _) -> repoStates[url] !is RepoFetchResult.Loaded }
+        val toFetch = sourceRepositoryUrls.filter { url ->
+            val snapshot = cached[url]
+            forced || snapshot == null || (browsingRepositories && snapshot.isStale())
+        }
+        loadRepositories(toFetch)
+    }
     // Do not make a second request purely for the bottom-navigation badge: this screen already
     // fetched the index for an explicit visit or a manual refresh, so use that same snapshot.
     // In particular, app startup and returning from the background must remain fully offline.
