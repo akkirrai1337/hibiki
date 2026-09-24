@@ -346,17 +346,15 @@ fun SettingsScreen(
             }
         }
 
-        if (BuildConfig.GITHUB_UPDATES_ENABLED) {
-            item(key = "updates") {
-                SettingsSection(title = stringResource(R.string.settings_updates)) {
-                    SettingsItems(count = 1) { _, _ ->
-                        SettingsActionItem(
-                            icon = Icons.Filled.Refresh,
-                            title = stringResource(R.string.settings_check_updates),
-                            shape = CircleShape,
-                            onClick = onCheckForUpdates,
-                        )
-                    }
+        item(key = "updates") {
+            SettingsSection(title = stringResource(R.string.settings_updates)) {
+                SettingsItems(count = 1) { _, _ ->
+                    SettingsActionItem(
+                        icon = Icons.Filled.Refresh,
+                        title = stringResource(R.string.settings_check_updates),
+                        shape = CircleShape,
+                        onClick = onCheckForUpdates,
+                    )
                 }
             }
         }

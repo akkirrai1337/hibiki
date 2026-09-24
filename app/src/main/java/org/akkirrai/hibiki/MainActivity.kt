@@ -135,10 +135,8 @@ class MainActivity : ComponentActivity() {
         setTheme(R.style.Theme_Hibiki)
         super.onCreate(savedInstanceState)
         AppLogger.install(applicationContext)
-        if (BuildConfig.GITHUB_UPDATES_ENABLED) {
-            cleanupInstalledUpdate()
-            updateDownloadId = updatePreferences.getLong(KEY_PENDING_DOWNLOAD_ID, NO_DOWNLOAD_ID)
-        }
+        cleanupInstalledUpdate()
+        updateDownloadId = updatePreferences.getLong(KEY_PENDING_DOWNLOAD_ID, NO_DOWNLOAD_ID)
 
         lifecycleScope.launch(Dispatchers.IO) {
             OfflineMediaCache.migrateLegacyStreamingCacheIfSafe(applicationContext)
@@ -170,7 +168,7 @@ class MainActivity : ComponentActivity() {
                                 onComplete = appPreferences::completeOnboarding,
                             )
                         }
-                        if (preferences.onboardingCompleted && BuildConfig.GITHUB_UPDATES_ENABLED) {
+                        if (preferences.onboardingCompleted) {
                             availableUpdate?.let { update ->
                                 AppUpdateDialog(
                                     update = update,
@@ -185,15 +183,13 @@ class MainActivity : ComponentActivity() {
             }
         }
 
-        if (BuildConfig.GITHUB_UPDATES_ENABLED) {
-            ContextCompat.registerReceiver(
-                this,
-                updateDownloadReceiver,
-                IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE),
-                ContextCompat.RECEIVER_NOT_EXPORTED,
-            )
-            checkForAppUpdate()
-        }
+        ContextCompat.registerReceiver(
+            this,
+            updateDownloadReceiver,
+            IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE),
+            ContextCompat.RECEIVER_NOT_EXPORTED,
+        )
+        checkForAppUpdate()
     }
 
     override fun onResume() {
@@ -223,17 +219,14 @@ class MainActivity : ComponentActivity() {
 
     override fun onDestroy() {
         discordRpcManager.setPictureInPictureActive(false)
-        if (BuildConfig.GITHUB_UPDATES_ENABLED) {
-            updateDownloadJob?.cancel()
-            unregisterReceiver(updateDownloadReceiver)
-            updateRepository.close()
-        }
+        updateDownloadJob?.cancel()
+        unregisterReceiver(updateDownloadReceiver)
+        updateRepository.close()
         appPreferences.close()
         super.onDestroy()
     }
 
     private fun checkForAppUpdate(showNoUpdateMessage: Boolean = false) {
-        if (!BuildConfig.GITHUB_UPDATES_ENABLED) return
         lifecycleScope.launch {
             val result = withContext(Dispatchers.IO) {
                 runCatching { updateRepository.findAvailableUpdate() }

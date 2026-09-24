@@ -59,7 +59,6 @@ android {
         versionCode = 272 
         versionName = "2.7.2"
 
-        buildConfigField("boolean", "GITHUB_UPDATES_ENABLED", "true")
         // MAL API client id for reading public anime data. Without it MAL is read through Jikan.
         buildConfigField("String", "MAL_CLIENT_ID", "\"${buildSecret("MAL_CLIENT_ID").trim()}\"")
         // AniList OAuth client id for optional library sync. The mobile implicit flow deliberately
