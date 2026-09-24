@@ -26,6 +26,20 @@ class HttpStreamValidator(
     private val successfulValidations = ConcurrentHashMap<ValidationKey, CachedValidation>()
 
     override suspend fun validate(stream: VideoStream): StreamValidationResult {
+        // A loopback URL is a proxy the extension runs for itself: probing it only makes the proxy
+        // fetch the upstream stream once more before the player fetches it again. A dead stream
+        // still surfaces as a player error, which the watch flow retries with another candidate.
+        if (stream.isLoopback()) {
+            onTiming?.invoke("loopback_skipped", 0L, true)
+            return StreamValidationResult(
+                success = true,
+                streamType = stream.type,
+                quality = stream.quality,
+                finalUrl = stream.url,
+                statusCode = null,
+                message = "Loopback stream is not probed",
+            )
+        }
         val cacheKey = stream.validationKey()
         successfulValidations[cacheKey]?.let { cached ->
             if (System.currentTimeMillis() - cached.cachedAt < SUCCESS_CACHE_TTL_MS) {
@@ -356,4 +370,10 @@ class HttpStreamValidator(
         val result: StreamValidationResult,
         val cachedAt: Long,
     )
+}
+
+private fun VideoStream.isLoopback(): Boolean {
+    val host = url.substringAfter("://", "").substringBefore('/').substringBefore('?')
+        .substringBeforeLast(':').trim('[', ']').lowercase()
+    return audioUrl.isNullOrBlank() && (host == "127.0.0.1" || host == "localhost" || host == "::1")
 }
