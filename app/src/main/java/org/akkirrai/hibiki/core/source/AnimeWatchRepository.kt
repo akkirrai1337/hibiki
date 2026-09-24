@@ -595,9 +595,22 @@ class AnimeWatchRepository(
         unavailablePlayerLinks.remove(cacheKey)
         return loadPlayerLinks(cacheKey, forceRefresh) {
             try {
-                payload.runtime.getPlayerLinks(payload.title, payload.group, episode)
-                    .filter(::isSupportedLink)
-                    .also { providerFailures.remove(payload.source.sourceId) }
+                val links = payload.runtime.getPlayerLinks(payload.title, payload.group, episode)
+                val supported = links.filter(::isSupportedLink)
+                if (supported.isEmpty() && links.isNotEmpty()) {
+                    // The source did answer; say what it gave us instead of "no players".
+                    val kinds = links.groupingBy { it.type }.eachCount()
+                        .entries.joinToString { (type, count) -> "$type x$count" }
+                    AppLogger.w(
+                        TAG,
+                        "Every link from ${payload.source.title} was dropped as unsupported: $kinds, " +
+                            "hosts=${links.map { it.url.safeHost() }.distinct()}",
+                    )
+                    providerFailures[payload.source.sourceId] = "no link it returned can be played ($kinds)"
+                } else {
+                    providerFailures.remove(payload.source.sourceId)
+                }
+                supported
             } catch (error: CancellationException) {
                 throw error
             } catch (error: Throwable) {
