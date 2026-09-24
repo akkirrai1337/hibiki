@@ -13,6 +13,7 @@ import org.akkirrai.beakokit.api.SourceLanguage
 import org.akkirrai.hibiki.core.source.extension.AniyomiAnimeSourceAdapter
 import org.akkirrai.hibiki.core.source.extension.ApkAnimeExtensionLoader
 import org.akkirrai.hibiki.core.source.extension.LoadedAnimeExtension
+import org.akkirrai.hibiki.core.source.extension.InstalledApkExtensionInfo
 import org.akkirrai.hibiki.core.source.extension.InstalledApkExtensions
 import org.akkirrai.beakokit.model.AnimeSearchFilterCatalog
 import org.akkirrai.hibiki.app.settings.AppPreferences
@@ -83,6 +84,9 @@ object AnimeSourceRegistry {
     private var registrationsState by mutableStateOf<List<Registration>>(emptyList())
     private var apkRuntimeSourcesState by mutableStateOf<Map<SourceId, org.akkirrai.beakokit.api.AnimeSource>>(emptyMap())
     private var apkExtensionLoadErrorsState by mutableStateOf<Map<String, String>>(emptyMap())
+    // What was installed when the extensions were last loaded; null until the first load has finished, so
+    // a screen can tell "nothing has loaded yet" from "these extensions produced no source".
+    private var installedApkState by mutableStateOf<Map<String, InstalledApkExtensionInfo>?>(null)
     // Retain APK class loaders while their adapters remain registered.
     private var loadedApkExtensionsState by mutableStateOf<List<LoadedAnimeExtension>>(emptyList())
     private val apkRefreshMutex = Mutex()
@@ -102,10 +106,12 @@ object AnimeSourceRegistry {
     suspend fun refreshApkExtensions(context: Context) {
         val appContext = context.applicationContext
         apkRefreshMutex.withLock {
+            var scanned: Map<String, InstalledApkExtensionInfo> = emptyMap()
             val (loaded, adapters, loadErrors) = withContext(Dispatchers.IO) {
                 val loader = ApkAnimeExtensionLoader(appContext)
                 val errors = mutableMapOf<String, String>()
-                val loadedExtensions = InstalledApkExtensions.scan(appContext).toSortedMap().asSequence()
+                scanned = InstalledApkExtensions.scan(appContext)
+                val loadedExtensions = scanned.toSortedMap().asSequence()
                     .filter { (_, info) -> info.isSystemInstalled && info.isTrusted }
                     .mapNotNull { (packageName, _) ->
                         runCatching { loader.load(packageName) }
@@ -150,6 +156,7 @@ object AnimeSourceRegistry {
             withContext(Dispatchers.Main.immediate) {
                 loadedApkExtensionsState = loaded
                 apkExtensionLoadErrorsState = loadErrors
+                installedApkState = scanned
                 apkRuntimeSourcesState = uniqueAdapters.associateBy({ it.info.id }, { it })
                 registrationsState = currentRegistrations()
                 applicationContext?.let { app ->
@@ -218,6 +225,9 @@ object AnimeSourceRegistry {
     class ApkSourceSettings(val sourceId: Long, val configurable: eu.kanade.tachiyomi.animesource.ConfigurableAnimeSource)
 
     fun apkExtensionLoadErrors(): Map<String, String> = apkExtensionLoadErrorsState
+
+    /** The installed extensions as of the last load, or null while the first load has not finished. */
+    fun installedApkExtensions(): Map<String, InstalledApkExtensionInfo>? = installedApkState
 
     fun descriptor(sourceId: SourceId): AnimeSourceDescriptor =
         descriptorOrNull(sourceId) ?: error("Anime source is not registered: $sourceId")

@@ -157,7 +157,10 @@ fun SourceExtensionsScreen(
     var pendingApkInstallPath by rememberSaveable { mutableStateOf<String?>(null) }
     var awaitingApkInstallPermission by rememberSaveable { mutableStateOf(false) }
     var pendingApkUninstallPackage by rememberSaveable { mutableStateOf<String?>(null) }
-    var installedApkExtensions by remember { mutableStateOf<Map<String, InstalledApkExtensionInfo>>(emptyMap()) }
+    // Starts from what the registry already scanned at startup, so the list is there on the first frame.
+    var installedApkExtensions by remember {
+        mutableStateOf(AnimeSourceRegistry.installedApkExtensions() ?: emptyMap())
+    }
     LaunchedEffect(installingApkPackages.isNotEmpty()) {
         onInstallationActiveChanged(installingApkPackages.isNotEmpty())
     }
@@ -251,7 +254,6 @@ fun SourceExtensionsScreen(
             if (event == Lifecycle.Event.ON_RESUME) {
                 tabScope.launch {
                     refreshInstalledApkExtensions()
-                    AnimeSourceRegistry.refreshApkExtensions(context)
                     val pending = pendingApkInstall
                     if (awaitingApkInstallPermission && pending != null) {
                         if (ApkExtensionInstaller.canRequestPackageInstalls(context)) {
@@ -1095,6 +1097,8 @@ private fun InstalledSourcesList(
     onSelect: (String) -> Unit,
     onUninstall: (String) -> Unit,
 ) {
+    // Until the extensions have been loaded once, "no usable source" only means "not loaded yet".
+    val extensionsLoaded = AnimeSourceRegistry.installedApkExtensions() != null
     var settingsSheetSourceId by rememberSaveable { mutableStateOf<String?>(null) }
     val installedVersions = installedApkExtensions
         .filterValues(InstalledApkExtensionInfo::isSystemInstalled)
@@ -1125,8 +1129,10 @@ private fun InstalledSourcesList(
     }
     val representedPackages = loadedSources.mapTo(mutableSetOf(), InstalledApkSourceEntry::packageName)
     // Installed APKs that produced no usable source: shown with the reason, so they can be removed or fixed.
-    val failedSources = installedApkExtensions.mapNotNull { (packageName, info) ->
-        if (!info.isSystemInstalled || packageName in representedPackages) return@mapNotNull null
+    // From the registry's own snapshot, which changes together with the loaded sources, so an extension
+    // is never shown as failed in the moment between being installed and being loaded.
+    val failedSources = AnimeSourceRegistry.installedApkExtensions().orEmpty().mapNotNull { (packageName, info) ->
+        if (!extensionsLoaded || !info.isSystemInstalled || packageName in representedPackages) return@mapNotNull null
         if (externalExtensions.any { it.packageName == packageName }) return@mapNotNull null
         val repositoryEntry = apkRepositoryExtensions.firstOrNull { it.pkg == packageName }
         val errorMessage = apkLoadErrors[packageName]
@@ -1185,7 +1191,7 @@ private fun InstalledSourcesList(
             .padding(top = 8.dp),
     ) {
         if (entries.isEmpty()) {
-            SourceRepositoryMessage(stringResource(R.string.source_extensions_installed_empty))
+            if (extensionsLoaded) SourceRepositoryMessage(stringResource(R.string.source_extensions_installed_empty))
         } else {
             val updates = entries.filter { it.repositoryEntry?.isUpdateAvailable(installedVersions) == true }
             val upToDate = entries - updates.toSet()
