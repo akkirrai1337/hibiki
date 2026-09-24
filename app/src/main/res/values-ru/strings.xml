@@ -644,4 +644,23 @@
     <string name="filter_option_reverse_harem">Обратный гарем</string>
     <string name="filter_option_ecchi">Этти</string>
     <string name="filter_option_mahou_shoujo">Махо-сёдзё</string>
+    <string name="migration_title">Перенос библиотеки</string>
+    <string name="migration_message">В библиотеке остались тайтлы из источников, которых в приложении больше нет. Выберите тот же источник, установленный как расширение, и сохранённые тайтлы будут перенесены в него. Прогресс просмотра и загрузки не переносятся.</string>
+    <plurals name="migration_entries">
+        <item quantity="one">%d тайтл</item>
+        <item quantity="few">%d тайтла</item>
+        <item quantity="many">%d тайтлов</item>
+        <item quantity="other">%d тайтла</item>
+    </plurals>
+    <string name="migration_no_target">Выберите источник</string>
+    <string name="migration_skip_source">Не переносить</string>
+    <string name="migration_install_hint">Сначала установите расширения источников на вкладке «Источники», затем вернитесь сюда.</string>
+    <string name="migration_start">Перенести</string>
+    <string name="migration_later">Не сейчас</string>
+    <string name="migration_never">Больше не спрашивать</string>
+    <string name="migration_running">Переносим библиотеку…</string>
+    <string name="migration_done_title">Библиотека перенесена</string>
+    <string name="migration_done_message">Перенесено %1$d из %2$d тайтлов.</string>
+    <string name="migration_unmatched">Эти тайтлы не найдены в новом источнике и остались как были:</string>
+    <string name="migration_close">Закрыть</string>
 </resources>

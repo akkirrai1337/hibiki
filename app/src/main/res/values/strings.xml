@@ -648,4 +648,21 @@
     <string name="filter_option_reverse_harem">Reverse Harem</string>
     <string name="filter_option_ecchi">Ecchi</string>
     <string name="filter_option_mahou_shoujo">Mahou Shoujo</string>
+    <string name="migration_title">Move your library</string>
+    <string name="migration_message">Your library still points at sources that no longer exist in the app. Pick the same source installed as an extension and the saved titles will be moved to it. Watch progress and downloads are not moved.</string>
+    <plurals name="migration_entries">
+        <item quantity="one">%d title</item>
+        <item quantity="other">%d titles</item>
+    </plurals>
+    <string name="migration_no_target">Choose a source</string>
+    <string name="migration_skip_source">Do not move</string>
+    <string name="migration_install_hint">Install the source extensions first, in the Sources tab, then come back.</string>
+    <string name="migration_start">Move</string>
+    <string name="migration_later">Not now</string>
+    <string name="migration_never">Never</string>
+    <string name="migration_running">Moving the library…</string>
+    <string name="migration_done_title">Library moved</string>
+    <string name="migration_done_message">Moved %1$d of %2$d titles.</string>
+    <string name="migration_unmatched">These titles were not found in the new source and stay as they were:</string>
+    <string name="migration_close">Close</string>
 </resources>

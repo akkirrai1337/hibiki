@@ -43,6 +43,7 @@ import org.akkirrai.hibiki.core.log.AppLogger
 import org.akkirrai.hibiki.core.download.OfflineMediaCache
 import org.akkirrai.hibiki.core.discord.DiscordRpcManager
 import org.akkirrai.hibiki.feature.update.AppUpdateDialog
+import org.akkirrai.hibiki.feature.migration.LegacyLibraryMigrationHost
 import org.akkirrai.hibiki.feature.onboarding.FirstLaunchOnboarding
 import org.akkirrai.hibiki.ui.theme.HibikiTheme
 import kotlinx.coroutines.Dispatchers
@@ -167,6 +168,7 @@ class MainActivity : ComponentActivity() {
                             )
                         }
                         if (preferences.onboardingCompleted) {
+                            LegacyLibraryMigrationHost()
                             availableUpdate?.let { update ->
                                 AppUpdateDialog(
                                     update = update,

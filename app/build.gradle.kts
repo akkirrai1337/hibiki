@@ -191,6 +191,8 @@ dependencies {
     implementation(libs.androidx.room.runtime)
     ksp(libs.androidx.room.compiler)
     testImplementation(libs.junit)
+    // Android's org.json is a stub on the JVM, and storage code that builds JSON is tested there.
+    testImplementation("org.json:json:20240303")
     testImplementation("io.ktor:ktor-client-mock:${libs.versions.ktor.get()}")
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
