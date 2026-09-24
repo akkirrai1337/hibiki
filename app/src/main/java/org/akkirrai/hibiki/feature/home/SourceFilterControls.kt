@@ -96,19 +96,30 @@ private fun SourceFilter(
                 )
                 return
             }
+            // A placeholder default ("<select>", "Any") is the state with nothing chosen, not a chip.
+            val placeholder = defaultIndex?.takeIf { isPlaceholderOption(def.options.getOrNull(it)) }
+            val sortKey = def.options.sortKeyOrNull()
             AppThreeStateChipFilter(
                 title = def.title,
-                options = def.options.indices.toList(),
-                included = setOfNotNull(selected?.toString()),
+                options = def.options.indices.filter { it != placeholder },
+                included = setOfNotNull(selected?.takeIf { it != placeholder }?.toString()),
                 excluded = emptySet(),
-                // A select always holds a value, so tapping the chosen option again changes nothing.
                 onChange = { included, _ ->
-                    included.firstOrNull { it != selected?.toString() }?.let(::set)
+                    val picked = included.firstOrNull { it != selected?.toString() }
+                    when {
+                        picked != null -> set(picked)
+                        // Tapping the chosen option again clears it when there is a placeholder to fall back to.
+                        placeholder != null -> set(placeholder.toString())
+                    }
                 },
                 id = { it.toString() },
                 text = { appFilterOptionText(def.options[it]) },
+                // A long list (genres, tags) is lettered and collapsed like the app's own genre filter.
+                maxCollapsedItems = if (sortKey != null) COLLAPSED_CHIP_COUNT else null,
+                maxCollapsedGroups = if (sortKey != null) COLLAPSED_GROUP_COUNT else null,
                 allowExclusion = false,
-                optionSortKey = def.options.sortKeyOrNull(),
+                optionSortKey = sortKey,
+                groupByFirstLetter = sortKey != null,
             )
         }
 
@@ -266,11 +277,16 @@ private fun GroupedChipFilter(
 
 /**
  * Alphabetical order for a very long list of options, where it helps to find one; anything shorter keeps
- * the order the source gave it, as do lists led by numbers (years, ratings). Options are keyed by
+ * the order the source gave it, as do lists mostly of numbers (years, ratings). Options are keyed by
  * index, so reordering only changes how they are shown.
  */
 private fun List<String>.sortKeyOrNull(): ((Int) -> String)? =
-    if (size >= SORTED_OPTION_MINIMUM && none { it.firstOrNull()?.isDigit() == true }) ({ index -> this[index] }) else null
+    if (size >= SORTED_OPTION_MINIMUM && count { it.firstOrNull()?.isDigit() == true } < size / 2) ({ index -> this[index] }) else null
+
+private fun isPlaceholderOption(option: String?): Boolean {
+    val t = option?.trim()?.lowercase() ?: return false
+    return t.isEmpty() || (t.startsWith("<") && t.endsWith(">")) || t in setOf("any", "all", "none", "-", "--")
+}
 
 private const val SORTED_OPTION_MINIMUM = 50
 
