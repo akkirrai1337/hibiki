@@ -78,6 +78,7 @@ private fun SourceFilter(
                 id = { it.toString() },
                 text = { appFilterOptionText(def.options[it]) },
                 allowExclusion = false,
+                optionSortKey = def.options.sortKeyOrNull(),
             )
         }
 
@@ -102,6 +103,7 @@ private fun SourceFilter(
                     if (index == selectedIndex) "${def.options[index]} ${if (ascending) "↑" else "↓"}" else def.options[index]
                 },
                 allowExclusion = false,
+                optionSortKey = def.options.sortKeyOrNull(),
             )
         }
 
@@ -205,6 +207,16 @@ private fun GroupedChipFilter(
         groupByFirstLetter = true,
     )
 }
+
+/**
+ * Alphabetical order for a list of options, as the app's status filter does, unless the list has an
+ * order of its own: short lists (seasons) and ones led by numbers (years, ratings) stay as defined.
+ * Options are keyed by index, so reordering only changes how they are shown.
+ */
+private fun List<String>.sortKeyOrNull(): ((Int) -> String)? =
+    if (size >= SORTED_OPTION_MINIMUM && none { it.firstOrNull()?.isDigit() == true }) ({ index -> this[index] }) else null
+
+private const val SORTED_OPTION_MINIMUM = 6
 
 private fun descendantKeys(def: SourceFilterDef): List<String> =
     listOf(def.key) + def.children.flatMap(::descendantKeys)
