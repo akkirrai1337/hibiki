@@ -407,6 +407,9 @@ class AppPreferences(context: Context) {
             )
         }
 
+        fun readSourceRepositoryUrls(context: Context): List<String> =
+            readSourceRepositoryUrls(context.applicationContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE))
+
         private fun readSourceRepositoryUrls(prefs: SharedPreferences): List<String> {
             if (!prefs.contains(KEY_SOURCE_REPOSITORY_URLS)) return listOf(ExtensionMarketplaceClient.DEFAULT_INDEX_URL)
             // The script-extension repository Hibiki used to ship with cannot be read any more; a

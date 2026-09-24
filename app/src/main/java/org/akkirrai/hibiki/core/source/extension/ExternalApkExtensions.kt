@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.pm.PackageInfo
 import android.content.pm.PackageManager
 import android.os.Build
+import org.akkirrai.hibiki.app.settings.AppPreferences
 import org.akkirrai.hibiki.core.log.AppLogger
 import java.io.File
 import java.nio.file.Files
@@ -22,9 +23,11 @@ data class ExternalApkExtension(
 )
 
 /**
- * Finds extensions installed outside Hibiki. Hibiki keeps its own trusted copy of every extension it
- * runs, so an APK it did not install is only used once the user has agreed to trust it, unless
- * Android records Hibiki itself as the installer (for example after its data was cleared).
+ * Finds extensions installed on the device that Hibiki does not trust (yet). Hibiki runs an extension
+ * from its own private copy, and trusts one that comes from a repository the user has added. An
+ * extension that is not in any added repository, or whose repository was removed, waits for the
+ * user to trust it. The installer Android records (usually just the package installer) says nothing
+ * about where the APK came from, so it is only shown to the user.
  */
 object ExternalApkExtensions {
     data class Detection(
@@ -38,13 +41,24 @@ object ExternalApkExtensions {
         val appContext = context.applicationContext
         var changed = false
         val pending = mutableListOf<ExternalApkExtension>()
+        val repositories = AppPreferences.readSourceRepositoryUrls(appContext)
+        // The last index fetched for each added repository; no network is involved here.
+        val repositoryOfPackage = mutableMapOf<String, String>()
+        repositories.forEach { url ->
+            RepositoryCatalogCache.get(appContext, url)?.extensions?.forEach { repositoryOfPackage.putIfAbsent(it.pkg, url) }
+        }
         for (extension in installedExtensions(appContext)) {
             if (ApkExtensionInstaller.wasInstalledBySystem(appContext, extension.packageName)) {
-                if (refreshAdoptedCopy(appContext, extension)) changed = true
+                if (ApkExtensionTrustStore.isOriginTrusted(appContext, extension.packageName, repositories)) {
+                    if (refreshAdoptedCopy(appContext, extension)) changed = true
+                } else {
+                    pending += extension
+                }
                 continue
             }
-            if (extension.installerPackage == appContext.packageName) {
-                if (adopt(appContext, extension)) changed = true
+            val repository = repositoryOfPackage[extension.packageName]
+            if (repository != null) {
+                if (adopt(appContext, extension, repository)) changed = true
             } else {
                 pending += extension
             }
@@ -52,11 +66,15 @@ object ExternalApkExtensions {
         return Detection(changed, pending)
     }
 
-    /** Copies the installed APK into Hibiki's private store and trusts its signing certificate. */
-    fun adopt(context: Context, extension: ExternalApkExtension): Boolean = try {
+    /**
+     * Copies the installed APK into Hibiki's private store and trusts its signing certificate, on the
+     * strength of [repositoryUrl] or, when that is null, of the user's decision.
+     */
+    fun adopt(context: Context, extension: ExternalApkExtension, repositoryUrl: String? = null): Boolean = try {
         val appContext = context.applicationContext
         copyPrivate(appContext, extension)
         ApkExtensionTrustStore.trust(appContext, extension.packageName, extension.signingFingerprint)
+        ApkExtensionTrustStore.setOrigin(appContext, extension.packageName, repositoryUrl)
         ApkExtensionInstaller.markAdopted(appContext, extension.packageName)
         true
     } catch (error: Exception) {

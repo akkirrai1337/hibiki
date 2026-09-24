@@ -5,6 +5,7 @@ import android.content.pm.PackageInfo
 import android.content.pm.PackageManager
 import android.os.Build
 import android.system.Os
+import org.akkirrai.hibiki.app.settings.AppPreferences
 import java.security.MessageDigest
 import java.io.File
 
@@ -35,6 +36,7 @@ object InstalledApkExtensions {
 
     fun scan(context: Context): Map<String, InstalledApkExtensionInfo> {
         val packageManager = context.packageManager
+        val repositories = AppPreferences.readSourceRepositoryUrls(context)
         return File(context.filesDir, EXTENSIONS_DIRECTORY).listFiles()
             .orEmpty()
             .asSequence()
@@ -55,7 +57,8 @@ object InstalledApkExtensions {
                         ?.takeIf(String::isNotBlank),
                     signingFingerprint = signingFingerprint,
                     isTrusted = signingFingerprint != null &&
-                        ApkExtensionTrustStore.isTrusted(context, packageInfo.packageName, signingFingerprint),
+                        ApkExtensionTrustStore.isTrusted(context, packageInfo.packageName, signingFingerprint) &&
+                        ApkExtensionTrustStore.isOriginTrusted(context, packageInfo.packageName, repositories),
                     isSystemInstalled = ApkExtensionInstaller.wasInstalledBySystem(context, packageInfo.packageName),
                 )
             }

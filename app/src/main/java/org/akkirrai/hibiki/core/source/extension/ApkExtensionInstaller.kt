@@ -45,6 +45,7 @@ object ApkExtensionInstaller {
                 "APK does not declare an Aniyomi source class"
             }
             Files.move(downloadedApk.toPath(), preparedApk.toPath(), StandardCopyOption.REPLACE_EXISTING)
+            ApkExtensionTrustStore.setPendingOrigin(context, extension.pkg, indexUrl)
             PreparedApkExtensionInstall(extension.pkg, preparedApk)
         } catch (error: Exception) {
             preparedApk.delete()
@@ -88,6 +89,7 @@ object ApkExtensionInstaller {
             val fingerprint = info.signingFingerprint
                 ?: error("Installed APK signing certificate is missing")
             ApkExtensionTrustStore.trust(appContext, prepared.packageName, fingerprint)
+            ApkExtensionTrustStore.commitPendingOrigin(appContext, prepared.packageName)
             ApkExtensionInstallRegistry.markSystemInstalled(appContext, prepared.packageName)
         } catch (error: Exception) {
             stagedApk.delete()

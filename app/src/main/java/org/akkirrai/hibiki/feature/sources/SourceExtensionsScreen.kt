@@ -351,6 +351,10 @@ fun SourceExtensionsScreen(
         }
         loadRepositories(toFetch)
     }
+    // An extension is trusted when an added repository lists it, so the list of trusted ones can change
+    // once an index arrives.
+    val loadedRepositoryCount = repoStates.count { it.value is RepoFetchResult.Loaded }
+    LaunchedEffect(loadedRepositoryCount, sourceRepositoryUrls) { refreshInstalledApkExtensions() }
     // Do not make a second request purely for the bottom-navigation badge: this screen already
     // fetched the index for an explicit visit or a manual refresh, so use that same snapshot.
     // In particular, app startup and returning from the background must remain fully offline.
@@ -1123,6 +1127,7 @@ private fun InstalledSourcesList(
     // Installed APKs that produced no usable source: shown with the reason, so they can be removed or fixed.
     val failedSources = installedApkExtensions.mapNotNull { (packageName, info) ->
         if (!info.isSystemInstalled || packageName in representedPackages) return@mapNotNull null
+        if (externalExtensions.any { it.packageName == packageName }) return@mapNotNull null
         val repositoryEntry = apkRepositoryExtensions.firstOrNull { it.pkg == packageName }
         val errorMessage = apkLoadErrors[packageName]
             ?: if (!info.isTrusted) {
@@ -1146,7 +1151,8 @@ private fun InstalledSourcesList(
             selectable = false,
         )
     }
-    // Installed elsewhere and not yet trusted: shown like any source, and tapping one asks first.
+    // Not trusted: installed elsewhere, or from a repository that has since been removed. Shown like any
+    // source, and tapping one asks first.
     val externalSources = externalExtensions.map { external ->
         val repositoryEntry = apkRepositoryExtensions.firstOrNull { it.pkg == external.packageName }
         InstalledApkSourceEntry(
