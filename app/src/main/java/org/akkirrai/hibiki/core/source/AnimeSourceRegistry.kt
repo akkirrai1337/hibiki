@@ -13,6 +13,7 @@ import org.akkirrai.beakokit.api.SourceLanguage
 import org.akkirrai.hibiki.core.source.extension.AniyomiAnimeSourceAdapter
 import org.akkirrai.hibiki.core.source.extension.ApkAnimeExtensionLoader
 import org.akkirrai.hibiki.core.source.extension.LoadedAnimeExtension
+import org.akkirrai.hibiki.core.source.extension.ExtensionIcons
 import org.akkirrai.hibiki.core.source.extension.InstalledApkExtensionInfo
 import org.akkirrai.hibiki.core.source.extension.InstalledApkExtensions
 import org.akkirrai.beakokit.model.AnimeSearchFilterCatalog
@@ -29,6 +30,8 @@ import kotlinx.coroutines.withContext
 data class AnimeSourceDescriptor(
     val info: SourceInfo,
     @param:DrawableRes val iconRes: Int,
+    /** An icon the app holds itself (an extension's own launcher icon); [SourceInfo.iconUrl] must be https. */
+    val iconOverride: String? = null,
 ) {
     val id: SourceId
         get() = info.id
@@ -37,7 +40,7 @@ data class AnimeSourceDescriptor(
         get() = info.name
 
     val iconUrl: String?
-        get() = info.iconUrl
+        get() = iconOverride ?: info.iconUrl
 
     val language: SourceLanguage
         get() = info.primaryLanguage
@@ -72,8 +75,9 @@ object AnimeSourceRegistry {
         val localizeFilters: (AnimeSearchFilterCatalog, Boolean) -> AnimeSearchFilterCatalog = { catalog, _ -> catalog },
         val normalizeTitleId: (String) -> String = { it },
         val runtimeSource: org.akkirrai.beakokit.api.AnimeSource,
+        val iconOverride: String? = null,
     ) {
-        val descriptor = AnimeSourceDescriptor(info = info, iconRes = iconRes)
+        val descriptor = AnimeSourceDescriptor(info = info, iconRes = iconRes, iconOverride = iconOverride)
     }
 
     @Volatile
@@ -84,6 +88,7 @@ object AnimeSourceRegistry {
     private var registrationsState by mutableStateOf<List<Registration>>(emptyList())
     private var apkRuntimeSourcesState by mutableStateOf<Map<SourceId, org.akkirrai.beakokit.api.AnimeSource>>(emptyMap())
     private var apkExtensionLoadErrorsState by mutableStateOf<Map<String, String>>(emptyMap())
+    private var apkIconsState by mutableStateOf<Map<SourceId, String>>(emptyMap())
     // What was installed when the extensions were last loaded; null until the first load has finished, so
     // a screen can tell "nothing has loaded yet" from "these extensions produced no source".
     private var installedApkState by mutableStateOf<Map<String, InstalledApkExtensionInfo>?>(null)
@@ -153,11 +158,17 @@ object AnimeSourceRegistry {
                 AppLogger.w("ApkAnimeExtensions", "Skipping duplicate adapted source IDs: ${duplicateIds.joinToString()}")
             }
             val uniqueAdapters = adapters.distinctBy { it.info.id }
+            val icons = withContext(Dispatchers.IO) {
+                uniqueAdapters.mapNotNull { adapter ->
+                    ExtensionIcons.uriFor(appContext, adapter.packageName)?.let { adapter.info.id to it }
+                }.toMap()
+            }
             withContext(Dispatchers.Main.immediate) {
                 loadedApkExtensionsState = loaded
                 apkExtensionLoadErrorsState = loadErrors
                 installedApkState = scanned
                 apkRuntimeSourcesState = uniqueAdapters.associateBy({ it.info.id }, { it })
+                apkIconsState = icons
                 registrationsState = currentRegistrations()
                 applicationContext?.let { app ->
                     AppPreferences.rememberAnimeSourceAppearances(
@@ -181,6 +192,7 @@ object AnimeSourceRegistry {
                 info = source.info,
                 iconRes = R.drawable.animite_media_type_anime,
                 runtimeSource = source,
+                iconOverride = apkIconsState[id],
             ).also { check(it.info.id == id) }
         }
 
