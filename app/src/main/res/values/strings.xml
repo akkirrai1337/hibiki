@@ -673,4 +673,6 @@
     <string name="source_extensions_external_trust">Trust</string>
     <string name="source_extensions_external_not_now">Not now</string>
     <string name="source_extensions_external_installer_unknown">an unknown app</string>
+    <string name="filter_rating_any">Any rating</string>
+    <string name="filter_rating_up_to">Up to %1$s</string>
 </resources>

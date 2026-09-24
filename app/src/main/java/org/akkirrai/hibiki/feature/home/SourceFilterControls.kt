@@ -9,9 +9,20 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.RecordVoiceOver
+import androidx.compose.material.icons.outlined.Subtitles
+import androidx.compose.material.icons.outlined.Videocam
+import androidx.compose.ui.res.stringResource
+import kotlin.math.roundToInt
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -74,13 +85,13 @@ private fun SourceFilter(
             // A short list of seasons or media types is drawn as the app's own type filter: connected
             // buttons with icons. The "any" option is not a button, it is the state with none pressed.
             val iconIndices = def.options.indices.filter { it != defaultIndex }
-            if (iconIndices.size in 2..6 && iconIndices.all { optionIconRes(def.options[it]) != null }) {
+            if (iconIndices.size in 2..6 && iconIndices.all { optionIcon(def.options[it]) != null }) {
                 AppConnectedToggleFilter(
                     title = def.title,
                     entries = iconIndices,
                     selected = selected?.takeIf { it != defaultIndex },
                     onSelected = { picked -> set((picked ?: defaultIndex ?: 0).toString()) },
-                    icon = { ImageVector.vectorResource(optionIconRes(def.options[it])!!) },
+                    icon = { optionIcon(def.options[it])!!.asVector() },
                     text = { appFilterOptionText(def.options[it]) },
                 )
                 return
@@ -197,8 +208,13 @@ private fun GroupedChipFilter(
         .filter { it.type == SourceFilterType.TRISTATE && stateOf(it) == "2" }
         .mapTo(mutableSetOf(), SourceFilterDef::key)
     val long = def.children.size >= SORTED_OPTION_MINIMUM
-    if (def.children.size in 2..4 && def.children.all { seasonIconRes(it.title) != null }) {
-        // Seasons are one-of-four, drawn like the app's own type filter. Tapping the pressed one clears it.
+    if (isAgeRatingGroup(def)) {
+        AgeRatingSlider(def, values, onValuesChange)
+        return
+    }
+    if (def.children.size in 2..6 && def.children.all { optionIcon(it.title) != null }) {
+        // Seasons, types, statuses and sub/dub are drawn like the app's own type filter: connected icon
+        // buttons, one pressed at a time. Tapping the pressed one clears it.
         val pressed = def.children.firstOrNull { it.key in included }
         AppConnectedToggleFilter(
             title = def.title,
@@ -212,7 +228,7 @@ private fun GroupedChipFilter(
                 }
                 onValuesChange(next)
             },
-            icon = { ImageVector.vectorResource(seasonIconRes(it.title)!!) },
+            icon = { optionIcon(it.title)!!.asVector() },
             text = { appFilterOptionText(it.title) },
         )
         return
@@ -264,16 +280,11 @@ private fun isYearFilter(def: SourceFilterDef): Boolean =
 
 private val YEAR_FILTER_TITLES = setOf("year", "years", "release year", "year of release", "год", "рік", "год выпуска", "рік випуску")
 
-private fun seasonIconRes(option: String): Int? = when (option.trim().lowercase()) {
-    "winter" -> R.drawable.animite_winter
-    "spring" -> R.drawable.animite_spring
-    "summer" -> R.drawable.animite_summer
-    "fall", "autumn" -> R.drawable.animite_fall
-    else -> null
-}
-
-/** Icons the app already has for seasons and media types, matched on the option's name. */
-private fun optionIconRes(option: String): Int? = when (option.trim().lowercase()) {
+/**
+ * Icons for options that name a season, a media type, a release status or a sub/dub language, matched
+ * on the option's name. A drawable id or a vector; null when the name is not one of those.
+ */
+private fun optionIcon(option: String): Any? = when (option.trim().lowercase()) {
     "winter" -> R.drawable.animite_winter
     "spring" -> R.drawable.animite_spring
     "summer" -> R.drawable.animite_summer
@@ -286,7 +297,91 @@ private fun optionIconRes(option: String): Int? = when (option.trim().lowercase(
     "tv short" -> R.drawable.animite_tv_short
     "music" -> R.drawable.animite_music
     "one shot", "one-shot" -> R.drawable.animite_one_shot
+    "finished airing", "finished", "completed", "ended" -> R.drawable.animite_finished
+    "currently airing", "airing", "ongoing", "releasing" -> R.drawable.animite_releasing
+    "not yet aired", "not yet released", "upcoming", "announced" -> R.drawable.animite_not_yet_released
+    "hiatus", "on hiatus" -> R.drawable.animite_hiatus
+    "cancelled", "canceled" -> R.drawable.animite_cancelled
+    "sub", "subbed", "subtitles", "softsub", "hardsub" -> Icons.Outlined.Subtitles
+    "dub", "dubbed" -> Icons.Outlined.RecordVoiceOver
+    "raw" -> Icons.Outlined.Videocam
     else -> null
+}
+
+@Composable
+private fun Any.asVector(): ImageVector = if (this is ImageVector) this else ImageVector.vectorResource(this as Int)
+
+private val AGE_RATING_TITLE_HINTS = listOf("rating", "age", "рейтинг", "возраст", "вік", "рейтинг")
+
+/** Strictness of an age-rating label, lowest first; null when the label is not a recognisable rating. */
+private fun ageRatingRank(title: String): Int? {
+    val t = title.lowercase().replace(" ", "")
+    return when {
+        "rx" in t || "hentai" in t || "nc-17" in t || "18+" in t -> 5
+        "r+" in t -> 4
+        "r-17" in t || "r17" in t || "17+" in t || t == "r" -> 3
+        "pg-13" in t || "pg13" in t || "13+" in t -> 2
+        t.startsWith("pg") -> 1
+        t == "g" || t.startsWith("all") || t.startsWith("g-") || "0+" in t || "everyone" in t -> 0
+        else -> null
+    }
+}
+
+private fun isAgeRatingGroup(def: SourceFilterDef): Boolean =
+    def.children.size >= 3 &&
+        AGE_RATING_TITLE_HINTS.any { def.title.lowercase().contains(it) } &&
+        def.children.all {
+            (it.type == SourceFilterType.CHECKBOX || it.type == SourceFilterType.TRISTATE) && ageRatingRank(it.title) != null
+        }
+
+/**
+ * Age ratings are ordered, so they are picked with a slider: everything up to the chosen rating is
+ * included. The far left is "any rating" and leaves the filter unset.
+ */
+@Composable
+private fun AgeRatingSlider(
+    def: SourceFilterDef,
+    values: Map<String, String>,
+    onValuesChange: (Map<String, String>) -> Unit,
+) {
+    val ordered = def.children.sortedBy { ageRatingRank(it.title) }
+    fun on(child: SourceFilterDef) = if (child.type == SourceFilterType.CHECKBOX) "true" else "1"
+    fun isOn(child: SourceFilterDef) = (values[child.key] ?: child.defaultValue) == on(child)
+    val level = ordered.indexOfLast(::isOn) + 1
+    var sliderValue by remember(level) { mutableStateOf(level.toFloat()) }
+    val shownLevel = sliderValue.roundToInt().coerceIn(0, ordered.size)
+
+    AppCollapsibleFilterSection(title = def.title, onLongClick = {
+        onValuesChange(values - def.children.map(SourceFilterDef::key).toSet())
+    }) {
+        Column(modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
+            Text(
+                text = if (shownLevel == 0) {
+                    stringResource(R.string.filter_rating_any)
+                } else {
+                    stringResource(R.string.filter_rating_up_to, ordered[shownLevel - 1].title)
+                },
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.align(Alignment.CenterHorizontally),
+            )
+            Slider(
+                value = sliderValue,
+                onValueChange = { sliderValue = it },
+                onValueChangeFinished = {
+                    val chosen = sliderValue.roundToInt().coerceIn(0, ordered.size)
+                    sliderValue = chosen.toFloat()
+                    var next = values - ordered.map(SourceFilterDef::key).toSet()
+                    ordered.take(chosen).forEach { child ->
+                        if (on(child) != child.defaultValue) next = next + (child.key to on(child))
+                    }
+                    onValuesChange(next)
+                },
+                valueRange = 0f..ordered.size.toFloat(),
+                steps = ordered.size - 1,
+            )
+        }
+    }
 }
 
 private fun descendantKeys(def: SourceFilterDef): List<String> =

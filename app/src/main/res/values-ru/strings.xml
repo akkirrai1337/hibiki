@@ -671,4 +671,6 @@
     <string name="source_extensions_external_trust">Доверять</string>
     <string name="source_extensions_external_not_now">Не сейчас</string>
     <string name="source_extensions_external_installer_unknown">неизвестное приложение</string>
+    <string name="filter_rating_any">Любой рейтинг</string>
+    <string name="filter_rating_up_to">До %1$s</string>
 </resources>

@@ -661,4 +661,6 @@
     <string name="source_extensions_external_trust">Довіряти</string>
     <string name="source_extensions_external_not_now">Не зараз</string>
     <string name="source_extensions_external_installer_unknown">невідомий застосунок</string>
+    <string name="filter_rating_any">Будь-який рейтинг</string>
+    <string name="filter_rating_up_to">До %1$s</string>
 </resources>
