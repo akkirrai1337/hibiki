@@ -20,9 +20,9 @@ import org.akkirrai.beakokit.model.SourceFilterDef
 import org.akkirrai.beakokit.model.SourceFilterType
 import org.akkirrai.hibiki.core.design.component.filter.AppCollapsibleFilterSection
 import org.akkirrai.hibiki.core.design.component.filter.AppThreeStateChipFilter
+import org.akkirrai.hibiki.core.design.component.filter.appFilterOptionText
 
-/** Genre-like lists (many small toggles) get the same lettered, collapsible layout as the app's own genres. */
-private const val GROUPED_CHIP_THRESHOLD = 16
+// The same limits the app's own genre filter uses in AnimeSearchFiltersSheet.
 private const val COLLAPSED_CHIP_COUNT = 15
 private const val COLLAPSED_GROUP_COUNT = 3
 
@@ -76,7 +76,7 @@ private fun SourceFilter(
                     included.firstOrNull { it != selected?.toString() }?.let(::set)
                 },
                 id = { it.toString() },
-                text = { def.options[it] },
+                text = { appFilterOptionText(def.options[it]) },
                 allowExclusion = false,
             )
         }
@@ -175,7 +175,6 @@ private fun GroupedChipFilter(
     val excluded = def.children
         .filter { it.type == SourceFilterType.TRISTATE && stateOf(it) == "2" }
         .mapTo(mutableSetOf(), SourceFilterDef::key)
-    val grouped = def.children.size >= GROUPED_CHIP_THRESHOLD
 
     AppThreeStateChipFilter(
         title = def.title,
@@ -198,12 +197,12 @@ private fun GroupedChipFilter(
             onValuesChange(next)
         },
         id = { it.key },
-        text = { it.title },
-        maxCollapsedItems = if (grouped) COLLAPSED_CHIP_COUNT else null,
-        maxCollapsedGroups = if (grouped) COLLAPSED_GROUP_COUNT else null,
+        text = { appFilterOptionText(it.title) },
+        maxCollapsedItems = COLLAPSED_CHIP_COUNT,
+        maxCollapsedGroups = COLLAPSED_GROUP_COUNT,
         allowExclusion = def.children.any { it.type == SourceFilterType.TRISTATE },
-        optionSortKey = if (grouped) ({ it.title }) else null,
-        groupByFirstLetter = grouped,
+        optionSortKey = { it.title },
+        groupByFirstLetter = true,
     )
 }
 
