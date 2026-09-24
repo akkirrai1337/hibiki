@@ -41,7 +41,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.font.FontWeight
@@ -50,28 +49,67 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.akkirrai.hibiki.R
 
-/** Applies the app language to known source aliases without changing their filter values. */
+/** Shows the app-language name of a known source alias without changing its filter value. */
 @Composable
 fun appFilterOptionText(value: String): String {
-    if (LocalConfiguration.current.locales[0]?.language != "ru") return value
-    return russianFilterOptionLabels[value.trim().lowercase()] ?: value
+    val resource = filterOptionLabels[value.trim().lowercase()] ?: return value
+    return stringResource(resource)
 }
 
-private val russianFilterOptionLabels = mapOf(
-    "ongoing" to "Онгоинг", "releasing" to "Онгоинг", "airing" to "Онгоинг",
-    "finished" to "Завершено", "completed" to "Завершено", "released" to "Вышло",
-    "announced" to "Анонс", "not yet released" to "Анонс", "not_yet_released" to "Анонс",
-    "cancelled" to "Отменено", "canceled" to "Отменено", "hiatus" to "Перерыв", "paused" to "Перерыв",
-    "movie" to "Фильм", "film" to "Фильм", "special" to "Спецвыпуск", "music" to "Музыка",
-    "action" to "Экшен", "adventure" to "Приключения", "comedy" to "Комедия", "drama" to "Драма",
-    "fantasy" to "Фэнтези", "horror" to "Ужасы", "mystery" to "Мистика", "romance" to "Романтика",
-    "sci-fi" to "Научная фантастика", "science fiction" to "Научная фантастика", "slice of life" to "Повседневность",
-    "sports" to "Спорт", "supernatural" to "Сверхъестественное", "thriller" to "Триллер", "psychological" to "Психология",
-    "mecha" to "Меха", "school" to "Школа", "historical" to "Историческое", "military" to "Военное",
-    "magic" to "Магия", "martial arts" to "Боевые искусства", "detective" to "Детектив", "isekai" to "Исекай",
-    "seinen" to "Сэйнэн", "shounen" to "Сёнэн", "shoujo" to "Сёдзё", "josei" to "Дзёсэй",
-    "kids" to "Детское", "parody" to "Пародия", "vampire" to "Вампиры", "demons" to "Демоны",
-    "game" to "Игры", "harem" to "Гарем", "reverse harem" to "Обратный гарем", "ecchi" to "Этти", "mahou shoujo" to "Махо-сёдзё",
+private val filterOptionLabels = mapOf(
+    "ongoing" to R.string.library_filter_status_ongoing,
+    "releasing" to R.string.library_filter_status_ongoing,
+    "airing" to R.string.library_filter_status_ongoing,
+    "finished" to R.string.filter_option_completed,
+    "completed" to R.string.filter_option_completed,
+    "released" to R.string.library_filter_status_released,
+    "announced" to R.string.library_filter_status_announced,
+    "not yet released" to R.string.library_filter_status_announced,
+    "not_yet_released" to R.string.library_filter_status_announced,
+    "cancelled" to R.string.filter_option_cancelled,
+    "canceled" to R.string.filter_option_cancelled,
+    "hiatus" to R.string.filter_option_hiatus,
+    "paused" to R.string.filter_option_hiatus,
+    "film" to R.string.filter_option_movie,
+    "sci-fi" to R.string.filter_option_sci_fi,
+    "science fiction" to R.string.filter_option_sci_fi,
+    "slice of life" to R.string.filter_option_slice_of_life,
+    "martial arts" to R.string.filter_option_martial_arts,
+    "reverse harem" to R.string.filter_option_reverse_harem,
+    "mahou shoujo" to R.string.filter_option_mahou_shoujo,
+    "movie" to R.string.filter_option_movie,
+    "special" to R.string.filter_option_special,
+    "music" to R.string.filter_option_music,
+    "action" to R.string.filter_option_action,
+    "adventure" to R.string.filter_option_adventure,
+    "comedy" to R.string.filter_option_comedy,
+    "drama" to R.string.filter_option_drama,
+    "fantasy" to R.string.filter_option_fantasy,
+    "horror" to R.string.filter_option_horror,
+    "mystery" to R.string.filter_option_mystery,
+    "romance" to R.string.filter_option_romance,
+    "sports" to R.string.filter_option_sports,
+    "supernatural" to R.string.filter_option_supernatural,
+    "thriller" to R.string.filter_option_thriller,
+    "psychological" to R.string.filter_option_psychological,
+    "mecha" to R.string.filter_option_mecha,
+    "school" to R.string.filter_option_school,
+    "historical" to R.string.filter_option_historical,
+    "military" to R.string.filter_option_military,
+    "magic" to R.string.filter_option_magic,
+    "detective" to R.string.filter_option_detective,
+    "isekai" to R.string.filter_option_isekai,
+    "seinen" to R.string.filter_option_seinen,
+    "shounen" to R.string.filter_option_shounen,
+    "shoujo" to R.string.filter_option_shoujo,
+    "josei" to R.string.filter_option_josei,
+    "kids" to R.string.filter_option_kids,
+    "parody" to R.string.filter_option_parody,
+    "vampire" to R.string.filter_option_vampire,
+    "demons" to R.string.filter_option_demons,
+    "game" to R.string.filter_option_game,
+    "harem" to R.string.filter_option_harem,
+    "ecchi" to R.string.filter_option_ecchi,
 )
 
 @Composable
