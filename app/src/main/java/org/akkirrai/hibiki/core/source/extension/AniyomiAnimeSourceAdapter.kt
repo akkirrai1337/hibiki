@@ -3,6 +3,7 @@ package org.akkirrai.hibiki.core.source.extension
 import eu.kanade.tachiyomi.animesource.AnimeCatalogueSource
 import eu.kanade.tachiyomi.animesource.ConfigurableAnimeSource
 import eu.kanade.tachiyomi.animesource.model.FetchType
+import eu.kanade.tachiyomi.animesource.model.Hoster
 import eu.kanade.tachiyomi.animesource.model.SAnime
 import eu.kanade.tachiyomi.animesource.model.SEpisode
 import eu.kanade.tachiyomi.animesource.model.Video
@@ -165,6 +166,9 @@ class AniyomiAnimeSourceAdapter(
         }
     }
 
+    /** A video together with the name of the hoster it was listed under, if the source has hosters. */
+    private data class HostedVideo(val video: Video, val hosterName: String?)
+
     private fun Video.withStreamUrl(streamUrl: String): Video = Video(
         videoUrl = streamUrl,
         videoTitle = videoTitle,
@@ -194,10 +198,11 @@ class AniyomiAnimeSourceAdapter(
             episode_number = episode.number.toFloat()
         }
         val videos = loadVideos(sourceEpisode)
-        return coroutineScope { videos.map { video -> async { toPlayerLink(video) } }.awaitAll() }.filterNotNull()
+        return coroutineScope { videos.map { hosted -> async { toPlayerLink(hosted) } }.awaitAll() }.filterNotNull()
     }
 
-    private suspend fun toPlayerLink(video: Video): PlayerLink? {
+    private suspend fun toPlayerLink(hosted: HostedVideo): PlayerLink? {
+        val video = hosted.video
         run {
             val directUrl = video.videoUrl.takeIf(String::isNotBlank)
             val url = directUrl ?: video.url
@@ -212,7 +217,9 @@ class AniyomiAnimeSourceAdapter(
                 type = if (directUrl != null) directPlayerType(directUrl, headers) else PlayerType.EMBED,
                 quality = video.quality.takeIf(String::isNotBlank),
                 headers = headers,
-                playerName = source.name,
+                // The hoster is the server or dub the video comes from, so it becomes the player the
+                // user can pick; a source without hosters is one player named after the source.
+                playerName = hosted.hosterName ?: source.name,
                 audioUrl = video.audioTracks.firstOrNull()?.url?.takeIf(String::isNotBlank),
                 audioHeaders = headers,
                 subtitles = video.subtitleTracks.filter { it.url.isNotBlank() }.map { track ->
@@ -260,16 +267,21 @@ class AniyomiAnimeSourceAdapter(
      * The v16 flow: hosters for the episode, then each hoster's videos, then lazy videos resolved.
      * One failing hoster must not hide the others; its error is only surfaced when nothing worked.
      */
-    private suspend fun loadVideos(episode: SEpisode): List<Video> {
+    private suspend fun loadVideos(episode: SEpisode): List<HostedVideo> {
         val http = source as? AnimeHttpSource
         val hosters = guarded("hoster list") { source.getHosterList(episode) }
             .let { list -> http?.let { runCatching { it.sortedHosters(list) }.getOrDefault(list) } ?: list }
         var firstError: Throwable? = null
         val listed = coroutineScope {
             hosters.map { hoster ->
+                val hosterName = hoster.hosterName.trim().takeIf { it.isNotEmpty() && it != Hoster.NO_HOSTER_LIST }
                 async {
                     try {
-                        hoster.videoList ?: guarded("video list") { source.getVideoList(hoster) }
+                        // Videos returned by the source for a hoster are already ordered by its own hook.
+                        val videos = hoster.videoList
+                            ?.let { preset -> http?.let { runCatching { it.sortedVideos(preset) }.getOrDefault(preset) } ?: preset }
+                            ?: guarded("video list") { source.getVideoList(hoster) }
+                        videos.map { HostedVideo(it, hosterName) }
                     } catch (cancelled: CancellationException) {
                         throw cancelled
                     } catch (error: Exception) {
@@ -279,27 +291,29 @@ class AniyomiAnimeSourceAdapter(
                 }
             }.awaitAll().flatten()
         }
-        val ordered = http?.let { runCatching { it.sortedVideos(listed) }.getOrDefault(listed) } ?: listed
+        val ordered = listed
         // Lazy videos carry internalData (or no URL yet) and are finished by the source on demand.
         val resolved = coroutineScope {
             ordered.chunked(RESOLVE_PARALLELISM).flatMap { batch ->
-                batch.map { video ->
+                batch.map { hosted ->
+                    val video = hosted.video
                     async {
                         if (http == null || (video.videoUrl.isNotBlank() && video.internalData.isBlank())) {
-                            video
+                            hosted
                         } else {
                             try {
-                                guarded("video resolve") {
-                                    val finished = http.resolveVideo(video)
+                                val finished = guarded("video resolve") {
+                                    val resolvedVideo = http.resolveVideo(video)
                                     // v14 sources list a page and fetch the stream URL separately.
-                                    if (finished != null && finished.videoUrl.isBlank() && finished.url.isNotBlank()) {
+                                    if (resolvedVideo != null && resolvedVideo.videoUrl.isBlank() && resolvedVideo.url.isNotBlank()) {
                                         @Suppress("DEPRECATION")
-                                        val streamUrl = http.getVideoUrl(finished).takeIf(String::isNotBlank)
-                                        streamUrl?.let { finished.withStreamUrl(it) } ?: finished
+                                        val streamUrl = http.getVideoUrl(resolvedVideo).takeIf(String::isNotBlank)
+                                        streamUrl?.let { resolvedVideo.withStreamUrl(it) } ?: resolvedVideo
                                     } else {
-                                        finished
+                                        resolvedVideo
                                     }
                                 }
+                                finished?.let { hosted.copy(video = it) }
                             } catch (cancelled: CancellationException) {
                                 throw cancelled
                             } catch (error: Exception) {
