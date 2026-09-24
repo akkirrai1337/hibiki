@@ -56,7 +56,7 @@ android {
         applicationId = "org.akkirrai.hibiki"
         minSdk = 26
         targetSdk = 36
-        versionCode = 272
+        versionCode = 272 
         versionName = "2.7.2"
 
         buildConfigField("boolean", "GITHUB_UPDATES_ENABLED", "true")
@@ -169,6 +169,20 @@ dependencies {
     implementation(libs.ktor.serialization.kotlinx.json)
     implementation(libs.coil.compose)
     implementation(libs.kotlinx.coroutines.android)
+    // RxJava 1 is part of the Aniyomi extensions-lib v14 ABI.
+    implementation("io.reactivex:rxjava:1.3.8")
+    // Aniyomi-compatible APKs compile Injekt and serialization as shared host dependencies.
+    implementation("com.github.null2264.injekt:injekt-core:4135455a2a")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-protobuf:1.7.3")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json-okio:1.7.3")
+    // Aniyomi extensions import app.cash.quickjs.QuickJs (compileOnly) and resolve it from the host app.
+    implementation("app.cash.quickjs:quickjs-android:0.9.2")
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    // Fallback resolver for extension traffic when the network's DNS refuses a host.
+    implementation("com.squareup.okhttp3:okhttp-dnsoverhttps:4.12.0")
+    implementation("com.squareup.okhttp3:okhttp-brotli:4.12.0")
+    implementation("org.jsoup:jsoup:1.23.2")
+    implementation("androidx.preference:preference-ktx:1.2.1")
     implementation(libs.androidx.media3.exoplayer)
     implementation(libs.androidx.media3.exoplayer.hls)
     implementation(libs.androidx.media3.exoplayer.dash)

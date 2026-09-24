@@ -8,19 +8,15 @@
 -keep,allowoptimization class okhttp3.** { public protected *; }
 -keep,allowoptimization class okio.** { public protected *; }
 -keep,allowoptimization class org.jsoup.** { public protected *; }
-# Rhino discovers its Android-compatible bridge by name at runtime. Keep only that bridge;
-# retaining the whole library would also retain Rhino's desktop AWT/Swing debugger.
--keep class org.mozilla.javascript.VMBridge { *; }
--keep class org.mozilla.javascript.jdk18.VMBridge_jdk18 { *; }
--keep class org.mozilla.javascript.jdk18.VMBridge_jdk18$* { *; }
-# Context loads the interpreter with Class.forName(), then instantiates it reflectively.
--keep class org.mozilla.javascript.Interpreter { *; }
--keep class org.mozilla.javascript.Interpreter$* { *; }
-# Rhino creates both the regexp engine and RegExp constructor from class-name strings.
--keep class org.mozilla.javascript.regexp.** { *; }
+# JNI reaches into QuickJS members by name, including private ones.
+-keep class app.cash.quickjs.** { *; }
+# Aniyomi extension APKs are loaded at runtime and link against this ABI by name; R8 cannot
+# see their references, so anything it considers unused would surface as NoSuchMethodError.
+-keep class eu.kanade.tachiyomi.** { *; }
+-keep class uy.kohesive.injekt.** { *; }
+-keep class rx.** { public protected *; }
+-keep class androidx.preference.** { public protected *; }
+-dontwarn rx.internal.**
+# Desktop-only JDK classes referenced (but never reached) by ktor and other JVM libraries.
 -dontwarn java.lang.management.**
--dontwarn java.beans.BeanDescriptor
--dontwarn java.beans.BeanInfo
--dontwarn java.beans.IntrospectionException
--dontwarn java.beans.Introspector
--dontwarn java.beans.PropertyDescriptor
+-dontwarn java.beans.**
