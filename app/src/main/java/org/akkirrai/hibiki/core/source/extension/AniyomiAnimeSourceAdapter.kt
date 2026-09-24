@@ -39,6 +39,10 @@ import org.akkirrai.beakokit.model.Episode
 import org.akkirrai.beakokit.model.PlayerLink
 import org.akkirrai.beakokit.model.PlayerType
 import org.akkirrai.beakokit.model.SubtitleTrack
+import org.akkirrai.beakokit.model.VideoSegment
+import org.akkirrai.beakokit.model.VideoSegmentType
+import eu.kanade.tachiyomi.animesource.model.ChapterType
+import eu.kanade.tachiyomi.animesource.model.TimeStamp
 import java.util.concurrent.ConcurrentHashMap
 import java.util.LinkedHashMap
 
@@ -220,6 +224,7 @@ class AniyomiAnimeSourceAdapter(
                 // The hoster is the server or dub the video comes from, so it becomes the player the
                 // user can pick; a source without hosters is one player named after the source.
                 playerName = hosted.hosterName ?: source.name,
+                segments = video.timestamps.mapNotNull(::toVideoSegment).sortedBy(VideoSegment::startMs),
                 audioUrl = video.audioTracks.firstOrNull()?.url?.takeIf(String::isNotBlank),
                 audioHeaders = headers,
                 subtitles = video.subtitleTracks.filter { it.url.isNotBlank() }.map { track ->
@@ -434,4 +439,21 @@ class AniyomiAnimeSourceAdapter(
             return lower.substringBefore('?').substringBefore('#').endsWith(".mpd") && !lower.contains(".m3u8")
         }
     }
+}
+
+/**
+ * An extension timestamp (seconds) as a skippable segment (milliseconds). Openings and mixed
+ * openings can be skipped as an opening, endings as an ending; recaps and unnamed chapters are
+ * kept as unknown segments. Malformed ranges are dropped rather than trusted.
+ */
+internal fun toVideoSegment(timestamp: TimeStamp): VideoSegment? {
+    val start = timestamp.start
+    val end = timestamp.end
+    if (!start.isFinite() || !end.isFinite() || start < 0.0 || end <= start) return null
+    val type = when (timestamp.type) {
+        ChapterType.Opening, ChapterType.MixedOp -> VideoSegmentType.OPENING
+        ChapterType.Ending -> VideoSegmentType.ENDING
+        ChapterType.Recap, ChapterType.Other -> VideoSegmentType.UNKNOWN
+    }
+    return VideoSegment(type = type, startMs = Math.round(start * 1000), endMs = Math.round(end * 1000))
 }

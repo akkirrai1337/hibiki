@@ -1,6 +1,7 @@
 package org.akkirrai.hibiki.core.source.extension
 
 import eu.kanade.tachiyomi.animesource.AnimeCatalogueSource
+import eu.kanade.tachiyomi.animesource.model.ChapterType
 import eu.kanade.tachiyomi.animesource.model.AnimeFilterList
 import eu.kanade.tachiyomi.animesource.model.AnimesPage
 import eu.kanade.tachiyomi.animesource.model.Hoster
@@ -80,5 +81,40 @@ class AniyomiAnimeSourceAdapterTest {
         )
 
         assertEquals(listOf("Good"), links(source).map { it.playerName })
+    }
+}
+
+class TimestampSegmentTest {
+    private fun stamp(start: Double, end: Double, type: ChapterType) =
+        eu.kanade.tachiyomi.animesource.model.TimeStamp(start, end, "chapter", type)
+
+    @Test
+    fun `seconds become milliseconds and chapter types map to skippable segment types`() {
+        assertEquals(
+            org.akkirrai.beakokit.model.VideoSegment(org.akkirrai.beakokit.model.VideoSegmentType.OPENING, 1_500, 91_250),
+            toVideoSegment(stamp(1.5, 91.25, ChapterType.Opening)),
+        )
+        assertEquals(
+            org.akkirrai.beakokit.model.VideoSegmentType.OPENING,
+            toVideoSegment(stamp(0.0, 10.0, ChapterType.MixedOp))?.type,
+        )
+        assertEquals(
+            org.akkirrai.beakokit.model.VideoSegmentType.ENDING,
+            toVideoSegment(stamp(1300.0, 1400.0, ChapterType.Ending))?.type,
+        )
+        assertEquals(
+            org.akkirrai.beakokit.model.VideoSegmentType.UNKNOWN,
+            toVideoSegment(stamp(5.0, 9.0, ChapterType.Recap))?.type,
+        )
+    }
+
+    @Test
+    fun `malformed ranges are dropped`() {
+        val other = ChapterType.Other
+        assertEquals(null, toVideoSegment(stamp(10.0, 10.0, other)))
+        assertEquals(null, toVideoSegment(stamp(20.0, 10.0, other)))
+        assertEquals(null, toVideoSegment(stamp(-1.0, 10.0, other)))
+        assertEquals(null, toVideoSegment(stamp(0.0, Double.NaN, other)))
+        assertEquals(null, toVideoSegment(stamp(0.0, Double.POSITIVE_INFINITY, other)))
     }
 }
