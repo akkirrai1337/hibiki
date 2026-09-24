@@ -544,11 +544,6 @@ private fun HibikiNavHost(
                     onBackClick = {
                         navController.runIfCurrent(backStackEntry) { navController.navigateUp() }
                     },
-                    onRelatedAnimeClick = { anime ->
-                        navController.runIfCurrent(backStackEntry) {
-                            navController.navigate(AnimeNavType.createDetailsRoute(anime))
-                        }
-                    },
                     onOpenSources = { anime ->
                         navController.runIfCurrent(backStackEntry) {
                             navController.navigateSingleTopTo(AnimeNavType.createWatchSourcesRoute(anime))

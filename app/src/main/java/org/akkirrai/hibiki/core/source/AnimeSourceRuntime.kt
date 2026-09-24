@@ -104,12 +104,7 @@ class AnimeSourceRuntime internal constructor(
 
     internal fun cachedDetailsFor(id: String): AnimeTitle? = cachedDetails(nativeId(id))
 
-    private fun scopeTitle(title: AnimeTitle): AnimeTitle = title.copy(
-        id = scopedId(title.id),
-        similarAnime = title.similarAnime.map { it.copy(id = scopedId(it.id)) },
-        franchiseAnime = title.franchiseAnime.map { it.copy(id = scopedId(it.id)) },
-        relatedAnime = title.relatedAnime.map { it.copy(id = scopedId(it.id)) },
-    )
+    private fun scopeTitle(title: AnimeTitle): AnimeTitle = title.copy(id = scopedId(title.id))
 
     private data class CachedDetails(
         val title: AnimeTitle,

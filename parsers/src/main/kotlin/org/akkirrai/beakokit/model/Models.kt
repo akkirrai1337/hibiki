@@ -29,9 +29,6 @@ data class AnimeTitle(
     val sourceMaterial: String? = null,
     val studios: List<String> = emptyList(),
     val mainCharacters: List<CharacterTitle> = emptyList(),
-    val similarAnime: List<RelatedAnimeTitle> = emptyList(),
-    val franchiseAnime: List<RelatedAnimeTitle> = emptyList(),
-    val relatedAnime: List<RelatedAnimeTitle> = emptyList(),
     val season: Int? = null,
     /** Episodes currently available from this source; differs from the planned total for ongoing titles. */
     val availableEpisodeCount: Int? = null,
@@ -242,17 +239,6 @@ data class CharacterTitle(
     val id: String,
     val title: String,
     val posterUrl: String? = null,
-)
-
-@Serializable
-data class RelatedAnimeTitle(
-    val id: String,
-    val title: String,
-    val posterUrl: String? = null,
-    val type: String? = null,
-    val year: Int? = null,
-    val episodeCount: Int? = null,
-    val status: String? = null,
 )
 
 data class ProviderMatch(

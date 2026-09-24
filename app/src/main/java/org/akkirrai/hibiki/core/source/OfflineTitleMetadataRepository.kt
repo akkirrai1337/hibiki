@@ -7,7 +7,6 @@ import org.akkirrai.hibiki.core.log.AppLogger
 import org.akkirrai.hibiki.core.model.Anime
 import org.akkirrai.hibiki.core.model.AnimeRating
 import org.akkirrai.hibiki.core.model.AnimeTrailer
-import org.akkirrai.hibiki.core.model.RelatedAnime
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -22,12 +21,7 @@ class OfflineTitleMetadataRepository(context: Context) {
     }
 
     fun save(anime: Anime) {
-        val normalized = anime.copy(
-            id = YummyIdMigration.normalizeTitleId(anime.id),
-            similarAnime = anime.similarAnime.map { it.copy(id = YummyIdMigration.normalizeTitleId(it.id)) },
-            franchiseAnime = anime.franchiseAnime.map { it.copy(id = YummyIdMigration.normalizeTitleId(it.id)) },
-            relatedAnime = anime.relatedAnime.map { it.copy(id = YummyIdMigration.normalizeTitleId(it.id)) },
-        )
+        val normalized = anime.copy(id = YummyIdMigration.normalizeTitleId(anime.id))
         dao.upsert(OfflineTitleEntity(normalized.id, encodeAnime(normalized).toString(), System.currentTimeMillis()))
     }
 
@@ -91,28 +85,6 @@ class OfflineTitleMetadataRepository(context: Context) {
                     })
                 }
             })
-            put("franchiseAnime", JSONArray().apply {
-                anime.franchiseAnime.forEach { related -> put(encodeRelated(related)) }
-            })
-            put("similarAnime", JSONArray().apply {
-                anime.similarAnime.forEach { related -> put(encodeRelated(related)) }
-            })
-            put("relatedAnime", JSONArray().apply {
-                anime.relatedAnime.forEach { related -> put(encodeRelated(related)) }
-            })
-        }
-    }
-
-    private fun encodeRelated(related: RelatedAnime): JSONObject {
-        return JSONObject().apply {
-            put("id", related.id)
-            put("title", related.title)
-            put("posterUrl", related.posterUrl)
-            put("posterFallbackUrl", related.posterFallbackUrl)
-            put("type", related.type)
-            put("year", related.year)
-            put("episodeCount", related.episodeCount)
-            put("status", related.status)
         }
     }
 
@@ -137,9 +109,6 @@ class OfflineTitleMetadataRepository(context: Context) {
             trailer = json.optJSONObject("trailer")?.toAnimeTrailer(),
             sourceMaterial = json.optString("sourceMaterial").ifBlank { null },
             studios = json.optJSONArray("studios").toStringList(),
-            similarAnime = json.optJSONArray("similarAnime").toRelatedAnimeList(),
-            franchiseAnime = json.optJSONArray("franchiseAnime").toRelatedAnimeList(),
-            relatedAnime = json.optJSONArray("relatedAnime").toRelatedAnimeList(),
         )
     }
 
@@ -173,26 +142,6 @@ class OfflineTitleMetadataRepository(context: Context) {
             if (value > 0.0) {
                 add(AnimeRating(source = source, value = value, votes = item.optInt("votes").takeIf { it > 0 }))
             }
-        }
-    }
-
-    private fun JSONArray?.toRelatedAnimeList(): List<RelatedAnime> = buildList {
-        if (this@toRelatedAnimeList == null) return@buildList
-        for (index in 0 until this@toRelatedAnimeList.length()) {
-            val item = this@toRelatedAnimeList.optJSONObject(index) ?: continue
-            val id = item.optString("id").takeIf(String::isNotBlank) ?: continue
-            add(
-                RelatedAnime(
-                    id = YummyIdMigration.normalizeTitleId(id),
-                    title = item.optString("title"),
-                    posterUrl = item.optString("posterUrl").ifBlank { null },
-                    posterFallbackUrl = item.optString("posterFallbackUrl").ifBlank { null },
-                    type = item.optString("type").ifBlank { null },
-                    year = item.optInt("year").takeIf { it > 0 },
-                    episodeCount = item.optInt("episodeCount").takeIf { it > 0 },
-                    status = item.optString("status").ifBlank { null },
-                )
-            )
         }
     }
 

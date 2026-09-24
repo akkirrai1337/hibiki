@@ -172,12 +172,7 @@
     <string name="details_source_material_visual_novel">Візуальна новела</string>
     <string name="details_source_material_game">Гра</string>
     <string name="details_source_material_original">Оригінал</string>
-    <string name="details_related">Пов’язані аніме</string>
     <string name="details_franchise">Франшиза</string>
-    <string name="details_similar">Схожі</string>
-    <string name="details_related_titles">Пов’язані аніме</string>
-    <string name="details_related_count_label">Аніме: %1$d</string>
-    <string name="details_related_show_all_count">Показати всі: %1$d</string>
     <string name="details_current">Поточне</string>
     <string name="details_rating_votes_compact">Оцінок: %1$s</string>
     <string name="details_views_compact">Переглядів: %1$s</string>

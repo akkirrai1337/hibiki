@@ -44,15 +44,7 @@ data class AnimeSourceDescriptor(
     val supportsPlayback: Boolean
         get() = SourceCapability.PLAYBACK in info.capabilities
 
-    val contentFeatures: Set<SourceCapability>
-        get() = info.capabilities.intersect(CONTENT_CAPABILITIES)
-
     companion object {
-        private val CONTENT_CAPABILITIES = setOf(
-            SourceCapability.RELATED_TITLES,
-            SourceCapability.SIMILAR_TITLES,
-        )
-
         /** A capability-less placeholder for a source id that isn't currently installed. */
         fun unavailable(sourceId: SourceId): AnimeSourceDescriptor = AnimeSourceDescriptor(
             info = SourceInfo(

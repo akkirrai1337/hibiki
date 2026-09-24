@@ -32,14 +32,12 @@ import org.akkirrai.beakokit.model.AnimeReleaseStatus
 import org.akkirrai.hibiki.core.model.ReleaseStatusText
 import org.akkirrai.beakokit.model.AnimeTitle
 import org.akkirrai.beakokit.model.AnimeTrailerTitle
-import org.akkirrai.beakokit.model.RelatedAnimeTitle
 import org.akkirrai.hibiki.app.settings.AppPreferences
 import org.akkirrai.hibiki.app.settings.LanguageMode
 import org.akkirrai.hibiki.core.log.AppLogger
 import org.akkirrai.hibiki.core.model.Anime
 import org.akkirrai.hibiki.core.model.AnimeRating
 import org.akkirrai.hibiki.core.model.AnimeTrailer
-import org.akkirrai.hibiki.core.model.RelatedAnime
 import org.akkirrai.hibiki.core.network.AndroidHttpClientFactory
 import org.akkirrai.hibiki.core.network.NoInternetConnectionException
 import org.akkirrai.hibiki.core.network.hasActiveInternetConnection
@@ -290,12 +288,6 @@ class AnimeSearchRepository(
             trailer = trailer,
             sourceMaterial = sourceMaterial ?: fallback?.sourceMaterial,
             studios = studios.ifEmpty { fallback?.studios.orEmpty() },
-            similarAnime = similarAnime.map(RelatedAnimeTitleMapper::map)
-                .ifEmpty { fallback?.similarAnime.orEmpty() },
-            franchiseAnime = franchiseAnime.map(RelatedAnimeTitleMapper::map)
-                .ifEmpty { fallback?.franchiseAnime.orEmpty() },
-            relatedAnime = relatedAnime.map(RelatedAnimeTitleMapper::map)
-                .ifEmpty { fallback?.relatedAnime.orEmpty() },
             releaseDate = formatReleaseDate(preferEnglish) ?: fallback?.releaseDate,
         )
     }
@@ -557,20 +549,6 @@ class AnimeSearchRepository(
         val anime: Anime,
         val cachedAt: Long,
     )
-
-    private object RelatedAnimeTitleMapper {
-        fun map(related: org.akkirrai.beakokit.model.RelatedAnimeTitle): RelatedAnime {
-            return RelatedAnime(
-                id = related.id,
-                title = related.title,
-                posterUrl = related.posterUrl,
-                type = related.type,
-                year = related.year,
-                episodeCount = related.episodeCount,
-                status = related.status,
-            )
-        }
-    }
 
     private companion object {
         const val TAG = "AnimeSearchRepository"

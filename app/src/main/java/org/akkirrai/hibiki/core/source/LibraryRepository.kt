@@ -10,7 +10,6 @@ import org.akkirrai.hibiki.core.log.AppLogger
 import org.akkirrai.hibiki.core.model.Anime
 import org.akkirrai.hibiki.core.model.AnimeRating
 import org.akkirrai.hibiki.core.model.AnimeTrailer
-import org.akkirrai.hibiki.core.model.RelatedAnime
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -151,16 +150,7 @@ private fun decodeStoredAnime(encoded: String): Anime? =
     runCatching { decodeAnime(JSONObject(encoded)).normalizeIds() }.getOrNull()
 
 private fun Anime.normalizeIds(): Anime {
-    return copy(
-        id = YummyIdMigration.normalizeTitleId(id),
-        similarAnime = similarAnime.map(::normalizeRelated),
-        franchiseAnime = franchiseAnime.map(::normalizeRelated),
-        relatedAnime = relatedAnime.map(::normalizeRelated),
-    )
-}
-
-private fun normalizeRelated(related: RelatedAnime): RelatedAnime {
-    return related.copy(id = YummyIdMigration.normalizeTitleId(related.id))
+    return copy(id = YummyIdMigration.normalizeTitleId(id))
 }
 
 /**
@@ -257,22 +247,6 @@ private fun encodeAnime(anime: Anime): JSONObject {
         })
         put("genres", JSONArray(anime.genres))
         put("studios", JSONArray(anime.studios))
-        put("franchiseAnime", JSONArray().apply { anime.franchiseAnime.forEach { put(encodeRelated(it)) } })
-        put("similarAnime", JSONArray().apply { anime.similarAnime.forEach { put(encodeRelated(it)) } })
-        put("relatedAnime", JSONArray().apply { anime.relatedAnime.forEach { put(encodeRelated(it)) } })
-    }
-}
-
-private fun encodeRelated(related: RelatedAnime): JSONObject {
-    return JSONObject().apply {
-        put("id", related.id)
-        put("title", related.title)
-        put("posterUrl", related.posterUrl)
-        put("posterFallbackUrl", related.posterFallbackUrl)
-        put("type", related.type)
-        put("year", related.year)
-        put("episodeCount", related.episodeCount)
-        put("status", related.status)
     }
 }
 
@@ -297,9 +271,6 @@ private fun decodeAnime(json: JSONObject): Anime {
         sourceMaterial = json.optString("sourceMaterial").ifBlank { null },
         genres = json.optJSONArray("genres").toStringList(),
         studios = json.optJSONArray("studios").toStringList(),
-        similarAnime = json.optJSONArray("similarAnime").toRelatedAnimeList(),
-        franchiseAnime = json.optJSONArray("franchiseAnime").toRelatedAnimeList(),
-        relatedAnime = json.optJSONArray("relatedAnime").toRelatedAnimeList(),
     )
 }
 
@@ -322,25 +293,6 @@ private fun JSONArray?.toStringList(): List<String> {
             add(optString(index))
         }
     }.filter(String::isNotBlank)
-}
-
-private fun JSONArray?.toRelatedAnimeList(): List<RelatedAnime> = buildList {
-    if (this@toRelatedAnimeList == null) return@buildList
-    for (index in 0 until this@toRelatedAnimeList.length()) {
-        val item = this@toRelatedAnimeList.optJSONObject(index) ?: continue
-        add(
-            RelatedAnime(
-                id = item.optString("id"),
-                title = item.optString("title"),
-                posterUrl = item.optString("posterUrl").ifBlank { null },
-                posterFallbackUrl = item.optString("posterFallbackUrl").ifBlank { null },
-                type = item.optString("type").ifBlank { null },
-                year = item.optInt("year").takeIf { it > 0 },
-                episodeCount = item.optInt("episodeCount").takeIf { it > 0 },
-                status = item.optString("status").ifBlank { null },
-            )
-        )
-    }
 }
 
 private fun JSONArray?.toRatingsList(): List<AnimeRating> = buildList {

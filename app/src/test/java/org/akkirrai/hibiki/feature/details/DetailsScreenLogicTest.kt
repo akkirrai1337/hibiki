@@ -39,16 +39,4 @@ class DetailsScreenLogicTest {
         )
         assertNull("/poster.webp".toAbsoluteImageUrl())
     }
-
-    @Test
-    fun `related metadata combines year and type`() {
-        assertEquals("2022 • TV", formatRelatedAnimeMetadata(2022, "tv"))
-        assertEquals("2022 • ONA", formatRelatedAnimeMetadata(2022, "ona"))
-        assertEquals("OVA", formatRelatedAnimeMetadata(null, "ova"))
-        assertEquals(
-            "анонс • TV",
-            formatRelatedAnimeMetadata(0, "tv", "announcement", "анонс"),
-        )
-        assertEquals("TV", formatRelatedAnimeMetadata(0, "tv", "unknown", "анонс"))
-    }
 }

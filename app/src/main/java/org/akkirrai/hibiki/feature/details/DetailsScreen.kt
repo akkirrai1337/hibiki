@@ -155,7 +155,6 @@ import org.akkirrai.hibiki.core.model.EpisodeWatchProgress
 import org.akkirrai.hibiki.core.model.formatEpisodeNumber
 import org.akkirrai.hibiki.core.model.formatPlaybackTime
 import org.akkirrai.hibiki.core.model.isWatchedToEnd
-import org.akkirrai.hibiki.core.model.RelatedAnime
 import org.akkirrai.hibiki.core.model.TitleWatchState
 import org.akkirrai.hibiki.core.model.WatchEpisode
 import org.akkirrai.hibiki.core.model.WatchSource
@@ -197,7 +196,6 @@ import com.materialkolor.rememberDynamicColorScheme
 fun DetailsScreen(
     anime: Anime,
     onBackClick: () -> Unit,
-    onRelatedAnimeClick: (Anime) -> Unit,
     onOpenSources: (Anime) -> Unit,
     onOpenSingleSource: (Anime, WatchSource) -> Unit,
     onPlayEpisode: (Anime, WatchSource, WatchEpisode) -> Unit,
@@ -467,13 +465,11 @@ fun DetailsScreen(
         currentAnime,
         heroInfo,
         description,
-        sourceDescriptor.contentFeatures,
     ) {
         buildDetailsUiModel(
             anime = currentAnime,
             hero = heroInfo,
             description = description,
-            contentFeatures = sourceDescriptor.contentFeatures,
         )
     }
     val canWatch = remember(selectedAnimeSource, currentAnime.episodesLabel, heroInfo.status) {
@@ -698,33 +694,6 @@ fun DetailsScreen(
                         onRetry = { episodesViewModel?.load() },
                         onEpisodeClick = { episode -> leaving { onPlayEpisode(currentAnimeState, selected, episode) } },
                     )
-                }
-            }
-
-            item {
-                Column {
-                    if (isDetailsLoading) {
-                        RelatedTitlesSkeleton()
-                    } else {
-                        uiModel.sections.forEach { section ->
-                            when (section) {
-                                is RelatedSection -> {
-                                    RelatedAnimeList(
-                                        items = section.items,
-                                        title = stringResource(R.string.details_related),
-                                        onAnimeClick = { related -> leaving { onRelatedAnimeClick(related) } },
-                                    )
-                                }
-                                is SimilarSection -> {
-                                    RelatedAnimeList(
-                                        items = section.items,
-                                        title = stringResource(R.string.details_similar),
-                                        onAnimeClick = { related -> leaving { onRelatedAnimeClick(related) } },
-                                    )
-                                }
-                            }
-                        }
-                    }
                 }
             }
                 }
@@ -1612,40 +1581,6 @@ private fun GenrePillsSkeletonRow() {
 }
 
 @Composable
-private fun RelatedTitlesSkeleton() {
-    Column(modifier = Modifier.fillMaxWidth()) {
-        Spacer(modifier = Modifier.height(32.dp))
-        DetailSectionTitle(
-            text = stringResource(R.string.details_related),
-            modifier = Modifier.padding(horizontal = DETAIL_CONTENT_START_PADDING),
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(220.dp)
-                .padding(horizontal = DETAIL_CONTENT_START_PADDING),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            repeat(3) {
-                Column(modifier = Modifier.width(100.dp)) {
-                    AppShimmerBlock(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(140.dp)
-                            .clip(RoundedCornerShape(12.dp)),
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    AppShimmerBlock(modifier = Modifier.fillMaxWidth().height(12.dp))
-                    Spacer(modifier = Modifier.height(6.dp))
-                    AppShimmerBlock(modifier = Modifier.fillMaxWidth(0.68f).height(10.dp))
-                }
-            }
-        }
-    }
-}
-
-@Composable
 private fun DetailSectionTitle(
     text: String,
     modifier: Modifier = Modifier,
@@ -2085,76 +2020,6 @@ private fun GenresSection(
 }
 
 @Composable
-private fun RelatedAnimeList(
-    items: List<RelatedAnime>,
-    title: String,
-    onAnimeClick: (Anime) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val announcementLabel = stringResource(R.string.anime_meta_announcement)
-    val displayItems = remember(items) { items.distinctBy(RelatedAnime::id) }
-    Column(modifier = modifier.fillMaxWidth()) {
-        Spacer(modifier = Modifier.height(32.dp))
-        DetailSectionTitle(
-            text = title,
-            modifier = Modifier.padding(horizontal = DETAIL_CONTENT_START_PADDING),
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-        LazyRow(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(220.dp),
-            contentPadding = PaddingValues(horizontal = DETAIL_CONTENT_START_PADDING),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            items(displayItems, key = RelatedAnime::id) { related ->
-                Column(
-                    modifier = Modifier
-                        .width(100.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .clickable { onAnimeClick(related.toAnime()) }
-                        .padding(bottom = 8.dp),
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(140.dp)
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(MaterialTheme.colorScheme.surfaceVariant),
-                    ) {
-                        NetworkImage(
-                            imageUrl = related.posterUrl,
-                            fallbackUrl = related.posterFallbackUrl,
-                            contentDescription = related.title,
-                        )
-                    }
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = formatRelatedAnimeMetadata(
-                            year = related.year,
-                            type = related.type,
-                            status = related.status,
-                            relationLabel = related.relationLabel,
-                            announcementLabel = announcementLabel,
-                        ),
-                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                        color = MaterialTheme.colorScheme.primary,
-                        maxLines = 1,
-                    )
-                    Text(
-                        text = related.title,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
 private fun FavoriteCircleButton(
     libraryCategory: LibraryCategory?,
     onClick: () -> Unit,
@@ -2478,16 +2343,6 @@ private fun formatCount(value: Long): String {
     }
 }
 
-private fun RelatedAnime.toAnime(): Anime = Anime(
-    id = id,
-    title = title,
-    subtitle = "",
-    episodesLabel = "",
-    status = status.orEmpty(),
-    posterUrl = posterUrl,
-    posterFallbackUrl = posterFallbackUrl
-)
-
 private suspend fun extractTitleSeedColor(
     context: Context,
     imageUrls: List<String>,
@@ -2574,26 +2429,6 @@ internal fun extractNextEpisodeNumber(episodesLabel: String): Int? {
         ?.toIntOrNull()
         ?: return null
     return releasedEpisodes.takeIf { it >= 0 }?.plus(1)
-}
-
-internal fun formatRelatedAnimeMetadata(
-    year: Int?,
-    type: String?,
-    status: String? = null,
-    announcementLabel: String = "announcement",
-    relationLabel: String? = null,
-): String {
-    val releaseLabel = year
-        ?.takeIf { it > 0 }
-        ?.toString()
-        ?: announcementLabel.takeIf { isAnnouncementStatus(status.orEmpty()) }
-    val typeLabel = type
-        ?.trim()
-        ?.takeIf(String::isNotBlank)
-        ?.replace('_', ' ')
-        ?.replace('-', ' ')
-        ?.uppercase(Locale.ROOT)
-    return listOfNotNull(relationLabel, releaseLabel, typeLabel).joinToString(" • ")
 }
 
 private const val DEFAULT_TYPE = "TV"

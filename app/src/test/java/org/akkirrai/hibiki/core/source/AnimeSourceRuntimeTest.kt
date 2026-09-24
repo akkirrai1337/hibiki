@@ -16,7 +16,6 @@ import org.akkirrai.beakokit.model.AnimeSearchRequest
 import org.akkirrai.beakokit.model.AnimeTitle
 import org.akkirrai.beakokit.model.CatalogCapabilities
 import org.akkirrai.beakokit.model.SearchFilterOption
-import org.akkirrai.beakokit.model.RelatedAnimeTitle
 import org.akkirrai.beakokit.model.Episode
 import org.akkirrai.beakokit.model.PlayerLink
 import org.junit.Assert.assertEquals
@@ -33,7 +32,6 @@ class AnimeSourceRuntimeTest {
         val details = runtime.details(searchResult.id)
 
         assertEquals("source:ani-liberty:7", searchResult.id)
-        assertEquals("source:ani-liberty:8", searchResult.relatedAnime.single().id)
         assertEquals("7", source.requestedDetailsId)
         assertEquals(searchResult.id, details.id)
     }
@@ -181,7 +179,6 @@ class AnimeSourceRuntimeTest {
             posterUrl = null,
             status = "ongoing",
             description = null,
-            relatedAnime = listOf(RelatedAnimeTitle(id = "8", title = "Related")),
         )
     }
 }

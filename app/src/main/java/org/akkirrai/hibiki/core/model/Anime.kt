@@ -20,11 +20,6 @@ data class Anime(
     val trailer: AnimeTrailer? = null,
     val sourceMaterial: String? = null,
     val studios: List<String> = emptyList(),
-    val similarAnime: List<RelatedAnime> = emptyList(),
-    val franchiseAnime: List<RelatedAnime> = emptyList(),
-    /** Franchise entries from AniList. Their ids resolve against the selected source on tap. */
-    val aggregatorFranchiseAnime: List<RelatedAnime> = emptyList(),
-    val relatedAnime: List<RelatedAnime> = emptyList(),
     val releaseDate: String? = null,
 )
 
@@ -45,16 +40,4 @@ data class AnimeRating(
     val source: String,
     val value: Double,
     val votes: Int? = null,
-)
-
-data class RelatedAnime(
-    val id: String,
-    val title: String,
-    val posterUrl: String? = null,
-    val posterFallbackUrl: String? = null,
-    val type: String? = null,
-    val year: Int? = null,
-    val episodeCount: Int? = null,
-    val status: String? = null,
-    val relationLabel: String? = null,
 )
