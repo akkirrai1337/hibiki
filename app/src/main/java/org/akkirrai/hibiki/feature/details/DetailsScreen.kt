@@ -287,6 +287,23 @@ fun DetailsScreen(
         onBackClick()
     }
 
+    // The scroll position is captured the moment the user leaves for another screen. Disposal is too
+    // late for the player: it turns the activity landscape while this page is still being torn
+    // down, the list re-lays out at that size, and the offset saved then made the page reopen
+    // scrolled by an arbitrary amount.
+    val scrollSavedOnLeave = remember(detailsStateKey) { booleanArrayOf(false) }
+    fun saveScrollState() {
+        detailsScreenStateCache[detailsStateKey] = DetailsScreenSavedState(
+            anime = currentAnimeState,
+            firstVisibleItemIndex = listState.firstVisibleItemIndex,
+            firstVisibleItemScrollOffset = listState.firstVisibleItemScrollOffset,
+        )
+        scrollSavedOnLeave[0] = true
+    }
+    fun leaving(navigate: () -> Unit) {
+        saveScrollState()
+        navigate()
+    }
     suspend fun refreshWatchStateSnapshot() {
         val snapshot = withContext(Dispatchers.IO) {
             val resumeFrame = resumeFrameRepository.getFrame(anime.id)
@@ -316,13 +333,13 @@ fun DetailsScreen(
             when {
                 offlineSources.size == 1 -> {
                     isResolvingWatchSources = false
-                    onOpenSingleSource(currentAnimeState, offlineSources.single())
+                    leaving { onOpenSingleSource(currentAnimeState, offlineSources.single()) }
                     return@launch
                 }
 
                 offlineSources.isNotEmpty() -> {
                     isResolvingWatchSources = false
-                    onOpenSources(currentAnimeState)
+                    leaving { onOpenSources(currentAnimeState) }
                     return@launch
                 }
             }
@@ -338,9 +355,9 @@ fun DetailsScreen(
             isResolvingWatchSources = false
             val singleSource = sources?.singleOrNull()
             if (singleSource != null) {
-                onOpenSingleSource(currentAnimeState, singleSource)
+                leaving { onOpenSingleSource(currentAnimeState, singleSource) }
             } else {
-                onOpenSources(currentAnimeState)
+                leaving { onOpenSources(currentAnimeState) }
             }
         }
     }
@@ -353,11 +370,7 @@ fun DetailsScreen(
 
     DisposableEffect(detailsStateKey, listState) {
         onDispose {
-            detailsScreenStateCache[detailsStateKey] = DetailsScreenSavedState(
-                anime = currentAnimeState,
-                firstVisibleItemIndex = listState.firstVisibleItemIndex,
-                firstVisibleItemScrollOffset = listState.firstVisibleItemScrollOffset,
-            )
+            if (!scrollSavedOnLeave[0]) saveScrollState()
         }
     }
 
@@ -422,6 +435,7 @@ fun DetailsScreen(
 
     DisposableEffect(lifecycleOwner, anime.id) {
         val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) scrollSavedOnLeave[0] = false
             if (event == Lifecycle.Event.ON_RESUME && screenTransitionSettledState) {
                 screenScope.launch {
                     refreshWatchStateSnapshot()
@@ -507,7 +521,7 @@ fun DetailsScreen(
                 watchStateRepository.getEpisodeProgressForSource(watchTitleIdFromSourceId(source.sourceId), source.sourceId)
             }
             val index = resolveEpisodeAutoScrollIndex(items, progress) ?: 0
-            onPlayEpisode(currentAnimeState, source, items[index])
+            leaving { onPlayEpisode(currentAnimeState, source, items[index]) }
         }
     }
     val fallbackColorScheme = MaterialTheme.colorScheme
@@ -620,7 +634,7 @@ fun DetailsScreen(
                         isLibrarySheetOpen = true
                     },
                     onPrimaryClick = { startWatching() },
-                    onResumeClick = onResumePlayback,
+                    onResumeClick = { progress -> leaving { onResumePlayback(progress) } },
                     onTrailerClick = {
                         currentAnime.trailer?.playbackUrl?.let(uriHandler::openUri)
                     },
@@ -651,6 +665,16 @@ fun DetailsScreen(
             }
 
             item {
+                Column {
+                    if (isDetailsLoading) {
+                        GenresSection(genres = emptyList(), isLoading = true)
+                    } else if (uiModel.anime.genres.isNotEmpty()) {
+                        GenresSection(genres = uiModel.anime.genres)
+                    }
+                }
+            }
+
+            item {
                 val sources = inlineSources
                 val selected = sources?.firstOrNull { it.sourceId == inlineSourceId }
                 val episodesUi = episodesState?.value
@@ -672,7 +696,7 @@ fun DetailsScreen(
                             )
                         },
                         onRetry = { episodesViewModel?.load() },
-                        onEpisodeClick = { episode -> onPlayEpisode(currentAnimeState, selected, episode) },
+                        onEpisodeClick = { episode -> leaving { onPlayEpisode(currentAnimeState, selected, episode) } },
                     )
                 }
             }
@@ -680,26 +704,22 @@ fun DetailsScreen(
             item {
                 Column {
                     if (isDetailsLoading) {
-                        GenresSection(genres = emptyList(), isLoading = true)
                         RelatedTitlesSkeleton()
                     } else {
-                        if (uiModel.anime.genres.isNotEmpty()) {
-                            GenresSection(genres = uiModel.anime.genres)
-                        }
                         uiModel.sections.forEach { section ->
                             when (section) {
                                 is RelatedSection -> {
                                     RelatedAnimeList(
                                         items = section.items,
                                         title = stringResource(R.string.details_related),
-                                        onAnimeClick = onRelatedAnimeClick,
+                                        onAnimeClick = { related -> leaving { onRelatedAnimeClick(related) } },
                                     )
                                 }
                                 is SimilarSection -> {
                                     RelatedAnimeList(
                                         items = section.items,
                                         title = stringResource(R.string.details_similar),
-                                        onAnimeClick = onRelatedAnimeClick,
+                                        onAnimeClick = { related -> leaving { onRelatedAnimeClick(related) } },
                                     )
                                 }
                             }
