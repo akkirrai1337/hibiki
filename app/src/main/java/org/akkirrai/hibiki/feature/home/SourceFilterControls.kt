@@ -30,6 +30,7 @@ import androidx.compose.material.icons.rounded.Public
 import androidx.compose.material.icons.rounded.Sort
 import androidx.compose.material.icons.rounded.SortByAlpha
 import androidx.compose.material.icons.rounded.Star
+import androidx.compose.material.icons.rounded.ThumbUp
 import androidx.compose.material.icons.rounded.TrendingUp
 import androidx.compose.material.icons.rounded.Tv
 import androidx.compose.material.icons.rounded.Update
@@ -152,7 +153,8 @@ private fun SourceFilter(
             val selectedIndex = current().substringBefore(':').toIntOrNull()
             val ascending = current().substringAfter(':', "1") == "1"
             // The direction is the chip's state: an up arrow on a green chip is ascending, a down arrow on
-            // a red one descending. Tapping the chosen option flips it; tapping another picks it ascending.
+            // a red one descending. Tapping the chosen option flips it, then clears it; tapping another picks
+            // it ascending.
             AppThreeStateChipFilter(
                 title = def.title,
                 options = def.options.indices.toList(),
@@ -163,7 +165,8 @@ private fun SourceFilter(
                     when {
                         picked != null -> set("$picked:1")
                         excluded.isNotEmpty() -> set("${excluded.first()}:0")
-                        selectedIndex != null -> set("$selectedIndex:1")
+                        // Tapping the descending chip clears the sort: the search runs without one.
+                        selectedIndex != null -> set("")
                     }
                 },
                 id = { it.toString() },
@@ -362,6 +365,7 @@ private fun sortChipIcon(option: String): ImageVector? {
     val t = option.trim().lowercase()
     return when {
         "favorit" in t || "favourit" in t -> Icons.Rounded.Favorite
+        "like" in t -> Icons.Rounded.ThumbUp
         "updated" in t || "update" in t -> Icons.Rounded.Update
         "added" in t || "newest" in t || "latest" in t || "new" in t -> Icons.Rounded.NewReleases
         "score" in t || "rating" in t || "rated" in t -> Icons.Rounded.Star
