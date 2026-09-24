@@ -20,6 +20,20 @@ class DirectHlsExtractor : StreamExtractor {
     )
 }
 
+class DirectDashExtractor : StreamExtractor {
+    override fun supports(link: PlayerLink): Boolean = link.type == PlayerType.DIRECT_DASH
+
+    override suspend fun extract(link: PlayerLink): VideoStream = VideoStream(
+        url = link.url,
+        type = StreamType.DASH,
+        quality = link.quality,
+        headers = link.headers,
+        audioUrl = link.audioUrl,
+        audioHeaders = link.audioHeaders,
+        subtitles = link.subtitles,
+    )
+}
+
 class DirectMp4Extractor : StreamExtractor {
     override fun supports(link: PlayerLink): Boolean = link.type == PlayerType.DIRECT_MP4
 

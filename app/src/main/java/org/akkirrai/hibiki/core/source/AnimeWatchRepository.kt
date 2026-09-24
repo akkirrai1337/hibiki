@@ -16,6 +16,7 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeout
 import org.akkirrai.beakokit.api.StreamExtractor
 import org.akkirrai.beakokit.api.SourceException
+import org.akkirrai.beakokit.playback.extractor.DirectDashExtractor
 import org.akkirrai.beakokit.playback.extractor.DirectHlsExtractor
 import org.akkirrai.beakokit.playback.extractor.DirectMp4Extractor
 import org.akkirrai.beakokit.playback.PlaybackResolver
@@ -706,7 +707,8 @@ class AnimeWatchRepository(
         candidatePlayerName: String?,
         playerType: PlayerType? = null,
     ): Long {
-        if (playerType == PlayerType.DIRECT_HLS || playerType == PlayerType.DIRECT_MP4) {
+        if (playerType == PlayerType.DIRECT_HLS || playerType == PlayerType.DIRECT_MP4 ||
+            playerType == PlayerType.DIRECT_DASH) {
             return if (matchesPreferredPlayer(candidatePlayerName, preferredPlayerName)) {
                 DIRECT_PREFERRED_RESOLVE_TIMEOUT_MS
             } else {
@@ -810,6 +812,7 @@ class AnimeWatchRepository(
         activeExtractors = buildList {
             add(DirectHlsExtractor())
             add(DirectMp4Extractor())
+            add(DirectDashExtractor())
             appContext?.let { add(DirectStreamWebViewRelayExtractor(it)) }
             addAll(downloadedResolvers)
             appContext?.let {

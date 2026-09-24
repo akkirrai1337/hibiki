@@ -277,6 +277,7 @@ data class Episode(
 enum class PlayerType {
     DIRECT_HLS,
     DIRECT_MP4,
+    DIRECT_DASH,
     EMBED,
 }
 

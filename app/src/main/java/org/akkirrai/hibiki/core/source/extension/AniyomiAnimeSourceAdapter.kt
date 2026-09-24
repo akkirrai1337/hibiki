@@ -220,7 +220,7 @@ class AniyomiAnimeSourceAdapter(
         run {
             val directUrl = video.videoUrl.takeIf(String::isNotBlank)
             val url = directUrl ?: video.url
-            if (url.isBlank() || isUnsupportedManifest(url)) return null
+            if (url.isBlank()) return null
             val headers = video.headers?.toMultimap()
                 ?.mapValues { (_, values) -> values.joinToString(", ") }
                 .orEmpty()
@@ -257,6 +257,7 @@ class AniyomiAnimeSourceAdapter(
         val path = lower.substringBefore('?').substringBefore('#')
         return when {
             ".m3u8" in lower -> PlayerType.DIRECT_HLS
+            path.endsWith(".mpd") -> PlayerType.DIRECT_DASH
             MEDIA_EXTENSIONS.any(path::endsWith) -> PlayerType.DIRECT_MP4
             else -> typeCache.getOrPut(url) { sniffPlayerType(url, headers) }
         }
@@ -266,16 +267,19 @@ class AniyomiAnimeSourceAdapter(
         val request = Request.Builder().url(url).header("Range", "bytes=0-255").apply {
             headers.forEach { (name, value) -> header(name, value) }
         }.build()
-        val isHls = withTimeoutOrNull(SNIFF_TIMEOUT_MS) {
+        return withTimeoutOrNull(SNIFF_TIMEOUT_MS) {
             runCatching {
                 NetworkHelper.instance().client.newCall(request).await().use { response ->
                     val contentType = response.header("Content-Type").orEmpty().lowercase()
-                    contentType.contains("mpegurl") ||
-                        response.body?.source()?.let { it.request(7); it.buffer.snapshot().utf8().startsWith("#EXTM3U") } == true
+                    val head = response.body?.source()?.let { it.request(256); it.buffer.snapshot().utf8() }.orEmpty()
+                    when {
+                        contentType.contains("mpegurl") || head.startsWith("#EXTM3U") -> PlayerType.DIRECT_HLS
+                        contentType.contains("dash+xml") || head.contains("<MPD") -> PlayerType.DIRECT_DASH
+                        else -> PlayerType.DIRECT_MP4
+                    }
                 }
-            }.getOrDefault(false)
-        } ?: false
-        return if (isHls) PlayerType.DIRECT_HLS else PlayerType.DIRECT_MP4
+            }.getOrDefault(PlayerType.DIRECT_MP4)
+        } ?: PlayerType.DIRECT_MP4
     }
 
     /**
@@ -442,12 +446,6 @@ class AniyomiAnimeSourceAdapter(
 
         val MEDIA_EXTENSIONS = listOf(".mp4", ".m4v", ".mkv", ".webm", ".mov", ".avi", ".ts", ".flv")
         const val SNIFF_TIMEOUT_MS = 8_000L
-
-        /** DASH has no PlayerType, so such links would fail; skip them and let another video win. */
-        fun isUnsupportedManifest(url: String): Boolean {
-            val lower = url.lowercase()
-            return lower.substringBefore('?').substringBefore('#').endsWith(".mpd") && !lower.contains(".m3u8")
-        }
     }
 }
 

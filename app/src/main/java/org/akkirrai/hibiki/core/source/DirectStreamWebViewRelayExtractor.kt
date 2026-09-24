@@ -79,7 +79,7 @@ internal class DirectStreamWebViewRelayExtractor(
                 type = when (link.type) {
                     PlayerType.DIRECT_HLS -> StreamType.HLS
                     PlayerType.DIRECT_MP4 -> StreamType.MP4
-                    PlayerType.EMBED -> error("Embed links are not direct relay inputs")
+                    PlayerType.DIRECT_DASH, PlayerType.EMBED -> error("Only HLS and MP4 links are relayed")
                 },
                 quality = link.quality,
                 headers = emptyMap(),
