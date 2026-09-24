@@ -1232,7 +1232,8 @@ private fun InstalledSourceRow(
         onInstall = { entry.repositoryEntry?.let(onUpdate) },
         onSelect = { onSelect(entry.extension.id) },
         onUninstall = { onUninstall("$APK_PACKAGE_ROW_PREFIX${entry.packageName}") },
-        onOpenSettings = AnimeSourceRegistry.apkSourceSettings(SourceId(entry.extension.id))?.let {
+        // Rows for extensions that produced no source carry a package id, not a source id.
+        onOpenSettings = entry.takeIf { it.selectable }?.let { AnimeSourceRegistry.apkSourceSettings(SourceId(it.extension.id)) }?.let {
             { onOpenSettings(entry.extension.id) }
         },
     )
