@@ -20,14 +20,6 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
-import org.akkirrai.beakokit.metadata.ExternalMetadata
-import org.akkirrai.beakokit.metadata.ExternalMetadataPreferences
-import org.akkirrai.beakokit.metadata.MetadataPriority
-import org.akkirrai.beakokit.metadata.MetadataProviderId
-import org.akkirrai.beakokit.metadata.ExternalMetadataService
-import org.akkirrai.beakokit.metadata.mergeExternalMetadata
-import org.akkirrai.beakokit.metadata.metadataProviderOrder
-import org.akkirrai.hibiki.core.metadata.RoomExternalMetadataStore
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
@@ -58,64 +50,14 @@ class AnimeSearchRepository(
     private val client: HttpClient = AndroidHttpClientFactory.create(),
     sourceManager: AnimeSourceRuntimeManager? = null,
     private val closeClientOnClose: Boolean = true,
-    /** Shared with the rest of the app when there is one - see HibikiDependencies. Constructed here
-     * only for the standalone paths that build this repository on their own. */
-    metadataService: ExternalMetadataService? = null,
 ) {
     private val searchCache = ConcurrentHashMap<String, CachedSearchResults>()
     private val filterCatalogCache = ConcurrentHashMap<String, AnimeSearchFilterCatalog>()
-    private val pendingCardMatches = ConcurrentHashMap.newKeySet<String>()
     private val appContext = context?.applicationContext
     private val appPreferences = appContext?.let(::AppPreferences)
     private val sourceManager = sourceManager ?: appContext?.let { AnimeSourceRuntimeManager(it, client) }
     private val titleMatcher = TitleMatcher()
-    // Built here rather than injected: everything it needs (the shared client, the app's own
-    // preferences) is already on this repository, and nothing else in the app describes a title.
-    // Only for the standalone path below, and closed with this repository: the shared client retries
-    // 429s, which is wrong for a metadata provider (see AndroidHttpClientFactory.createMetadata).
-    private var ownedMetadataClient: HttpClient? = null
-    private val metadataService = metadataService
-        ?: appContext?.let {
-            ExternalMetadataService(
-                AndroidHttpClientFactory.createMetadata().also { created -> ownedMetadataClient = created },
-                RoomExternalMetadataStore.get(it),
-                log = { message -> AppLogger.d("ExternalMetadata", message) },
-                malClientId = org.akkirrai.hibiki.BuildConfig.MAL_CLIENT_ID.takeIf(String::isNotBlank),
-            )
-        }
-    // Owns preference observation and is cancelled with the repository.
-    private val metadataScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-    private val _cardMetadata = MutableStateFlow<Map<String, Anime>>(emptyMap())
-    /** Durable overlay for cards that completed an aggregator match. State, not an event, so a
-     * screen opening or paginating after a result cannot miss it. */
-    val cardMetadata = _cardMetadata.asStateFlow()
-    private val _pendingCardMetadata = MutableStateFlow<Set<String>>(emptySet())
-    /** Source cards whose aggregator lookup is still in progress. */
-    val pendingCardMetadata = _pendingCardMetadata.asStateFlow()
-    private val _relatedMetadata = MutableStateFlow<Map<String, RelatedAnime>>(emptyMap())
-    /** Related titles described after their details page was returned - see [warmRelatedAnime].
-     * Apply with [withRelatedMetadata]. */
-    val relatedMetadata = _relatedMetadata.asStateFlow()
     private val detailsRequestSlots = Semaphore(MAX_CONCURRENT_DETAILS_REQUESTS)
-    private val cardMatchSlots = Semaphore(MAX_CONCURRENT_CARD_MATCHES)
-    // AniList turns independent card searches into one GraphQL request. Let a whole alias batch
-    // reach it together when it is the sole selected provider; the normal cap still protects
-    // fallback mode, where those lookups may fan out to non-batching services.
-    private val aniListCardMatchSlots = Semaphore(MAX_ANILIST_CONCURRENT_CARD_MATCHES)
-    private val relatedAnimeMatchSlots = Semaphore(MAX_CONCURRENT_CARD_MATCHES)
-
-    init {
-        // Changing whether/which/how external metadata is fetched can only be seen by the user
-        // once already-cached (possibly stale, differently merged) lists and details are dropped.
-        // The initial value is skipped: the cache is already empty right after construction.
-        appPreferences?.state
-            ?.map { RelevantMetadataSettings(it) }
-            ?.distinctUntilChanged()
-            ?.drop(1)
-            ?.onEach { clearCaches() }
-            ?.launchIn(metadataScope)
-    }
-
     suspend fun search(query: String): List<Anime> {
         return search(query = query, limit = SEARCH_PAGE_SIZE, offset = 0)
     }
@@ -129,13 +71,6 @@ class AnimeSearchRepository(
         request: AnimeSearchRequest,
         allowEmptyQuery: Boolean = false,
         forceRefresh: Boolean = false,
-        cardMetadataVisibleCount: Int = VISIBLE_CARD_MATCH_COUNT,
-        cardMetadataPrefetchDelayMillis: Long = CARD_METADATA_PREFETCH_HEAD_START_MILLIS,
-        /** Lets a caller that obtains several source lists at once coalesce their background
-         * metadata work before any card enters a provider queue. */
-        cardMetadataInitialDelayMillis: Long = 0,
-        /** Browse grids can use only source data, leaving enrichment for the details screen. */
-        enrichCardsWithMetadata: Boolean = true,
     ): List<Anime> {
         val normalizedQuery = request.query.trim()
         val hasFilters = request.typeAliases.isNotEmpty() ||
@@ -149,7 +84,7 @@ class AnimeSearchRepository(
         if (normalizedQuery.isBlank() && !hasFilters && !allowEmptyQuery) return emptyList()
 
         val normalizedRequest = request.copy(query = normalizedQuery)
-        val cacheKey = searchCacheKey(normalizedRequest, enrichCardsWithMetadata)
+        val cacheKey = searchCacheKey(normalizedRequest)
         if (!forceRefresh) {
             getCachedSearch(cacheKey)?.let { cached ->
                 AppLogger.d(TAG, "search: cache hit items=${cached.size}")
@@ -177,27 +112,10 @@ class AnimeSearchRepository(
             throw error
         }
         AppLogger.d(TAG, "search: source returned ${sourceTitles.size} in ${System.currentTimeMillis() - startedAt}ms $requestSummary")
-        val results = describeAll(
-            source = source,
-            titles = sourceTitles,
-            cardMetadataVisibleCount = cardMetadataVisibleCount,
-            cardMetadataPrefetchDelayMillis = cardMetadataPrefetchDelayMillis,
-            cardMetadataInitialDelayMillis = cardMetadataInitialDelayMillis,
-            enrichCardsWithMetadata = enrichCardsWithMetadata,
-        )
-            .map { title ->
-                val anime = if (enrichCardsWithMetadata) {
-                    getCachedDetails(detailsCacheKey(title.id))
-                        ?: title.toAnime(preferEnglish = preferEnglish)
-                } else {
-                    title.toAnime(preferEnglish = preferEnglish)
-                }
-                // The cached entry may be the details page's fully merged Anime, whose title comes
-                // from the aggregator. This list only ever shows the source's own title (see
-                // describeAll's doc), so that field is re-applied here even on a cache hit.
-                (if (enrichCardsWithMetadata) cardMetadata.value[title.id] ?: anime else anime)
-                    .copy(title = title.displayName)
-            }
+        val results = sourceTitles.map { title ->
+            (getCachedDetails(detailsCacheKey(title.id)) ?: title.toAnime(preferEnglish = preferEnglish))
+                .copy(title = title.displayName)
+        }
 
         searchCache[cacheKey] = CachedSearchResults(
             items = results,
@@ -219,7 +137,6 @@ class AnimeSearchRepository(
         query: String,
         limit: Int,
         offset: Int,
-        enrichCardsWithMetadata: Boolean = true,
     ): List<Anime> {
         return search(
             AnimeSearchRequest(
@@ -228,51 +145,26 @@ class AnimeSearchRepository(
                 offset = offset,
                 sort = AnimeSearchSort.RELEVANCE,
             ),
-            enrichCardsWithMetadata = enrichCardsWithMetadata,
         )
     }
 
     /**
-     * The source's own "latest releases" list, described exactly like a search page - same
-     * describe-then-convert path, same cache.
-     *
-     * Home used to build these cards straight from the source runtime's [AnimeTitle]s, without
-     * running them through [describeAll] at all, so fields like year and rating could be missing or
-     * stale compared to the title page. Routing it through this one path fixes that - but the name
-     * stays deliberately different: this row keeps the source's own title, while its details screen
-     * shows the aggregator's, exactly as [describeAll]'s doc explains.
+     * The source's own "latest releases" list, converted exactly like a search page and cached the
+     * same way, so a card shows the same fields wherever it appears.
      */
     suspend fun latest(
         limit: Int,
         forceRefresh: Boolean = false,
-        cardMetadataVisibleCount: Int = VISIBLE_CARD_MATCH_COUNT,
-        cardMetadataPrefetchDelayMillis: Long = CARD_METADATA_PREFETCH_HEAD_START_MILLIS,
-        cardMetadataInitialDelayMillis: Long = 0,
-        enrichCardsWithMetadata: Boolean = true,
     ): List<Anime> {
-        val cacheKey = "latest:${selectedSourceId().value}:$limit:${languageKey()}:metadata=$enrichCardsWithMetadata"
+        val cacheKey = "latest:${selectedSourceId().value}:$limit:${languageKey()}"
         if (!forceRefresh) getCachedSearch(cacheKey)?.let { return it }
 
         ensureInternetConnection()
 
         val preferEnglish = preferEnglish()
         val source = currentSource()
-        val results = describeAll(
-            source = source,
-            titles = source.latest(limit),
-            cardMetadataVisibleCount = cardMetadataVisibleCount,
-            cardMetadataPrefetchDelayMillis = cardMetadataPrefetchDelayMillis,
-            cardMetadataInitialDelayMillis = cardMetadataInitialDelayMillis,
-            enrichCardsWithMetadata = enrichCardsWithMetadata,
-        ).map { title ->
-            val anime = if (enrichCardsWithMetadata) {
-                getCachedDetails(detailsCacheKey(title.id)) ?: title.toAnime(preferEnglish = preferEnglish)
-            } else {
-                title.toAnime(preferEnglish = preferEnglish)
-            }
-            // See search(): a details-cache hit carries the aggregator-merged title, but this list
-            // always shows the source's own title, so it is re-applied here too.
-            (if (enrichCardsWithMetadata) cardMetadata.value[title.id] ?: anime else anime)
+        val results = source.latest(limit).map { title ->
+            (getCachedDetails(detailsCacheKey(title.id)) ?: title.toAnime(preferEnglish = preferEnglish))
                 .copy(title = title.displayName)
         }
         searchCache[cacheKey] = CachedSearchResults(
@@ -287,13 +179,10 @@ class AnimeSearchRepository(
         id: String,
         fallback: Anime,
         requireSourceDetails: Boolean = false,
-        /** Skips a cached copy - for a title just opened from an aggregator card, which may now be
-         * described by a different provider than the copy that was cached. */
-        bypassCache: Boolean = false,
     ): Anime {
         AppLogger.d(TAG, "getDetails(id=$id, fallback.title=${fallback.title.take(50)})")
         val cacheKey = detailsCacheKey(id)
-        if (!bypassCache) getCachedDetails(cacheKey)?.let {
+        getCachedDetails(cacheKey)?.let {
             AppLogger.d(TAG, "getDetails: cache hit for $cacheKey")
             return it
         }
@@ -301,10 +190,10 @@ class AnimeSearchRepository(
         val detailsMutex = detailsMutexes.computeIfAbsent(cacheKey) { Mutex() }
         return try {
             detailsMutex.withLock {
-                if (!bypassCache) getCachedDetails(cacheKey)?.let { return@withLock it }
+                getCachedDetails(cacheKey)?.let { return@withLock it }
 
                 detailsRequestSlots.withPermit {
-                    if (!bypassCache) getCachedDetails(cacheKey)?.let { return@withPermit it }
+                    getCachedDetails(cacheKey)?.let { return@withPermit it }
 
                     ensureInternetConnection()
 
@@ -321,20 +210,9 @@ class AnimeSearchRepository(
                                 .bestMatchFor(fallback.title)
                                 ?: throw it
                         }
-                    val described = describe(source, title)
-                    val order = providerOrderFor(source)
-                    val related = listOf(described.relatedAnime, described.franchiseAnime, described.similarAnime)
-                        .flatten()
-                        .distinctBy(RelatedAnimeTitle::id)
-                    val cachedRelated = cachedRelatedAnime(order, related)
-                    val describedFull = described.copy(
-                        relatedAnime = described.relatedAnime.map { cachedRelated[it.id] ?: it },
-                        franchiseAnime = described.franchiseAnime.map { cachedRelated[it.id] ?: it },
-                        similarAnime = described.similarAnime.map { cachedRelated[it.id] ?: it },
-                    )
-                    val trailer = describedFull.trailer?.toAnimeTrailer()
-                    val anime = describedFull.toAnime(
-                        canonicalId = describedFull.id,
+                    val trailer = title.trailer?.toAnimeTrailer()
+                    val anime = title.toAnime(
+                        canonicalId = title.id,
                         preferEnglish = preferEnglish(),
                         fallback = fallback,
                         trailer = trailer ?: fallback.trailer,
@@ -345,7 +223,6 @@ class AnimeSearchRepository(
                         cachedAt = System.currentTimeMillis(),
                     )
                     trimOldestEntries(detailsCache, MAX_DETAILS_CACHE_ENTRIES) { it.cachedAt }
-                    warmRelatedAnime(order, related.filterNot { it.id in cachedRelated }, cacheKey)
                     anime
                 }
             }
@@ -359,21 +236,11 @@ class AnimeSearchRepository(
         filterCatalogCache.clear()
         detailsCache.clear()
         detailsMutexes.clear()
-        pendingCardMatches.clear()
-        _cardMetadata.value = emptyMap()
-        _pendingCardMetadata.value = emptySet()
-        _relatedMetadata.value = emptyMap()
     }
 
     fun close() {
         searchCache.clear()
         filterCatalogCache.clear()
-        pendingCardMatches.clear()
-        _cardMetadata.value = emptyMap()
-        _relatedMetadata.value = emptyMap()
-        _pendingCardMetadata.value = emptySet()
-        metadataScope.cancel()
-        ownedMetadataClient?.close()
         if (closeClientOnClose) client.close()
     }
 
@@ -549,220 +416,6 @@ class AnimeSearchRepository(
             ?.first
     }
 
-    /**
-     * Describes a whole list, card by card.
-     *
-     * The name on a list card is deliberately kept as the source's own, never the aggregator's,
-     * even once a match has been found - this list, unlike the title page, is not enriched with the
-     * provider's title. The details page follows the same rule: the source owns the ID that opens
-     * for playback, while the aggregator enriches only the descriptive fields around that title.
-     *
-     * A list never asks the source for full details before a card is opened. Cached aggregator
-     * data is applied synchronously; new matches continue in the background and update the durable
-     * [cardMetadata] overlay. This keeps the source list responsive without losing an update when
-     * the UI is loading, paginating, or temporarily off screen.
-     */
-    private suspend fun describeAll(
-        source: AnimeSourceRuntime,
-        titles: List<AnimeTitle>,
-        cardMetadataVisibleCount: Int = VISIBLE_CARD_MATCH_COUNT,
-        cardMetadataPrefetchDelayMillis: Long = CARD_METADATA_PREFETCH_HEAD_START_MILLIS,
-        cardMetadataInitialDelayMillis: Long = 0,
-        enrichCardsWithMetadata: Boolean = true,
-    ): List<AnimeTitle> {
-        if (!enrichCardsWithMetadata) return titles
-        val service = metadataService ?: return titles
-        val order = providerOrderFor(source)
-        if (order.isEmpty()) {
-            if (titles.isNotEmpty()) {
-                AppLogger.d(
-                    TAG,
-                    "describeAll: source=${source.descriptor.id.value} skipped, provider order is empty " +
-                        "(useExternalMetadata=${source.descriptor.info.useExternalMetadata}, " +
-                        "userEnabled=${appPreferences?.state?.value?.externalMetadataEnabled})",
-                )
-            }
-            return titles
-        }
-        if (titles.isEmpty()) return titles
-
-        val cachedByTitle = service.cachedMetadataForAll(titles.map(AnimeTitle::id), order)
-        val cached = titles.map { cachedByTitle[it.id] }
-        AppLogger.d(
-            TAG,
-            "describeAll: source=${source.descriptor.id.value} order=$order titles=${titles.size} " +
-                "alreadyDescribed=${cached.count { it != null }} deferredUntilDetails=${cached.count { it == null }}",
-        )
-        titles.filterIndexed { index, title -> cached[index] == null && title.id !in cardMetadata.value }
-            .takeIf(List<AnimeTitle>::isNotEmpty)
-            ?.let {
-                warmCardMetadata(
-                    service = service,
-                    order = order,
-                    titles = it,
-                    visibleCount = cardMetadataVisibleCount,
-                    prefetchDelayMillis = cardMetadataPrefetchDelayMillis,
-                    initialDelayMillis = cardMetadataInitialDelayMillis,
-                )
-            }
-        return titles.mapIndexed { index, title ->
-            val external = cached[index]
-            // mergeExternalMetadata keeps source-owned names. Re-applying these two fields also
-            // protects this list from details cached by an older app version.
-            val described = mergeExternalMetadata(title, external).copy(
-                englishName = title.englishName,
-                originalName = title.originalName,
-            )
-            described
-        }
-    }
-
-    /** Matches a source card without calling source.details(). The completed card is retained in
-     * [cardMetadata], not sent as a one-shot event. */
-    private fun warmCardMetadata(
-        service: ExternalMetadataService,
-        order: List<MetadataProviderId>,
-        titles: List<AnimeTitle>,
-        visibleCount: Int,
-        prefetchDelayMillis: Long,
-        initialDelayMillis: Long,
-    ) {
-        // Claim IDs before launching so duplicate pages/searches cannot create a second lookup
-        // or leave a permanent loading indicator behind.
-        val titlesToLoad = titles.filter { title ->
-            title.id !in cardMetadata.value && pendingCardMatches.add(title.id)
-        }
-        if (titlesToLoad.isEmpty()) return
-        _pendingCardMetadata.update { pending -> pending + titlesToLoad.map(AnimeTitle::id) }
-        val matchSlots = if (order == listOf(MetadataProviderId.ANILIST)) {
-            aniListCardMatchSlots
-        } else {
-            cardMatchSlots
-        }
-        // Give the first row a short uncontended head start. Previously every title in a 24-card
-        // home response entered the visible provider lane at once: cards the user could not yet
-        // see occupied the same limited slots and competed for the same provider queues.
-        // The remainder still enriches automatically, just as prefetch work after the first paint.
-        for ((index, title) in titlesToLoad.withIndex()) {
-            val priority = if (index < visibleCount) {
-                MetadataPriority.Visible
-            } else {
-                MetadataPriority.Prefetch
-            }
-            metadataScope.launch(priority) {
-                if (initialDelayMillis > 0) delay(initialDelayMillis)
-                if (index >= visibleCount) delay(prefetchDelayMillis)
-                matchSlots.withPermit {
-                    try {
-                        // Background priority: the service also sends each live search to whichever
-                        // provider's queue frees up first, spreading a page across all of them.
-                        runCatching { service.metadataFor(title, order) }
-                            .onSuccess { external ->
-                                external ?: return@onSuccess
-                                val enriched = mergeExternalMetadata(title, external)
-                                    .toAnime(preferEnglish = preferEnglish())
-                                _cardMetadata.update { known -> known + (title.id to enriched) }
-                            }
-                            .onFailure { AppLogger.w(TAG, "warmCardMetadata: ${title.id} not described", it) }
-                    } finally {
-                        pendingCardMatches.remove(title.id)
-                        _pendingCardMetadata.update { pending -> pending - title.id }
-                    }
-                }
-            }
-        }
-    }
-
-    private fun providerOrderFor(source: AnimeSourceRuntime): List<MetadataProviderId> {
-        val preferences = appPreferences?.state?.value ?: return emptyList()
-        return metadataProviderOrder(
-            ExternalMetadataPreferences(
-                enabled = preferences.externalMetadataEnabled,
-                overrides = preferences.externalMetadataOverrides,
-                provider = preferences.externalMetadataProvider,
-                fallbackEnabled = preferences.externalMetadataFallback,
-            ),
-            source.descriptor.id.value,
-            source.descriptor.info.useExternalMetadata,
-        )
-    }
-
-    /**
-     * Replaces a title's descriptive fields with a metadata provider's, when both the source asked
-     * for that in its manifest and the user has not turned it off. Names and playback identity stay
-     * with the source; the aggregator owns the presentation metadata around them.
-     *
-     * Failures are swallowed on purpose: a provider being unreachable, rate-limiting us, or simply
-     * not carrying this title must cost the better description and nothing else - the source's own
-     * screen still renders exactly as it did before this existed.
-     */
-    private suspend fun describe(source: AnimeSourceRuntime, title: AnimeTitle): AnimeTitle {
-        val service = metadataService ?: return title
-        val order = providerOrderFor(source)
-        if (order.isEmpty()) return title
-        val external = runCatching { service.metadataFor(title, order) }
-            .onFailure { AppLogger.w(TAG, "describe: metadata lookup failed for ${title.id}", it) }
-            .getOrNull()
-        return mergeExternalMetadata(title, external)
-    }
-
-    /**
-     * Related/franchise/similar titles already described in the store, applied with no request.
-     * Their source IDs remain actionable, so their source titles stay intact while the aggregator
-     * contributes only descriptive fields.
-     */
-    private fun cachedRelatedAnime(
-        order: List<MetadataProviderId>,
-        items: List<RelatedAnimeTitle>,
-    ): Map<String, RelatedAnimeTitle> {
-        val service = metadataService ?: return emptyMap()
-        if (order.isEmpty()) return emptyMap()
-        val cachedByTitle = service.cachedMetadataForAll(items.map(RelatedAnimeTitle::id), order)
-        return items.mapNotNull { item ->
-            cachedByTitle[item.id]?.let { item.id to item.describedWith(it) }
-        }.toMap()
-    }
-
-    /**
-     * Describes the rest of a title's related strips off getDetails()'s critical path. A
-     * franchise-heavy title carries 15-30 of them, each up to several paced requests, and the page
-     * used to wait for all of them before showing anything. Results land in [relatedMetadata] and in
-     * the details cache, at background priority so they never hold up another title being opened.
-     */
-    private fun warmRelatedAnime(
-        order: List<MetadataProviderId>,
-        items: List<RelatedAnimeTitle>,
-        detailsCacheKey: String,
-    ) {
-        val service = metadataService ?: return
-        if (order.isEmpty()) return
-        for (item in items) {
-            metadataScope.launch(MetadataPriority.Prefetch) {
-                relatedAnimeMatchSlots.withPermit {
-                    val stub = AnimeTitle(id = item.id, originalName = item.title, englishName = item.title, posterUrl = item.posterUrl, year = item.year, type = item.type, status = item.status, availableEpisodeCount = item.episodeCount)
-                    val external = runCatching { service.metadataFor(stub, order) }
-                        .onFailure { AppLogger.w(TAG, "warmRelatedAnime: metadata lookup failed for ${item.id}", it) }
-                        .getOrNull()
-                        ?: return@withPermit
-                    val described = RelatedAnimeTitleMapper.map(item.describedWith(external))
-                    _relatedMetadata.update { known -> known + (item.id to described) }
-                    detailsCache.computeIfPresent(detailsCacheKey) { _, cached ->
-                        cached.copy(anime = cached.anime.withRelatedMetadata(mapOf(item.id to described)))
-                    }
-                }
-            }
-        }
-    }
-
-    private fun RelatedAnimeTitle.describedWith(external: ExternalMetadata): RelatedAnimeTitle = copy(
-        posterUrl = posterUrl ?: external.posterUrl,
-        year = external.year ?: year,
-        type = external.type ?: type,
-        episodeCount = external.episodeCount ?: episodeCount,
-        status = external.status ?: status,
-    )
-
-
     /** Whether titles should read in English for the current language setting - the catalog asks so
      * an aggregator entry is named the same way a source title on the same screen would be. */
     fun prefersEnglishTitles(): Boolean = preferEnglish()
@@ -794,7 +447,7 @@ class AnimeSearchRepository(
             LanguageMode.SYSTEM -> "sys"
         }
 
-    private fun searchCacheKey(request: AnimeSearchRequest, enrichCardsWithMetadata: Boolean): String {
+    private fun searchCacheKey(request: AnimeSearchRequest): String {
         val languageKey = languageKey()
         val types = request.typeAliases.sorted().joinToString(",")
         val statuses = request.statusAliases.sorted().joinToString(",")
@@ -816,9 +469,6 @@ class AnimeSearchRepository(
             append(request.offset)
             append(':')
             append(request.sort.name)
-            append(':')
-            append("metadata=")
-            append(enrichCardsWithMetadata)
             append(':')
             append(types)
             append(':')
@@ -859,7 +509,7 @@ class AnimeSearchRepository(
             searchCache.remove(key, cached)
             return null
         }
-        return cached.items.map { anime -> cardMetadata.value[anime.id] ?: anime }
+        return cached.items
     }
 
     private fun getCachedDetails(key: String): Anime? {
@@ -898,23 +548,6 @@ class AnimeSearchRepository(
         }
     }
 
-    /** The subset of [org.akkirrai.hibiki.app.settings.AppPreferencesState] that affects how
-     * external metadata is fetched and merged - a change to any of these invalidates the caches
-     * above, since they may now hold results produced under the old settings. */
-    private data class RelevantMetadataSettings(
-        val enabled: Boolean,
-        val provider: MetadataProviderId,
-        val fallback: Boolean,
-        val overrides: Map<String, Boolean>,
-    ) {
-        constructor(state: org.akkirrai.hibiki.app.settings.AppPreferencesState) : this(
-            enabled = state.externalMetadataEnabled,
-            provider = state.externalMetadataProvider,
-            fallback = state.externalMetadataFallback,
-            overrides = state.externalMetadataOverrides,
-        )
-    }
-
     private data class CachedSearchResults(
         val items: List<Anime>,
         val cachedAt: Long,
@@ -944,12 +577,6 @@ class AnimeSearchRepository(
         const val SEARCH_CACHE_VERSION = 2
         const val SEARCH_PAGE_SIZE = 20
         const val MAX_CONCURRENT_DETAILS_REQUESTS = 3
-        // Card matches are one lookup against providers already picked for this source, not the
-        // full details page, so more of them can run at once without hammering any single provider.
-        const val MAX_CONCURRENT_CARD_MATCHES = 5
-        const val MAX_ANILIST_CONCURRENT_CARD_MATCHES = 12
-        const val VISIBLE_CARD_MATCH_COUNT = 6
-        const val CARD_METADATA_PREFETCH_HEAD_START_MILLIS = 250L
         const val MAX_SEARCH_CACHE_ENTRIES = 100
         const val MAX_DETAILS_CACHE_ENTRIES = 200
         const val SEARCH_CACHE_TTL_MS = 5 * 60_000L
@@ -965,15 +592,4 @@ class AnimeSearchRepository(
         val detailsCache = ConcurrentHashMap<String, CachedAnime>()
         val detailsMutexes = ConcurrentHashMap<String, Mutex>()
     }
-}
-
-/** [this] with related/franchise/similar entries replaced by their described copies, by id. */
-fun Anime.withRelatedMetadata(overlay: Map<String, RelatedAnime>): Anime {
-    if (overlay.isEmpty()) return this
-    fun List<RelatedAnime>.overlaid() = map { overlay[it.id] ?: it }
-    return copy(
-        relatedAnime = relatedAnime.overlaid(),
-        franchiseAnime = franchiseAnime.overlaid(),
-        similarAnime = similarAnime.overlaid(),
-    )
 }

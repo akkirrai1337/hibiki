@@ -1,7 +1,6 @@
 package org.akkirrai.hibiki.app.settings
 
 import android.content.Context
-import org.akkirrai.beakokit.metadata.MetadataProviderId
 import android.content.SharedPreferences
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -65,21 +64,6 @@ data class AppPreferencesState(
     val discordRpcEnabled: Boolean = false,
     val discordRpcExcludedTitleIds: Set<String> = emptySet(),
     val hideNsfwSources: Boolean = false,
-    /** Whether a source that declares `useExternalMetadata` gets its titles described by an
-     * aggregator. On by default: a source only asks for this because its own descriptions are the
-     * weak half of what it returns, so the better screen is the right default. */
-    val externalMetadataEnabled: Boolean = false,
-    val externalMetadataProvider: MetadataProviderId = MetadataProviderId.ANILIST,
-    /** Whether background card lookups may use other aggregators when their queues are freer.
-     * This speeds a page up, but each service can disagree about covers, scores and airing dates. */
-    val externalMetadataFallback: Boolean = false,
-    /** Whether the details screen prints which provider entry describes a title. Off by default: it
-     * answers a question most people never ask, and turning it on is also what makes the manual
-     * rebind reachable, since that line is what opens it. */
-    val externalMetadataShowBinding: Boolean = false,
-    /** Per-source answers that win over [externalMetadataEnabled] in both directions. Sparse: an
-     * absent source follows the global switch. */
-    val externalMetadataOverrides: Map<String, Boolean> = emptyMap(),
     // Whether the source marketplace has already seeded its language filter from the app/system
     // language. A one-time thing: after the first run the filter is whatever the user leaves it
     // as, and changing the app language later does not re-apply it.
@@ -116,11 +100,6 @@ class AppPreferences(context: Context) {
             KEY_DISCORD_RPC_ENABLED,
             KEY_DISCORD_RPC_EXCLUDED_TITLE_IDS,
             KEY_HIDE_NSFW_SOURCES,
-            KEY_EXTERNAL_METADATA_ENABLED,
-            KEY_EXTERNAL_METADATA_PROVIDER,
-            KEY_EXTERNAL_METADATA_FALLBACK,
-            KEY_EXTERNAL_METADATA_SHOW_BINDING,
-            KEY_EXTERNAL_METADATA_OVERRIDES,
             KEY_SOURCE_LANGUAGE_FILTER_SEEDED,
             KEY_SOURCE_REPOSITORY_URLS -> {
                 _state.value = readState(prefs)
@@ -221,35 +200,6 @@ class AppPreferences(context: Context) {
         prefs.edit().putBoolean(KEY_HIDE_NSFW_SOURCES, hide).apply()
     }
 
-    fun setExternalMetadataEnabled(enabled: Boolean) {
-        prefs.edit().putBoolean(KEY_EXTERNAL_METADATA_ENABLED, enabled).apply()
-    }
-
-    fun setExternalMetadataProvider(provider: MetadataProviderId) {
-        prefs.edit().putString(KEY_EXTERNAL_METADATA_PROVIDER, provider.id).apply()
-    }
-
-    fun setExternalMetadataFallback(enabled: Boolean) {
-        prefs.edit().putBoolean(KEY_EXTERNAL_METADATA_FALLBACK, enabled).apply()
-    }
-
-    fun setExternalMetadataShowBinding(show: Boolean) {
-        prefs.edit().putBoolean(KEY_EXTERNAL_METADATA_SHOW_BINDING, show).apply()
-    }
-
-    /** null hands the source back to the global switch, which is not the same as answering "no" for
-     * it - the two differ the moment the global switch is flipped. */
-    fun setExternalMetadataOverride(sourceId: String, enabled: Boolean?) {
-        val overrides = readExternalMetadataOverrides(prefs).toMutableMap()
-        if (enabled == null) overrides.remove(sourceId) else overrides[sourceId] = enabled
-        prefs.edit()
-            .putStringSet(
-                KEY_EXTERNAL_METADATA_OVERRIDES,
-                overrides.map { (id, value) -> "$id=$value" }.toSet(),
-            )
-            .apply()
-    }
-
     fun markSourceLanguageFilterSeeded() {
         prefs.edit().putBoolean(KEY_SOURCE_LANGUAGE_FILTER_SEEDED, true).apply()
     }
@@ -318,11 +268,6 @@ class AppPreferences(context: Context) {
         const val KEY_DISCORD_RPC_ENABLED = "discord_rpc_enabled"
         const val KEY_DISCORD_RPC_EXCLUDED_TITLE_IDS = "discord_rpc_excluded_title_ids"
         const val KEY_HIDE_NSFW_SOURCES = "hide_nsfw_sources"
-        const val KEY_EXTERNAL_METADATA_ENABLED = "external_metadata_enabled"
-        const val KEY_EXTERNAL_METADATA_PROVIDER = "external_metadata_provider"
-        const val KEY_EXTERNAL_METADATA_FALLBACK = "external_metadata_fallback"
-        const val KEY_EXTERNAL_METADATA_SHOW_BINDING = "external_metadata_show_binding"
-        const val KEY_EXTERNAL_METADATA_OVERRIDES = "external_metadata_overrides"
         const val KEY_SOURCE_LANGUAGE_FILTER_SEEDED = "source_language_filter_seeded"
         const val KEY_SOURCE_REPOSITORY_URLS = "source_repository_urls"
         private const val KEY_KNOWN_ANIME_SOURCE_NAMES = "known_anime_source_names"
@@ -342,18 +287,6 @@ class AppPreferences(context: Context) {
             val isExistingInstall = prefs.all.isNotEmpty()
             prefs.edit().putBoolean(KEY_ONBOARDING_COMPLETED, isExistingInstall).apply()
         }
-
-        /** Stored as a set of "sourceId=true" strings rather than JSON: SharedPreferences has a
-         * string-set type of its own, and a map this small does not need a parser. */
-        private fun readExternalMetadataOverrides(prefs: SharedPreferences): Map<String, Boolean> =
-            prefs.getStringSet(KEY_EXTERNAL_METADATA_OVERRIDES, emptySet())
-                .orEmpty()
-                .mapNotNull { entry ->
-                    val separator = entry.lastIndexOf('=')
-                    if (separator <= 0) return@mapNotNull null
-                    entry.substring(0, separator) to (entry.substring(separator + 1) == "true")
-                }
-                .toMap()
 
         fun readState(context: Context): AppPreferencesState {
             return readState(
@@ -469,12 +402,6 @@ class AppPreferences(context: Context) {
                     .orEmpty()
                     .toSet(),
                 hideNsfwSources = prefs.getBoolean(KEY_HIDE_NSFW_SOURCES, false),
-                externalMetadataEnabled = prefs.getBoolean(KEY_EXTERNAL_METADATA_ENABLED, false),
-                externalMetadataProvider = MetadataProviderId.fromId(prefs.getString(KEY_EXTERNAL_METADATA_PROVIDER, null))
-                    ?: MetadataProviderId.ANILIST,
-                externalMetadataFallback = prefs.getBoolean(KEY_EXTERNAL_METADATA_FALLBACK, false),
-                externalMetadataShowBinding = prefs.getBoolean(KEY_EXTERNAL_METADATA_SHOW_BINDING, false),
-                externalMetadataOverrides = readExternalMetadataOverrides(prefs),
                 sourceLanguageFilterSeeded = prefs.getBoolean(KEY_SOURCE_LANGUAGE_FILTER_SEEDED, false),
                 sourceRepositoryUrls = readSourceRepositoryUrls(prefs),
             )

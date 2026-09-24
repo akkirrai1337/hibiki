@@ -42,11 +42,6 @@ class SearchViewModel(
     init {
         loadFilterCatalog()
         viewModelScope.launch {
-            repository.cardMetadata.collect { metadata ->
-                _uiState.update { it.copy(result = it.result.withCardMetadata(metadata)) }
-            }
-        }
-        viewModelScope.launch {
             AppPreferences.animeSourceChanges.collect {
                 resetForNewSource()
             }
@@ -137,7 +132,7 @@ class SearchViewModel(
             } else {
                 SearchUiState.Content(items = items.take(PAGE_SIZE), canLoadMore = items.size > PAGE_SIZE)
             }
-            _uiState.update { it.copy(result = result.withCardMetadata(repository.cardMetadata.value)) }
+            _uiState.update { it.copy(result = result) }
         } catch (cancelled: CancellationException) {
             throw cancelled
         } catch (throwable: Throwable) {
@@ -164,8 +159,7 @@ class SearchViewModel(
                 if (isStale(query, filters)) return@launch
                 updateContent {
                     it.copy(
-                        items = (it.items + next.take(PAGE_SIZE)).distinctBy(Anime::id)
-                            .withCardMetadata(repository.cardMetadata.value),
+                        items = (it.items + next.take(PAGE_SIZE)).distinctBy(Anime::id),
                         canLoadMore = next.size > PAGE_SIZE,
                         isLoadingMore = false,
                         loadMoreError = null,
@@ -201,15 +195,6 @@ class SearchViewModel(
                 it.copy(filterCatalog = catalog ?: it.filterCatalog, isFilterCatalogLoading = false)
             }
         }
-    }
-
-    private fun List<Anime>.withCardMetadata(metadata: Map<String, Anime>): List<Anime> = map { anime ->
-        metadata[anime.id]?.copy(title = anime.title) ?: anime
-    }
-
-    private fun SearchUiState.withCardMetadata(metadata: Map<String, Anime>): SearchUiState = when (this) {
-        is SearchUiState.Content -> copy(items = items.withCardMetadata(metadata))
-        else -> this
     }
 
     override fun onCleared() {

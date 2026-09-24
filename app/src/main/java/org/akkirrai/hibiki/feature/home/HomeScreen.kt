@@ -140,7 +140,6 @@ import org.akkirrai.hibiki.core.model.SearchUiState
 import org.akkirrai.hibiki.core.model.buildCardMeta
 import org.akkirrai.hibiki.core.source.AnimeSourceRegistry
 import org.akkirrai.hibiki.app.settings.LocalAppPreferencesState
-import org.akkirrai.hibiki.feature.catalog.rememberEntryOpener
 
 @OptIn(
     ExperimentalMaterial3Api::class,
@@ -194,7 +193,6 @@ fun HomeScreen(
     val homeListState = rememberSaveable(selectedSourceId, saver = LazyListState.Saver) { LazyListState() }
     // New cards are source-owned and open directly. The opener only retains support for a legacy
     // in-memory aggregator entry while a screen is being recreated.
-    val openAggregatorEntry = rememberEntryOpener(repository = viewModel.repository, onOpen = onAnimeClick)
 
     Box(modifier = modifier.fillMaxSize()) {
         // Loading/error render as content inside the same Box (instead of an early return) so
@@ -262,7 +260,7 @@ fun HomeScreen(
                                     hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
                                     pendingProgressRemoval = anime
                                 },
-                                onEntryClick = openAggregatorEntry,
+                                onEntryClick = onAnimeClick,
                                 sharedCardModifier = sharedCardModifier,
                                 sharedPosterModifier = sharedPosterModifier,
                             )

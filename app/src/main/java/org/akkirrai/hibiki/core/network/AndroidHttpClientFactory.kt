@@ -17,24 +17,4 @@ object AndroidHttpClientFactory {
     fun create(): HttpClient = HttpClient(OkHttp) {
         installBeakoKitHttpDefaults(BeakoKitHttpPolicy(userAgent = DEFAULT_USER_AGENT))
     }
-
-    /**
-     * For the metadata aggregators only. No retries: the shared client's retry sat inside
-     * MetadataRequestQueue's request, so a 429 from Jikan was slept on (Retry-After, up to
-     * 30s, twice) instead of reaching the queue's stand-down, while the queue kept admitting more
-     * requests into the same throttle - and each such request held a card-match slot for up to a
-     * minute. Short timeouts for the same reason: a lookup that slow is worth less than the source's
-     * own description.
-     */
-    fun createMetadata(): HttpClient = HttpClient(OkHttp) {
-        installBeakoKitHttpDefaults(
-            BeakoKitHttpPolicy(
-                userAgent = DEFAULT_USER_AGENT,
-                connectTimeoutMillis = 5_000,
-                requestTimeoutMillis = 10_000,
-                socketTimeoutMillis = 10_000,
-                maxRetries = 0,
-            ),
-        )
-    }
 }

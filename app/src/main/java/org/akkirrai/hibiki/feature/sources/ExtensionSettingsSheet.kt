@@ -62,7 +62,7 @@ import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.core.design.component.AppModalBottomSheet
 import org.akkirrai.hibiki.core.log.AppLogger
 import org.akkirrai.hibiki.core.source.AnimeSourceRegistry
-import org.akkirrai.hibiki.feature.settings.ExternalMetadataSheetGroup
+import org.akkirrai.hibiki.feature.settings.SettingsSheetGroup
 import org.akkirrai.hibiki.feature.settings.SettingsItemRow
 import org.akkirrai.hibiki.feature.settings.SettingsItems
 import org.akkirrai.hibiki.feature.settings.SettingsSwitchItem
@@ -148,7 +148,7 @@ private fun PreferenceGroupContent(group: PreferenceGroup, onChanged: () -> Unit
         if (rows.isEmpty()) return@forEach
         val name = category.title?.toString()
         if (name != null) {
-            ExternalMetadataSheetGroup(title = name) {
+            SettingsSheetGroup(title = name) {
                 SettingsItems(count = rows.size) { index, shape -> PreferenceRow(rows[index], shape, onChanged) }
             }
         } else {

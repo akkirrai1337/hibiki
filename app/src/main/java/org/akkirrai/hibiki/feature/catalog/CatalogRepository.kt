@@ -4,14 +4,9 @@ import android.content.Context
 import io.ktor.client.HttpClient
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.flow.StateFlow
 import org.akkirrai.beakokit.model.AnimeSearchRequest
 import org.akkirrai.beakokit.model.AnimeSearchFilterCatalog
 import org.akkirrai.beakokit.model.AnimeSearchSort
-import org.akkirrai.beakokit.metadata.ExternalMetadataService
-import org.akkirrai.beakokit.metadata.MetadataReference
-import org.akkirrai.hibiki.core.metadata.AggregatorEntryResolver
-import org.akkirrai.hibiki.core.metadata.decodeExternalEntryId
 import org.akkirrai.hibiki.core.model.Anime
 import org.akkirrai.hibiki.core.model.AnimeSearchFilters
 import org.akkirrai.hibiki.core.network.AndroidHttpClientFactory
@@ -24,10 +19,7 @@ class CatalogRepository(
     private val client: HttpClient = AndroidHttpClientFactory.create(),
     sourceManager: AnimeSourceRuntimeManager? = null,
     private val closeClientOnClose: Boolean = true,
-    /** Shared with the rest of the app - see HibikiDependencies. Absent only on the standalone paths
-     * that build this repository on their own, where an aggregator catalog is simply not offered. */
-    private val metadataService: ExternalMetadataService? = null,
-) : AggregatorEntryResolver {
+) {
     private val appContext = context.applicationContext
     private val sourceManager = sourceManager ?: AnimeSourceRuntimeManager(appContext, client)
     private val searchRepository = AnimeSearchRepository(
@@ -35,19 +27,13 @@ class CatalogRepository(
         client = client,
         sourceManager = this.sourceManager,
         closeClientOnClose = false,
-        metadataService = metadataService,
     )
     private val homeRepository = HomeRepository(
         context = appContext,
         client = client,
         sourceManager = this.sourceManager,
         closeClientOnClose = false,
-        metadataService = metadataService,
     )
-    val cardMetadata: StateFlow<Map<String, Anime>> = searchRepository.cardMetadata
-    val recentCardMetadata: StateFlow<Map<String, Anime>> = homeRepository.cardMetadata
-    val pendingCardMetadata: StateFlow<Set<String>> = searchRepository.pendingCardMetadata
-    val pendingRecentCardMetadata: StateFlow<Set<String>> = homeRepository.pendingCardMetadata
 
     suspend fun loadPage(
         page: Int = 1,
@@ -98,7 +84,6 @@ class CatalogRepository(
                 ),
                 allowEmptyQuery = true,
                 forceRefresh = forceRefresh,
-                enrichCardsWithMetadata = false,
             )
         }
 
@@ -112,46 +97,6 @@ class CatalogRepository(
             canLoadMore = anime.size >= CATALOG_PAGE_SIZE,
         )
     }
-
-    /**
-     * Turns a card from that catalog into something playable: the source's own title for this entry.
-     *
-     * Null means the source does not have it, as far as its own search can tell - the screen says so
-     * and offers to look for it by hand, rather than opening a title page that has no episodes.
-     */
-    override suspend fun resolveEntry(anime: Anime): Anime? {
-        val service = metadataService ?: return null
-        val (provider, externalId) = decodeExternalEntryId(anime.id) ?: return anime
-        val entry = service.entryFor(MetadataReference(provider, externalId)) ?: return null
-        val sourceId = sourceManager.selectedId
-        val resolved = service.resolveSourceTitle(sourceId.value, entry) { query ->
-            runCatching { sourceManager.current().search(query) }.getOrNull()
-        } ?: return null
-        return searchRepository.getDetails(
-            resolved.titleId,
-            anime.copy(id = resolved.titleId),
-            requireSourceDetails = true,
-            bypassCache = true,
-        )
-    }
-
-    /** Binds an entry to a title of this source by hand, from the resolution sheet, and opens it. */
-    override suspend fun bindEntry(anime: Anime, titleId: String): Anime? {
-        val service = metadataService ?: return null
-        val (provider, externalId) = decodeExternalEntryId(anime.id) ?: return null
-        val entry = service.entryFor(MetadataReference(provider, externalId)) ?: return null
-        service.setManualSourceTitle(sourceManager.selectedId.value, titleId, entry)
-        return searchRepository.getDetails(
-            titleId,
-            anime.copy(id = titleId),
-            requireSourceDetails = true,
-            bypassCache = true,
-        )
-    }
-
-    /** The source's own results for a query, for that sheet to choose from. */
-    override suspend fun searchSourceTitles(query: String): List<Anime> =
-        searchRepository.search(AnimeSearchRequest(query = query, limit = 20))
 
     fun close() {
         searchRepository.close()

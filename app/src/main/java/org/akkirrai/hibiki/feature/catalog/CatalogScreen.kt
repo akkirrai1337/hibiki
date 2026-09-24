@@ -139,9 +139,7 @@ fun CatalogScreen(
     val hasOfflineDownloads = remember(isOffline) {
         isOffline && OfflineDownloadRepository(context.applicationContext).getOfflineTitleIds().isNotEmpty()
     }
-    // Current catalog pages are source-owned. The opener only supports a legacy in-memory
-    // aggregator entry while a screen is being recreated; new cards open directly.
-    val openAnime = rememberEntryOpener(repository = viewModel.repository, onOpen = onAnimeClick)
+    val openAnime = onAnimeClick
     // Groups the fields the anime list actually renders behind one structurally-compared
     // snapshot, so pagination/list-affecting changes don't force LazyColumn to recompose
     // when unrelated fields (query, filters, selectedSort, filterCatalog) change instead.
@@ -151,7 +149,6 @@ fun CatalogScreen(
             CatalogAnimeListUiState(
                 items = current.items.map { it.anime },
                 description = current.description,
-                pendingCardMetadata = current.pendingCardMetadata,
                 isLoadingMore = current.isLoadingMore,
                 loadMoreError = current.loadMoreError,
             )
@@ -355,7 +352,6 @@ fun CatalogScreen(
 private data class CatalogAnimeListUiState(
     val items: List<Anime>,
     val description: String?,
-    val pendingCardMetadata: Set<String>,
     val isLoadingMore: Boolean,
     val loadMoreError: String?,
 )
@@ -699,9 +695,6 @@ class CatalogViewModel(
     private var searchJob: kotlinx.coroutines.Job? = null
 
     init {
-        observeCardMetadata(repository.cardMetadata)
-        observeCardMetadata(repository.recentCardMetadata)
-        observePendingCardMetadata()
         load(reason = "init")
         viewModelScope.launch {
             AppPreferences.animeSourceChanges.collect { source ->
@@ -723,32 +716,6 @@ class CatalogViewModel(
                     )
                 }
                 load(reason = "source-change")
-            }
-        }
-    }
-
-    private fun observePendingCardMetadata() {
-        viewModelScope.launch {
-            combine(repository.pendingCardMetadata, repository.pendingRecentCardMetadata) { catalog, recent ->
-                catalog + recent
-            }.collect { pending ->
-                _uiState.update { it.copy(pendingCardMetadata = pending) }
-            }
-        }
-    }
-
-    private fun observeCardMetadata(metadata: kotlinx.coroutines.flow.StateFlow<Map<String, Anime>>) {
-        viewModelScope.launch {
-            metadata.collect { updates ->
-                _uiState.update { state ->
-                    state.copy(
-                        items = state.items.map { card ->
-                            updates[card.anime.id]?.let { update ->
-                                card.copy(anime = update.copy(title = card.anime.title))
-                            } ?: card
-                        },
-                    )
-                }
             }
         }
     }
@@ -803,8 +770,7 @@ class CatalogViewModel(
                     val known = knownDescriptions[card.anime.id] ?: return@map card
                     CatalogAnimeCard(card.anime.copy(description = known))
                 }
-                val metadata = repository.cardMetadata.value + repository.recentCardMetadata.value
-                val readyCards = withKnownDescriptions.withCardMetadata(metadata)
+                val readyCards = withKnownDescriptions
                 _uiState.update { state ->
                     state.copy(
                         isLoading = false,
@@ -912,10 +878,8 @@ class CatalogViewModel(
                 )
             }.onSuccess { page ->
                 _uiState.update { current ->
-                    val metadata = repository.cardMetadata.value + repository.recentCardMetadata.value
                     val merged = (current.items + page.items)
                         .distinctBy { it.anime.id }
-                        .withCardMetadata(metadata)
                     current.copy(
                         isLoadingMore = false,
                         title = current.title,
@@ -935,10 +899,6 @@ class CatalogViewModel(
                 }
             }
         }
-    }
-
-    private fun List<CatalogAnimeCard>.withCardMetadata(metadata: Map<String, Anime>): List<CatalogAnimeCard> = map { card ->
-        metadata[card.anime.id]?.let { update -> card.copy(anime = update.copy(title = card.anime.title)) } ?: card
     }
 
     override fun onCleared() {
@@ -983,7 +943,6 @@ data class CatalogUiState(
     val isLoadingMore: Boolean = false,
     val errorMessage: String? = null,
     val loadMoreError: String? = null,
-    val pendingCardMetadata: Set<String> = emptySet(),
 )
 
 enum class CatalogSort(@androidx.annotation.StringRes val labelRes: Int) {

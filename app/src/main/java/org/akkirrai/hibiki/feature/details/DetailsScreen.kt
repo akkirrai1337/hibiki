@@ -142,8 +142,6 @@ import org.akkirrai.hibiki.core.design.UiDimens
 import org.akkirrai.hibiki.core.design.AppMotion
 import org.akkirrai.hibiki.core.design.component.AppBackButton
 import org.akkirrai.hibiki.core.design.component.AppShimmerBlock
-import org.akkirrai.beakokit.metadata.ExternalMetadataPreferences
-import org.akkirrai.beakokit.metadata.metadataProviderOrder
 import org.akkirrai.hibiki.core.design.component.AppModalBottomSheet
 import org.akkirrai.hibiki.core.design.component.AppTonalSurface
 import org.akkirrai.hibiki.core.design.component.anime.AnimeTitleText
@@ -168,7 +166,6 @@ import org.akkirrai.hibiki.feature.player.resolveEpisodeAutoScrollIndex
 import androidx.lifecycle.viewmodel.compose.viewModel
 import org.akkirrai.hibiki.core.model.WatchSourceSelection
 import org.akkirrai.hibiki.core.source.AnimeSearchRepository
-import org.akkirrai.hibiki.core.source.withRelatedMetadata
 import org.akkirrai.hibiki.core.source.AnimeSourceDescriptor
 import org.akkirrai.hibiki.core.source.AnimeSourceRegistry
 import org.akkirrai.hibiki.app.settings.LocalAppPreferencesState
@@ -247,7 +244,6 @@ fun DetailsScreen(
         saved.firstVisibleItemIndex == 0 && saved.firstVisibleItemScrollOffset == 0
     } ?: true
     val searchRepository = remember(dependencies) { dependencies.animeSearchRepository() }
-    val relatedMetadata by searchRepository.relatedMetadata.collectAsState()
     val libraryRepository = remember(dependencies) { dependencies.libraryRepository() }
     val offlineTitleMetadataRepository = remember(dependencies) { dependencies.offlineTitleMetadataRepository() }
     val watchStateRepository = remember(dependencies) { dependencies.watchStateRepository() }
@@ -255,28 +251,6 @@ fun DetailsScreen(
     val animeWatchRepository = remember(dependencies) { dependencies.animeWatchRepository() }
     val offlineDownloadRepository = remember(dependencies) { dependencies.offlineDownloadRepository() }
     var isResolvingWatchSources by remember(anime.id) { mutableStateOf(false) }
-    // Bumped by a manual rebind, which is a change to what describes this title - the details fetch
-    // below re-runs and the screen redraws from the entry that was just chosen.
-    var detailsReloadKey by remember(anime.id) { mutableStateOf(0) }
-    val showMetadataBinding = preferences.externalMetadataShowBinding
-    val metadataProviders = remember(
-        selectedAnimeSource,
-        preferences.externalMetadataEnabled,
-        preferences.externalMetadataProvider,
-        preferences.externalMetadataFallback,
-        preferences.externalMetadataOverrides,
-    ) {
-        metadataProviderOrder(
-            ExternalMetadataPreferences(
-                enabled = preferences.externalMetadataEnabled,
-                overrides = preferences.externalMetadataOverrides,
-                provider = preferences.externalMetadataProvider,
-                fallbackEnabled = preferences.externalMetadataFallback,
-            ),
-            selectedAnimeSource.value,
-            AnimeSourceRegistry.descriptor(selectedAnimeSource).info.useExternalMetadata,
-        )
-    }
     var currentAnime by remember(detailsStateKey) { mutableStateOf(savedScreenState?.anime ?: anime) }
     var isDetailsLoading by remember(detailsStateKey) { mutableStateOf(savedScreenState == null) }
     var titleSeedColor by remember(detailsStateKey) {
@@ -387,7 +361,7 @@ fun DetailsScreen(
         }
     }
 
-    LaunchedEffect(anime.id, selectedAnimeSource, detailsReloadKey) {
+    LaunchedEffect(anime.id, selectedAnimeSource) {
         try {
             withContext(Dispatchers.IO) {
                 offlineTitleMetadataRepository.get(anime.id)
@@ -477,13 +451,12 @@ fun DetailsScreen(
     }
     val uiModel = remember(
         currentAnime,
-        relatedMetadata,
         heroInfo,
         description,
         sourceDescriptor.contentFeatures,
     ) {
         buildDetailsUiModel(
-            anime = currentAnime.withRelatedMetadata(relatedMetadata),
+            anime = currentAnime,
             hero = heroInfo,
             description = description,
             contentFeatures = sourceDescriptor.contentFeatures,
@@ -675,25 +648,6 @@ fun DetailsScreen(
                     heroInfo = uiModel.hero,
                     isLoading = isDetailsLoading,
                 )
-            }
-
-            item {
-                // Where the description came from, and the way to correct a wrong match - under the
-                // description it explains, and only when asked for (see the Settings switch).
-                if (!isDetailsLoading && showMetadataBinding && metadataProviders.isNotEmpty()) {
-                    Column(modifier = Modifier.padding(horizontal = 16.dp)) {
-                        MetadataBindingRow(
-                            service = dependencies.externalMetadata,
-                            titleId = uiModel.anime.id,
-                            providers = metadataProviders,
-                            preferredProvider = preferences.externalMetadataProvider,
-                            onRebound = {
-                                searchRepository.clearCaches()
-                                detailsReloadKey++
-                            },
-                        )
-                    }
-                }
             }
 
             item {

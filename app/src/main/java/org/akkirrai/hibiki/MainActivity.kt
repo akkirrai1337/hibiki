@@ -162,9 +162,7 @@ class MainActivity : ComponentActivity() {
                         } else {
                             FirstLaunchOnboarding(
                                 notificationPermissionState = preferences.notificationPermissionState,
-                                externalMetadataEnabled = preferences.externalMetadataEnabled,
                                 onRequestNotificationPermission = ::requestNotificationPermission,
-                                onExternalMetadataEnabledChanged = appPreferences::setExternalMetadataEnabled,
                                 onComplete = appPreferences::completeOnboarding,
                             )
                         }

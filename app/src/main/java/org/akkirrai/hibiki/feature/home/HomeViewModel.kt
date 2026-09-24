@@ -44,8 +44,6 @@ class HomeViewModel(
 
     init {
         PerfLogger.mark("HomeViewModel created")
-        observeCardMetadata()
-        observePendingCardMetadata()
         load()
         observeLanguageChanges()
         observeSourceChanges()
@@ -78,7 +76,7 @@ class HomeViewModel(
                         isLoading = false,
                         errorMessage = null,
                         hasContinueHistory = current.hasContinueHistory,
-                    ).withCardMetadata(repository.cardMetadata.value)
+                    )
                     PerfLogger.mark(
                         event = "Home refresh finished",
                         details = "duration=${System.currentTimeMillis() - startedAt}ms",
@@ -175,7 +173,7 @@ class HomeViewModel(
                         isLoading = false,
                         errorMessage = null,
                         hasContinueHistory = current.hasContinueHistory,
-                    ).withCardMetadata(repository.cardMetadata.value)
+                    )
                     PerfLogger.mark(
                         event = "Home load finished",
                         details = "duration=${System.currentTimeMillis() - startedAt}ms",
@@ -240,7 +238,7 @@ class HomeViewModel(
                             continueAnime = supplements.continueAnime,
                             recentlyUpdated = supplements.recentlyUpdated,
                             trending = supplements.trending,
-                        ).withCardMetadata(repository.cardMetadata.value)
+                        )
                     }
                     PerfLogger.mark(
                         event = "Home supplements finished",
@@ -254,32 +252,6 @@ class HomeViewModel(
                     }
                 }
         }
-    }
-
-    private fun observeCardMetadata() {
-        viewModelScope.launch {
-            repository.cardMetadata.collect { metadata ->
-                _uiState.update { state -> state.withCardMetadata(metadata) }
-            }
-        }
-    }
-
-    private fun observePendingCardMetadata() {
-        viewModelScope.launch {
-            repository.pendingCardMetadata.collect { pending ->
-                _uiState.update { it.copy(pendingCardMetadata = pending) }
-            }
-        }
-    }
-
-    private fun HomeUiState.withCardMetadata(metadata: Map<String, Anime>): HomeUiState = copy(
-        featuredAnime = featuredAnime.withCardMetadata(metadata),
-        trending = trending.withCardMetadata(metadata),
-        recentlyUpdated = recentlyUpdated.withCardMetadata(metadata),
-    )
-
-    private fun List<Anime>.withCardMetadata(metadata: Map<String, Anime>): List<Anime> = map { anime ->
-        metadata[anime.id]?.copy(title = anime.title) ?: anime
     }
 
     private fun observeLanguageChanges() {

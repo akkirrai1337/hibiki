@@ -62,7 +62,6 @@ import org.akkirrai.hibiki.core.design.component.anime.LibraryStatusPosterFooter
 import org.akkirrai.hibiki.core.design.component.anime.rememberLibraryStatusByAnimeId
 import org.akkirrai.hibiki.core.model.Anime
 import org.akkirrai.hibiki.core.model.buildCardMeta
-import org.akkirrai.hibiki.feature.catalog.rememberEntryOpener
 
 @Composable
 fun TrendingAnimeScreen(
@@ -91,9 +90,7 @@ fun TrendingAnimeScreen(
     }
     val listState = rememberLazyListState()
     val libraryStatusByAnimeId = rememberLibraryStatusByAnimeId()
-    // A card here may name an aggregator entry rather than a real source title (see
-    // rememberEntryOpener) -- resolve it before opening, same as Catalog/Home.
-    val openAnime = rememberEntryOpener(repository = viewModel.repository, onOpen = onAnimeClick)
+    val openAnime = onAnimeClick
 
     LaunchedEffect(listState) {
         snapshotFlow {

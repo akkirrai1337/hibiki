@@ -5,21 +5,16 @@ import io.ktor.client.HttpClient
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.StateFlow
 import kotlin.random.Random
 import org.akkirrai.beakokit.api.SourceErrorKind
 import org.akkirrai.beakokit.api.SourceException
 import org.akkirrai.beakokit.api.SourceId
-import org.akkirrai.beakokit.metadata.ExternalMetadataService
-import org.akkirrai.beakokit.metadata.MetadataReference
 import org.akkirrai.beakokit.model.AnimeSearchFilterCatalog
 import org.akkirrai.beakokit.model.AnimeSearchRequest
 import org.akkirrai.beakokit.model.AnimeSearchSort
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.app.settings.AppPreferences
 import org.akkirrai.hibiki.app.settings.LanguageMode
-import org.akkirrai.hibiki.core.metadata.AggregatorEntryResolver
-import org.akkirrai.hibiki.core.metadata.decodeExternalEntryId
 import org.akkirrai.hibiki.core.model.Anime
 import org.akkirrai.hibiki.core.model.AnimeSearchFilters
 import org.akkirrai.hibiki.core.log.AppLogger
@@ -38,10 +33,7 @@ class HomeRepository(
     private val client: HttpClient = AndroidHttpClientFactory.create(),
     sourceManager: AnimeSourceRuntimeManager? = null,
     closeClientOnClose: Boolean = true,
-    /** Shared with the rest of the app - see HibikiDependencies. Absent only on the standalone paths
-     * that build this repository on their own, where an aggregator catalog is simply not offered. */
-    private val metadataService: ExternalMetadataService? = null,
-) : AggregatorEntryResolver {
+) {
     @Volatile
     private var cachedHomeContent: CachedHomeContent? = null
 
@@ -59,10 +51,7 @@ class HomeRepository(
         client = client,
         sourceManager = this.sourceManager,
         closeClientOnClose = closeClientOnClose,
-        metadataService = metadataService,
     )
-    val cardMetadata: StateFlow<Map<String, Anime>> = searchRepository.cardMetadata
-    val pendingCardMetadata: StateFlow<Set<String>> = searchRepository.pendingCardMetadata
     private val watchStateRepository = WatchStateRepository(appContext)
     private val offlineTitleMetadataRepository = OfflineTitleMetadataRepository(appContext)
     private val libraryRepository = LibraryRepository(appContext)
@@ -116,8 +105,6 @@ class HomeRepository(
                 ),
                 allowEmptyQuery = true,
                 forceRefresh = forceRefresh,
-                cardMetadataInitialDelayMillis = HOME_METADATA_BATCH_WINDOW_MILLIS,
-                enrichCardsWithMetadata = false,
             )
         }
         AppLogger.d(TAG, "loadHomeState: first catalog page returned ${catalog.size} items")
@@ -165,7 +152,7 @@ class HomeRepository(
     suspend fun search(query: String): List<Anime> {
         AppLogger.d(TAG, "search(query=$query)")
         ensureInternetConnection()
-        return searchRepository.search(query = query, limit = 20, offset = 0, enrichCardsWithMetadata = false)
+        return searchRepository.search(query = query, limit = 20, offset = 0)
     }
 
     suspend fun search(
@@ -188,9 +175,8 @@ class HomeRepository(
                 excludedGenreAliases = filters.excludedGenreAliases.sorted(),
                 yearFrom = filters.yearFrom,
                 yearTo = filters.yearTo,
-                    sourceFilterValues = filters.sourceFilterValues,
+                sourceFilterValues = filters.sourceFilterValues,
             ),
-            enrichCardsWithMetadata = false,
         )
     }
 
@@ -225,13 +211,7 @@ class HomeRepository(
     suspend fun loadHomeSupplements(forceRefresh: Boolean = false): HomeSupplements = coroutineScope {
         val recentlyUpdated = async {
             runCatching {
-                loadRecentlyUpdated(
-                    forceRefresh = forceRefresh,
-                    cardMetadataVisibleCount = 0,
-                    cardMetadataPrefetchDelayMillis = HOME_BACKGROUND_METADATA_DELAY_MILLIS,
-                    cardMetadataInitialDelayMillis = HOME_METADATA_BATCH_WINDOW_MILLIS,
-                    enrichCardsWithMetadata = false,
-                )
+                loadRecentlyUpdated(forceRefresh = forceRefresh)
             }
                 .onFailure { error -> AppLogger.w(TAG, "Home recent updates are unavailable: ${error.message}") }
                 .getOrDefault(emptyList())
@@ -327,30 +307,19 @@ class HomeRepository(
         return catalog.drop(offset.coerceAtLeast(0)).take(limit.coerceAtLeast(1))
     }
 
-    private suspend fun loadRecentlyUpdated(
-        forceRefresh: Boolean = false,
-        cardMetadataVisibleCount: Int = 6,
-        cardMetadataPrefetchDelayMillis: Long = 250L,
-        cardMetadataInitialDelayMillis: Long = 0,
-        enrichCardsWithMetadata: Boolean = false,
-    ): List<Anime> =
+    private suspend fun loadRecentlyUpdated(forceRefresh: Boolean = false): List<Anime> =
         // Home renders only one short row. Parsing the 100-item pagination snapshot here delayed
         // first paint even though 88 entries were immediately discarded; the catalog keeps its
         // own full snapshot through loadRecentlyUpdatedPage when the user actually opens it.
         searchRepository.latest(
             limit = HOME_SECTION_LIMIT,
             forceRefresh = forceRefresh,
-            cardMetadataVisibleCount = cardMetadataVisibleCount,
-            cardMetadataPrefetchDelayMillis = cardMetadataPrefetchDelayMillis,
-            cardMetadataInitialDelayMillis = cardMetadataInitialDelayMillis,
-            enrichCardsWithMetadata = enrichCardsWithMetadata,
         )
 
     private suspend fun loadRecentlyUpdatedCatalog(forceRefresh: Boolean = false): List<Anime> {
         return searchRepository.latest(
             limit = HOME_FULL_SECTION_LIMIT,
             forceRefresh = forceRefresh,
-            enrichCardsWithMetadata = false,
         )
     }
 
@@ -368,7 +337,6 @@ class HomeRepository(
                 typeAliases = listOfNotNull(filter.typeAlias),
             ),
             allowEmptyQuery = true,
-            enrichCardsWithMetadata = false,
         )
         AppLogger.d(TAG, "loadTrendingPage: got ${catalog.size} items from getCatalog")
         return catalog
@@ -391,44 +359,6 @@ class HomeRepository(
         }
         return null
     }
-
-    /**
-     * Turns a card from the aggregator catalog into something playable: the source's own title for
-     * this entry. Null means the source does not have it, as far as its own search can tell.
-     */
-    override suspend fun resolveEntry(anime: Anime): Anime? {
-        val service = metadataService ?: return null
-        val (provider, externalId) = decodeExternalEntryId(anime.id) ?: return anime
-        val entry = service.entryFor(MetadataReference(provider, externalId)) ?: return null
-        val sourceId = sourceManager.selectedId
-        val resolved = service.resolveSourceTitle(sourceId.value, entry) { query ->
-            runCatching { sourceManager.current().search(query) }.getOrNull()
-        } ?: return null
-        return searchRepository.getDetails(
-            resolved.titleId,
-            anime.copy(id = resolved.titleId),
-            requireSourceDetails = true,
-            bypassCache = true,
-        )
-    }
-
-    /** Binds an entry to a title of this source by hand, from the resolution sheet, and opens it. */
-    override suspend fun bindEntry(anime: Anime, titleId: String): Anime? {
-        val service = metadataService ?: return null
-        val (provider, externalId) = decodeExternalEntryId(anime.id) ?: return null
-        val entry = service.entryFor(MetadataReference(provider, externalId)) ?: return null
-        service.setManualSourceTitle(sourceManager.selectedId.value, titleId, entry)
-        return searchRepository.getDetails(
-            titleId,
-            anime.copy(id = titleId),
-            requireSourceDetails = true,
-            bypassCache = true,
-        )
-    }
-
-    /** The source's own results for a query, for that sheet to choose from. */
-    override suspend fun searchSourceTitles(query: String): List<Anime> =
-        searchRepository.search(AnimeSearchRequest(query = query, limit = 20))
 
     private fun String.toSearchSort(): AnimeSearchSort {
         return when (this) {
@@ -474,8 +404,6 @@ class HomeRepository(
         const val HOME_TRENDING_WINDOW_SIZE = 24
         // The first source page, remaining catalog and latest row normally arrive within this
         // window. Their metadata can then fill AniList batches instead of starting three waves.
-        const val HOME_METADATA_BATCH_WINDOW_MILLIS = 300L
-        const val HOME_BACKGROUND_METADATA_DELAY_MILLIS = 2_000L
         const val HOME_TRENDING_MAX_OFFSET_EXCLUSIVE = 201
         const val AGGREGATOR_TOP_N = 100
         const val FEATURED_COUNT = 5

@@ -16,5 +16,4 @@ data class HomeUiState(
     val isRecentUpdatesLoadingMore: Boolean = false,
     val canLoadMoreRecentUpdates: Boolean = true,
     val recentUpdatesLoadMoreError: String? = null,
-    val pendingCardMetadata: Set<String> = emptySet(),
 )
