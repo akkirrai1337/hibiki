@@ -63,6 +63,26 @@ class SourceDescriptionFooterTest {
     }
 
     @Test
+    fun `a star line at the top becomes the score`() {
+        val parsed = SourceDescriptionFooter.parse("★★★☆☆ 6.14\n\nIn a fantasy world.\n\nMore story.")
+        assertEquals("In a fantasy world.\n\nMore story.", parsed.text)
+        assertEquals(6.14, FooterFacts.from(parsed.facts).score!!, 0.001)
+    }
+
+    @Test
+    fun `stars without a number are counted`() {
+        val parsed = SourceDescriptionFooter.parse("★★★★☆\nStory.")
+        assertEquals("Story.", parsed.text)
+        assertEquals(8.0, FooterFacts.from(parsed.facts).score!!, 0.001)
+    }
+
+    @Test
+    fun `stars in the middle of the story stay`() {
+        val text = "A story.\n★★★★★ is what critics gave it."
+        assertEquals(text, SourceDescriptionFooter.parse(text).text)
+    }
+
+    @Test
     fun `a plain description is untouched`() {
         val parsed = SourceDescriptionFooter.parse("Just a story.\nWith two lines.")
         assertEquals("Just a story.\nWith two lines.", parsed.text)

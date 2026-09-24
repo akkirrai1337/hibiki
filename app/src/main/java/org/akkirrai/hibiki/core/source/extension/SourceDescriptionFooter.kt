@@ -1,7 +1,8 @@
 package org.akkirrai.hibiki.core.source.extension
 
 /**
- * Some extensions append machine-made facts to a plain-text description, in one of two shapes:
+ * Some extensions put machine-made facts into a plain-text description: a line of rating stars at
+ * the top ("★★★★☆ 7.21"), and/or facts appended at the end, in one of two shapes:
  *
  *     Second season of ...
  *
@@ -27,6 +28,9 @@ internal object SourceDescriptionFooter {
     private val LINK_ONLY = Regex("""^\[[^\]]+]\(https?://[^)\s]+\)$""")
     private val PIPE_FACT = Regex("""^([A-Za-z][A-Za-z ]{0,24}):\s*(.*)$""")
 
+    /** A first line made of rating stars, optionally with the number they stand for: "★★★★☆ 7.21". */
+    private val STAR_HEADER = Regex("""^([★☆✩✮✭⭐]{2,10})\s*(\d{1,3}(?:[.,]\d+)?)?\s*$""")
+
     /** A lone "Key: value" line only counts when its key is one of these - prose also has colons. */
     private val PLAIN_KEYS = setOf(
         "score", "mal score", "mean score", "rating", "studio", "studios", "genre", "genres", "status", "type",
@@ -39,6 +43,18 @@ internal object SourceDescriptionFooter {
         val lines = description.lines().toMutableList()
         val facts = linkedMapOf<String, String>()
         var removedAny = false
+        // Some extensions open the description with the rating as stars; it is the score, not prose.
+        val headerIndex = lines.indexOfFirst { it.isNotBlank() }
+        val header = lines.getOrNull(headerIndex)?.trim()?.let(STAR_HEADER::matchEntire)
+        if (header != null) {
+            val printed = header.groupValues[2].replace(',', '.').takeIf(String::isNotBlank)
+            // Without a number the stars themselves are the score, on a five-star scale.
+            val score = printed ?: header.groupValues[1].count { it == '★' || it == '✭' || it == '⭐' }
+                .takeIf { it > 0 }?.let { (it * 2).toString() }
+            score?.let { facts["score"] = it }
+            lines.subList(0, headerIndex + 1).clear()
+            removedAny = true
+        }
         while (lines.isNotEmpty()) {
             val line = lines.last().trim()
             if (line.isEmpty()) {
