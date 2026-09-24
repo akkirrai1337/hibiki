@@ -9,6 +9,9 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -44,9 +47,11 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.unit.TextUnit
 import org.akkirrai.hibiki.R
 
 /** Shows the app-language name of a known source alias without changing its filter value. */
@@ -123,7 +128,7 @@ fun <T> AppConnectedToggleFilter(
 ) {
     AppCollapsibleFilterSection(title = title, onLongClick = { onSelected(null) }) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
+            modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min).padding(top = 16.dp),
             horizontalArrangement = Arrangement.spacedBy(2.dp),
         ) {
             entries.forEachIndexed { index, entry ->
@@ -135,7 +140,8 @@ fun <T> AppConnectedToggleFilter(
                     onSelected = onSelected,
                     icon = icon,
                     text = text,
-                    modifier = Modifier.weight(1f),
+                    compact = entries.size > 4,
+                    modifier = Modifier.weight(1f).fillMaxHeight(),
                 )
             }
         }
@@ -151,6 +157,7 @@ private fun <T> AppConnectedToggleFilterItem(
     onSelected: (T?) -> Unit,
     icon: @Composable (T) -> ImageVector,
     text: @Composable (T) -> String,
+    compact: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     val selectedRadius = 32.dp
@@ -184,10 +191,15 @@ private fun <T> AppConnectedToggleFilterItem(
                 contentDescription = text(entry),
                 modifier = Modifier.graphicsLayer { alpha = 0.5f }.size(width = 14.dp, height = 14.dp),
             )
+            // Many buttons share the width, so their labels get a smaller size and a second line
+            // instead of being cut to "M…" and "Currently …".
             Text(
                 text = text(entry),
                 fontWeight = FontWeight.SemiBold,
-                maxLines = 1,
+                fontSize = if (compact) 12.sp else TextUnit.Unspecified,
+                lineHeight = if (compact) 14.sp else TextUnit.Unspecified,
+                textAlign = TextAlign.Center,
+                maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
         }
