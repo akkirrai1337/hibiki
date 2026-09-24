@@ -81,6 +81,12 @@ class AnimeWatchRepository(
     private val unavailablePlayerLinks = ConcurrentHashMap<String, Long>()
     /** The latest failure message a source raised while listing links, by source id. */
     private val providerFailures = ConcurrentHashMap<String, String>()
+    /**
+     * Which player and quality a resolved stream URL belonged to. Some sources mint a new URL for
+     * the same stream on every request (a loopback playlist proxy, signed URLs), so excluding a
+     * failed stream by URL alone would let the very same stream come straight back.
+     */
+    private val linkIdentityByStreamUrl = ConcurrentHashMap<String, String>()
     private val inFlightLoads = ConcurrentHashMap<String, CompletableDeferred<List<WatchSource>>>()
     private val inFlightPlayerLinks = ConcurrentHashMap<String, CompletableDeferred<List<PlayerLink>>>()
     private val appContext = context?.applicationContext
@@ -276,7 +282,11 @@ class AnimeWatchRepository(
                         "Playback attempt ${candidateIndex + 1}/${candidates.size} links ready: " +
                             "count=${rawLinks.size}, elapsedMs=${System.currentTimeMillis() - startedAt}",
                     )
-                    val availableLinks = rawLinks.filterNot { it.url in excludedStreamUrls }
+                    val failedIdentities = excludedStreamUrls.mapNotNull(linkIdentityByStreamUrl::get).toSet()
+                    val availableLinks = rawLinks.filterNot { link ->
+                        link.url in excludedStreamUrls ||
+                            (failedIdentities.isNotEmpty() && link.identity() in failedIdentities)
+                    }
                     val selectedAutomaticPlayer = if (selectFirstAvailablePlayer) {
                         val playerNames = prioritizeLinks(
                             links = availableLinks,
@@ -414,6 +424,11 @@ class AnimeWatchRepository(
             videoId = resolved.link.videoId,
         )
         val playerName = resolvedPlayerName ?: resolved.link.playerName
+        if (linkIdentityByStreamUrl.size > MAX_REMEMBERED_STREAM_URLS) linkIdentityByStreamUrl.clear()
+        resolved.link.identity().let { identity ->
+            linkIdentityByStreamUrl[playback.streamUrl] = identity
+            linkIdentityByStreamUrl[resolved.link.url] = identity
+        }
         cachedStreams[cacheKey] = CachedPlaybackStream(
             stream = playback,
             playerName = playerName,
@@ -911,6 +926,7 @@ class AnimeWatchRepository(
 
     private companion object {
         const val TAG = "AnimeWatchRepository"
+        const val MAX_REMEMBERED_STREAM_URLS = 200
         const val STREAM_CACHE_TTL_MS = 10 * 60_000L
         const val PLAYER_LINKS_CACHE_TTL_MS = 60_000L
         const val UNAVAILABLE_PROVIDER_TTL_MS = 10 * 60_000L
@@ -931,3 +947,7 @@ class AnimeWatchRepository(
         const val DIRECT_PREFERRED_RESOLVE_TIMEOUT_MS = 15_000L
     }
 }
+
+/** Player and quality, the part of a link that stays the same when its URL changes between requests. */
+private fun PlayerLink.identity(): String =
+    "${playerName.orEmpty().trim().lowercase()}|${quality.orEmpty().trim().lowercase()}"
