@@ -14,11 +14,15 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import org.akkirrai.beakokit.model.SourceFilterDef
 import org.akkirrai.beakokit.model.SourceFilterType
+import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.core.design.component.filter.AppCollapsibleFilterSection
+import org.akkirrai.hibiki.core.design.component.filter.AppConnectedToggleFilter
 import org.akkirrai.hibiki.core.design.component.filter.AppThreeStateChipFilter
 import org.akkirrai.hibiki.core.design.component.filter.appFilterOptionText
 
@@ -38,7 +42,7 @@ fun SourceFilterControls(
     values: Map<String, String>,
     onValuesChange: (Map<String, String>) -> Unit,
 ) {
-    filters.forEach { def -> SourceFilter(def, values, onValuesChange) }
+    filters.filterNot(::isYearFilter).forEach { def -> SourceFilter(def, values, onValuesChange) }
 }
 
 @Composable
@@ -66,6 +70,21 @@ private fun SourceFilter(
 
         SourceFilterType.SELECT -> {
             val selected = current().toIntOrNull()
+            val defaultIndex = def.defaultValue.toIntOrNull()
+            // A short list of seasons or media types is drawn as the app's own type filter: connected
+            // buttons with icons. The "any" option is not a button, it is the state with none pressed.
+            val iconIndices = def.options.indices.filter { it != defaultIndex }
+            if (iconIndices.size in 2..6 && iconIndices.all { optionIconRes(def.options[it]) != null }) {
+                AppConnectedToggleFilter(
+                    title = def.title,
+                    entries = iconIndices,
+                    selected = selected?.takeIf { it != defaultIndex },
+                    onSelected = { picked -> set((picked ?: defaultIndex ?: 0).toString()) },
+                    icon = { ImageVector.vectorResource(optionIconRes(def.options[it])!!) },
+                    text = { appFilterOptionText(def.options[it]) },
+                )
+                return
+            }
             AppThreeStateChipFilter(
                 title = def.title,
                 options = def.options.indices.toList(),
@@ -177,6 +196,7 @@ private fun GroupedChipFilter(
     val excluded = def.children
         .filter { it.type == SourceFilterType.TRISTATE && stateOf(it) == "2" }
         .mapTo(mutableSetOf(), SourceFilterDef::key)
+    val long = def.children.size >= SORTED_OPTION_MINIMUM
 
     AppThreeStateChipFilter(
         title = def.title,
@@ -200,23 +220,46 @@ private fun GroupedChipFilter(
         },
         id = { it.key },
         text = { appFilterOptionText(it.title) },
-        maxCollapsedItems = COLLAPSED_CHIP_COUNT,
-        maxCollapsedGroups = COLLAPSED_GROUP_COUNT,
+        maxCollapsedItems = if (long) COLLAPSED_CHIP_COUNT else null,
+        maxCollapsedGroups = if (long) COLLAPSED_GROUP_COUNT else null,
         allowExclusion = def.children.any { it.type == SourceFilterType.TRISTATE },
-        optionSortKey = { it.title },
-        groupByFirstLetter = true,
+        optionSortKey = if (long) ({ it.title }) else null,
+        groupByFirstLetter = long,
     )
 }
 
 /**
- * Alphabetical order for a list of options, as the app's status filter does, unless the list has an
- * order of its own: short lists (seasons) and ones led by numbers (years, ratings) stay as defined.
- * Options are keyed by index, so reordering only changes how they are shown.
+ * Alphabetical order for a very long list of options, where it helps to find one; anything shorter keeps
+ * the order the source gave it, as do lists led by numbers (years, ratings). Options are keyed by
+ * index, so reordering only changes how they are shown.
  */
 private fun List<String>.sortKeyOrNull(): ((Int) -> String)? =
     if (size >= SORTED_OPTION_MINIMUM && none { it.firstOrNull()?.isDigit() == true }) ({ index -> this[index] }) else null
 
-private const val SORTED_OPTION_MINIMUM = 6
+private const val SORTED_OPTION_MINIMUM = 50
+
+/** The year filter is the app's own range slider; a source's separate year filter would only duplicate it. */
+private fun isYearFilter(def: SourceFilterDef): Boolean =
+    def.type != SourceFilterType.GROUP && def.title.trim().lowercase() in YEAR_FILTER_TITLES
+
+private val YEAR_FILTER_TITLES = setOf("year", "years", "release year", "year of release", "год", "рік", "год выпуска", "рік випуску")
+
+/** Icons the app already has for seasons and media types, matched on the option's name. */
+private fun optionIconRes(option: String): Int? = when (option.trim().lowercase()) {
+    "winter" -> R.drawable.animite_winter
+    "spring" -> R.drawable.animite_spring
+    "summer" -> R.drawable.animite_summer
+    "fall", "autumn" -> R.drawable.animite_fall
+    "tv" -> R.drawable.animite_tv
+    "ona" -> R.drawable.animite_ona
+    "ova" -> R.drawable.animite_ova
+    "movie", "film" -> R.drawable.animite_movie
+    "special" -> R.drawable.animite_special
+    "tv short" -> R.drawable.animite_tv_short
+    "music" -> R.drawable.animite_music
+    "one shot", "one-shot" -> R.drawable.animite_one_shot
+    else -> null
+}
 
 private fun descendantKeys(def: SourceFilterDef): List<String> =
     listOf(def.key) + def.children.flatMap(::descendantKeys)
