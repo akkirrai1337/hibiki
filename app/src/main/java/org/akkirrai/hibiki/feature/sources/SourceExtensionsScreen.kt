@@ -120,6 +120,8 @@ import org.akkirrai.hibiki.core.source.extension.InstalledApkExtensions
 import org.akkirrai.hibiki.core.source.extension.InstalledApkExtensionInfo
 import org.akkirrai.hibiki.core.source.extension.MarketplaceExtension
 import org.akkirrai.hibiki.core.source.extension.isExtensionVersionNewer
+import org.akkirrai.hibiki.core.source.extension.ExternalApkExtension
+import org.akkirrai.hibiki.core.source.extension.ExternalApkExtensions
 import org.akkirrai.hibiki.core.source.extension.RepositoryCatalogCache
 import org.akkirrai.hibiki.core.source.extension.SourceExtensionUpdateChecker
 import org.akkirrai.hibiki.core.source.extension.isUpdateAvailable
@@ -180,10 +182,16 @@ fun SourceExtensionsScreen(
         }
     }
 
+    var externalExtensionQueue by remember { mutableStateOf<List<ExternalApkExtension>>(emptyList()) }
+
     suspend fun refreshInstalledApkExtensions() {
-        installedApkExtensions = withContext(kotlinx.coroutines.Dispatchers.IO) {
-            InstalledApkExtensions.scan(context)
+        val (detection, installed) = withContext(kotlinx.coroutines.Dispatchers.IO) {
+            val detection = ExternalApkExtensions.sync(context)
+            detection to InstalledApkExtensions.scan(context)
         }
+        installedApkExtensions = installed
+        externalExtensionQueue = detection.pending
+        if (detection.changed) AnimeSourceRegistry.refreshApkExtensions(context)
     }
 
     val packageInstallLauncher = rememberLauncherForActivityResult(
@@ -421,6 +429,30 @@ fun SourceExtensionsScreen(
                 AnimeSourceRegistry.refreshApkExtensions(context)
             }
         }
+    }
+    externalExtensionQueue.firstOrNull()?.let { external ->
+        ExternalExtensionTrustDialog(
+            extension = external,
+            onTrust = {
+                externalExtensionQueue = externalExtensionQueue - external
+                tabScope.launch {
+                    val hadNoSources = AnimeSourceRegistry.sources.isEmpty()
+                    val adopted = withContext(kotlinx.coroutines.Dispatchers.IO) { ExternalApkExtensions.adopt(context, external) }
+                    if (adopted) {
+                        refreshInstalledApkExtensions()
+                        AnimeSourceRegistry.refreshApkExtensions(context)
+                        if (hadNoSources) AnimeSourceRegistry.sources.firstOrNull()?.let { preferences.setAnimeSource(it.id) }
+                    } else {
+                        apkInstallErrors = apkInstallErrors +
+                            (external.packageName to context.getString(R.string.source_extensions_apk_install_failed))
+                    }
+                }
+            },
+            onDismiss = {
+                ExternalApkExtensions.decline(external)
+                externalExtensionQueue = externalExtensionQueue - external
+            },
+        )
     }
     Column(modifier = modifier.fillMaxSize()) {
         SourceExtensionsToolbar(
@@ -1645,4 +1677,40 @@ private fun ExtensionManageButton(
             )
         }
     }
+}
+
+/** Asks whether to run an extension that was installed by something other than Hibiki. */
+@Composable
+private fun ExternalExtensionTrustDialog(
+    extension: ExternalApkExtension,
+    onTrust: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val installer = extension.installerLabel
+        ?: extension.installerPackage
+        ?: stringResource(R.string.source_extensions_external_installer_unknown)
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.source_extensions_external_title)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(
+                    text = stringResource(
+                        R.string.source_extensions_external_message,
+                        extension.label,
+                        extension.versionName,
+                        extension.packageName,
+                        installer,
+                    ),
+                )
+                Text(
+                    text = stringResource(R.string.source_extensions_external_warning),
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            }
+        },
+        confirmButton = { TextButton(onClick = onTrust) { Text(stringResource(R.string.source_extensions_external_trust)) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.source_extensions_external_not_now)) } },
+    )
 }

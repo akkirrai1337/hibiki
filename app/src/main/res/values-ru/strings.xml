@@ -665,4 +665,10 @@
     <string name="migration_unmatched">Эти тайтлы не найдены в новом источнике и остались как были:</string>
     <string name="migration_close">Закрыть</string>
     <string name="source_extensions_language_all">Все языки</string>
+    <string name="source_extensions_external_title">Доверять этому расширению?</string>
+    <string name="source_extensions_external_message">Найдено «%1$s» %2$s (%3$s), установлено через %4$s.</string>
+    <string name="source_extensions_external_warning">Оно установлено не из Hibiki и могло быть скачано со стороннего источника. Расширение выполняет свой код внутри Hibiki и имеет доступ к сети и к тому, что вы смотрите. Доверяйте, только если знаете, откуда оно.</string>
+    <string name="source_extensions_external_trust">Доверять</string>
+    <string name="source_extensions_external_not_now">Не сейчас</string>
+    <string name="source_extensions_external_installer_unknown">неизвестное приложение</string>
 </resources>

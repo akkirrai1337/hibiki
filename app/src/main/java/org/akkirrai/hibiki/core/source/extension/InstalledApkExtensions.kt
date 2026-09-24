@@ -40,7 +40,7 @@ object InstalledApkExtensions {
             .asSequence()
             .filter { it.isFile && it.extension == PRIVATE_EXTENSION }
             .mapNotNull { apk ->
-                val packageInfo = packageManager.getPackageArchiveInfo(apk.absolutePath, PACKAGE_FLAGS)
+                val packageInfo = packageManager.getPackageArchiveInfo(apk.absolutePath, packageFlags)
                     ?: return@mapNotNull null
                 if (packageInfo.reqFeatures.orEmpty().none { it.name == ANIME_EXTENSION_FEATURE }) {
                     return@mapNotNull null
@@ -63,7 +63,7 @@ object InstalledApkExtensions {
     }
 
     @Suppress("DEPRECATION")
-    private val PACKAGE_FLAGS: Int
+    val packageFlags: Int
         get() = PackageManager.GET_CONFIGURATIONS or PackageManager.GET_META_DATA or
             PackageManager.GET_SIGNATURES or
             (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
@@ -73,7 +73,7 @@ object InstalledApkExtensions {
             })
 
     @Suppress("DEPRECATION")
-    private fun PackageInfo.signingFingerprint(): String? {
+    internal fun PackageInfo.signingFingerprint(): String? {
         val signatures = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
             signingInfo?.apkContentsSigners
         } else {

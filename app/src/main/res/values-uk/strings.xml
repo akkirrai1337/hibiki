@@ -655,4 +655,10 @@
     <string name="migration_unmatched">Ці тайтли не знайдено в новому джерелі, вони залишилися як були:</string>
     <string name="migration_close">Закрити</string>
     <string name="source_extensions_language_all">Усі мови</string>
+    <string name="source_extensions_external_title">Довіряти цьому розширенню?</string>
+    <string name="source_extensions_external_message">Знайдено «%1$s» %2$s (%3$s), встановлено через %4$s.</string>
+    <string name="source_extensions_external_warning">Його встановлено не з Hibiki, тож воно могло бути завантажене зі стороннього джерела. Розширення виконує свій код усередині Hibiki та має доступ до мережі й до того, що ви дивитесь. Довіряйте, лише якщо знаєте, звідки воно.</string>
+    <string name="source_extensions_external_trust">Довіряти</string>
+    <string name="source_extensions_external_not_now">Не зараз</string>
+    <string name="source_extensions_external_installer_unknown">невідомий застосунок</string>
 </resources>

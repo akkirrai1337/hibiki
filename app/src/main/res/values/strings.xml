@@ -667,4 +667,10 @@
     <string name="migration_unmatched">These titles were not found in the new source and stay as they were:</string>
     <string name="migration_close">Close</string>
     <string name="source_extensions_language_all">All languages</string>
+    <string name="source_extensions_external_title">Trust this extension?</string>
+    <string name="source_extensions_external_message">Found “%1$s” %2$s (%3$s), installed by %4$s.</string>
+    <string name="source_extensions_external_warning">It was not installed from Hibiki, so it may come from an unknown source. An extension runs code inside Hibiki with access to the network and to what you watch. Only trust it if you know where it came from.</string>
+    <string name="source_extensions_external_trust">Trust</string>
+    <string name="source_extensions_external_not_now">Not now</string>
+    <string name="source_extensions_external_installer_unknown">an unknown app</string>
 </resources>

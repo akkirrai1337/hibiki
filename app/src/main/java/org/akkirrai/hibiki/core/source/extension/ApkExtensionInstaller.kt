@@ -123,6 +123,10 @@ object ApkExtensionInstaller {
         File(context.filesDir, "$EXTENSIONS_DIRECTORY/$packageName.$PRIVATE_EXTENSION").delete()
     }
 
+    /** Records an extension installed elsewhere as one Hibiki now manages (uninstalled through Android, updated in place). */
+    fun markAdopted(context: Context, packageName: String) =
+        ApkExtensionInstallRegistry.markSystemInstalled(context, packageName)
+
     fun wasInstalledBySystem(context: Context, packageName: String): Boolean =
         ApkExtensionInstallRegistry.isSystemInstalled(context, packageName)
 
