@@ -162,6 +162,7 @@
     <string name="details_release_date">Дата виходу</string>
     <string name="details_release_date_unknown">Невідомо</string>
     <string name="details_status">Статус</string>
+    <string name="details_age_rating">Віковий рейтинг</string>
     <string name="details_studio">Студія</string>
     <string name="details_source_material">Першоджерело</string>
     <string name="details_source_material_manga">Манґа</string>

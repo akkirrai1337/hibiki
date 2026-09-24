@@ -166,6 +166,7 @@
     <string name="details_release_date">Release date</string>
     <string name="details_release_date_unknown">Unknown</string>
     <string name="details_status">Status</string>
+    <string name="details_age_rating">Age rating</string>
     <string name="details_studio">Studio</string>
     <string name="details_source_material">Source material</string>
     <string name="details_source_material_manga">Manga</string>

@@ -6,12 +6,37 @@ import org.junit.Test
 
 class SourceDescriptionFooterTest {
     @Test
-    fun `machine made footer is removed and the age rating is kept`() {
+    fun `markdown footer is removed and its facts are kept`() {
         val parsed = SourceDescriptionFooter.parse(
             "Second season.\n\n**Rating:** PG 13\n**Subtitles:** English, Deutsch\n[MAL](https://myanimelist.net/anime/1)",
         )
         assertEquals("Second season.", parsed.text)
         assertEquals("PG 13", parsed.ageRating)
+        assertEquals("English, Deutsch", parsed.facts["subtitles"])
+    }
+
+    @Test
+    fun `a pipe separated fact line is removed and parsed`() {
+        val parsed = SourceDescriptionFooter.parse(
+            "The story. [Written by MAL Rewrite]\n\nOther name: BLEACH - ブリーチ - | Synonyms: Bleach | Type: TV | " +
+                "Aired: Oct 5, 2004 | Premiered: Fall 2004 | Duration: 24 min | Rating: PG-13 | Episodes: 366",
+        )
+        assertEquals("The story. [Written by MAL Rewrite]", parsed.text)
+        val facts = FooterFacts.from(parsed.facts)
+        assertEquals("PG-13", facts.ageRating)
+        assertEquals(366, facts.episodeCount)
+        assertEquals("TV", facts.type)
+        assertEquals(2004, facts.year)
+        assertEquals(4, facts.season)
+        assertEquals(listOf("BLEACH - ブリーチ", "Bleach"), facts.synonyms)
+    }
+
+    @Test
+    fun `the year falls back to the aired date`() {
+        val facts = FooterFacts.from(mapOf("aired" to "Oct 5, 2004 to Mar 27, 2012", "episodes" to "?"))
+        assertEquals(2004, facts.year)
+        assertNull(facts.season)
+        assertNull(facts.episodeCount)
     }
 
     @Test
@@ -22,9 +47,11 @@ class SourceDescriptionFooterTest {
     }
 
     @Test
-    fun `bold text inside the story is not a footer`() {
-        val text = "He said **no:** and left.\nThe end."
-        assertEquals(text, SourceDescriptionFooter.parse(text).text)
+    fun `bold text and a lone colon inside the story are not a footer`() {
+        val bold = "He said **no:** and left.\nThe end."
+        assertEquals(bold, SourceDescriptionFooter.parse(bold).text)
+        val colon = "Note: this is prose | not facts, really"
+        assertEquals(colon, SourceDescriptionFooter.parse(colon).text)
     }
 
     @Test

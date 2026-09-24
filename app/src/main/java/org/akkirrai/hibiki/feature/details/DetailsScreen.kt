@@ -63,6 +63,7 @@ import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Business
+import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Star
@@ -1477,6 +1478,16 @@ private fun DetailContentCard(
                                 value = releaseDate,
                                 icon = Icons.Filled.DateRange,
                                 accent = MaterialTheme.colorScheme.primary,
+                            )
+                        }
+                    }
+                    anime.ageRating?.takeIf(String::isNotBlank)?.let { ageRating ->
+                        item {
+                            DetailInfoPill(
+                                label = stringResource(R.string.details_age_rating),
+                                value = ageRating,
+                                icon = Icons.Filled.Shield,
+                                accent = MaterialTheme.colorScheme.secondary,
                             )
                         }
                     }
