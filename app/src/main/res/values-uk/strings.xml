@@ -249,6 +249,7 @@
     <string name="watch_episode_fallback_title">Серія %1$s</string>
     <string name="watch_error_voiceover_not_found">Озвучення не знайдено</string>
     <string name="watch_error_episode_not_found">Серію не знайдено</string>
+    <string name="watch_error_source_failed">Джерело не змогло завантажити цей епізод: %1$s</string>
     <string name="watch_error_no_players">Немає доступних плеєрів для вибраного озвучення</string>
     <string name="watch_error_extractor_missing">%1$s: екстрактор відсутній</string>
     <string name="watch_error_timeout">%1$s: час очікування вичерпано</string>

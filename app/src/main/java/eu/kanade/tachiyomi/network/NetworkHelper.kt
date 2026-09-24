@@ -34,6 +34,7 @@ class NetworkHelper(context: Context) {
         .readTimeout(30, TimeUnit.SECONDS)
         .callTimeout(120, TimeUnit.SECONDS)
         .cache(Cache(File(appContext.cacheDir, "network_cache"), 5L * 1024 * 1024))
+        .addInterceptor(FailureRecordingInterceptor())
         .addInterceptor(UncaughtExceptionInterceptor())
         .addInterceptor(UserAgentInterceptor(::defaultUserAgentProvider))
         .addNetworkInterceptor(IgnoreGzipInterceptor())

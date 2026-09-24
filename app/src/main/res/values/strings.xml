@@ -258,6 +258,7 @@
     <string name="watch_episode_fallback_title">Episode %1$s</string>
     <string name="watch_error_voiceover_not_found">Voiceover not found</string>
     <string name="watch_error_episode_not_found">Episode not found</string>
+    <string name="watch_error_source_failed">The source could not load this episode: %1$s</string>
     <string name="watch_error_no_players">No available players for the selected voiceover</string>
     <string name="watch_error_selected_player_unavailable">This player did not provide a stream in time. Open Player settings to choose another player.</string>
     <string name="watch_error_extractor_missing">%1$s: extractor missing</string>

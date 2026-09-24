@@ -79,6 +79,8 @@ class AnimeWatchRepository(
     private val cachedStreams = ConcurrentHashMap<String, CachedPlaybackStream>()
     private val cachedPlayerLinks = ConcurrentHashMap<String, CachedPlayerLinks>()
     private val unavailablePlayerLinks = ConcurrentHashMap<String, Long>()
+    /** The latest failure message a source raised while listing links, by source id. */
+    private val providerFailures = ConcurrentHashMap<String, String>()
     private val inFlightLoads = ConcurrentHashMap<String, CompletableDeferred<List<WatchSource>>>()
     private val inFlightPlayerLinks = ConcurrentHashMap<String, CompletableDeferred<List<PlayerLink>>>()
     private val appContext = context?.applicationContext
@@ -310,6 +312,10 @@ class AnimeWatchRepository(
                         AppLogger.d(TAG, "[playback.player.selected] name=${selectedAutomaticPlayer.orEmpty()} links=${links.size}")
                     }
                     if (links.isEmpty()) {
+                        // Say why, when the source told us, instead of a generic "no players".
+                        providerFailures[candidatePayload.source.sourceId]?.let { reason ->
+                            lastResolutionError = SourceException(appString(R.string.watch_error_source_failed, reason))
+                        }
                         AppLogger.d(TAG, "Playback attempt ${candidateIndex + 1}/${candidates.size} skipped: voiceover=${candidatePayload.source.title}, no playable links, elapsedMs=${System.currentTimeMillis() - startedAt}")
                         continue
                     }
@@ -591,9 +597,11 @@ class AnimeWatchRepository(
             try {
                 payload.runtime.getPlayerLinks(payload.title, payload.group, episode)
                     .filter(::isSupportedLink)
+                    .also { providerFailures.remove(payload.source.sourceId) }
             } catch (error: CancellationException) {
                 throw error
             } catch (error: Throwable) {
+                providerFailures[payload.source.sourceId] = error.message ?: error.javaClass.simpleName
                 if (error.message?.contains("HTTP 444") == true || error.message?.contains("HTTP 5") == true) {
                     unavailablePlayerLinks[cacheKey] = System.currentTimeMillis()
                 }

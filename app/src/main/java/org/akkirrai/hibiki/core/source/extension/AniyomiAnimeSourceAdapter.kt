@@ -8,6 +8,7 @@ import eu.kanade.tachiyomi.animesource.model.SAnime
 import eu.kanade.tachiyomi.animesource.model.SEpisode
 import eu.kanade.tachiyomi.animesource.model.Video
 import eu.kanade.tachiyomi.animesource.online.AnimeHttpSource
+import eu.kanade.tachiyomi.network.NetworkFailureLog
 import eu.kanade.tachiyomi.network.NetworkHelper
 import eu.kanade.tachiyomi.network.await
 import okhttp3.Request
@@ -201,8 +202,17 @@ class AniyomiAnimeSourceAdapter(
             name = episode.title ?: "Episode ${episode.number}"
             episode_number = episode.number.toFloat()
         }
+        val startedAt = System.currentTimeMillis()
         val videos = loadVideos(sourceEpisode)
-        return coroutineScope { videos.map { hosted -> async { toPlayerLink(hosted) } }.awaitAll() }.filterNotNull()
+        val links = coroutineScope { videos.map { hosted -> async { toPlayerLink(hosted) } }.awaitAll() }.filterNotNull()
+        if (links.isEmpty()) {
+            // Extensions swallow their own network errors and return nothing; the client kept them.
+            val cause = NetworkFailureLog.summary(startedAt)
+            throw ApkExtensionRuntimeException(
+                "${source.name} returned no playable videos" + (cause?.let { " ($it)" } ?: ""),
+            )
+        }
+        return links
     }
 
     private suspend fun toPlayerLink(hosted: HostedVideo): PlayerLink? {
