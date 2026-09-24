@@ -86,6 +86,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
+import org.akkirrai.hibiki.feature.search.PendingSearchFilters
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -153,7 +154,7 @@ fun HomeScreen(
     onOpenSources: () -> Unit = {},
     onOpenDownloads: () -> Unit = {},
     onSearch: (String) -> Unit = {},
-    onOpenFilters: () -> Unit = {},
+    onOpenSearchWithFilters: () -> Unit = {},
     isActive: Boolean = true,
     bottomContentPadding: Dp = 96.dp,
     sharedTransitionScope: SharedTransitionScope? = null,
@@ -173,6 +174,7 @@ fun HomeScreen(
     // The title a long press on a watched card is offering to forget. Confirmed before anything is
     // removed: a long press is easy to trigger by accident while scrolling a row.
     var pendingProgressRemoval by remember { mutableStateOf<Anime?>(null) }
+    var showFilters by rememberSaveable { mutableStateOf(false) }
     val pullToRefreshState = rememberPullToRefreshState()
     val sharedCardModifier: @Composable (Anime) -> Modifier = { anime ->
         animeDetailsSharedCardModifier(anime.id, sharedTransitionScope, animatedVisibilityScope, origin = "home")
@@ -280,8 +282,7 @@ fun HomeScreen(
             query = "",
             onQueryChange = { query -> if (query.isNotBlank()) onSearch(query) },
             onClear = {},
-            // The filters live on the search screen, so the button takes the user there with them open.
-            onFilterClick = onOpenFilters,
+            onFilterClick = { showFilters = true },
             showFilter = true,
             modifier = Modifier
                 .align(Alignment.TopCenter)
@@ -292,6 +293,16 @@ fun HomeScreen(
                     end = UiDimens.ScreenPadding,
                 )
         )
+
+        if (showFilters) {
+            HomeFiltersSheet(
+                onApply = { filters ->
+                    PendingSearchFilters.set(filters)
+                    onOpenSearchWithFilters()
+                },
+                onDismissRequest = { showFilters = false },
+            )
+        }
 
         pendingProgressRemoval?.let { anime ->
             AnimeQuickActionsSheet(

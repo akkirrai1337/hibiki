@@ -67,8 +67,16 @@ fun SourceFilterControls(
     filters: List<SourceFilterDef>,
     values: Map<String, String>,
     onValuesChange: (Map<String, String>) -> Unit,
+    inlineYear: (@Composable () -> Unit)? = null,
 ) {
-    filters.filterNot(::isYearFilter).inDisplayOrder().forEach { def -> SourceFilter(def, values, onValuesChange) }
+    val ordered = filters.filterNot(::isYearFilter).inDisplayOrder()
+    // The app's year slider sits with the date-like filters (after sort and season), not above them all.
+    val yearIndex = ordered.indexOfFirst { filterRank(it) > 1 }.let { if (it == -1) ordered.size else it }
+    ordered.forEachIndexed { index, def ->
+        if (index == yearIndex) inlineYear?.invoke()
+        SourceFilter(def, values, onValuesChange)
+    }
+    if (yearIndex == ordered.size) inlineYear?.invoke()
 }
 
 @Composable

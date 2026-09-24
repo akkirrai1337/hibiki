@@ -166,13 +166,19 @@ fun AnimeSearchFiltersSheet(
                         )
                     }
 
-                    if (capabilities.supports(AnimeSearchFilter.YEAR_RANGE)) {
-                        YearFilter(
-                            selectedRange = yearRange,
-                            yearRange = FILTER_YEAR_RANGE,
-                            onRangeChange = { yearRange = it },
-                        )
+                    val yearSlider: (@Composable () -> Unit)? = if (capabilities.supports(AnimeSearchFilter.YEAR_RANGE)) {
+                        {
+                            YearFilter(
+                                selectedRange = yearRange,
+                                yearRange = FILTER_YEAR_RANGE,
+                                onRangeChange = { yearRange = it },
+                            )
+                        }
+                    } else {
+                        null
                     }
+                    // With source filters the slider is placed among them; otherwise it stays where it was.
+                    if (catalog.sourceFilters.isEmpty()) yearSlider?.invoke()
 
                     if (capabilities.supports(AnimeSearchFilter.STATUS) && catalog.statusOptions.isNotEmpty()) {
                         AppThreeStateChipFilter(
@@ -194,6 +200,7 @@ fun AnimeSearchFiltersSheet(
                             filters = catalog.sourceFilters,
                             values = pendingFilters.sourceFilterValues,
                             onValuesChange = { pendingFilters = pendingFilters.copy(sourceFilterValues = it) },
+                            inlineYear = yearSlider,
                         )
                     }
 
