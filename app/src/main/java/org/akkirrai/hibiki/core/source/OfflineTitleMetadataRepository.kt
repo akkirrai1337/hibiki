@@ -76,6 +76,7 @@ class OfflineTitleMetadataRepository(context: Context) {
             }
             put("sourceMaterial", anime.sourceMaterial)
             put("studios", JSONArray(anime.studios))
+            put("producers", JSONArray(anime.producers))
             put("ratings", JSONArray().apply {
                 anime.ratings.forEach { rating ->
                     put(JSONObject().apply {
@@ -109,6 +110,7 @@ class OfflineTitleMetadataRepository(context: Context) {
             trailer = json.optJSONObject("trailer")?.toAnimeTrailer(),
             sourceMaterial = json.optString("sourceMaterial").ifBlank { null },
             studios = json.optJSONArray("studios").toStringList(),
+            producers = json.optJSONArray("producers").toStringList(),
         )
     }
 

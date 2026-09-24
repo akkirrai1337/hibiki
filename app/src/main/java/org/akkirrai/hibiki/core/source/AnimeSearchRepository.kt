@@ -288,6 +288,7 @@ class AnimeSearchRepository(
             trailer = trailer,
             sourceMaterial = sourceMaterial ?: fallback?.sourceMaterial,
             studios = studios.ifEmpty { fallback?.studios.orEmpty() },
+            producers = producers.ifEmpty { fallback?.producers.orEmpty() },
             releaseDate = formatReleaseDate(preferEnglish) ?: fallback?.releaseDate,
         )
     }

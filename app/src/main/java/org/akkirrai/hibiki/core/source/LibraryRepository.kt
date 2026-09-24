@@ -247,6 +247,7 @@ private fun encodeAnime(anime: Anime): JSONObject {
         })
         put("genres", JSONArray(anime.genres))
         put("studios", JSONArray(anime.studios))
+        put("producers", JSONArray(anime.producers))
     }
 }
 
@@ -271,6 +272,7 @@ private fun decodeAnime(json: JSONObject): Anime {
         sourceMaterial = json.optString("sourceMaterial").ifBlank { null },
         genres = json.optJSONArray("genres").toStringList(),
         studios = json.optJSONArray("studios").toStringList(),
+        producers = json.optJSONArray("producers").toStringList(),
     )
 }
 

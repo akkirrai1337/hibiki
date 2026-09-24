@@ -63,6 +63,7 @@ import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Business
+import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.PlayArrow
@@ -1501,6 +1502,16 @@ private fun DetailContentCard(
                             )
                         }
                     }
+                    anime.producers.takeIf(List<String>::isNotEmpty)?.let { producers ->
+                        item {
+                            DetailInfoPill(
+                                label = stringResource(R.string.details_producers),
+                                value = producers.summarized(),
+                                icon = Icons.Filled.Groups,
+                                accent = MaterialTheme.colorScheme.tertiary,
+                            )
+                        }
+                    }
                     heroInfo.studio.takeIf(String::isNotBlank)?.let { studio ->
                         item {
                             DetailInfoPill(
@@ -2246,7 +2257,7 @@ private fun buildHeroInfo(anime: Anime, localizedEpisodeWord: String): HeroInfo 
             ?: year.takeIf(::isKnownReleaseDate).orEmpty(),
         episodes = episodes,
         status = status,
-        studio = anime.studios.joinToString(", "),
+        studio = anime.studios.summarized(),
     )
 }
 
@@ -2523,3 +2534,7 @@ private fun ImagePlaceholder(modifier: Modifier = Modifier) {
         )
     }
 }
+
+/** A long list of names for a one-line pill: the first few, then how many more there are. */
+private fun List<String>.summarized(limit: Int = 3): String =
+    if (size <= limit) joinToString(", ") else take(limit).joinToString(", ") + " +${size - limit}"

@@ -388,6 +388,7 @@ class AniyomiAnimeSourceAdapter(
             ?: url
         val description = SourceDescriptionFooter.parse(anime.description)
         val facts = FooterFacts.from(description.facts)
+        val credits = listOfNotNull(anime.author, anime.artist).map(StudioCredits::parse)
         return AnimeTitle(
             id = url,
             originalName = title,
@@ -407,10 +408,8 @@ class AniyomiAnimeSourceAdapter(
             synonyms = facts.synonyms,
             genres = anime.getGenres().orEmpty(),
             // Aniyomi has no studio field; extensions that know it put it in author (or artist).
-            studios = (listOfNotNull(anime.author, anime.artist).flatMap { it.split(',', ';') } + facts.studios)
-                .map(String::trim)
-                .filter(String::isNotBlank)
-                .distinct(),
+            studios = (credits.flatMap { it.studios } + facts.studios).distinct(),
+            producers = credits.flatMap { it.producers }.distinct(),
             ratings = listOfNotNull(facts.score?.let { org.akkirrai.beakokit.model.TitleRating(source.name, it) }),
         )
     }

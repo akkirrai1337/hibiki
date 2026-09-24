@@ -20,6 +20,7 @@ data class Anime(
     val trailer: AnimeTrailer? = null,
     val sourceMaterial: String? = null,
     val studios: List<String> = emptyList(),
+    val producers: List<String> = emptyList(),
     val releaseDate: String? = null,
 )
 

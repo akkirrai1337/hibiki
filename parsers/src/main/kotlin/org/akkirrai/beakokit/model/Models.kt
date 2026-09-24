@@ -28,6 +28,7 @@ data class AnimeTitle(
     val trailer: AnimeTrailerTitle? = null,
     val sourceMaterial: String? = null,
     val studios: List<String> = emptyList(),
+    val producers: List<String> = emptyList(),
     val mainCharacters: List<CharacterTitle> = emptyList(),
     val season: Int? = null,
     /** Episodes currently available from this source; differs from the planned total for ongoing titles. */

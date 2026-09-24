@@ -165,6 +165,7 @@
     <string name="details_release_date_unknown">Неизвестно</string>
     <string name="details_status">Статус</string>
     <string name="details_age_rating">Возрастной рейтинг</string>
+    <string name="details_producers">Продюсеры</string>
     <string name="details_studio">Студия</string>
     <string name="details_source_material">Первоисточник</string>
     <string name="details_source_material_manga">Манга</string>
