@@ -3134,6 +3134,7 @@ private fun PlayerMediaPreparationEffect(
         val resumeWhenReady = exoPlayer.playWhenReady
         // Extensions report a track's URL but not its format, and ASS, SRT and WebVTT need different parsers.
         val subtitleMimeTypes = if (state.isPlayingOffline) emptyMap() else sniffSubtitleMimeTypes(playback.subtitles)
+        AppLogger.d(PLAYBACK_LOG_TAG, "[player.subtitles.formats] tracks=${playback.subtitles.size} sniffed=${subtitleMimeTypes.values.groupingBy { it }.eachCount()}")
         exoPlayer.stop()
         exoPlayer.clearMediaItems()
         exoPlayer.setMediaSource(
@@ -3602,6 +3603,7 @@ private fun PlayerPlaybackListenerEffect(
     onDisposed: () -> Unit,
 ) {
     DisposableEffect(exoPlayer) {
+        var loggedFirstCue = false
         val listener = object : Player.Listener {
             override fun onRenderedFirstFrame() {
                 val preparedAt = playerPrepareStartedAt.longValue
@@ -3625,7 +3627,22 @@ private fun PlayerPlaybackListenerEffect(
                 isPlaying.value = playing
             }
 
+            override fun onTracksChanged(tracks: androidx.media3.common.Tracks) {
+                val text = tracks.groups.filter { it.type == C.TRACK_TYPE_TEXT }
+                AppLogger.d(
+                    PLAYBACK_LOG_TAG,
+                    "[player.subtitles.tracks] count=${text.size} " + text.joinToString(prefix = "[", postfix = "]") { group ->
+                        val format = group.getTrackFormat(0)
+                        "${format.sampleMimeType}/${format.label}/supported=${group.isSupported}/selected=${group.isSelected}"
+                    },
+                )
+            }
+
             override fun onCues(cueGroup: CueGroup) {
+                if (cueGroup.cues.isNotEmpty() && !loggedFirstCue) {
+                    loggedFirstCue = true
+                    AppLogger.d(PLAYBACK_LOG_TAG, "[player.subtitles.first_cue] cues=${cueGroup.cues.size}")
+                }
                 subtitleLines.value = cueGroup.cues.mapNotNull { cue ->
                     cue.text?.toString()?.trim()?.takeIf(String::isNotBlank)
                 }.distinct()
