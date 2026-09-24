@@ -11,194 +11,229 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import org.akkirrai.hibiki.R
+import kotlinx.coroutines.withContext
 import org.akkirrai.hibiki.app.di.hibikiDependencies
 import org.akkirrai.hibiki.app.settings.AppPreferences
+import org.akkirrai.hibiki.core.log.AppLogger
+import org.akkirrai.hibiki.core.model.Anime
+import org.akkirrai.hibiki.core.model.AnimeSearchFilters
 import org.akkirrai.hibiki.core.model.SearchUiState
-import org.akkirrai.hibiki.core.source.AnimeSearchRepository
 import org.akkirrai.hibiki.core.source.toSearchErrorMessage
+import org.akkirrai.hibiki.feature.home.HomeRepository
 
+/** The app's single search: query, filters and paged results for the active source. */
 class SearchViewModel(
-    private val repository: AnimeSearchRepository,
+    private val repository: HomeRepository,
     context: Context,
 ) : ViewModel() {
     private val appContext = context.applicationContext
+    private val appPreferences = AppPreferences(appContext)
     private val _uiState = MutableStateFlow(SearchScreenState())
     val uiState: StateFlow<SearchScreenState> = _uiState.asStateFlow()
     private var searchJob: Job? = null
     private var loadMoreJob: Job? = null
+    private var filterCatalogJob: Job? = null
 
     init {
         loadFilterCatalog()
         viewModelScope.launch {
+            repository.cardMetadata.collect { metadata ->
+                _uiState.update { it.copy(result = it.result.withCardMetadata(metadata)) }
+            }
+        }
+        viewModelScope.launch {
             AppPreferences.animeSourceChanges.collect {
-                searchJob?.cancel()
-                loadMoreJob?.cancel()
-                _uiState.update { state -> state.copy(result = SearchUiState.Idle, filterCatalog = null) }
-                loadFilterCatalog()
-                if (currentSearchQuery() != null) search()
+                resetForNewSource()
+            }
+        }
+        viewModelScope.launch {
+            appPreferences.state.map { it.languageMode }.distinctUntilChanged().drop(1).collect {
+                resetForNewSource()
             }
         }
     }
 
     fun onQueryChange(value: String) {
-        _uiState.update { state -> state.copy(query = value) }
-        if (value.isBlank() || value.trim().length < MIN_QUERY_LENGTH) {
-            searchJob?.cancel()
+        _uiState.update { it.copy(query = value) }
+        if (!canSearch(_uiState.value)) {
+            cancelSearch()
             _uiState.update { it.copy(result = SearchUiState.Idle) }
             return
         }
         scheduleSearch(immediate = false)
     }
 
-    fun search() {
-        scheduleSearch(immediate = true)
-    }
-
-    /** Receives text typed into another surface (currently Catalog) and starts immediately. */
+    /** Text handed over from another screen's search bar: search right away, no debounce. */
     fun startSearch(query: String) {
         _uiState.update { it.copy(query = query) }
         scheduleSearch(immediate = true)
     }
 
-    private fun scheduleSearch(immediate: Boolean) {
+    fun retry() = scheduleSearch(immediate = true)
+
+    fun clear() {
+        cancelSearch()
+        _uiState.update { it.copy(query = "", result = SearchUiState.Idle) }
+        if (_uiState.value.filters.hasActiveFilters()) scheduleSearch(immediate = true)
+    }
+
+    fun applyFilters(filters: AnimeSearchFilters) {
+        _uiState.update { it.copy(filters = filters) }
+        scheduleSearch(immediate = true)
+    }
+
+    private fun cancelSearch() {
         searchJob?.cancel()
-        if (currentSearchQuery() == null) {
+        loadMoreJob?.cancel()
+    }
+
+    private fun resetForNewSource() {
+        cancelSearch()
+        _uiState.update {
+            it.copy(filters = AnimeSearchFilters(), filterCatalog = null, result = SearchUiState.Idle)
+        }
+        loadFilterCatalog()
+        if (canSearch(_uiState.value)) scheduleSearch(immediate = true)
+    }
+
+    private fun canSearch(state: SearchScreenState): Boolean =
+        state.query.trim().length >= MIN_QUERY_LENGTH || state.filters.hasActiveFilters()
+
+    private fun scheduleSearch(immediate: Boolean) {
+        cancelSearch()
+        if (!canSearch(_uiState.value)) {
             _uiState.update { it.copy(result = SearchUiState.Idle) }
             return
         }
-
         searchJob = viewModelScope.launch {
             if (!immediate) delay(SEARCH_DEBOUNCE_MS)
-            val activeQuery = currentSearchQuery()
-            if (activeQuery == null) {
+            val snapshot = _uiState.value
+            if (!canSearch(snapshot)) {
                 _uiState.update { it.copy(result = SearchUiState.Idle) }
                 return@launch
             }
-
-            loadMoreJob?.cancel()
             _uiState.update { it.copy(result = SearchUiState.Loading) }
-            loadFirstSearchPage(activeQuery)
+            loadFirstPage(snapshot.query.trim(), snapshot.filters)
         }
     }
 
-    private suspend fun loadFirstSearchPage(activeQuery: String) {
+    private suspend fun loadFirstPage(query: String, filters: AnimeSearchFilters) {
+        // Only the query length is logged - the text itself is what the user typed.
+        val startedAt = System.currentTimeMillis()
+        AppLogger.d(LOG_TAG, "search start queryLength=${query.length} filtered=${filters.hasActiveFilters()}")
         try {
-            val items = kotlinx.coroutines.withContext(Dispatchers.IO) {
-                repository.search(
-                    query = activeQuery,
-                    limit = SEARCH_PAGE_SIZE,
-                    offset = 0,
-                    enrichCardsWithMetadata = false,
-                )
+            val items = withContext(Dispatchers.IO) {
+                repository.search(query, filters, limit = PAGE_SIZE + 1, offset = 0)
             }
-            if (activeQuery != uiState.value.query.trim()) return
+            AppLogger.d(LOG_TAG, "search ok items=${items.size} in ${System.currentTimeMillis() - startedAt}ms")
+            if (isStale(query, filters)) return
             val result = if (items.isEmpty()) {
                 SearchUiState.Empty
             } else {
-                SearchUiState.Content(
-                    items = items,
-                    canLoadMore = items.size >= SEARCH_PAGE_SIZE,
-                )
+                SearchUiState.Content(items = items.take(PAGE_SIZE), canLoadMore = items.size > PAGE_SIZE)
             }
-            _uiState.update { it.copy(result = result) }
+            _uiState.update { it.copy(result = result.withCardMetadata(repository.cardMetadata.value)) }
         } catch (cancelled: CancellationException) {
             throw cancelled
         } catch (throwable: Throwable) {
-            if (activeQuery != uiState.value.query.trim()) return
+            AppLogger.w(LOG_TAG, "search failed in ${System.currentTimeMillis() - startedAt}ms", throwable)
+            if (isStale(query, filters)) return
             _uiState.update { it.copy(result = SearchUiState.Error(throwable.toSearchErrorMessage(appContext))) }
         }
     }
 
-    private fun currentSearchQuery(): String? = uiState.value.query.trim()
-        .takeIf { it.length >= MIN_QUERY_LENGTH }
-
     fun loadMore() {
-        val query = uiState.value.query.trim()
-        val content = uiState.value.result as? SearchUiState.Content ?: return
-        if (query.isBlank() || content.isLoadingMore || !content.canLoadMore) return
+        val state = _uiState.value
+        val content = state.result as? SearchUiState.Content ?: return
+        if (content.isLoadingMore || !content.canLoadMore || !canSearch(state)) return
+        val query = state.query.trim()
+        val filters = state.filters
 
         loadMoreJob?.cancel()
         loadMoreJob = viewModelScope.launch {
-            _uiState.update { state ->
-                val current = state.result as? SearchUiState.Content ?: return@update state
-                state.copy(result = current.copy(isLoadingMore = true))
-            }
-
+            updateContent { it.copy(isLoadingMore = true, loadMoreError = null) }
             try {
-                val nextItems = kotlinx.coroutines.withContext(Dispatchers.IO) {
-                    repository.search(
-                        query = query,
-                        limit = SEARCH_PAGE_SIZE,
-                        offset = content.items.size,
-                        enrichCardsWithMetadata = false,
-                    )
+                val next = withContext(Dispatchers.IO) {
+                    repository.search(query, filters, limit = PAGE_SIZE + 1, offset = content.items.size)
                 }
-                if (query != uiState.value.query.trim()) return@launch
-                _uiState.update { state ->
-                    val current = state.result as? SearchUiState.Content ?: return@update state
-                    val merged = (current.items + nextItems).distinctBy { it.id }
-                    state.copy(
-                        result = current.copy(
-                            items = merged,
-                            canLoadMore = nextItems.size >= SEARCH_PAGE_SIZE,
-                            isLoadingMore = false,
-                        )
+                if (isStale(query, filters)) return@launch
+                updateContent {
+                    it.copy(
+                        items = (it.items + next.take(PAGE_SIZE)).distinctBy(Anime::id)
+                            .withCardMetadata(repository.cardMetadata.value),
+                        canLoadMore = next.size > PAGE_SIZE,
+                        isLoadingMore = false,
+                        loadMoreError = null,
                     )
                 }
             } catch (cancelled: CancellationException) {
                 throw cancelled
-            } catch (_: Throwable) {
-                _uiState.update { state ->
-                    val current = state.result as? SearchUiState.Content ?: return@update state
-                    state.copy(result = current.copy(isLoadingMore = false))
-                }
+            } catch (throwable: Throwable) {
+                val message = throwable.toSearchErrorMessage(appContext)
+                updateContent { it.copy(isLoadingMore = false, loadMoreError = message) }
             }
         }
     }
 
-    override fun onCleared() {
-        searchJob?.cancel()
-        loadMoreJob?.cancel()
-        repository.close()
-        super.onCleared()
-    }
+    private fun isStale(query: String, filters: AnimeSearchFilters): Boolean =
+        query != _uiState.value.query.trim() || filters != _uiState.value.filters
 
-    class Factory(
-        private val context: Context,
-    ) : ViewModelProvider.Factory {
-        @Suppress("UNCHECKED_CAST")
-        override fun <T : ViewModel> create(modelClass: Class<T>): T {
-            val dependencies = context.applicationContext.hibikiDependencies()
-            return SearchViewModel(
-                repository = dependencies.animeSearchRepository(),
-                context = context.applicationContext,
-            ) as T
+    private fun updateContent(transform: (SearchUiState.Content) -> SearchUiState.Content) {
+        _uiState.update { state ->
+            val current = state.result as? SearchUiState.Content ?: return@update state
+            state.copy(result = transform(current))
         }
     }
 
     private fun loadFilterCatalog() {
-        viewModelScope.launch {
+        filterCatalogJob?.cancel()
+        filterCatalogJob = viewModelScope.launch {
             _uiState.update { it.copy(isFilterCatalogLoading = true) }
             val catalog = runCatching {
-                kotlinx.coroutines.withContext(Dispatchers.IO) {
-                    repository.getSearchFilterCatalog()
-                }
+                withContext(Dispatchers.IO) { repository.getSearchFilterCatalog() }
             }.getOrNull()
             _uiState.update {
-                it.copy(
-                    filterCatalog = catalog ?: it.filterCatalog,
-                    isFilterCatalogLoading = false,
-                )
+                it.copy(filterCatalog = catalog ?: it.filterCatalog, isFilterCatalogLoading = false)
             }
         }
     }
 
+    private fun List<Anime>.withCardMetadata(metadata: Map<String, Anime>): List<Anime> = map { anime ->
+        metadata[anime.id]?.copy(title = anime.title) ?: anime
+    }
+
+    private fun SearchUiState.withCardMetadata(metadata: Map<String, Anime>): SearchUiState = when (this) {
+        is SearchUiState.Content -> copy(items = items.withCardMetadata(metadata))
+        else -> this
+    }
+
+    override fun onCleared() {
+        cancelSearch()
+        filterCatalogJob?.cancel()
+        repository.close()
+        super.onCleared()
+    }
+
+    class Factory(private val context: Context) : ViewModelProvider.Factory {
+        @Suppress("UNCHECKED_CAST")
+        override fun <T : ViewModel> create(modelClass: Class<T>): T {
+            val appContext = context.applicationContext
+            return SearchViewModel(
+                repository = appContext.hibikiDependencies().homeRepository(),
+                context = appContext,
+            ) as T
+        }
+    }
+
     private companion object {
+        const val LOG_TAG = "Search"
         const val SEARCH_DEBOUNCE_MS = 450L
         const val MIN_QUERY_LENGTH = 3
-        const val SEARCH_PAGE_SIZE = 20
+        const val PAGE_SIZE = 24
     }
 }

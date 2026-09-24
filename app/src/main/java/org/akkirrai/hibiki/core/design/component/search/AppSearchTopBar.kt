@@ -19,12 +19,21 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.annotation.StringRes
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.core.design.UiDimens
@@ -37,20 +46,27 @@ fun AppSearchTopBar(
     onFilterClick: () -> Unit = {},
     showFilter: Boolean = true,
     @StringRes placeholderResId: Int = R.string.search_placeholder,
+    barHeight: Dp = UiDimens.SearchBarHeight,
+    focusRequester: FocusRequester? = null,
     modifier: Modifier = Modifier,
 ) {
+    val innerBarHeight = barHeight - 2.dp
+    // A plain String value resets the cursor to the start whenever the text is set from outside
+    // (text handed over from another screen), so the next letters would land in front of it.
+    var edited by remember { mutableStateOf(TextFieldValue(query, TextRange(query.length))) }
+    val fieldValue = if (edited.text == query) edited else TextFieldValue(query, TextRange(query.length))
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .height(UiDimens.SearchBarHeight),
+            .height(barHeight),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Row(
             modifier = Modifier
                 .weight(1f)
-                .height(UiDimens.SearchBarHeight - 2.dp)
-                .clip(RoundedCornerShape((UiDimens.SearchBarHeight - 2.dp) / 2))
+                .height(innerBarHeight)
+                .clip(RoundedCornerShape(innerBarHeight / 2))
                 .background(MaterialTheme.colorScheme.surfaceContainer)
                 .padding(start = 18.dp, end = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -75,9 +91,14 @@ fun AppSearchTopBar(
                     )
                 }
                 BasicTextField(
-                    value = query,
-                    onValueChange = onQueryChange,
-                    modifier = Modifier.fillMaxWidth(),
+                    value = fieldValue,
+                    onValueChange = { next ->
+                        edited = next
+                        if (next.text != query) onQueryChange(next.text)
+                    },
+                    modifier = Modifier.fillMaxWidth().then(
+                        if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier,
+                    ),
                     singleLine = true,
                     textStyle = MaterialTheme.typography.bodyLarge.copy(
                         color = MaterialTheme.colorScheme.onSurface,

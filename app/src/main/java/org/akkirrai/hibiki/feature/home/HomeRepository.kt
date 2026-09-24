@@ -160,6 +160,8 @@ class HomeRepository(
         watchStateRepository.clearTitleProgress(titleId)
     }
 
+    fun hasContinueHistory(): Boolean = watchStateRepository.getRecentTitleWatchState() != null
+
     suspend fun search(query: String): List<Anime> {
         AppLogger.d(TAG, "search(query=$query)")
         ensureInternetConnection()

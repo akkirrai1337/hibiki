@@ -1,9 +1,6 @@
 package org.akkirrai.hibiki.feature.home
 
-import androidx.activity.compose.BackHandler
-import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibilityScope
-import androidx.compose.animation.ContentTransform
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
@@ -35,7 +32,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.isImeVisible
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -98,6 +94,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
+import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -156,6 +153,7 @@ fun HomeScreen(
     onAnimeClick: (Anime) -> Unit,
     onOpenSources: () -> Unit = {},
     onOpenDownloads: () -> Unit = {},
+    onSearch: (String) -> Unit = {},
     isActive: Boolean = true,
     bottomContentPadding: Dp = 96.dp,
     sharedTransitionScope: SharedTransitionScope? = null,
@@ -175,13 +173,6 @@ fun HomeScreen(
     // The title a long press on a watched card is offering to forget. Confirmed before anything is
     // removed: a long press is easy to trigger by accident while scrolling a row.
     var pendingProgressRemoval by remember { mutableStateOf<Anime?>(null) }
-    var showSearchFilters by rememberSaveable { mutableStateOf(false) }
-    val isImeVisible = WindowInsets.isImeVisible
-    val isSearchActive = state.searchQuery.isNotBlank() ||
-        state.searchResult !is SearchUiState.Idle
-    val searchLoadMoreLabel = stringResource(R.string.search_load_more)
-    val searchEmptyTitle = stringResource(R.string.home_search_empty_title)
-    val searchEmptyMessage = stringResource(R.string.home_search_empty_message)
     val pullToRefreshState = rememberPullToRefreshState()
     val sharedCardModifier: @Composable (Anime) -> Modifier = { anime ->
         animeDetailsSharedCardModifier(anime.id, sharedTransitionScope, animatedVisibilityScope, origin = "home")
@@ -205,25 +196,19 @@ fun HomeScreen(
     // in-memory aggregator entry while a screen is being recreated.
     val openAggregatorEntry = rememberEntryOpener(repository = viewModel.repository, onOpen = onAnimeClick)
 
-    BackHandler(enabled = isImeVisible || isSearchActive) {
-        if (isImeVisible) {
-            keyboardController?.hide()
-            focusManager.clearFocus(force = true)
-        } else {
-            viewModel.clearSearch()
-        }
-    }
-
     Box(modifier = modifier.fillMaxSize()) {
         // Loading/error render as content inside the same Box (instead of an early return) so
         // the search bar overlay below stays visible even before the feed has loaded or while
         // offline -- matching CatalogScreen, where search never disappears under those states.
         when {
-            state.isLoading && !hasContent && !isSearchActive -> {
-                HomeLoadingState(modifier = Modifier.fillMaxSize())
+            state.isLoading && !hasContent -> {
+                HomeLoadingState(
+                    hasContinueHistory = state.hasContinueHistory == true,
+                    modifier = Modifier.fillMaxSize(),
+                )
             }
 
-            errorMessage != null && !hasContent && !isSearchActive -> {
+            errorMessage != null && !hasContent -> {
                 HomeErrorState(
                     message = errorMessage,
                     actionLabel = stringResource(
@@ -240,41 +225,7 @@ fun HomeScreen(
                 )
             }
 
-            else -> AnimatedContent(
-                targetState = isSearchActive,
-                transitionSpec = { homeSearchContentTransition(targetState) },
-                label = "HomeSearchContent",
-            ) { searchActive ->
-                if (searchActive) {
-                    LazyVerticalGrid(
-                        columns = GridCells.Fixed(BROWSE_GRID_COLUMNS),
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(
-                            start = UiDimens.ScreenPadding,
-                            top = HOME_CONTENT_TOP_PADDING,
-                            end = UiDimens.ScreenPadding,
-                            bottom = bottomContentPadding
-                        ),
-                        verticalArrangement = Arrangement.spacedBy(PortraitGridSpacing),
-                        horizontalArrangement = Arrangement.spacedBy(PortraitGridSpacing),
-                    ) {
-                        searchStatePosterGridContent(
-                            state = state.searchResult,
-                            onAnimeClick = openAggregatorEntry,
-                            onLoadMore = viewModel::loadMoreSearchResults,
-                            loadMoreLabel = searchLoadMoreLabel,
-                            resultsCountLabel = { count ->
-                                pluralStringResource(R.plurals.search_results_count, count, count)
-                            },
-                            emptyTitle = searchEmptyTitle,
-                            emptyMessage = searchEmptyMessage,
-                            emptyIcon = Icons.Outlined.SearchOff,
-                            titleOverlay = true,
-                            sharedCardModifier = sharedCardModifier,
-                            sharedPosterModifier = sharedPosterModifier,
-                        )
-                    }
-                } else {
+            else -> {
                     PullToRefreshBox(
                         isRefreshing = state.isLoading,
                         onRefresh = viewModel::refresh,
@@ -317,7 +268,6 @@ fun HomeScreen(
                             )
                         }
                     }
-                }
             }
         }
 
@@ -326,17 +276,12 @@ fun HomeScreen(
             height = HOME_TOP_SEARCH_SCRIM_HEIGHT,
         )
 
+        // Home only launches search: the first character typed opens the search screen.
         AppSearchTopBar(
-            query = state.searchQuery,
-            onQueryChange = viewModel::onSearchQueryChange,
-            onClear = viewModel::clearSearch,
-            onFilterClick = {
-                keyboardController?.hide()
-                focusManager.clearFocus(force = true)
-                showSearchFilters = true
-            },
-            // Hidden until the source has said it has filters - see CatalogScreen's showFilterControl.
-            showFilter = state.searchFilterCatalog?.capabilities?.supportedFilters?.isNotEmpty() ?: false,
+            query = "",
+            onQueryChange = { query -> if (query.isNotBlank()) onSearch(query) },
+            onClear = {},
+            showFilter = false,
             modifier = Modifier
                 .align(Alignment.TopCenter)
                 .fillMaxWidth()
@@ -346,13 +291,6 @@ fun HomeScreen(
                     end = UiDimens.ScreenPadding,
                 )
         )
-
-        if (showSearchFilters) {
-            HomeSearchFiltersSheet(
-                viewModel = viewModel,
-                onDismissRequest = { showSearchFilters = false },
-            )
-        }
 
         pendingProgressRemoval?.let { anime ->
             AnimeQuickActionsSheet(
@@ -434,30 +372,9 @@ private fun LazyListScope.homeFeedContent(
     }
 }
 
-private fun homeSearchContentTransition(searchActive: Boolean): ContentTransform {
-    return if (searchActive) {
-        slideInVertically(
-            animationSpec = tween(durationMillis = 220),
-            initialOffsetY = { fullHeight -> fullHeight / 12 },
-        ) + fadeIn(animationSpec = tween(durationMillis = 180)) togetherWith
-            slideOutVertically(
-                animationSpec = tween(durationMillis = 200),
-                targetOffsetY = { fullHeight -> -(fullHeight / 24) },
-            ) + fadeOut(animationSpec = tween(durationMillis = 120))
-    } else {
-        slideInVertically(
-            animationSpec = tween(durationMillis = 220),
-            initialOffsetY = { fullHeight -> -(fullHeight / 24) },
-        ) + fadeIn(animationSpec = tween(durationMillis = 180)) togetherWith
-            slideOutVertically(
-                animationSpec = tween(durationMillis = 200),
-                targetOffsetY = { fullHeight -> fullHeight / 12 },
-            ) + fadeOut(animationSpec = tween(durationMillis = 120))
-    }
-}
-
 @Composable
 private fun HomeLoadingState(
+    hasContinueHistory: Boolean,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -468,33 +385,73 @@ private fun HomeLoadingState(
                 top = HOME_CONTENT_TOP_PADDING,
                 end = UiDimens.ScreenPadding,
             ),
-        verticalArrangement = Arrangement.spacedBy(20.dp),
+        // Same spacing as the Home LazyColumn between its feed items.
+        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        // Match the first stable layout on Home so loading reads as incoming content rather than
-        // a blocking state. AppShimmerBlock is shared with title and poster skeletons.
+        // Keep the placeholders in the same order and geometry as the current Home feed:
+        // featured carousel, continue watching card, then the two-column poster sections.
         AppShimmerBlock(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(240.dp)
                 .clip(RoundedCornerShape(28.dp)),
         )
-        repeat(HOME_LOADING_CARD_COUNT) {
-            Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                AppShimmerBlock(
-                    modifier = Modifier
-                        .width(112.dp)
-                        .height(168.dp)
-                        .clip(RoundedCornerShape(16.dp)),
+
+        if (hasContinueHistory) {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                HomeSectionHeader(
+                    title = stringResource(R.string.home_continue_title),
+                    icon = Icons.Outlined.History,
                 )
-                Column(
-                    modifier = Modifier
-                        .weight(1f)
-                        .padding(top = 8.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(24.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                    ),
                 ) {
-                    AppShimmerBlock(modifier = Modifier.fillMaxWidth().height(18.dp).clip(CircleShape))
-                    AppShimmerBlock(modifier = Modifier.fillMaxWidth(0.72f).height(18.dp).clip(CircleShape))
-                    AppShimmerBlock(modifier = Modifier.fillMaxWidth(0.42f).height(12.dp).clip(CircleShape))
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(12.dp),
+                        horizontalArrangement = Arrangement.spacedBy(14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        AppShimmerBlock(
+                            Modifier.width(72.dp).aspectRatio(2f / 3f).clip(
+                                RoundedCornerShape(UiDimens.CardCorner),
+                            ),
+                        )
+                        Column(
+                            modifier = Modifier.weight(1f),
+                            verticalArrangement = Arrangement.spacedBy(3.dp),
+                        ) {
+                            AppShimmerBlock(Modifier.fillMaxWidth(0.82f).height(20.dp).clip(CircleShape))
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                AppShimmerBlock(Modifier.fillMaxWidth(0.42f).height(16.dp).clip(CircleShape))
+                                AppShimmerBlock(Modifier.width(44.dp).height(16.dp).clip(CircleShape))
+                            }
+                            AppShimmerBlock(Modifier.fillMaxWidth(0.56f).height(14.dp).clip(CircleShape))
+                        }
+                    }
+                }
+            }
+        }
+
+        Column {
+            HomeSectionHeader(
+                title = stringResource(
+                    if (hasContinueHistory) R.string.home_recently_watched else R.string.home_trending,
+                ),
+                icon = if (hasContinueHistory) Icons.Outlined.History else Icons.AutoMirrored.Outlined.TrendingUp,
+            )
+            Spacer(Modifier.height(12.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(PortraitGridSpacing)) {
+                repeat(BROWSE_GRID_COLUMNS) {
+                    AppShimmerBlock(
+                        Modifier.weight(1f)
+                            .fillMaxWidth()
+                            .aspectRatio(2f / 3f)
+                            .clip(RoundedCornerShape(UiDimens.CardCorner)),
+                    )
                 }
             }
         }
@@ -1050,7 +1007,6 @@ private fun AnimeImagePlaceholder(
 }
 
 private const val FEATURED_AUTO_ADVANCE_MS = 5000
-private const val HOME_LOADING_CARD_COUNT = 2
 private val HOME_CONTENT_TOP_PADDING = UiDimens.SearchBarTopPadding +
     UiDimens.SearchBarHeight +
     UiDimens.ScreenPadding

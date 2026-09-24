@@ -212,6 +212,11 @@ private fun HibikiNavHost(
                             navController.navigate(AnimeNavType.DOWNLOADS_ROUTE)
                         }
                     },
+                    onSearch = { query ->
+                        navController.runIfCurrent(backStackEntry) {
+                            navController.navigate(AnimeNavType.createSearchRoute(query))
+                        }
+                    },
                     isActive = isTopLevelDestination && currentTopLevel == TopLevelDestination.Home,
                     bottomContentPadding = topLevelBottomContentPadding,
                     sharedTransitionScope = sharedTransitionScope,
@@ -300,7 +305,26 @@ private fun HibikiNavHost(
             popEnterTransition = { appScreenPopEnterTransition() },
             popExitTransition = { appScreenPopExitTransition() },
         ) { backStackEntry ->
-            DestinationScreenContainer {
+            // Search keeps the bottom bar, highlighting the tab it was opened from.
+            val origin = remember(backStackEntry) {
+                TopLevelDestination.entries.firstOrNull {
+                    it.route == navController.previousBackStackEntry?.destination?.route
+                } ?: TopLevelDestination.Home
+            }
+            TopLevelScreenContainer(
+                destination = origin,
+                sourceUpdateCount = sourceUpdateCount,
+                destinations = TopLevelDestination.entries,
+                onDestinationClick = { destination ->
+                    navController.runIfCurrent(backStackEntry) {
+                        if (destination == origin) {
+                            navController.popBackStack()
+                        } else {
+                            navController.navigateTopLevelDestination(origin, destination)
+                        }
+                    }
+                },
+            ) {
                 SearchScreen(
                     initialQuery = backStackEntry.arguments?.getString(AnimeNavType.QUERY_ARG).orEmpty(),
                     onAnimeClick = { anime ->
@@ -308,6 +332,7 @@ private fun HibikiNavHost(
                             navController.navigate(AnimeNavType.createDetailsRoute(anime, transitionOrigin = "search"))
                         }
                     },
+                    bottomContentPadding = topLevelBottomContentPadding,
                     modifier = screenModifier,
                 )
             }

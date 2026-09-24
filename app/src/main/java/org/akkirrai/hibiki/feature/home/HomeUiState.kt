@@ -1,13 +1,11 @@
 package org.akkirrai.hibiki.feature.home
 
-import org.akkirrai.beakokit.model.AnimeSearchFilterCatalog
 import org.akkirrai.hibiki.core.model.Anime
-import org.akkirrai.hibiki.core.model.AnimeSearchFilters
-import org.akkirrai.hibiki.core.model.SearchUiState
 
 data class HomeUiState(
     val isLoading: Boolean = false,
     val errorMessage: String? = null,
+    val hasContinueHistory: Boolean? = null,
     val featuredAnime: List<Anime> = emptyList(),
     val continueAnime: Anime? = null,
     val recentlyWatched: List<Anime> = emptyList(),
@@ -18,10 +16,5 @@ data class HomeUiState(
     val isRecentUpdatesLoadingMore: Boolean = false,
     val canLoadMoreRecentUpdates: Boolean = true,
     val recentUpdatesLoadMoreError: String? = null,
-    val searchQuery: String = "",
-    val searchResult: SearchUiState = SearchUiState.Idle,
-    val searchFilterCatalog: AnimeSearchFilterCatalog? = null,
-    val isSearchFilterCatalogLoading: Boolean = false,
-    val searchFilters: AnimeSearchFilters = AnimeSearchFilters(),
     val pendingCardMetadata: Set<String> = emptySet(),
 )

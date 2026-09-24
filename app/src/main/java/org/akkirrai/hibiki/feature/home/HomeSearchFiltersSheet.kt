@@ -61,27 +61,6 @@ import kotlin.math.roundToInt
     ExperimentalMaterial3Api::class,
 )
 @Composable
-fun HomeSearchFiltersSheet(
-    onDismissRequest: () -> Unit,
-    viewModel: HomeViewModel,
-    modifier: Modifier = Modifier,
-) {
-    val state by viewModel.uiState.collectAsState()
-    AnimeSearchFiltersSheet(
-        initialFilters = state.searchFilters,
-        filterCatalog = state.searchFilterCatalog,
-        isFilterCatalogLoading = state.isSearchFilterCatalogLoading,
-        onApply = viewModel::applySearchFilters,
-        onDismissRequest = onDismissRequest,
-        modifier = modifier,
-    )
-}
-
-@OptIn(
-    ExperimentalLayoutApi::class,
-    ExperimentalMaterial3Api::class,
-)
-@Composable
 fun AnimeSearchFiltersSheet(
     initialFilters: AnimeSearchFilters,
     filterCatalog: AnimeSearchFilterCatalog?,
