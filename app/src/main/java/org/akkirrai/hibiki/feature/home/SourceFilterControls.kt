@@ -2,20 +2,11 @@ package org.akkirrai.hibiki.feature.home
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowDownward
-import androidx.compose.material.icons.filled.ArrowUpward
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
@@ -28,11 +19,18 @@ import androidx.compose.ui.unit.dp
 import org.akkirrai.beakokit.model.SourceFilterDef
 import org.akkirrai.beakokit.model.SourceFilterType
 import org.akkirrai.hibiki.core.design.component.filter.AppCollapsibleFilterSection
+import org.akkirrai.hibiki.core.design.component.filter.AppThreeStateChipFilter
+
+/** Genre-like lists (many small toggles) get the same lettered, collapsible layout as the app's own genres. */
+private const val GROUPED_CHIP_THRESHOLD = 16
+private const val COLLAPSED_CHIP_COUNT = 15
+private const val COLLAPSED_GROUP_COUNT = 3
 
 /**
- * Renders the filters a source defines for itself. Values are kept as the strings described on
- * [SourceFilterType], keyed by [SourceFilterDef.key], and only differences from a filter default are
- * stored, so an untouched sheet produces an empty map (which means "no filters").
+ * Renders the filters a source defines for itself, with the same chips as the app's own type, genre
+ * and status filters. Values are kept as the strings described on [SourceFilterType], keyed by
+ * [SourceFilterDef.key], and only differences from a filter default are stored, so an untouched sheet
+ * produces an empty map (which means "no filters").
  */
 @Composable
 fun SourceFilterControls(
@@ -43,7 +41,6 @@ fun SourceFilterControls(
     filters.forEach { def -> SourceFilter(def, values, onValuesChange) }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun SourceFilter(
     def: SourceFilterDef,
@@ -67,48 +64,45 @@ private fun SourceFilter(
             color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
         )
 
-        SourceFilterType.SELECT -> AppCollapsibleFilterSection(title = def.title, onLongClick = { set(def.defaultValue) }) {
-            FlowRow(
-                modifier = Modifier.padding(top = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                def.options.forEachIndexed { index, option ->
-                    FilterChip(
-                        selected = current() == index.toString(),
-                        onClick = { set(index.toString()) },
-                        label = { Text(option) },
-                    )
-                }
-            }
+        SourceFilterType.SELECT -> {
+            val selected = current().toIntOrNull()
+            AppThreeStateChipFilter(
+                title = def.title,
+                options = def.options.indices.toList(),
+                included = setOfNotNull(selected?.toString()),
+                excluded = emptySet(),
+                // A select always holds a value, so tapping the chosen option again changes nothing.
+                onChange = { included, _ ->
+                    included.firstOrNull { it != selected?.toString() }?.let(::set)
+                },
+                id = { it.toString() },
+                text = { def.options[it] },
+                allowExclusion = false,
+            )
         }
 
-        SourceFilterType.SORT -> AppCollapsibleFilterSection(title = def.title, onLongClick = { set(def.defaultValue) }) {
+        SourceFilterType.SORT -> {
             val selectedIndex = current().substringBefore(':').toIntOrNull()
             val ascending = current().substringAfter(':', "1") == "1"
-            FlowRow(
-                modifier = Modifier.padding(top = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                def.options.forEachIndexed { index, option ->
-                    val selected = index == selectedIndex
-                    FilterChip(
-                        selected = selected,
-                        // Tapping the selected option flips its direction, like the sort row in Aniyomi.
-                        onClick = { set("$index:${if (selected && ascending) 0 else 1}") },
-                        label = { Text(option) },
-                        leadingIcon = if (selected) {
-                            {
-                                Icon(
-                                    imageVector = if (ascending) Icons.Filled.ArrowUpward else Icons.Filled.ArrowDownward,
-                                    contentDescription = null,
-                                )
-                            }
-                        } else {
-                            null
-                        },
-                    )
-                }
-            }
+            AppThreeStateChipFilter(
+                title = def.title,
+                options = def.options.indices.toList(),
+                included = setOfNotNull(selectedIndex?.toString()),
+                excluded = emptySet(),
+                onChange = { included, _ ->
+                    val picked = included.firstOrNull { it != selectedIndex?.toString() }
+                    when {
+                        picked != null -> set("$picked:1")
+                        // Tapping the chosen option flips its direction, like the sort row in Aniyomi.
+                        selectedIndex != null -> set("$selectedIndex:${if (ascending) 0 else 1}")
+                    }
+                },
+                id = { it.toString() },
+                text = { index ->
+                    if (index == selectedIndex) "${def.options[index]} ${if (ascending) "↑" else "↓"}" else def.options[index]
+                },
+                allowExclusion = false,
+            )
         }
 
         SourceFilterType.CHECKBOX -> Row(
@@ -120,7 +114,23 @@ private fun SourceFilter(
             Switch(checked = current().toBoolean(), onCheckedChange = { set(it.toString()) })
         }
 
-        SourceFilterType.TRISTATE -> TriStateChip(def, current(), ::set)
+        SourceFilterType.TRISTATE -> AppThreeStateChipFilter(
+            title = def.title,
+            options = listOf(def),
+            included = if (current() == "1") setOf(def.key) else emptySet(),
+            excluded = if (current() == "2") setOf(def.key) else emptySet(),
+            onChange = { included, excluded ->
+                set(
+                    when {
+                        def.key in included -> "1"
+                        def.key in excluded -> "2"
+                        else -> "0"
+                    },
+                )
+            },
+            id = { it.key },
+            text = { it.title },
+        )
 
         SourceFilterType.TEXT -> OutlinedTextField(
             value = current(),
@@ -131,60 +141,69 @@ private fun SourceFilter(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
         )
 
-        SourceFilterType.GROUP -> AppCollapsibleFilterSection(title = def.title, onLongClick = {
-            onValuesChange(values - def.children.flatMap(::descendantKeys).toSet())
-        }) {
-            // Genre style groups are many small toggles: show them as one wrapping row of chips.
-            val compact = def.children.all {
+        SourceFilterType.GROUP -> {
+            val compact = def.children.isNotEmpty() && def.children.all {
                 it.type == SourceFilterType.CHECKBOX || it.type == SourceFilterType.TRISTATE
             }
             if (compact) {
-                FlowRow(
-                    modifier = Modifier.padding(top = 8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    def.children.forEach { child ->
-                        val value = values[child.key] ?: child.defaultValue
-                        if (child.type == SourceFilterType.CHECKBOX) {
-                            FilterChip(
-                                selected = value.toBoolean(),
-                                onClick = {
-                                    val next = (!value.toBoolean()).toString()
-                                    onValuesChange(
-                                        if (next == child.defaultValue) values - child.key else values + (child.key to next),
-                                    )
-                                },
-                                label = { Text(child.title) },
-                            )
-                        } else {
-                            TriStateChip(child, value) { next ->
-                                onValuesChange(
-                                    if (next == child.defaultValue) values - child.key else values + (child.key to next),
-                                )
-                            }
-                        }
-                    }
-                }
+                GroupedChipFilter(def, values, onValuesChange)
             } else {
-                Column { SourceFilterControls(def.children, values, onValuesChange) }
+                AppCollapsibleFilterSection(title = def.title, onLongClick = {
+                    onValuesChange(values - def.children.flatMap(::descendantKeys).toSet())
+                }) {
+                    Column { SourceFilterControls(def.children, values, onValuesChange) }
+                }
             }
         }
     }
 }
 
-/** Ignored, then included, then excluded, then ignored again on each tap. */
+/** A group of on/off or include/exclude toggles - the shape of a genre list. */
 @Composable
-private fun TriStateChip(def: SourceFilterDef, value: String, onChange: (String) -> Unit) {
-    val state = value.toIntOrNull() ?: 0
-    FilterChip(
-        selected = state != 0,
-        onClick = { onChange(((state + 1) % 3).toString()) },
-        label = { Text(def.title) },
-        leadingIcon = when (state) {
-            1 -> ({ Icon(imageVector = Icons.Filled.Check, contentDescription = null) })
-            2 -> ({ Icon(imageVector = Icons.Filled.Close, contentDescription = null) })
-            else -> null
+private fun GroupedChipFilter(
+    def: SourceFilterDef,
+    values: Map<String, String>,
+    onValuesChange: (Map<String, String>) -> Unit,
+) {
+    fun stateOf(child: SourceFilterDef): String = values[child.key] ?: child.defaultValue
+    val included = def.children.filter { child ->
+        when (child.type) {
+            SourceFilterType.CHECKBOX -> stateOf(child).toBoolean()
+            else -> stateOf(child) == "1"
+        }
+    }.mapTo(mutableSetOf(), SourceFilterDef::key)
+    val excluded = def.children
+        .filter { it.type == SourceFilterType.TRISTATE && stateOf(it) == "2" }
+        .mapTo(mutableSetOf(), SourceFilterDef::key)
+    val grouped = def.children.size >= GROUPED_CHIP_THRESHOLD
+
+    AppThreeStateChipFilter(
+        title = def.title,
+        options = def.children,
+        included = included,
+        excluded = excluded,
+        onChange = { newIncluded, newExcluded ->
+            var next = values
+            def.children.forEach { child ->
+                val state = when (child.type) {
+                    SourceFilterType.CHECKBOX -> (child.key in newIncluded).toString()
+                    else -> when {
+                        child.key in newIncluded -> "1"
+                        child.key in newExcluded -> "2"
+                        else -> "0"
+                    }
+                }
+                next = if (state == child.defaultValue) next - child.key else next + (child.key to state)
+            }
+            onValuesChange(next)
         },
+        id = { it.key },
+        text = { it.title },
+        maxCollapsedItems = if (grouped) COLLAPSED_CHIP_COUNT else null,
+        maxCollapsedGroups = if (grouped) COLLAPSED_GROUP_COUNT else null,
+        allowExclusion = def.children.any { it.type == SourceFilterType.TRISTATE },
+        optionSortKey = if (grouped) ({ it.title }) else null,
+        groupByFirstLetter = grouped,
     )
 }
 
