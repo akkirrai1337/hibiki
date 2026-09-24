@@ -7,6 +7,7 @@ import kotlinx.coroutines.coroutineScope
 import org.akkirrai.beakokit.model.AnimeSearchRequest
 import org.akkirrai.beakokit.model.AnimeSearchFilterCatalog
 import org.akkirrai.beakokit.model.AnimeSearchSort
+import org.akkirrai.beakokit.model.CatalogFeature
 import org.akkirrai.hibiki.core.model.Anime
 import org.akkirrai.hibiki.core.model.AnimeSearchFilters
 import org.akkirrai.hibiki.core.network.AndroidHttpClientFactory
@@ -57,7 +58,9 @@ class CatalogRepository(
         val hasRealSearchSort = if (sort == CatalogSort.Updated) {
             val catalog = catalogDeferred.await()
             catalog.capabilities.supports(AnimeSearchSort.TITLE) ||
-                catalog.capabilities.supports(AnimeSearchSort.RATING)
+                catalog.capabilities.supports(AnimeSearchSort.RATING) ||
+                // An extension's "latest updates" is its own listing, not the popular one search returns.
+                CatalogFeature.LATEST_RELEASES in catalog.capabilities.features
         } else {
             false
         }

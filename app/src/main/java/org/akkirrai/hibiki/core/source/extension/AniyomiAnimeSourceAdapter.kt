@@ -120,6 +120,12 @@ class AniyomiAnimeSourceAdapter(
     }
 
     override suspend fun getSearchFilterCatalog(): AnimeSearchFilterCatalog = AnimeSearchFilterCatalog(
+        // Only the sorts this adapter really has: a catalog that claimed rating, title and the rest would
+        // offer sort buttons that change nothing, since a source sorts through its own filters instead.
+        capabilities = CatalogCapabilities.FULL.copy(
+            supportedSorts = catalogCapabilities.supportedSorts,
+            features = catalogCapabilities.features,
+        ),
         sourceFilters = guarded("filters") { AniyomiFilterMapper.describe(source.getFilterList()) },
     )
 
