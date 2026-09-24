@@ -3133,7 +3133,7 @@ private fun PlayerMediaPreparationEffect(
         } ?: 0L
         val resumeWhenReady = exoPlayer.playWhenReady
         // Extensions report a track's URL but not its format, and ASS, SRT and WebVTT need different parsers.
-        val subtitleMimeTypes = if (state.isPlayingOffline) emptyMap() else sniffSubtitleMimeTypes(playback.subtitles)
+        val subtitleMimeTypes = if (state.isPlayingOffline) emptyMap() else sniffSubtitleMimeTypes(playback.subtitles, playback.headers)
         AppLogger.d(PLAYBACK_LOG_TAG, "[player.subtitles.formats] tracks=${playback.subtitles.size} sniffed=${subtitleMimeTypes.values.groupingBy { it }.eachCount()}")
         exoPlayer.stop()
         exoPlayer.clearMediaItems()
@@ -3299,13 +3299,16 @@ private fun subtitleMimeTypeFromUrl(url: String): String? {
 }
 
 /** Reads the start of each remote track whose URL does not name its format and tells the format from the content. */
-private suspend fun sniffSubtitleMimeTypes(subtitles: List<PlaybackSubtitle>): Map<String, String> =
+private suspend fun sniffSubtitleMimeTypes(
+    subtitles: List<PlaybackSubtitle>,
+    streamHeaders: Map<String, String>,
+): Map<String, String> =
     coroutineScope {
         subtitles
             .filter { subtitleMimeTypeFromUrl(it.url) == null }
             .map { subtitle ->
                 async(Dispatchers.IO) {
-                    subtitle.url to (sniffSubtitleMimeType(subtitle.url, subtitle.headers) ?: TEXT_VTT)
+                    subtitle.url to (sniffSubtitleMimeType(subtitle.url, subtitle.headers.ifEmpty { streamHeaders }) ?: TEXT_VTT)
                 }
             }
             .awaitAll()
