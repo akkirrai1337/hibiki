@@ -369,7 +369,7 @@ private fun sortChipIcon(option: String): ImageVector? {
         "updated" in t || "update" in t -> Icons.Rounded.Update
         "added" in t || "newest" in t || "latest" in t || "new" in t -> Icons.Rounded.NewReleases
         "score" in t || "rating" in t || "rated" in t -> Icons.Rounded.Star
-        "name" in t || "title" in t || "a-z" in t || "alphab" in t -> Icons.Rounded.SortByAlpha
+        "name" in t || "title" in t || "a-z" in t || "z-a" in t || "a–z" in t || "z–a" in t || "alphab" in t -> Icons.Rounded.SortByAlpha
         "release" in t || "date" in t || "year" in t || "aired" in t -> Icons.Rounded.CalendarMonth
         "view" in t || "popular" in t || "trend" in t -> Icons.Rounded.TrendingUp
         "episode" in t -> Icons.Rounded.FormatListNumbered
