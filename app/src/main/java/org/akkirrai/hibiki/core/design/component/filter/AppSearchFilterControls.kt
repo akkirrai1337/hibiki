@@ -341,9 +341,13 @@ private fun <T> AppThreeStateFilterFlowRow(
 
 @Composable
 private fun AppFilterChip(color: Color, icon: ImageVector?, text: String, onClick: () -> Unit) {
-    Row(modifier = Modifier.clip(CircleShape).combinedClickable(onClick = onClick, onLongClick = {}).background(color.copy(alpha = 0.2f)).padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-        icon?.let { Icon(it, null, tint = color, modifier = Modifier.size(15.dp)) }
-        Text(text, color = color, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
+    // The colour eases between states and the "+ " / "− " prefix cross-fades, as the chip always did.
+    val animatedColor by animateColorAsState(color, label = "filter_chip_color")
+    Row(modifier = Modifier.clip(CircleShape).combinedClickable(onClick = onClick, onLongClick = {}).background(animatedColor.copy(alpha = 0.2f)).padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+        icon?.let { Icon(it, null, tint = animatedColor, modifier = Modifier.size(15.dp)) }
+        AnimatedContent(targetState = text, label = "filter_chip_text") { currentText ->
+            Text(currentText, color = animatedColor, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
+        }
     }
 }
 
