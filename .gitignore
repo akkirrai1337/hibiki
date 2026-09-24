@@ -50,6 +50,8 @@ parsers/src/test/resources/beakokit/miruro/
 .reasonix/
 *.toml
 *.md
+tools/
+
 
 *.js
 node_*
