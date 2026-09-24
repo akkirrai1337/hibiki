@@ -70,8 +70,8 @@ fun SourceFilterControls(
     inlineYear: (@Composable () -> Unit)? = null,
 ) {
     val ordered = filters.filterNot(::isYearFilter).inDisplayOrder()
-    // The app's year slider sits with the date-like filters (after sort and season), not above them all.
-    val yearIndex = ordered.indexOfFirst { filterRank(it) > 1 }.let { if (it == -1) ordered.size else it }
+    // The app's year slider follows sort, season and genre, and comes before status, language and type.
+    val yearIndex = ordered.indexOfFirst { filterRank(it) > 2 }.let { if (it == -1) ordered.size else it }
     ordered.forEachIndexed { index, def ->
         if (index == yearIndex) inlineYear?.invoke()
         SourceFilter(def, values, onValuesChange)
