@@ -282,16 +282,29 @@ fun DetailsScreen(
     // Navigation Compose starts seeking the shared transition during a predictive-back gesture.
     // When that gesture is cancelled, the shared page and poster snap back separately. Keep the
     // details page visually stable until Android confirms the gesture, then run the usual return.
+    // Closing the page for good starts the next visit at the top. The scroll position is kept only for a
+    // page that is left temporarily (the player, the sources list) or recreated (rotation); without this,
+    // whatever offset the last visit ended on came back the next time the title was opened.
+    val scrollSavedOnLeave = remember(detailsStateKey) { booleanArrayOf(false) }
+    val closePage: () -> Unit = {
+        scrollSavedOnLeave[0] = true
+        // The loaded details stay cached; only the scroll position starts over.
+        detailsScreenStateCache[detailsStateKey] = DetailsScreenSavedState(
+            anime = currentAnimeState,
+            firstVisibleItemIndex = 0,
+            firstVisibleItemScrollOffset = 0,
+        )
+        onBackClick()
+    }
     PredictiveBackHandler {
         it.collect()
-        onBackClick()
+        closePage()
     }
 
     // The scroll position is captured the moment the user leaves for another screen. Disposal is too
     // late for the player: it turns the activity landscape while this page is still being torn
     // down, the list re-lays out at that size, and the offset saved then made the page reopen
     // scrolled by an arbitrary amount.
-    val scrollSavedOnLeave = remember(detailsStateKey) { booleanArrayOf(false) }
     fun saveScrollState() {
         detailsScreenStateCache[detailsStateKey] = DetailsScreenSavedState(
             anime = currentAnimeState,
@@ -705,7 +718,7 @@ fun DetailsScreen(
                 )
 
                 HeroOverlayBackButton(
-                    onClick = onBackClick,
+                    onClick = closePage,
                     modifier = Modifier.align(Alignment.TopStart),
                 )
             }
