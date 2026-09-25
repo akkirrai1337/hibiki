@@ -876,8 +876,11 @@ private fun DetailHeroSection(
         // The wide hero is always reserved, with or without a banner or resume frame. Sizing it by whether
         // media exists made the same title look different depending on watch data (and jump when the
         // resume frame appeared or went away); without media the banner area is simply the backdrop.
-        val reservesBanner = true
-        val heroTopTrim = if (reservesBanner) 0.dp else 96.dp
+        // It stays reserved while the details load (a banner may still arrive, and growing it later would
+        // jump). Once they have loaded and there is nothing to show, the empty band is trimmed to what the
+        // back button needs, so the poster does not float in a large blank area.
+        val reservesBanner = hasHeroMedia || isDetailsLoading
+        val heroTopTrim = if (reservesBanner) 0.dp else 80.dp
         val posterTop = bannerHeight - 12.dp - heroTopTrim
         // Without a banner the text block starts level with the poster and is as tall as it, so the
         // description gets the room instead of being cut short beside the cover.
