@@ -1137,6 +1137,7 @@ private fun InstalledSourcesList(
                 // An APK source has no icon of its own; the repository index carries it.
                 iconUrl = descriptor.iconUrl ?: repositoryEntry?.iconUrl,
                 lang = descriptor.language.tag,
+                isNsfw = (repositoryEntry?.nsfw ?: 0) != 0,
             ),
             packageName = packageName,
             installedVersion = apkInfo.versionName,
