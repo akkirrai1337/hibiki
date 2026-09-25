@@ -357,7 +357,7 @@ fun SourceExtensionsScreen(
     // for each repository (memory or disk). The network is used only when a repository has no index
     // yet, when the repositories tab or one repository is open and its index is stale, in onboarding
     // (where the list is what to install), or when the user presses refresh.
-    val browsingRepositories = onboarding || pagerState.currentPage == 1 || selectedRepositoryUrl != null
+    val browsingRepositories = onboarding || showAvailable || pagerState.currentPage == 1 || selectedRepositoryUrl != null
     var handledRefreshSignal by remember { mutableStateOf(0) }
     LaunchedEffect(sourceRepositoryUrls, browsingRepositories, repositoryRefreshSignal) {
         val forced = repositoryRefreshSignal != handledRefreshSignal
