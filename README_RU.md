@@ -51,7 +51,7 @@
 - [anilibria-app](https://github.com/anilibria/anilibria-app): иконки для плеера.
 - [Animite](https://github.com/imashnake0/Animite): референсы для динамической палитры и поведения интерфейса страницы тайтла, оформление таймера и иконка песочных часов.
 - [AniSync](https://github.com/Marco-9456/AniSync): дизайн и стилистические решения страницы тайтла.
-- [Anikku](https://github.com/komikku-app/anikku) и [Yuzono anime-extensions](https://github.com/yuzono/anime-extensions): API расширений Aniyomi и код совместимости, используются по лицензии Apache-2.0 (лицензии в `third_party/`).
+- [Anikku](https://github.com/komikku-app/anikku) и [Yuzono anime-extensions](https://github.com/yuzono/anime-extensions): API расширений Aniyomi и код совместимости, используются по лицензии Apache-2.0.
 
 ### 💬 Связь
 

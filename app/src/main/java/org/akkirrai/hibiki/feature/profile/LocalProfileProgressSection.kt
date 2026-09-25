@@ -351,15 +351,6 @@ internal fun AchievementsSheet(
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface,
             )
-            // The best run belongs here rather than in the header chip, which only has room for
-            // the run that is still going.
-            if (streak.best > 0) {
-                Text(
-                    stringResource(R.string.local_profile_streak_best_long, streak.best),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
             achievements.forEach { achievement -> AchievementRow(achievement, onClick = { detail = achievement }) }
         }
     }
@@ -549,11 +540,7 @@ internal fun AchievementDetailSheet(achievement: ProfileRules.Achievement, onDis
                     )
                 }
             }
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                DetailChip("${formatAmount(achievement.current)} / ${formatAmount(achievement.target)}")
-                DetailChip(stringResource(R.string.local_profile_achievement_xp, activeTier.xp))
-                if (achievement.unlocked) DetailChip(stringResource(R.string.local_profile_achievement_maxed), highlighted = true)
-            }
+            if (achievement.unlocked) DetailChip(stringResource(R.string.local_profile_achievement_maxed), highlighted = true)
             if (tiers.size > 1) {
                 Text(
                     stringResource(R.string.local_profile_achievement_levels),

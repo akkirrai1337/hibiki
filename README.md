@@ -51,7 +51,7 @@
 - [anilibria-app](https://github.com/anilibria/anilibria-app): player icons.
 - [Animite](https://github.com/imashnake0/Animite): references for the title page's dynamic palette and UI behavior, countdown styling, and the hourglass icon.
 - [AniSync](https://github.com/Marco-9456/AniSync): title page design and styling references.
-- [Anikku](https://github.com/komikku-app/anikku) and [Yuzono anime-extensions](https://github.com/yuzono/anime-extensions): the Aniyomi extension API and compatibility code, used under Apache-2.0 (licenses in `third_party/`).
+- [Anikku](https://github.com/komikku-app/anikku) and [Yuzono anime-extensions](https://github.com/yuzono/anime-extensions): the Aniyomi extension API and compatibility code, used under Apache-2.0.
 
 ### 💬 Contact
 
