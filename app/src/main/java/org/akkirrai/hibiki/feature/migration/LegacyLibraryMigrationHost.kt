@@ -317,7 +317,6 @@ private fun OfferDialog(
             installed = installed,
             selected = installed.firstOrNull { it.id == targets[legacy.id] },
             onSelect = { viewModel.choose(legacy.id, it?.id); pickerFor = null },
-            onInstall = { pickerFor = null; onInstall() },
             onDismiss = { pickerFor = null },
         )
     }
@@ -346,7 +345,6 @@ private fun SourcePickerSheet(
     installed: List<AnimeSourceDescriptor>,
     selected: AnimeSourceDescriptor?,
     onSelect: (AnimeSourceDescriptor?) -> Unit,
-    onInstall: () -> Unit,
     onDismiss: () -> Unit,
 ) {
     ModalBottomSheet(onDismissRequest = onDismiss) {
@@ -376,23 +374,6 @@ private fun SourcePickerSheet(
                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 8.dp),
                 )
             }
-            PickerRow(
-                selected = false,
-                onClick = { onSelect(null) },
-                icon = {
-                    Icon(Icons.Rounded.Block, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(28.dp))
-                },
-                label = stringResource(R.string.migration_skip_source),
-            )
-            PickerRow(
-                selected = false,
-                onClick = onInstall,
-                icon = {
-                    Icon(Icons.Outlined.Extension, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(28.dp))
-                },
-                label = stringResource(R.string.migration_install_sources),
-                accent = true,
-            )
         }
     }
 }
