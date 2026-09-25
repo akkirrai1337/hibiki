@@ -703,8 +703,8 @@
     <string name="anilist_auto_channel">Синхронізація AniList</string>
     <string name="anilist_auto_notification_title">Синхронізація AniList</string>
     <string name="anilist_auto_notification_text">Готово змін для надсилання в AniList: %1$d</string>
-    <string name="anilist_removal_title">Видалити тайтл, що прийшов з AniList?</string>
-    <string name="anilist_removal_message">Цей тайтл було імпортовано з AniList. Тут він видаляється зараз. Імпорт не додасть його знову, доки ви не повернете його самі, а під час наступного надсилання в AniList запропонує видалити і його запис там (ви підтвердите це окремо).</string>
+    <string name="anilist_removal_title">Видалити з бібліотеки?</string>
+    <string name="anilist_removal_message">Тайтл синхронізовано з AniList. Видалити лише в себе чи ще й його запис в AniList?</string>
     <string name="anilist_removal_confirm">Видалити</string>
     <string name="anilist_push_removals_title">Буде видалено з AniList (%1$d)</string>
     <string name="anilist_push_removals_warning">Ці тайтли вже синхронізувалися і більше не у вашій бібліотеці. Надсилання видалить їхні записи з вашого списку AniList.</string>
@@ -756,4 +756,11 @@
     <string name="migration_never_cancel">Скасувати</string>
     <string name="migration_settings_title">Перенесення бібліотеки</string>
     <string name="migration_settings_summary">Перенести тайтли зі старих джерел у встановлені розширення</string>
+    <string name="anilist_removal_local">Лише в мене</string>
+    <string name="anilist_removal_everywhere">Всюди</string>
+    <string name="anilist_removal_dont_ask">Більше не питати</string>
+    <string name="anilist_removal_done">Видалено й в AniList</string>
+    <string name="anilist_removal_failed">Не вдалося видалити з AniList</string>
+    <string name="anilist_sync_removal_ask">Питати під час видалення</string>
+    <string name="anilist_sync_removal_ask_hint">Для синхронізованих тайтлів. Вимкнено: завжди вибір нижче.</string>
 </resources>

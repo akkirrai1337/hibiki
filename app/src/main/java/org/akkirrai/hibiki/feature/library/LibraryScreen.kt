@@ -254,10 +254,10 @@ fun LibraryScreen(
 
     pendingAniListRemoval?.let { anime ->
         AniListRemovalDialog(
-            onConfirm = {
+            onChoose = { everywhere, remember ->
                 pendingAniListRemoval = null
-                AniListLibrarySync(context).exclude(anime.id)
                 viewModel.removeFromLibrary(anime.id)
+                applyAniListRemoval(context, anime.id, everywhere, remember)
             },
             onDismiss = { pendingAniListRemoval = null },
         )
@@ -275,7 +275,13 @@ fun LibraryScreen(
                     onClick = {
                         titleWithActions = null
                         if (AniListLibrarySync(context).isSyncedTitle(anime.id)) {
-                            pendingAniListRemoval = anime
+                            val standing = standingRemovalChoice(context)
+                            if (standing == null) {
+                                pendingAniListRemoval = anime
+                            } else {
+                                viewModel.removeFromLibrary(anime.id)
+                                applyAniListRemoval(context, anime.id, standing)
+                            }
                         } else {
                             viewModel.removeFromLibrary(anime.id)
                         }

@@ -715,8 +715,8 @@
     <string name="anilist_auto_channel">AniList sync</string>
     <string name="anilist_auto_notification_title">AniList sync</string>
     <string name="anilist_auto_notification_text">%1$d changes are ready to send to AniList</string>
-    <string name="anilist_removal_title">Remove a title from AniList sync?</string>
-    <string name="anilist_removal_message">This title was imported from AniList. It is removed here now. The import will not add it again unless you add it back, and the next send to AniList will offer to delete its entry there too (you confirm that first).</string>
+    <string name="anilist_removal_title">Remove from library?</string>
+    <string name="anilist_removal_message">This title is synced with AniList. Remove it only here, or delete its AniList entry too?</string>
     <string name="anilist_removal_confirm">Remove</string>
     <string name="anilist_push_removals_title">Will be removed from AniList (%1$d)</string>
     <string name="anilist_push_removals_warning">These titles were synced before and are no longer in your library. Sending deletes their entries from your AniList list.</string>
@@ -768,4 +768,11 @@
     <string name="migration_never_cancel">Cancel</string>
     <string name="migration_settings_title">Move library</string>
     <string name="migration_settings_summary">Move titles from retired sources to installed extensions</string>
+    <string name="anilist_removal_local">Only here</string>
+    <string name="anilist_removal_everywhere">Everywhere</string>
+    <string name="anilist_removal_dont_ask">Don’t ask again</string>
+    <string name="anilist_removal_done">Removed from AniList</string>
+    <string name="anilist_removal_failed">Could not remove it from AniList</string>
+    <string name="anilist_sync_removal_ask">Ask before removing</string>
+    <string name="anilist_sync_removal_ask_hint">When removing a synced title. Off: always do the choice below.</string>
 </resources>

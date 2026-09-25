@@ -67,7 +67,22 @@ class AniListLibraryPush(context: Context) {
     private val library = LibraryRepository(appContext)
     private val watchState = WatchStateRepository(appContext)
 
-    suspend fun plan(onProgress: (done: Int, total: Int) -> Unit = { _, _ -> }): AniListPushPlan {
+    /**
+     * Removes the AniList entry of a title that has just been removed from the library, right away and only
+     * that one. The person chose "everywhere" for it, which is the confirmation; the same safety check as a
+     * send applies (an entry somebody changed on AniList in the meantime is left alone).
+     */
+    suspend fun removeEverywhere(titleId: String): Boolean {
+        val plan = plan(treatAsRemoved = setOf(titleId))
+        val mine = plan.removals.filter { it.titleId == titleId }
+        if (mine.isEmpty()) return false
+        return execute(AniListPushPlan(emptyList(), mine, emptyList())).removed > 0
+    }
+
+    suspend fun plan(
+        treatAsRemoved: Set<String> = emptySet(),
+        onProgress: (done: Int, total: Int) -> Unit = { _, _ -> },
+    ): AniListPushPlan {
         val client = AndroidHttpClientFactory.create()
         try {
             val account = AniListRepository(appContext, client)
@@ -152,12 +167,13 @@ class AniListLibraryPush(context: Context) {
             val present = library.getLibraryEntries()
                 .filter { it.category != LibraryCategory.Saved }
                 .mapTo(mutableSetOf()) { it.anime.id }
+                .apply { removeAll(treatAsRemoved) }
             val syncedTitles = (
                 sync.linkedMediaIds().filter { (_, mediaId) -> sync.appliedCategory(mediaId) != null }.toList() +
                     loadPushedState().titles.map { (mediaId, titleId) -> titleId to mediaId.toInt() }
                 ).distinctBy { it.second }
             val removals = syncedTitles.mapNotNull { (titleId, mediaId) ->
-                if (titleId in present) return@mapNotNull null
+                if (titleId in present || sync.isKeptOnAniList(titleId)) return@mapNotNull null
                 if (skipNsfw && sync.isNsfwTitle(titleId)) return@mapNotNull null
                 val current = remote[mediaId] ?: return@mapNotNull null
                 val entryId = current.entryId ?: return@mapNotNull null

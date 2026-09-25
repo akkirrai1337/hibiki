@@ -763,11 +763,11 @@ fun DetailsScreen(
 
         if (isAniListRemovalOpen) {
             org.akkirrai.hibiki.feature.library.AniListRemovalDialog(
-                onConfirm = {
+                onChoose = { everywhere, remember ->
                     isAniListRemovalOpen = false
-                    AniListLibrarySync(context).exclude(currentAnime.id)
                     libraryRepository.removeFromLibrary(currentAnime.id)
                     libraryCategory = libraryRepository.getLibraryCategory(currentAnime.id)
+                    org.akkirrai.hibiki.feature.library.applyAniListRemoval(context, currentAnime.id, everywhere, remember)
                 },
                 onDismiss = { isAniListRemovalOpen = false },
             )
@@ -784,7 +784,14 @@ fun DetailsScreen(
                 onRemoveClick = {
                     isLibrarySheetOpen = false
                     if (AniListLibrarySync(context).isSyncedTitle(currentAnime.id)) {
-                        isAniListRemovalOpen = true
+                        val standing = org.akkirrai.hibiki.feature.library.standingRemovalChoice(context)
+                        if (standing == null) {
+                            isAniListRemovalOpen = true
+                        } else {
+                            libraryRepository.removeFromLibrary(currentAnime.id)
+                            libraryCategory = libraryRepository.getLibraryCategory(currentAnime.id)
+                            org.akkirrai.hibiki.feature.library.applyAniListRemoval(context, currentAnime.id, standing)
+                        }
                     } else {
                         libraryRepository.removeFromLibrary(currentAnime.id)
                         libraryCategory = libraryRepository.getLibraryCategory(currentAnime.id)

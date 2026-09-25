@@ -47,6 +47,13 @@ data class AniListSyncReport(
  *   moved by hand stays until the AniList side moves again;
  * - nothing is ever removed from the local library.
  */
+/** What removing a synced title does without asking. */
+object AniListRemovalMode {
+    const val ASK = "ask"
+    const val LOCAL = "local"
+    const val EVERYWHERE = "everywhere"
+}
+
 class AniListLibrarySync(context: Context) {
     private val appContext = context.applicationContext
     private val prefs = appContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
@@ -82,6 +89,24 @@ class AniListLibrarySync(context: Context) {
 
     /** Synced through an import or a send: removing it here is something AniList has to be told about. */
     fun isSyncedTitle(titleId: String): Boolean = isSynced(titleId) || AniListLibraryPush(appContext).wasPushed(titleId)
+
+    /** What removing a synced title does without asking: "ask", "local" (only here) or "everywhere". */
+    var removalMode: String
+        get() = prefs.getString(KEY_REMOVAL_MODE, AniListRemovalMode.ASK) ?: AniListRemovalMode.ASK
+        set(value) { prefs.edit().putString(KEY_REMOVAL_MODE, value).apply() }
+
+    /** A title removed "only here": its AniList entry stays, and a send must not offer to delete it. */
+    fun keepOnAniList(titleId: String) {
+        val current = prefs.getStringSet(KEY_KEPT, emptySet()).orEmpty()
+        prefs.edit().putStringSet(KEY_KEPT, current + titleId).apply()
+    }
+
+    fun isKeptOnAniList(titleId: String): Boolean = titleId in prefs.getStringSet(KEY_KEPT, emptySet()).orEmpty()
+
+    fun unkeepOnAniList(titleId: String) {
+        val current = prefs.getStringSet(KEY_KEPT, emptySet()).orEmpty()
+        if (titleId in current) prefs.edit().putStringSet(KEY_KEPT, current - titleId).apply()
+    }
 
     /** Stops the import from adding [titleId] again; it is forgotten once the title is back in the library. */
     fun exclude(titleId: String) {
@@ -436,6 +461,8 @@ class AniListLibrarySync(context: Context) {
         const val KEY_SKIP_NSFW = "skip_nsfw"
         const val KEY_AUTO = "auto"
         const val KEY_EXCLUDED = "excluded"
+        const val KEY_REMOVAL_MODE = "removal_mode"
+        const val KEY_KEPT = "kept_on_anilist"
         const val KEY_LAST_SYNC = "last_sync"
         const val KEY_KNOWN_TITLES = "known_titles"
         const val KEY_STATE = "state"

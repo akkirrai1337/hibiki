@@ -74,6 +74,7 @@ import kotlinx.coroutines.withContext
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.core.anilist.AniListLibraryPush
 import org.akkirrai.hibiki.core.anilist.AniListLibrarySync
+import org.akkirrai.hibiki.core.anilist.AniListRemovalMode
 import org.akkirrai.hibiki.core.anilist.AniListNsfwSourceException
 import org.akkirrai.hibiki.core.anilist.AniListPrivateListException
 import org.akkirrai.hibiki.core.anilist.AniListPushItem
@@ -140,6 +141,7 @@ internal fun AniListSyncDialog(
     var useAccount by remember { mutableStateOf(sync.useAccount) }
     var skipNsfw by remember { mutableStateOf(sync.skipNsfw) }
     var autoSync by remember { mutableStateOf(sync.autoEnabled) }
+    var removalMode by remember { mutableStateOf(sync.removalMode) }
     var running by remember { mutableStateOf(false) }
     var progress by remember { mutableStateOf(0 to 0) }
     var report by remember { mutableStateOf<AniListSyncReport?>(sync.lastReport()) }
@@ -395,6 +397,46 @@ internal fun AniListSyncDialog(
                                     sync.autoEnabled = it
                                 },
                             )
+                        }
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Column(Modifier.weight(1f)) {
+                                Text(
+                                    text = stringResource(R.string.anilist_sync_removal_ask),
+                                    style = MaterialTheme.typography.bodyLarge,
+                                )
+                                Text(
+                                    text = stringResource(R.string.anilist_sync_removal_ask_hint),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                            Switch(
+                                checked = removalMode == AniListRemovalMode.ASK,
+                                onCheckedChange = {
+                                    removalMode = if (it) AniListRemovalMode.ASK else AniListRemovalMode.LOCAL
+                                    sync.removalMode = removalMode
+                                },
+                            )
+                        }
+                        if (removalMode != AniListRemovalMode.ASK) {
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                listOf(
+                                    AniListRemovalMode.LOCAL to R.string.anilist_removal_local,
+                                    AniListRemovalMode.EVERYWHERE to R.string.anilist_removal_everywhere,
+                                ).forEach { (mode, label) ->
+                                    androidx.compose.material3.FilterChip(
+                                        selected = removalMode == mode,
+                                        onClick = {
+                                            removalMode = mode
+                                            sync.removalMode = mode
+                                        },
+                                        label = { Text(stringResource(label)) },
+                                    )
+                                }
+                            }
                         }
                     }
 
