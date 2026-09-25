@@ -98,7 +98,7 @@ fun ContinueWatchingRow(
             contentPadding = PaddingValues(horizontal = UiDimens.ScreenPadding),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            items(items, key = { it.id }) { anime ->
+            items(items.distinctBy { it.id }, key = { it.id }) { anime ->
                 ContinueWatchingFrameCard(
                     anime = anime,
                     info = info[anime.id],

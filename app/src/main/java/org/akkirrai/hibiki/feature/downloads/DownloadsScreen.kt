@@ -110,7 +110,7 @@ fun DownloadsScreen(
                     )
                 }
             } else {
-                items(items = uiState.entries, key = { it.anime.id }) { entry ->
+                items(items = uiState.entries.distinctBy { it.anime.id }, key = { it.anime.id }) { entry ->
                     DownloadedTitleRow(
                         entry = entry,
                         onOpenSource = onOpenSource,
