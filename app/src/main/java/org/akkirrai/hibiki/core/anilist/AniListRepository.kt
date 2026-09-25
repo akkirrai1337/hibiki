@@ -185,10 +185,10 @@ enum class AniListMediaListStatus { CURRENT, PLANNING, COMPLETED, DROPPED, PAUSE
 @Serializable private data class AniListGraphQlRequest(val query: String, val variables: JsonObject)
 @Serializable private data class AniListGraphQlResponse<T>(val data: T? = null, val errors: List<AniListGraphQlError>? = null)
 @Serializable private data class AniListGraphQlError(val message: String)
-@Serializable private data class AniListViewerData(val viewer: AniListViewerDto)
+@Serializable private data class AniListViewerData(@kotlinx.serialization.SerialName("Viewer") val viewer: AniListViewerDto)
 @Serializable private data class AniListViewerDto(val id: Int, val name: String, val avatar: AniListAvatarDto? = null)
 @Serializable private data class AniListAvatarDto(val large: String? = null)
-@Serializable private data class AniListLibraryData(val page: AniListPageDto)
+@Serializable private data class AniListLibraryData(@kotlinx.serialization.SerialName("Page") val page: AniListPageDto)
 @Serializable private data class AniListPageDto(val pageInfo: AniListPageInfoDto, val mediaList: List<AniListMediaListItem>)
 @Serializable private data class AniListPageInfoDto(val hasNextPage: Boolean)
 @Serializable private data class AniListMediaListItem(
@@ -206,7 +206,7 @@ enum class AniListMediaListStatus { CURRENT, PLANNING, COMPLETED, DROPPED, PAUSE
 )
 @Serializable private data class AniListMediaTitleDto(val romaji: String? = null, val english: String? = null, val native: String? = null)
 @Serializable private data class AniListCoverImageDto(val large: String? = null)
-@Serializable private data class AniListSaveProgressData(val saveMediaListEntry: AniListMediaListItem)
+@Serializable private data class AniListSaveProgressData(@kotlinx.serialization.SerialName("SaveMediaListEntry") val saveMediaListEntry: AniListMediaListItem)
 
 private fun AniListViewerDto.toModel() = AniListViewer(id, name, avatar?.large)
 private fun AniListMediaListItem.toModel() = AniListLibraryEntry(
