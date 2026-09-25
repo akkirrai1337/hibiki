@@ -35,6 +35,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyListScope
@@ -412,7 +413,11 @@ private fun HomeLoadingState(
                     icon = Icons.Outlined.History,
                 )
                 // Two 16:9 frame cards, the second cut off by the edge like the real row.
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                // unbounded, so the second card keeps its width instead of being squeezed into what is left.
+                Row(
+                    modifier = Modifier.wrapContentWidth(align = Alignment.Start, unbounded = true),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
                     repeat(2) {
                         Column(
                             modifier = Modifier.width(260.dp),
