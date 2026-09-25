@@ -20,3 +20,8 @@
 # Desktop-only JDK classes referenced (but never reached) by ktor and other JVM libraries.
 -dontwarn java.lang.management.**
 -dontwarn java.beans.**
+# Injekt reads the type argument off anonymous TypeReference subclasses via their generic superclass
+# signature; without it, hasFactory<T>()/get<T>() crash in release with "TypeReference constructed
+# without actual type information".
+-keepattributes Signature,InnerClasses,EnclosingMethod
+-keep class * extends uy.kohesive.injekt.api.TypeReference { *; }
