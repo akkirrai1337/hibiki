@@ -459,9 +459,14 @@ private fun HomeLoadingState(
     hasContinueHistory: Boolean,
     modifier: Modifier = Modifier,
 ) {
+    // The placeholders are taller than the screen. Measured against the space that is left, the last
+    // section was squeezed and its blocks rode up over its heading, so they are measured at their full
+    // size (unbounded) and the part that does not fit is simply clipped, like a list scrolled to the top.
+    Box(modifier = modifier.fillMaxSize().clipToBounds()) {
     Column(
-        modifier = modifier
-            .fillMaxSize()
+        modifier = Modifier
+            .fillMaxWidth()
+            .wrapContentHeight(align = Alignment.Top, unbounded = true)
             .padding(
                 start = UiDimens.ScreenPadding,
                 top = HOME_CONTENT_TOP_PADDING,
@@ -524,6 +529,7 @@ private fun HomeLoadingState(
                 }
             }
         }
+    }
     }
 }
 
