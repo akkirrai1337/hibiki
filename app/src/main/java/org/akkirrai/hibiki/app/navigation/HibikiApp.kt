@@ -199,6 +199,11 @@ private fun HibikiNavHost(
                             navController.navigate(AnimeNavType.createDetailsRoute(anime, transitionOrigin = "home"))
                         }
                     },
+                    onContinueAnimeClick = { anime ->
+                        navController.runIfCurrent(backStackEntry) {
+                            navController.navigate(AnimeNavType.createDetailsRoute(anime, transitionOrigin = "home-continue"))
+                        }
+                    },
                     onOpenSources = {
                         navController.runIfCurrent(backStackEntry) {
                             navController.navigateTopLevelDestination(

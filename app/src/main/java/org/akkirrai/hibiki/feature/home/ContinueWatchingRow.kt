@@ -61,6 +61,7 @@ fun ContinueWatchingRow(
     items: List<Anime>,
     onAnimeClick: (Anime) -> Unit,
     onAnimeLongClick: (Anime) -> Unit,
+    sharedFrameModifier: @Composable (Anime) -> Modifier = { Modifier },
 ) {
     val context = LocalContext.current.applicationContext
     val ids = items.map { it.id }
@@ -94,6 +95,7 @@ fun ContinueWatchingRow(
                 ContinueWatchingFrameCard(
                     anime = anime,
                     info = info[anime.id],
+                    sharedFrameModifier = sharedFrameModifier(anime),
                     onClick = { onAnimeClick(anime) },
                     onLongClick = { onAnimeLongClick(anime) },
                 )
@@ -107,6 +109,7 @@ fun ContinueWatchingRow(
 private fun ContinueWatchingFrameCard(
     anime: Anime,
     info: ContinueInfo?,
+    sharedFrameModifier: Modifier,
     onClick: () -> Unit,
     onLongClick: () -> Unit,
 ) {
@@ -119,7 +122,8 @@ private fun ContinueWatchingFrameCard(
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         Box(
-            modifier = Modifier
+            // The page opens from and closes back into this frame, not the title's poster elsewhere on Home.
+            modifier = sharedFrameModifier
                 .fillMaxWidth()
                 .aspectRatio(16f / 9f)
                 .clip(RoundedCornerShape(16.dp))

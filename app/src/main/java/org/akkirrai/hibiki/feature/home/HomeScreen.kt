@@ -155,6 +155,7 @@ fun HomeScreen(
     onOpenDownloads: () -> Unit = {},
     onSearch: (String) -> Unit = {},
     onOpenSearchWithFilters: () -> Unit = {},
+    onContinueAnimeClick: (Anime) -> Unit = onAnimeClick,
     isActive: Boolean = true,
     bottomContentPadding: Dp = 96.dp,
     sharedTransitionScope: SharedTransitionScope? = null,
@@ -181,6 +182,9 @@ fun HomeScreen(
     }
     val sharedPosterModifier: @Composable (Anime) -> Modifier = { anime ->
         animeDetailsSharedPosterModifier(anime.id, sharedTransitionScope, animatedVisibilityScope, origin = "home")
+    }
+    val sharedContinueModifier: @Composable (Anime) -> Modifier = { anime ->
+        animeDetailsSharedCardModifier(anime.id, sharedTransitionScope, animatedVisibilityScope, origin = "home-continue")
     }
     val selectedSourceId = LocalAppPreferencesState.current.animeSource
     val noSourcesInstalled = AnimeSourceRegistry.sources.isEmpty()
@@ -259,6 +263,8 @@ fun HomeScreen(
                                 trending = state.trending,
                                 isActive = isActive,
                                 onAnimeClick = onAnimeClick,
+                                onContinueClick = onContinueAnimeClick,
+                                sharedContinueModifier = sharedContinueModifier,
                                 onWatchedAnimeLongClick = { anime ->
                                     hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
                                     pendingProgressRemoval = anime
@@ -332,6 +338,8 @@ private fun LazyListScope.homeFeedContent(
     trending: List<Anime>,
     isActive: Boolean,
     onAnimeClick: (Anime) -> Unit,
+    onContinueClick: (Anime) -> Unit,
+    sharedContinueModifier: @Composable (Anime) -> Modifier,
     onWatchedAnimeLongClick: (Anime) -> Unit,
     onEntryClick: (Anime) -> Unit,
     sharedCardModifier: @Composable (Anime) -> Modifier,
@@ -352,8 +360,9 @@ private fun LazyListScope.homeFeedContent(
         item {
             ContinueWatchingRow(
                 items = continueItems,
-                onAnimeClick = onAnimeClick,
+                onAnimeClick = onContinueClick,
                 onAnimeLongClick = onWatchedAnimeLongClick,
+                sharedFrameModifier = sharedContinueModifier,
             )
         }
     }
