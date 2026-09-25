@@ -50,6 +50,11 @@ class AniListLibrarySync(context: Context) {
         get() = prefs.getString(KEY_USER, "").orEmpty()
         set(value) { prefs.edit().putString(KEY_USER, value.trim()).apply() }
 
+    /** Read the list of the signed-in account (true) or a public list by [userName] (false). */
+    var useAccount: Boolean
+        get() = prefs.getBoolean(KEY_USE_ACCOUNT, true)
+        set(value) { prefs.edit().putBoolean(KEY_USE_ACCOUNT, value).apply() }
+
     var sourceId: String
         get() = prefs.getString(KEY_SOURCE, "").orEmpty()
         set(value) { prefs.edit().putString(KEY_SOURCE, value).apply() }
@@ -64,7 +69,7 @@ class AniListLibrarySync(context: Context) {
         val search = AnimeSearchRepository(appContext, client = client, closeClientOnClose = false)
         try {
             // Signed in, the account decides whose list this is and private lists are readable.
-            val token = AniListRepository(appContext, client).currentAccessToken()
+            val token = AniListRepository(appContext, client).currentAccessToken()?.takeIf { useAccount }
             val user = if (token != null) {
                 AniListRepository(appContext, client).getViewer().name
             } else {
@@ -311,6 +316,7 @@ class AniListLibrarySync(context: Context) {
         const val PREFS_NAME = "anilist_library_sync"
         const val KEY_USER = "user"
         const val KEY_SOURCE = "source"
+        const val KEY_USE_ACCOUNT = "use_account"
         const val KEY_STATE = "state"
         const val KEY_REPORT = "report"
         const val LOOKUP_CONCURRENCY = 3

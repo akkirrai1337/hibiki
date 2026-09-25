@@ -665,7 +665,7 @@
     <string name="filter_rating_up_to">До %1$s</string>
     <string name="settings_anilist_sync">Синхронізація з AniList</string>
     <string name="settings_anilist_sync_summary">Імпорт списку AniList до бібліотеки</string>
-    <string name="anilist_sync_hint">В один бік: з AniList до Hibiki. Читається публічний список; в AniList нічого не змінюється, з Hibiki нічого не видаляється.</string>
+    <string name="anilist_sync_hint">В один бік: з AniList до Hibiki. В AniList нічого не змінюється, з Hibiki нічого не видаляється.</string>
     <string name="anilist_sync_username">Ім’я користувача AniList</string>
     <string name="anilist_sync_source">Шукати тайтли на джерелі</string>
     <string name="anilist_sync_start">Синхронізувати</string>
@@ -681,4 +681,6 @@
     <string name="anilist_sync_sign_out">Вийти</string>
     <string name="anilist_sync_connected_as">Ви увійшли як %1$s</string>
     <string name="anilist_sync_or_public">Або прочитати публічний список за іменем:</string>
+    <string name="anilist_sync_method_account">Акаунт</string>
+    <string name="anilist_sync_method_username">Нік</string>
 </resources>

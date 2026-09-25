@@ -6,14 +6,19 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.selection.selectable
-import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -28,7 +33,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.painterResource
+import androidx.compose.foundation.layout.size
+import coil.compose.AsyncImage
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -44,9 +52,11 @@ import org.akkirrai.hibiki.core.anilist.AniListRepository
 import org.akkirrai.hibiki.core.anilist.AniListSyncReport
 import org.akkirrai.hibiki.core.anilist.AniListUserNotFoundException
 import org.akkirrai.hibiki.core.network.NoInternetConnectionException
+import org.akkirrai.hibiki.core.source.AnimeSourceDescriptor
 import org.akkirrai.hibiki.core.source.AnimeSourceRegistry
 
 /** One-way AniList to Hibiki library sync: who to read, which source to look the titles up on, and the run itself. */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun AniListSyncDialog(
     defaultSourceId: String,
@@ -87,6 +97,7 @@ internal fun AniListSyncDialog(
                 ?: sources.firstOrNull()?.id?.value.orEmpty(),
         )
     }
+    var useAccount by remember { mutableStateOf(sync.useAccount) }
     var running by remember { mutableStateOf(false) }
     var progress by remember { mutableStateOf(0 to 0) }
     var report by remember { mutableStateOf<AniListSyncReport?>(sync.lastReport()) }
@@ -111,23 +122,39 @@ internal fun AniListSyncDialog(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                if (connected) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                    ) {
-                        Text(
-                            text = stringResource(R.string.anilist_sync_connected_as, viewerName.orEmpty()),
-                            style = MaterialTheme.typography.bodyLarge,
-                            modifier = Modifier.weight(1f),
-                        )
-                        TextButton(enabled = !running, onClick = { account.disconnect(); connected = false }) {
-                            Text(stringResource(R.string.anilist_sync_sign_out))
-                        }
+                if (account.isConfigured) {
+                    SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                        SegmentedButton(
+                            selected = useAccount,
+                            onClick = { useAccount = true },
+                            enabled = !running,
+                            shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
+                        ) { Text(stringResource(R.string.anilist_sync_method_account)) }
+                        SegmentedButton(
+                            selected = !useAccount,
+                            onClick = { useAccount = false },
+                            enabled = !running,
+                            shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
+                        ) { Text(stringResource(R.string.anilist_sync_method_username)) }
                     }
-                } else {
-                    if (account.isConfigured) {
+                }
+                if (useAccount && account.isConfigured) {
+                    if (connected) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                        ) {
+                            Text(
+                                text = stringResource(R.string.anilist_sync_connected_as, viewerName.orEmpty()),
+                                style = MaterialTheme.typography.bodyLarge,
+                                modifier = Modifier.weight(1f),
+                            )
+                            TextButton(enabled = !running, onClick = { account.disconnect(); connected = false }) {
+                                Text(stringResource(R.string.anilist_sync_sign_out))
+                            }
+                        }
+                    } else {
                         Button(
                             enabled = !running,
                             onClick = {
@@ -144,12 +171,8 @@ internal fun AniListSyncDialog(
                             },
                             modifier = Modifier.fillMaxWidth(),
                         ) { Text(stringResource(R.string.anilist_sync_sign_in)) }
-                        Text(
-                            text = stringResource(R.string.anilist_sync_or_public),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
                     }
+                } else {
                     OutlinedTextField(
                         value = userName,
                         onValueChange = { userName = it },
@@ -167,23 +190,32 @@ internal fun AniListSyncDialog(
                 if (sources.isEmpty()) {
                     Text(stringResource(R.string.settings_sources_empty))
                 } else {
-                    Column(Modifier.selectableGroup()) {
-                        sources.forEach { source ->
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .selectable(
-                                        selected = source.id.value == sourceId,
-                                        enabled = !running,
-                                        role = Role.RadioButton,
-                                        onClick = { sourceId = source.id.value },
-                                    )
-                                    .padding(vertical = 8.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                            ) {
-                                RadioButton(selected = source.id.value == sourceId, onClick = null)
-                                Text(source.name, style = MaterialTheme.typography.bodyLarge)
+                    var sourceMenuOpen by remember { mutableStateOf(false) }
+                    val chosen = sources.firstOrNull { it.id.value == sourceId } ?: sources.first()
+                    ExposedDropdownMenuBox(
+                        expanded = sourceMenuOpen,
+                        onExpandedChange = { if (!running) sourceMenuOpen = it },
+                    ) {
+                        OutlinedTextField(
+                            value = chosen.name,
+                            onValueChange = {},
+                            readOnly = true,
+                            enabled = !running,
+                            singleLine = true,
+                            leadingIcon = { SourceIcon(chosen) },
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = sourceMenuOpen) },
+                            modifier = Modifier.menuAnchor().fillMaxWidth(),
+                        )
+                        ExposedDropdownMenu(expanded = sourceMenuOpen, onDismissRequest = { sourceMenuOpen = false }) {
+                            sources.forEach { source ->
+                                DropdownMenuItem(
+                                    text = { Text(source.name) },
+                                    leadingIcon = { SourceIcon(source) },
+                                    onClick = {
+                                        sourceId = source.id.value
+                                        sourceMenuOpen = false
+                                    },
+                                )
                             }
                         }
                     }
@@ -226,9 +258,11 @@ internal fun AniListSyncDialog(
         },
         confirmButton = {
             Button(
-                enabled = !running && (connected || userName.isNotBlank()) && sourceId.isNotBlank(),
+                enabled = !running && sourceId.isNotBlank() &&
+                    (if (useAccount && account.isConfigured) connected else userName.isNotBlank()),
                 onClick = {
                     sync.userName = userName
+                    sync.useAccount = useAccount
                     sync.sourceId = sourceId
                     errorMessage = null
                     running = true
@@ -258,5 +292,16 @@ internal fun AniListSyncDialog(
         dismissButton = {
             TextButton(enabled = !running, onClick = onDismiss) { Text(stringResource(R.string.anilist_sync_close)) }
         },
+    )
+}
+
+@Composable
+private fun SourceIcon(source: AnimeSourceDescriptor) {
+    AsyncImage(
+        model = source.iconUrl,
+        placeholder = painterResource(source.iconRes),
+        error = painterResource(source.iconRes),
+        contentDescription = null,
+        modifier = Modifier.size(24.dp).clip(CircleShape),
     )
 }
