@@ -171,6 +171,21 @@ jobs:
             echo
           } > release-notes.md
 
+          # A hand-written section for this version in changelog.txt ("## hibiki <version>") replaces the
+          # commit list; without one, the commit list above stays as the release notes.
+          if [ -f changelog.txt ]; then
+            awk -v heading="## hibiki ${TARGET_VERSION}" '
+              /^## hibiki / { if (found) exit; if ($0 == heading) { found = 1; next } }
+              found { print }
+            ' <(tr -d '\015' < changelog.txt) | sed '/./,$!d' > changelog-section.md
+            if [ -s changelog-section.md ]; then
+              cp changelog-section.md release-notes.md
+              echo "Release notes taken from changelog.txt (${TARGET_VERSION})."
+            else
+              echo "No section for ${TARGET_VERSION} in changelog.txt; using the commit list."
+            fi
+          fi
+
       - name: Build signed release APK
         env:
           HIBIKI_RELEASE_STORE_FILE: hibiki
