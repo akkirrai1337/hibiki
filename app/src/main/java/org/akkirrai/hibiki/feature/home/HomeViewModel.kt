@@ -319,6 +319,9 @@ class HomeViewModel(
             AppPreferences.animeSourceChanges.collect {
                 homeLoadJob?.cancel()
                 recentRandomIds.clear()
+                // The feed belongs to the source that was just left: showing it under the new one would pass
+                // it off as that source's content, and would hide the new source's loading and its error.
+                _uiState.update { HomeUiState(isLoading = true, hasContinueHistory = it.hasContinueHistory) }
                 load()
             }
         }
