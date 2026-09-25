@@ -100,6 +100,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.snapshotFlow
+import kotlinx.coroutines.flow.take
+import org.akkirrai.hibiki.core.log.AppLogger
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -274,6 +277,17 @@ fun DetailsScreen(
             firstVisibleItemIndex = savedScreenState?.firstVisibleItemIndex ?: 0,
             firstVisibleItemScrollOffset = savedScreenState?.firstVisibleItemScrollOffset ?: 0,
         )
+    }
+    // The scroll position a page opens with, and where it settles once the hero has been measured; a page
+    // that opens shifted shows here whether the offset was restored or came from a later re-layout.
+    LaunchedEffect(detailsStateKey) {
+        AppLogger.d(
+            "DetailsScroll",
+            "open restored=${savedScreenState != null} index=${listState.firstVisibleItemIndex} offset=${listState.firstVisibleItemScrollOffset}",
+        )
+        snapshotFlow { listState.firstVisibleItemIndex to listState.firstVisibleItemScrollOffset }
+            .take(6)
+            .collect { (index, offset) -> AppLogger.d("DetailsScroll", "position index=$index offset=$offset") }
     }
     val localizedEpisodeWord = stringResource(R.string.details_episode_label)
     val currentAnimeState by rememberUpdatedState(currentAnime)
