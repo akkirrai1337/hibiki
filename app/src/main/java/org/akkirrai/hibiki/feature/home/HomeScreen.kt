@@ -432,16 +432,24 @@ private fun HomeLoadingState(
                                 RoundedCornerShape(UiDimens.CardCorner),
                             ),
                         )
+                        // Shaped like the real card's text: a two-line title, the meta line with the source
+                        // badge, then the hint. Thin, softly rounded bars read as text, thick pills do not.
                         Column(
                             modifier = Modifier.weight(1f),
-                            verticalArrangement = Arrangement.spacedBy(3.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
                         ) {
-                            AppShimmerBlock(Modifier.fillMaxWidth(0.82f).height(20.dp).clip(CircleShape))
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                AppShimmerBlock(Modifier.fillMaxWidth(0.42f).height(16.dp).clip(CircleShape))
-                                AppShimmerBlock(Modifier.width(44.dp).height(16.dp).clip(CircleShape))
+                            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                SkeletonLine(widthFraction = 0.9f, height = 14.dp)
+                                SkeletonLine(widthFraction = 0.55f, height = 14.dp)
                             }
-                            AppShimmerBlock(Modifier.fillMaxWidth(0.56f).height(14.dp).clip(CircleShape))
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                SkeletonLine(widthFraction = 0.34f, height = 11.dp)
+                                AppShimmerBlock(Modifier.size(width = 36.dp, height = 18.dp).clip(RoundedCornerShape(9.dp)))
+                            }
+                            SkeletonLine(widthFraction = 0.46f, height = 10.dp)
                         }
                     }
                 }
@@ -468,6 +476,16 @@ private fun HomeLoadingState(
             }
         }
     }
+}
+
+@Composable
+private fun SkeletonLine(widthFraction: Float, height: Dp) {
+    AppShimmerBlock(
+        Modifier
+            .fillMaxWidth(widthFraction)
+            .height(height)
+            .clip(RoundedCornerShape(height / 2.5f)),
+    )
 }
 
 @Composable
