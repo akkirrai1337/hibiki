@@ -73,6 +73,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
+import androidx.compose.material.icons.outlined.SwapHoriz
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -134,6 +136,13 @@ fun SettingsScreen(
     val preferences = LocalAppPreferencesState.current
     var isLanguageDialogOpen by rememberSaveable { mutableStateOf(false) }
     var isAniListSyncOpen by rememberSaveable { mutableStateOf(false) }
+    // The offer to move a library off retired scripted sources stays reachable from here, but only while
+    // such titles are still there.
+    val hasLegacyLibrary by produceState(false, context) {
+        value = runCatching {
+            org.akkirrai.hibiki.core.migration.LegacyLibraryMigration(context).scan().isNotEmpty()
+        }.getOrDefault(false)
+    }
     val discordRpcManager = remember(context) { DiscordRpcManager.get(context) }
     var isDiscordAuthDialogOpen by remember { mutableStateOf(false) }
     var pendingDiscordToken by remember { mutableStateOf<String?>(null) }
@@ -237,7 +246,7 @@ fun SettingsScreen(
 
         item(key = "sources") {
             SettingsSection(title = stringResource(R.string.settings_sources)) {
-                SettingsItems(count = 2) { index, shape ->
+                SettingsItems(count = if (hasLegacyLibrary) 3 else 2) { index, shape ->
                     when (index) {
                         0 -> SettingsSwitchItem(
                             icon = Icons.Filled.VisibilityOff,
@@ -245,6 +254,15 @@ fun SettingsScreen(
                             checked = preferences.hideNsfwSources,
                             shape = shape,
                             onCheckedChange = appPreferences::setHideNsfwSources,
+                        )
+
+                        2 -> SettingsActionItem(
+                            icon = Icons.Outlined.SwapHoriz,
+                            title = stringResource(R.string.migration_settings_title),
+                            subtitle = stringResource(R.string.migration_settings_summary),
+                            shape = shape,
+                            showNavigationArrow = true,
+                            onClick = { org.akkirrai.hibiki.feature.migration.LegacyMigrationRequests.reopen() },
                         )
 
                         1 -> SettingsActionItem(

@@ -746,5 +746,14 @@
     <string name="onboarding_anilist_manage">Керування синхронізацією</string>
     <string name="onboarding_anilist_needs_source">Спочатку встанови джерело, щоб тайтли AniList можна було знайти в ньому.</string>
     <string name="onboarding_anilist_skip_hint">Можна пропустити й налаштувати пізніше в налаштуваннях.</string>
-    <string name="migration_start_count">Перенести тайтлів: %1$d</string>
+    <string name="migration_start_count">Перенести (%1$d)</string>
+    <string name="migration_install_title">Встановлення джерел</string>
+    <string name="migration_install_sources">Встановити джерела</string>
+    <string name="migration_pick_title">Перенести «%1$s» до</string>
+    <string name="migration_never_title">Більше не пропонувати?</string>
+    <string name="migration_never_message">Бібліотека й далі посилатиметься на джерела, яких більше немає, і ці тайтли залишаться неробочими. Пізніше їх усе одно можна перенести з налаштувань.</string>
+    <string name="migration_never_confirm">Не пропонувати</string>
+    <string name="migration_never_cancel">Скасувати</string>
+    <string name="migration_settings_title">Перенесення бібліотеки</string>
+    <string name="migration_settings_summary">Перенести тайтли зі старих джерел у встановлені розширення</string>
 </resources>

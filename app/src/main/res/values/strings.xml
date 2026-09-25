@@ -758,5 +758,14 @@
     <string name="onboarding_anilist_manage">Manage sync</string>
     <string name="onboarding_anilist_needs_source">Install a source first, then AniList titles can be matched to it.</string>
     <string name="onboarding_anilist_skip_hint">You can skip this and set it up later in Settings.</string>
-    <string name="migration_start_count">Move %1$d titles</string>
+    <string name="migration_start_count">Move (%1$d)</string>
+    <string name="migration_install_title">Install sources</string>
+    <string name="migration_install_sources">Install sources</string>
+    <string name="migration_pick_title">Move “%1$s” to</string>
+    <string name="migration_never_title">Never offer this again?</string>
+    <string name="migration_never_message">The library will keep pointing at sources that no longer exist, and those titles will stay unusable. You can still move them later from Settings.</string>
+    <string name="migration_never_confirm">Never offer</string>
+    <string name="migration_never_cancel">Cancel</string>
+    <string name="migration_settings_title">Move library</string>
+    <string name="migration_settings_summary">Move titles from retired sources to installed extensions</string>
 </resources>

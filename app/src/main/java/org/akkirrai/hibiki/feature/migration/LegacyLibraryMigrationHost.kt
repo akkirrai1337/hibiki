@@ -2,6 +2,18 @@ package org.akkirrai.hibiki.feature.migration
 
 import android.app.Application
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material.icons.outlined.Extension
+import androidx.compose.material.icons.rounded.Block
+import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.ui.graphics.Color
+import org.akkirrai.hibiki.feature.sources.SourceExtensionsScreen
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
@@ -76,6 +88,15 @@ sealed interface LegacyMigrationState {
     data class Finished(val result: LegacyMigrationResult) : LegacyMigrationState
 }
 
+/** Lets Settings ask the migration host to show the offer again after "Not now" or "Never". */
+object LegacyMigrationRequests {
+    internal val flow = kotlinx.coroutines.flow.MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+
+    fun reopen() {
+        flow.tryEmit(Unit)
+    }
+}
+
 class LegacyLibraryMigrationViewModel(application: Application) : AndroidViewModel(application) {
     private val migration = LegacyLibraryMigration(application)
     private val _state = MutableStateFlow<LegacyMigrationState>(LegacyMigrationState.Hidden)
@@ -86,6 +107,18 @@ class LegacyLibraryMigrationViewModel(application: Application) : AndroidViewMod
             viewModelScope.launch {
                 val sources = runCatching { migration.scan() }.getOrDefault(emptyList())
                 if (sources.isNotEmpty()) _state.value = LegacyMigrationState.Offer(sources, emptyMap())
+            }
+        }
+    }
+
+    init {
+        viewModelScope.launch {
+            LegacyMigrationRequests.flow.collect {
+                migration.dismissedForever = false
+                val sources = runCatching { migration.scan() }.getOrDefault(emptyList())
+                if (sources.isNotEmpty() && _state.value is LegacyMigrationState.Hidden) {
+                    _state.value = LegacyMigrationState.Offer(sources, emptyMap())
+                }
             }
         }
     }
@@ -134,17 +167,56 @@ fun LegacyLibraryMigrationHost() {
         factory = androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.getInstance(application),
     )
     val state by viewModel.state.collectAsState()
+    var installOpen by remember { mutableStateOf(false) }
     when (val current = state) {
         LegacyMigrationState.Hidden -> Unit
-        is LegacyMigrationState.Offer -> OfferDialog(current, viewModel)
+        is LegacyMigrationState.Offer -> OfferDialog(current, viewModel, onInstall = { installOpen = true })
         is LegacyMigrationState.Running -> RunningDialog(current)
         is LegacyMigrationState.Finished -> FinishedDialog(current.result, viewModel::finish)
+    }
+    if (installOpen) InstallSourcesDialog(onClose = { installOpen = false })
+}
+
+/** The extension repositories, opened over the offer so a source can be installed without leaving it. */
+@Composable
+private fun InstallSourcesDialog(onClose: () -> Unit) {
+    androidx.compose.ui.window.Dialog(
+        onDismissRequest = onClose,
+        properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false),
+    ) {
+        androidx.compose.material3.Surface(
+            modifier = Modifier.fillMaxSize(),
+            color = MaterialTheme.colorScheme.background,
+        ) {
+            Column(modifier = Modifier.fillMaxSize().systemBarsPadding()) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    IconButton(onClick = onClose) {
+                        Icon(Icons.Rounded.Close, contentDescription = stringResource(R.string.migration_close))
+                    }
+                    Text(
+                        stringResource(R.string.migration_install_title),
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                }
+                SourceExtensionsScreen(onboarding = true, modifier = Modifier.weight(1f))
+            }
+        }
     }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun OfferDialog(offer: LegacyMigrationState.Offer, viewModel: LegacyLibraryMigrationViewModel) {
+private fun OfferDialog(
+    offer: LegacyMigrationState.Offer,
+    viewModel: LegacyLibraryMigrationViewModel,
+    onInstall: () -> Unit,
+) {
+    var confirmNever by remember { mutableStateOf(false) }
+    var pickerFor by remember { mutableStateOf<LegacySource?>(null) }
     // Read from the registry inside composition: extensions are installed and loaded while this
     // sheet is open, and the suggestions should appear the moment one is.
     val installed = AnimeSourceRegistry.sources
@@ -191,10 +263,14 @@ private fun OfferDialog(offer: LegacyMigrationState.Offer, viewModel: LegacyLibr
             offer.sources.forEach { legacy ->
                 LegacySourceCard(
                     legacy = legacy,
-                    installed = installed,
                     selected = installed.firstOrNull { it.id == targets[legacy.id] },
-                    onSelect = { viewModel.choose(legacy.id, it?.id) },
+                    onPick = { pickerFor = legacy },
                 )
+            }
+            OutlinedButton(onClick = onInstall, modifier = Modifier.fillMaxWidth()) {
+                Icon(Icons.Outlined.Extension, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(8.dp))
+                Text(stringResource(R.string.migration_install_sources))
             }
             if (installed.isEmpty()) {
                 Row(
@@ -228,22 +304,135 @@ private fun OfferDialog(offer: LegacyMigrationState.Offer, viewModel: LegacyLibr
             }
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
                 TextButton(onClick = viewModel::later) { Text(stringResource(R.string.migration_later)) }
-                TextButton(onClick = viewModel::never) {
+                TextButton(onClick = { confirmNever = true }) {
                     Text(stringResource(R.string.migration_never), color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         }
+    }
+
+    pickerFor?.let { legacy ->
+        SourcePickerSheet(
+            legacy = legacy,
+            installed = installed,
+            selected = installed.firstOrNull { it.id == targets[legacy.id] },
+            onSelect = { viewModel.choose(legacy.id, it?.id); pickerFor = null },
+            onInstall = { pickerFor = null; onInstall() },
+            onDismiss = { pickerFor = null },
+        )
+    }
+    if (confirmNever) {
+        AlertDialog(
+            onDismissRequest = { confirmNever = false },
+            icon = { Icon(Icons.Outlined.Info, contentDescription = null) },
+            title = { Text(stringResource(R.string.migration_never_title)) },
+            text = { Text(stringResource(R.string.migration_never_message)) },
+            confirmButton = {
+                TextButton(onClick = { confirmNever = false; viewModel.never() }) {
+                    Text(stringResource(R.string.migration_never_confirm))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmNever = false }) { Text(stringResource(R.string.migration_never_cancel)) }
+            },
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SourcePickerSheet(
+    legacy: LegacySource,
+    installed: List<AnimeSourceDescriptor>,
+    selected: AnimeSourceDescriptor?,
+    onSelect: (AnimeSourceDescriptor?) -> Unit,
+    onInstall: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    ModalBottomSheet(onDismissRequest = onDismiss) {
+        Column(
+            modifier = Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 12.dp).padding(bottom = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(2.dp),
+        ) {
+            Text(
+                stringResource(R.string.migration_pick_title, legacy.name),
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(horizontal = 8.dp, vertical = 8.dp),
+            )
+            installed.forEach { source ->
+                PickerRow(
+                    selected = source.id == selected?.id,
+                    onClick = { onSelect(source) },
+                    icon = { SourceIcon(source, size = 32.dp) },
+                    label = source.info.name,
+                )
+            }
+            if (installed.isEmpty()) {
+                Text(
+                    stringResource(R.string.migration_install_hint),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 8.dp),
+                )
+            }
+            PickerRow(
+                selected = false,
+                onClick = { onSelect(null) },
+                icon = {
+                    Icon(Icons.Rounded.Block, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(28.dp))
+                },
+                label = stringResource(R.string.migration_skip_source),
+            )
+            PickerRow(
+                selected = false,
+                onClick = onInstall,
+                icon = {
+                    Icon(Icons.Outlined.Extension, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(28.dp))
+                },
+                label = stringResource(R.string.migration_install_sources),
+                accent = true,
+            )
+        }
+    }
+}
+
+@Composable
+private fun PickerRow(
+    selected: Boolean,
+    onClick: () -> Unit,
+    icon: @Composable () -> Unit,
+    label: String,
+    accent: Boolean = false,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(if (selected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f) else Color.Transparent)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 12.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(14.dp),
+    ) {
+        Box(modifier = Modifier.size(32.dp), contentAlignment = Alignment.Center) { icon() }
+        Text(
+            label,
+            style = MaterialTheme.typography.bodyLarge,
+            fontWeight = if (selected || accent) FontWeight.SemiBold else FontWeight.Normal,
+            color = if (accent) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.weight(1f),
+        )
+        if (selected) Icon(Icons.Rounded.Check, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
     }
 }
 
 @Composable
 private fun LegacySourceCard(
     legacy: LegacySource,
-    installed: List<AnimeSourceDescriptor>,
     selected: AnimeSourceDescriptor?,
-    onSelect: (AnimeSourceDescriptor?) -> Unit,
+    onPick: () -> Unit,
 ) {
-    var expanded by remember { mutableStateOf(false) }
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -278,7 +467,7 @@ private fun LegacySourceCard(
                         if (selected != null) MaterialTheme.colorScheme.primary.copy(alpha = 0.6f) else MaterialTheme.colorScheme.outlineVariant,
                         RoundedCornerShape(14.dp),
                     )
-                    .clickable { expanded = true }
+                    .clickable(onClick = onPick)
                     .padding(horizontal = 12.dp, vertical = 12.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -292,31 +481,18 @@ private fun LegacySourceCard(
                 )
                 Icon(Icons.Rounded.UnfoldMore, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-                DropdownMenuItem(
-                    text = { Text(stringResource(R.string.migration_skip_source)) },
-                    onClick = { expanded = false; onSelect(null) },
-                )
-                installed.forEach { source ->
-                    DropdownMenuItem(
-                        text = { Text(source.info.name) },
-                        leadingIcon = { SourceIcon(source) },
-                        onClick = { expanded = false; onSelect(source) },
-                    )
-                }
-            }
         }
     }
 }
 
 @Composable
-private fun SourceIcon(source: AnimeSourceDescriptor) {
+private fun SourceIcon(source: AnimeSourceDescriptor, size: androidx.compose.ui.unit.Dp = 24.dp) {
     AsyncImage(
         model = source.iconUrl,
         placeholder = painterResource(source.iconRes),
         error = painterResource(source.iconRes),
         contentDescription = null,
-        modifier = Modifier.size(24.dp).clip(CircleShape),
+        modifier = Modifier.size(size).clip(CircleShape),
     )
 }
 
