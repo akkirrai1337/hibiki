@@ -17,6 +17,7 @@ import org.akkirrai.hibiki.core.source.LibraryCategory
 internal fun buildProfileSnapshot(
     resources: Resources,
     localData: LocalProfileData,
+    marks: AchievementMarks? = null,
 ): LocalProfileSnapshot {
     val activityByDate = localData.activity.associateBy { it.date }
     val today = LocalDate.now()
@@ -104,7 +105,15 @@ internal fun buildProfileSnapshot(
     // what is nearly done, or done, is what the strip should lead with, and the seven families are
     // otherwise in an order that means nothing to anyone reading them. Sorted here rather than in
     // ProfileRules, whose order is part of what the shared vectors pin.
-    val achievements = ProfileRules.computeAchievements(ruleEntries, lifetimeWatchedMs, bestStreakEver)
+    // Library-based achievements never go backwards: what the library once held is topped up from the
+    // recorded best, using neutral stand-in entries so the shared rules themselves stay untouched.
+    val achievementEntries = ruleEntries.withRecordedBest(marks)
+    marks?.record(
+        titles = achievementEntries.size,
+        completed = achievementEntries.count { it.category == "completed" },
+        genres = achievementEntries.flatMap { it.genres }.toSet().size,
+    )
+    val achievements = ProfileRules.computeAchievements(achievementEntries, lifetimeWatchedMs, bestStreakEver)
         .sortedWith(
             compareByDescending<ProfileRules.Achievement> { it.level }
                 .thenByDescending { if (it.target > 0) it.current / it.target else 0.0 }
@@ -125,6 +134,21 @@ internal fun buildProfileSnapshot(
         genreSegments = genreSegments,
         genreTrackedTitlesCount = allMetadata.count { it.genres.isNotEmpty() },
     )
+}
+
+private fun List<ProfileRules.Entry>.withRecordedBest(marks: AchievementMarks?): List<ProfileRules.Entry> {
+    if (marks == null) return this
+    val completedPad = maxOf(0, marks.completed - count { it.category == "completed" })
+    val genrePad = maxOf(0, marks.genres - flatMap { it.genres }.toSet().size)
+    val padding = mutableListOf<ProfileRules.Entry>()
+    repeat(completedPad) { padding += ProfileRules.Entry(category = "completed", genres = emptyList()) }
+    if (genrePad > 0) {
+        padding += ProfileRules.Entry(category = "other", genres = (0 until genrePad).map { "\u0000best-$it" })
+    }
+    repeat(maxOf(0, marks.titles - size - padding.size)) {
+        padding += ProfileRules.Entry(category = "other", genres = emptyList())
+    }
+    return this + padding
 }
 
 /**

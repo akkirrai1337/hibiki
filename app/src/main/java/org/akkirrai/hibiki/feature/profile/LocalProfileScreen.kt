@@ -124,8 +124,9 @@ fun LocalProfileScreen(
     val localizedResources = remember(context, appLanguage) {
         context.withLanguage(appLanguage).resources
     }
+    val achievementMarks = remember(context) { AchievementMarks(context) }
     val snapshot = remember(localizedResources, state.data) {
-        buildProfileSnapshot(localizedResources, state.data)
+        buildProfileSnapshot(localizedResources, state.data, achievementMarks)
     }
     val statusInsets = WindowInsets.statusBars.asPaddingValues()
 
