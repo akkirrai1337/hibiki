@@ -146,6 +146,9 @@ internal fun AniListSyncDialog(
     var progress by remember { mutableStateOf(0 to 0) }
     var report by remember { mutableStateOf<AniListSyncReport?>(sync.lastReport()) }
     var pushPlan by remember { mutableStateOf<AniListPushPlan?>(null) }
+    // Opened from the banner or a notification: the changes to confirm are the whole point, so the ordinary
+    // sync screen stays covered while they are prepared and until they have been confirmed or turned down.
+    var previewGate by remember { mutableStateOf(startWithPreview) }
     var pushResult by remember { mutableStateOf<AniListPushResult?>(null) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var showUnmatched by remember { mutableStateOf(false) }
@@ -194,7 +197,8 @@ internal fun AniListSyncDialog(
         if (connected) AniListSyncStatus.setNeedsSignIn(false)
     }
     LaunchedEffect(startWithPreview) {
-        if (startWithPreview && accountMode && connected && sourceId.isNotBlank() && !running) startPush()
+        if (!startWithPreview) return@LaunchedEffect
+        if (accountMode && connected && sourceId.isNotBlank() && !running) startPush() else previewGate = false
     }
     val canImport = !running && sourceId.isNotBlank() && (if (accountMode) connected else userName.isNotBlank())
 
@@ -203,6 +207,7 @@ internal fun AniListSyncDialog(
         properties = DialogProperties(usePlatformDefaultWidth = false, dismissOnBackPress = !running, decorFitsSystemWindows = false),
     ) {
         Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+          Box(Modifier.fillMaxSize()) {
             Column(Modifier.fillMaxSize().systemBarsPadding()) {
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(start = 8.dp, end = 16.dp, top = 8.dp),
@@ -541,15 +546,37 @@ internal fun AniListSyncDialog(
                     }
                 }
             }
+            if (startWithPreview && previewGate && errorMessage == null) {
+                Box(
+                    modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).systemBarsPadding(),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    if (pushPlan == null) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                            androidx.compose.material3.CircularProgressIndicator()
+                            Text(
+                                text = stringResource(R.string.anilist_sync_preparing),
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                }
+            }
+          }
         }
     }
 
     pushPlan?.let { plan ->
         PushPreview(
             plan = plan,
-            onDismiss = { pushPlan = null },
+            onDismiss = {
+                pushPlan = null
+                if (startWithPreview) onDismiss()
+            },
             onSend = {
                 pushPlan = null
+                previewGate = false
                 errorMessage = null
                 running = true
                 progress = 0 to (plan.items.size + plan.removals.size)

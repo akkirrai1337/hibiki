@@ -766,4 +766,5 @@
     <string name="anilist_sync_removal_hint_ask">Вибір щоразу.</string>
     <string name="anilist_sync_removal_hint_local">Тайтл іде з бібліотеки, запис в AniList залишається.</string>
     <string name="anilist_sync_removal_hint_everywhere">Запис в AniList теж видаляється.</string>
+    <string name="anilist_sync_preparing">Готую зміни…</string>
 </resources>

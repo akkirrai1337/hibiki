@@ -289,19 +289,6 @@ fun HomeScreen(
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             homeFeedContent(
-                                syncBanner = if (syncPending != null || syncNeedsSignIn) {
-                                    {
-                                        AniListSyncBanner(
-                                            pending = syncPending,
-                                            needsSignIn = syncNeedsSignIn,
-                                            onClick = {
-                                                syncDialog = if (syncPending != null) HomeSyncDialog.Preview else HomeSyncDialog.Open
-                                            },
-                                        )
-                                    }
-                                } else {
-                                    null
-                                },
                                 featuredAnime = featuredAnime,
                                 continueAnime = continueAnime,
                                 recentlyWatched = recentlyWatched,
@@ -338,7 +325,7 @@ fun HomeScreen(
             extraAction = if (syncAvailable) {
                 {
                     IconButton(
-                        onClick = { syncDialog = HomeSyncDialog.Open },
+                        onClick = { syncDialog = if (syncPending != null) HomeSyncDialog.Preview else HomeSyncDialog.Open },
                         modifier = Modifier.size(42.dp),
                     ) {
                         BadgedBox(badge = { if (syncPending != null || syncNeedsSignIn) Badge() }) {
@@ -411,7 +398,6 @@ fun HomeScreen(
 }
 
 private fun LazyListScope.homeFeedContent(
-    syncBanner: (@Composable () -> Unit)?,
     featuredAnime: List<Anime>,
     continueAnime: Anime?,
     recentlyWatched: List<Anime>,
@@ -425,11 +411,6 @@ private fun LazyListScope.homeFeedContent(
     sharedCardModifier: @Composable (Anime) -> Modifier,
     sharedPosterModifier: @Composable (Anime) -> Modifier,
 ) {
-    syncBanner?.let { banner ->
-        item(key = "anilist_sync_banner") {
-            Box(modifier = Modifier.padding(horizontal = UiDimens.ScreenPadding)) { banner() }
-        }
-    }
     item {
         if (featuredAnime.isNotEmpty()) {
             FeaturedCarousel(

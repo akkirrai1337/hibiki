@@ -778,4 +778,5 @@
     <string name="anilist_sync_removal_hint_ask">You choose each time.</string>
     <string name="anilist_sync_removal_hint_local">It leaves your library; its AniList entry stays.</string>
     <string name="anilist_sync_removal_hint_everywhere">Its AniList entry is deleted too.</string>
+    <string name="anilist_sync_preparing">Preparing the changes…</string>
 </resources>
