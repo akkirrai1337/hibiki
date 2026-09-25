@@ -143,10 +143,14 @@ fun SourceExtensionsScreen(
     var query by rememberSaveable { mutableStateOf("") }
     var searchOpen by rememberSaveable { mutableStateOf(false) }
     var languageFilterOpen by remember { mutableStateOf(false) }
-    var selectedLanguages by remember { mutableStateOf(emptySet<String>()) }
+    // The installed list and an opened repository filter independently, and a repository starts unfiltered.
+    var installedSelectedLanguages by remember { mutableStateOf(emptySet<String>()) }
+    var repositorySelectedLanguages by remember { mutableStateOf(emptySet<String>()) }
     var addRepositoryDialogOpen by remember { mutableStateOf(false) }
     var repositoryPendingRemovalUrl by remember { mutableStateOf<String?>(null) }
     var selectedRepositoryUrl by rememberSaveable { mutableStateOf<String?>(null) }
+    LaunchedEffect(selectedRepositoryUrl) { repositorySelectedLanguages = emptySet() }
+    val selectedLanguages = if (selectedRepositoryUrl != null) repositorySelectedLanguages else installedSelectedLanguages
     var repositoryRefreshSignal by remember { mutableStateOf(0) }
     val marketplaceHttpClient = remember { AndroidHttpClientFactory.create() }
     DisposableEffect(marketplaceHttpClient) { onDispose { marketplaceHttpClient.close() } }
@@ -670,11 +674,8 @@ fun SourceExtensionsScreen(
             languages = (repositoryFilterLanguages + selectedLanguages).distinct().sorted(),
             selectedLanguages = selectedLanguages,
             onLanguageToggle = { language ->
-                selectedLanguages = if (language in selectedLanguages) {
-                    selectedLanguages - language
-                } else {
-                    selectedLanguages + language
-                }
+                val updated = if (language in selectedLanguages) selectedLanguages - language else selectedLanguages + language
+                if (selectedRepositoryUrl != null) repositorySelectedLanguages = updated else installedSelectedLanguages = updated
             },
             onDismiss = { languageFilterOpen = false },
         )
