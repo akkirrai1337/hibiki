@@ -298,9 +298,24 @@ fun SourceExtensionsScreen(
     val selectedRepositoryExtensions = selectedRepositoryUrl
         ?.let { repoStates[it] as? RepoFetchResult.Loaded }
         ?.extensions
+    // The Sources tab lists only what is installed, so its filter offers only those languages; the
+    // repository lists offer the languages of what they carry.
+    val installedLanguages = AnimeSourceRegistry.installedApkExtensions().orEmpty()
+        .filterValues(InstalledApkExtensionInfo::isSystemInstalled)
+        .keys
+        .flatMap { packageName ->
+            val loaded = AnimeSourceRegistry.sources
+                .filter { AnimeSourceRegistry.apkPackageForSource(it.id) == packageName }
+                .map { it.language.tag }
+            loaded.ifEmpty {
+                listOf(apkRepositoryExtensions.firstOrNull { it.pkg == packageName }?.lang?.ifBlank { "all" } ?: "all")
+            }
+        }
+        .distinct()
+        .sorted()
     val repositoryFilterLanguages = selectedRepositoryExtensions
         ?.map(ApkRepositoryExtension::lang)?.distinct()?.sorted()
-        ?: extensionLanguages
+        ?: if (pagerState.currentPage == 0) installedLanguages else extensionLanguages
     val showLanguageFilter = selectedRepositoryUrl == null && pagerState.currentPage == 0 ||
         selectedRepositoryExtensions != null
 
