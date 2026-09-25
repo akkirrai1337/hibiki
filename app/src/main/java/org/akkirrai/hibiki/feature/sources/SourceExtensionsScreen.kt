@@ -176,7 +176,7 @@ fun SourceExtensionsScreen(
     val haptic = LocalHapticFeedback.current
     val updateChecker = remember(context) { SourceExtensionUpdateChecker.get(context) }
 
-    val pagerState = rememberPagerState(initialPage = 0) { if (onboarding) 1 else 2 }
+    val pagerState = rememberPagerState(initialPage = 0) { 2 }
     val tabScope = rememberCoroutineScope()
     val lifecycleOwner = LocalLifecycleOwner.current
     val pendingApkInstall = remember(pendingApkInstallPackage, pendingApkInstallPath) {
@@ -393,12 +393,7 @@ fun SourceExtensionsScreen(
             .distinctUntilChanged()
             .collect { selectedTab = it }
     }
-    // Onboarding has nothing to browse but the default repository, so it opens straight into it: the
-    // list there already carries installed and installable extensions together.
-    LaunchedEffect(onboarding, sourceRepositoryUrls) {
-        if (onboarding && selectedRepositoryUrl == null) selectedRepositoryUrl = sourceRepositoryUrls.firstOrNull()
-    }
-    BackHandler(enabled = searchOpen || (selectedRepositoryUrl != null && !onboarding)) {
+    BackHandler(enabled = searchOpen || selectedRepositoryUrl != null) {
         if (searchOpen) {
             query = ""
             searchOpen = false
@@ -485,11 +480,42 @@ fun SourceExtensionsScreen(
             onDismiss = { externalToTrust = null },
         )
     }
+    val repositoryContent: @Composable (String) -> Unit = { repositoryUrl ->
+        when (val result = repoStates[repositoryUrl]) {
+            is RepoFetchResult.Loaded -> ApkRepositoryList(
+                repositoryUrl = repositoryUrl,
+                extensions = result.extensions,
+                bottomContentPadding = bottomContentPadding,
+                query = query,
+                selectedLanguages = selectedLanguages,
+                hideNsfwSources = appPreferencesState.hideNsfwSources,
+                selectedSource = selectedSource,
+                installingPackages = installingApkPackages,
+                installErrors = apkInstallErrors,
+                installedExtensions = installedApkExtensions,
+                onInstall = installApkExtension,
+                onSelect = { packageName ->
+                    AnimeSourceRegistry.sourceIdsForApkPackage(packageName).firstOrNull()?.let { sourceId ->
+                        preferences.setAnimeSource(sourceId)
+                        haptic.performHapticFeedback(HapticFeedbackType.SegmentTick)
+                    }
+                },
+                onUninstall = uninstallApkExtension,
+            )
+            is RepoFetchResult.Error -> SourceRepositoryMessage(
+                message = stringResource(R.string.source_extensions_repository_error),
+                detail = result.message,
+                onRetry = { tabScope.launch { loadRepositories(listOf(repositoryUrl)) } },
+            )
+            RepoFetchResult.Loading, null ->
+                SourceRepositoryMessage(stringResource(R.string.source_extensions_repository_loading))
+        }
+    }
     Column(modifier = modifier.fillMaxSize()) {
         SourceExtensionsToolbar(
             title = selectedRepositoryUrl?.let(::repositoryTitle)
                 ?: stringResource(R.string.nav_sources),
-            onBack = selectedRepositoryUrl?.takeUnless { onboarding }?.let { { selectedRepositoryUrl = null } },
+            onBack = selectedRepositoryUrl?.let { { selectedRepositoryUrl = null } },
             searchOpen = searchOpen,
             showFilter = showLanguageFilter,
             filterCount = selectedLanguages.size,
@@ -522,38 +548,10 @@ fun SourceExtensionsScreen(
             label = "SourceRepositoryNavigation",
         ) { repositoryUrl ->
             if (repositoryUrl != null) {
-                when (val result = repoStates[repositoryUrl]) {
-                    is RepoFetchResult.Loaded -> ApkRepositoryList(
-                        repositoryUrl = repositoryUrl,
-                        extensions = result.extensions,
-                        bottomContentPadding = bottomContentPadding,
-                        query = query,
-                        selectedLanguages = selectedLanguages,
-                        hideNsfwSources = appPreferencesState.hideNsfwSources,
-                        selectedSource = selectedSource,
-                        installingPackages = installingApkPackages,
-                        installErrors = apkInstallErrors,
-                        installedExtensions = installedApkExtensions,
-                        onInstall = installApkExtension,
-                        onSelect = { packageName ->
-                            AnimeSourceRegistry.sourceIdsForApkPackage(packageName).firstOrNull()?.let { sourceId ->
-                                preferences.setAnimeSource(sourceId)
-                                haptic.performHapticFeedback(HapticFeedbackType.SegmentTick)
-                            }
-                        },
-                        onUninstall = uninstallApkExtension,
-                    )
-                    is RepoFetchResult.Error -> SourceRepositoryMessage(
-                        message = stringResource(R.string.source_extensions_repository_error),
-                        detail = result.message,
-                        onRetry = { tabScope.launch { loadRepositories(listOf(repositoryUrl)) } },
-                    )
-                    RepoFetchResult.Loading, null ->
-                        SourceRepositoryMessage(stringResource(R.string.source_extensions_repository_loading))
-                }
+                repositoryContent(repositoryUrl)
             } else {
                 Column(Modifier.fillMaxSize()) {
-                    if (!onboarding) PrimaryTabRow(
+                    PrimaryTabRow(
                         selectedTabIndex = pagerState.currentPage,
                         containerColor = MaterialTheme.colorScheme.background,
                     ) {
@@ -626,7 +624,11 @@ fun SourceExtensionsScreen(
                                 },
                             )
                         } else {
-                            RepositoriesList(
+                            val defaultRepositoryUrl = sourceRepositoryUrls.firstOrNull()
+                            if (onboarding && defaultRepositoryUrl != null) {
+                                // Onboarding has one repository to offer, so it lists it right away.
+                                repositoryContent(defaultRepositoryUrl)
+                            } else RepositoriesList(
                                 urls = sourceRepositoryUrls,
                                 repoStates = repoStates,
                                 bottomContentPadding = bottomContentPadding,
