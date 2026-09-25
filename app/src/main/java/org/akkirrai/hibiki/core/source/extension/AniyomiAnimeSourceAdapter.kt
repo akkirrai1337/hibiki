@@ -1,5 +1,6 @@
 package org.akkirrai.hibiki.core.source.extension
 
+import org.akkirrai.hibiki.core.log.AppLogger
 import eu.kanade.tachiyomi.animesource.AnimeCatalogueSource
 import eu.kanade.tachiyomi.animesource.ConfigurableAnimeSource
 import eu.kanade.tachiyomi.animesource.model.FetchType
@@ -300,8 +301,10 @@ class AniyomiAnimeSourceAdapter(
      */
     private suspend fun loadVideos(episode: SEpisode): List<HostedVideo> {
         val http = source as? AnimeHttpSource
+        val startedAt = System.currentTimeMillis()
         val hosters = guarded("hoster list") { source.getHosterList(episode) }
             .let { list -> http?.let { runCatching { it.sortedHosters(list) }.getOrDefault(list) } ?: list }
+        AppLogger.d(TAG, "${source.name}: ${hosters.size} hosters in ${System.currentTimeMillis() - startedAt}ms")
         var firstError: Throwable? = null
         val listed = coroutineScope {
             hosters.map { hoster ->
@@ -309,13 +312,16 @@ class AniyomiAnimeSourceAdapter(
                 async {
                     try {
                         // Videos returned by the source for a hoster are already ordered by its own hook.
+                        val hosterStartedAt = System.currentTimeMillis()
                         val videos = hoster.videoList
                             ?.let { preset -> http?.let { runCatching { it.sortedVideos(preset) }.getOrDefault(preset) } ?: preset }
                             ?: guarded("video list") { source.getVideoList(hoster) }
+                        AppLogger.d(TAG, "${source.name}: hoster ${hosterName ?: "-"} gave ${videos.size} videos in ${System.currentTimeMillis() - hosterStartedAt}ms")
                         videos.map { HostedVideo(it, hosterName) }
                     } catch (cancelled: CancellationException) {
                         throw cancelled
                     } catch (error: Exception) {
+                        AppLogger.w(TAG, "${source.name}: hoster ${hosterName ?: "-"} failed: ${error.message}")
                         if (firstError == null) firstError = error
                         emptyList()
                     }
@@ -348,6 +354,7 @@ class AniyomiAnimeSourceAdapter(
                             } catch (cancelled: CancellationException) {
                                 throw cancelled
                             } catch (error: Exception) {
+                                AppLogger.w(TAG, "${source.name}: resolving a video failed: ${error.message}")
                                 if (firstError == null) firstError = error
                                 null
                             }
@@ -356,6 +363,7 @@ class AniyomiAnimeSourceAdapter(
                 }.awaitAll()
             }.filterNotNull()
         }
+        AppLogger.d(TAG, "${source.name}: ${resolved.size} of ${ordered.size} videos resolved, ${System.currentTimeMillis() - startedAt}ms in total")
         if (resolved.isEmpty()) firstError?.let { throw it }
         return resolved
     }
@@ -450,6 +458,7 @@ class AniyomiAnimeSourceAdapter(
     private companion object {
         const val MAX_PAGE_SIZE = 100
         const val MAX_CACHED_QUERIES = 12
+        const val TAG = "AniyomiAdapter"
         const val OPERATION_TIMEOUT_MS = 90_000L
         const val RESOLVE_PARALLELISM = 4
 
