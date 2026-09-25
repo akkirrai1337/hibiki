@@ -693,4 +693,14 @@
     <string name="anilist_sync_or_public">Или прочитать публичный список по имени:</string>
     <string name="anilist_sync_method_account">Аккаунт</string>
     <string name="anilist_sync_method_username">Ник</string>
+    <string name="anilist_sync_skip_nsfw">Пропускать источники 18+</string>
+    <string name="anilist_sync_nsfw_source">Этот источник помечен 18+. Выключите «Пропускать источники 18+» или выберите другой.</string>
+    <string name="anilist_push_button">Отправить библиотеку в AniList…</string>
+    <string name="anilist_push_title">Отправка в AniList</string>
+    <string name="anilist_push_summary">Будет обновлено тайтлов в AniList: %1$d</string>
+    <string name="anilist_push_nothing">Отправлять нечего: AniList уже актуален.</string>
+    <string name="anilist_push_skipped">Пропущено %1$d (нет уверенного совпадения или в AniList уже стоит другое):</string>
+    <string name="anilist_push_episode">сер. %1$d</string>
+    <string name="anilist_push_send">Отправить</string>
+    <string name="anilist_push_result">Отправлено %1$d · ошибок %2$d</string>
 </resources>

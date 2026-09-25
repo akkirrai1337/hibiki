@@ -28,8 +28,8 @@ class AniListPrivateListException : IllegalStateException("The AniList profile o
 class AniListUserNotFoundException : IllegalStateException("AniList user not found")
 
 /**
- * Reads a user's list and favourites without signing in. This is all a one-way pull needs: a public
- * profile is readable by anyone, and it keeps the feature free of OAuth (and of a client id) entirely.
+ * Reads a user's list and favourites, and (with a token) writes entries. Reading needs no sign-in for a
+ * public profile, which keeps a one-way pull free of OAuth entirely.
  */
 class AniListPublicLibrary(
     private val client: HttpClient,
@@ -89,6 +89,49 @@ class AniListPublicLibrary(
         return result
     }
 
+    suspend fun search(name: String): List<AniListSyncEntry> {
+        val data = execute<SearchData>(
+            SEARCH_QUERY,
+            JsonObject(mapOf("q" to JsonPrimitive(name))),
+        )
+        return data.page.media.orEmpty().map { media ->
+            AniListSyncEntry(
+                mediaId = media.id,
+                status = null,
+                progress = 0,
+                updatedAtSeconds = null,
+                names = media.names(),
+                year = media.year(),
+                format = media.format,
+                episodes = media.episodes,
+            )
+        }
+    }
+
+    /** Creates or updates list entries: each is a title, the status to set and the progress to set (either may be null). */
+    suspend fun saveEntries(entries: List<Triple<Int, AniListMediaListStatus?, Int?>>) {
+        if (entries.isEmpty()) return
+        // Ids, enum names and integers only, so nothing here needs escaping.
+        val body = entries.mapIndexed { index, (mediaId, status, progress) ->
+            val args = buildList {
+                add("mediaId: $mediaId")
+                status?.let { add("status: ${it.name}") }
+                progress?.let { add("progress: $it") }
+            }.joinToString(", ")
+            "e$index: SaveMediaListEntry($args) { id }"
+        }.joinToString("\n")
+        execute<JsonObject>("mutation {\n$body\n}", JsonObject(emptyMap()))
+    }
+
+    /** Toggles favourites on: the caller passes only titles that are not favourites yet. */
+    suspend fun toggleFavourites(mediaIds: List<Int>) {
+        if (mediaIds.isEmpty()) return
+        val body = mediaIds.mapIndexed { index, id ->
+            "f$index: ToggleFavourite(animeId: $id) { anime { nodes { id } } }"
+        }.joinToString("\n")
+        execute<JsonObject>("mutation {\n$body\n}", JsonObject(emptyMap()))
+    }
+
     private suspend inline fun <reified T> execute(query: String, variables: JsonObject): T {
         val response = client.post(GRAPHQL_URL) {
             accessToken?.let { header(io.ktor.http.HttpHeaders.Authorization, "Bearer $it") }
@@ -124,6 +167,13 @@ class AniListPublicLibrary(
               }
             }
         """
+        const val SEARCH_QUERY = """
+            query Search(${'$'}q: String) {
+              Page(perPage: 6) {
+                media(search: ${'$'}q, type: ANIME) { $MEDIA_FIELDS }
+              }
+            }
+        """
         const val FAVOURITES_QUERY = """
             query Favourites(${'$'}userName: String, ${'$'}page: Int) {
               User(name: ${'$'}userName) {
@@ -155,6 +205,10 @@ class AniListPublicLibrary(
     val updatedAt: Long? = null,
     val media: MediaDto? = null,
 )
+@Serializable private data class SearchData(
+    @kotlinx.serialization.SerialName("Page") val page: SearchPageDto,
+)
+@Serializable private data class SearchPageDto(val media: List<MediaDto>? = null)
 @Serializable private data class FavouritesData(
     @kotlinx.serialization.SerialName("User") val user: UserDto? = null,
 )

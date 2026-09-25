@@ -13,12 +13,14 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -46,7 +48,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.akkirrai.hibiki.R
+import org.akkirrai.hibiki.core.anilist.AniListLibraryPush
 import org.akkirrai.hibiki.core.anilist.AniListLibrarySync
+import org.akkirrai.hibiki.core.anilist.AniListNsfwSourceException
+import org.akkirrai.hibiki.core.anilist.AniListPushPlan
+import org.akkirrai.hibiki.core.anilist.AniListPushResult
 import org.akkirrai.hibiki.core.anilist.AniListPrivateListException
 import org.akkirrai.hibiki.core.anilist.AniListRepository
 import org.akkirrai.hibiki.core.anilist.AniListSyncReport
@@ -98,6 +104,10 @@ internal fun AniListSyncDialog(
         )
     }
     var useAccount by remember { mutableStateOf(sync.useAccount) }
+    var skipNsfw by remember { mutableStateOf(sync.skipNsfw) }
+    val push = remember { AniListLibraryPush(context) }
+    var pushPlan by remember { mutableStateOf<AniListPushPlan?>(null) }
+    var pushResult by remember { mutableStateOf<AniListPushResult?>(null) }
     var running by remember { mutableStateOf(false) }
     var progress by remember { mutableStateOf(0 to 0) }
     var report by remember { mutableStateOf<AniListSyncReport?>(sync.lastReport()) }
@@ -108,6 +118,41 @@ internal fun AniListSyncDialog(
     val missingText = stringResource(R.string.anilist_sync_user_missing)
     val offlineText = stringResource(R.string.home_error_no_internet)
     val failedText = stringResource(R.string.anilist_sync_failed)
+    val nsfwSourceText = stringResource(R.string.anilist_sync_nsfw_source)
+
+    fun describe(error: Throwable): String? = when (error) {
+        is AniListPrivateListException -> privateText
+        is AniListUserNotFoundException -> missingText
+        is NoInternetConnectionException -> offlineText
+        is AniListNsfwSourceException -> nsfwSourceText
+        else -> "$failedText: ${error.message.orEmpty()}"
+    }
+
+    pushPlan?.let { plan ->
+        PushPreviewDialog(
+            plan = plan,
+            onDismiss = { pushPlan = null },
+            onSend = {
+                pushPlan = null
+                errorMessage = null
+                running = true
+                progress = 0 to plan.items.size
+                scope.launch {
+                    try {
+                        pushResult = withContext(Dispatchers.IO) {
+                            push.execute(plan) { done, total -> progress = done to total }
+                        }
+                    } catch (error: CancellationException) {
+                        throw error
+                    } catch (error: Throwable) {
+                        errorMessage = describe(error)
+                    } finally {
+                        running = false
+                    }
+                }
+            },
+        )
+    }
 
     AlertDialog(
         onDismissRequest = { if (!running) onDismiss() },
@@ -220,6 +265,57 @@ internal fun AniListSyncDialog(
                         }
                     }
                 }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    Text(
+                        text = stringResource(R.string.anilist_sync_skip_nsfw),
+                        style = MaterialTheme.typography.bodyLarge,
+                        modifier = Modifier.weight(1f),
+                    )
+                    Switch(
+                        checked = skipNsfw,
+                        enabled = !running,
+                        onCheckedChange = {
+                            skipNsfw = it
+                            sync.skipNsfw = it
+                        },
+                    )
+                }
+                if (useAccount && connected) {
+                    OutlinedButton(
+                        enabled = !running && sourceId.isNotBlank(),
+                        modifier = Modifier.fillMaxWidth(),
+                        onClick = {
+                            sync.sourceId = sourceId
+                            errorMessage = null
+                            pushResult = null
+                            running = true
+                            progress = 0 to 0
+                            scope.launch {
+                                try {
+                                    pushPlan = withContext(Dispatchers.IO) {
+                                        push.plan { done, total -> progress = done to total }
+                                    }
+                                } catch (error: CancellationException) {
+                                    throw error
+                                } catch (error: Throwable) {
+                                    errorMessage = describe(error)
+                                } finally {
+                                    running = false
+                                }
+                            }
+                        },
+                    ) { Text(stringResource(R.string.anilist_push_button)) }
+                }
+                pushResult?.let { result ->
+                    Text(
+                        text = stringResource(R.string.anilist_push_result, result.sent, result.failed),
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                }
                 if (running) {
                     Text(
                         text = stringResource(R.string.anilist_sync_running, progress.first, progress.second),
@@ -274,14 +370,8 @@ internal fun AniListSyncDialog(
                             }
                         } catch (error: CancellationException) {
                             throw error
-                        } catch (error: AniListPrivateListException) {
-                            errorMessage = privateText
-                        } catch (error: AniListUserNotFoundException) {
-                            errorMessage = missingText
-                        } catch (error: NoInternetConnectionException) {
-                            errorMessage = offlineText
                         } catch (error: Throwable) {
-                            errorMessage = "$failedText: ${error.message.orEmpty()}"
+                            errorMessage = describe(error)
                         } finally {
                             running = false
                         }
@@ -292,6 +382,64 @@ internal fun AniListSyncDialog(
         dismissButton = {
             TextButton(enabled = !running, onClick = onDismiss) { Text(stringResource(R.string.anilist_sync_close)) }
         },
+    )
+}
+
+@Composable
+private fun PushPreviewDialog(
+    plan: AniListPushPlan,
+    onSend: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.anilist_push_title)) },
+        text = {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Text(
+                    text = if (plan.items.isEmpty()) {
+                        stringResource(R.string.anilist_push_nothing)
+                    } else {
+                        stringResource(R.string.anilist_push_summary, plan.items.size)
+                    },
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                plan.items.forEach { item ->
+                    Column {
+                        Text(item.name, style = MaterialTheme.typography.bodyMedium, maxLines = 2)
+                        val details = buildList {
+                            item.statusCategory?.let { add(stringResource(it.labelResId)) }
+                            item.progress?.let { add(stringResource(R.string.anilist_push_episode, it)) }
+                            if (item.favourite) add("\u2605")
+                        }.joinToString(" \u00b7 ")
+                        Text(
+                            text = details,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+                if (plan.skipped.isNotEmpty()) {
+                    Text(
+                        text = stringResource(R.string.anilist_push_skipped, plan.skipped.size),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    plan.skipped.forEach { name ->
+                        Text(name, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            if (plan.items.isNotEmpty()) {
+                Button(onClick = onSend) { Text(stringResource(R.string.anilist_push_send)) }
+            }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.anilist_sync_close)) } },
     )
 }
 

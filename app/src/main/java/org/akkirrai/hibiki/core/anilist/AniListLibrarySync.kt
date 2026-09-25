@@ -9,16 +9,22 @@ import kotlinx.coroutines.sync.withPermit
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import org.akkirrai.beakokit.api.AnimeKey
 import org.akkirrai.beakokit.api.SourceId
 import org.akkirrai.beakokit.matching.TitleMatcher
 import org.akkirrai.beakokit.model.AnimeTitle
+import org.akkirrai.hibiki.app.settings.AppPreferences
 import org.akkirrai.hibiki.core.log.AppLogger
 import org.akkirrai.hibiki.core.model.Anime
 import org.akkirrai.hibiki.core.network.AndroidHttpClientFactory
 import org.akkirrai.hibiki.core.network.NoInternetConnectionException
 import org.akkirrai.hibiki.core.source.AnimeSearchRepository
 import org.akkirrai.hibiki.core.source.LibraryCategory
+import org.akkirrai.hibiki.core.source.AnimeSourceRegistry
 import org.akkirrai.hibiki.core.source.LibraryRepository
+import org.akkirrai.hibiki.core.source.extension.RepositoryCatalogCache
+
+class AniListNsfwSourceException : IllegalStateException("The chosen source is marked 18+")
 
 data class AniListSyncReport(
     val added: Int,
@@ -55,6 +61,11 @@ class AniListLibrarySync(context: Context) {
         get() = prefs.getBoolean(KEY_USE_ACCOUNT, true)
         set(value) { prefs.edit().putBoolean(KEY_USE_ACCOUNT, value).apply() }
 
+    /** Leave out titles from sources marked 18+: they are neither imported nor sent to AniList. */
+    var skipNsfw: Boolean
+        get() = prefs.getBoolean(KEY_SKIP_NSFW, true)
+        set(value) { prefs.edit().putBoolean(KEY_SKIP_NSFW, value).apply() }
+
     var sourceId: String
         get() = prefs.getString(KEY_SOURCE, "").orEmpty()
         set(value) { prefs.edit().putString(KEY_SOURCE, value).apply() }
@@ -65,6 +76,7 @@ class AniListLibrarySync(context: Context) {
 
     suspend fun run(onProgress: (done: Int, total: Int) -> Unit = { _, _ -> }): AniListSyncReport {
         val source = sourceId.ifBlank { error("Sync source is not chosen") }
+        if (skipNsfw && isNsfwSource(source)) throw AniListNsfwSourceException()
         val client = AndroidHttpClientFactory.create()
         val search = AnimeSearchRepository(appContext, client = client, closeClientOnClose = false)
         try {
@@ -143,6 +155,37 @@ class AniListLibrarySync(context: Context) {
         } finally {
             search.close()
             client.close()
+        }
+    }
+
+    /** Every title a sync has linked, by its title id, for any source. */
+    internal fun linkedMediaIds(): Map<String, Int> = loadState().links
+        .filterValues { it.titleId.isNotBlank() }
+        .entries.associate { (key, link) -> link.titleId to key.substringAfterLast(':').toInt() }
+
+    /** The category the last import applied for a title, whichever source it went through. */
+    internal fun appliedCategory(mediaId: Int): String? = loadState().applied.entries
+        .firstOrNull { it.key.endsWith(":$mediaId") }?.value
+
+    /** The best AniList candidate for a title of the app, or null unless it clearly wins. */
+    internal fun pickBestAniList(local: AnimeTitle, candidates: List<AniListSyncEntry>): Int? {
+        val scored = candidates.map { it to confidence(it, local) }.sortedByDescending { it.second }
+        val (best, bestScore) = scored.firstOrNull() ?: return null
+        if (bestScore < MIN_CONFIDENCE) return null
+        val runnerUp = scored.getOrNull(1)?.second ?: 0.0
+        if (bestScore - runnerUp < MIN_MARGIN) return null
+        return best.mediaId
+    }
+
+    internal fun isNsfwTitle(titleId: String): Boolean =
+        AnimeKey.parse(titleId)?.sourceId?.value?.let(::isNsfwSource) == true
+
+    /** Whether the extension behind a source is marked 18+ in any of the repositories that list it. */
+    private fun isNsfwSource(sourceId: String): Boolean {
+        val packageName = AnimeSourceRegistry.apkPackageForSource(SourceId(sourceId)) ?: return false
+        return AppPreferences.readSourceRepositoryUrls(appContext).any { url ->
+            RepositoryCatalogCache.get(appContext, url)?.extensions
+                ?.any { it.pkg == packageName && it.nsfw != 0 } == true
         }
     }
 
@@ -317,6 +360,7 @@ class AniListLibrarySync(context: Context) {
         const val KEY_USER = "user"
         const val KEY_SOURCE = "source"
         const val KEY_USE_ACCOUNT = "use_account"
+        const val KEY_SKIP_NSFW = "skip_nsfw"
         const val KEY_STATE = "state"
         const val KEY_REPORT = "report"
         const val LOOKUP_CONCURRENCY = 3

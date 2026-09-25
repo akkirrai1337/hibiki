@@ -695,4 +695,14 @@
     <string name="anilist_sync_or_public">Or read a public list by username:</string>
     <string name="anilist_sync_method_account">Account</string>
     <string name="anilist_sync_method_username">Username</string>
+    <string name="anilist_sync_skip_nsfw">Skip 18+ sources</string>
+    <string name="anilist_sync_nsfw_source">This source is marked 18+. Turn off “Skip 18+ sources” or choose another one.</string>
+    <string name="anilist_push_button">Send library to AniList…</string>
+    <string name="anilist_push_title">Send to AniList</string>
+    <string name="anilist_push_summary">%1$d titles will be updated on AniList:</string>
+    <string name="anilist_push_nothing">Nothing to send: AniList is already up to date.</string>
+    <string name="anilist_push_skipped">Skipped %1$d (no confident match, or already set differently on AniList):</string>
+    <string name="anilist_push_episode">ep. %1$d</string>
+    <string name="anilist_push_send">Send</string>
+    <string name="anilist_push_result">Sent %1$d · failed %2$d</string>
 </resources>
