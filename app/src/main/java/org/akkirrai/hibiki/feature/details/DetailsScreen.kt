@@ -842,12 +842,16 @@ private fun DetailHeroSection(
             ?.takeIf { it > 0f }
             ?.let { (maxWidth / it).coerceIn(120.dp, 224.dp) }
             ?: 224.dp
-        val heroTopTrim = if (hasHeroMedia) 0.dp else 96.dp
+        // The wide hero is kept once it has been shown. The resume frame disappears when the last watched
+        // episode is removed, and letting the hero collapse with it made the whole page jump up.
+        var reservesBanner by remember(anime.id) { mutableStateOf(hasHeroMedia) }
+        if (hasHeroMedia && !reservesBanner) reservesBanner = true
+        val heroTopTrim = if (reservesBanner) 0.dp else 96.dp
         val posterTop = bannerHeight - 12.dp - heroTopTrim
         // Without a banner the text block starts level with the poster and is as tall as it, so the
         // description gets the room instead of being cut short beside the cover.
-        val detailsTop = if (hasHeroMedia) bannerHeight else posterTop
-        val detailsBoxHeight = if (hasHeroMedia) detailsHeight else posterExpandedHeight
+        val detailsTop = if (reservesBanner) bannerHeight else posterTop
+        val detailsBoxHeight = if (reservesBanner) detailsHeight else posterExpandedHeight
         val heroHeight = bannerHeight + 188.dp - heroTopTrim
 
         Column(

@@ -204,8 +204,10 @@ fun LibraryScreen(
                 )
             }
         } else {
+            // A title has one card. Two entries with the same id (a leftover duplicate row, or a downloaded copy
+            // listed beside a saved one) used to reach LazyColumn as the same key and crash it.
             items(
-                items = visibleEntries,
+                items = visibleEntries.distinctBy { it.anime.id },
                 key = { it.anime.id }
             ) { entry ->
                 LibraryAnimeCard(
