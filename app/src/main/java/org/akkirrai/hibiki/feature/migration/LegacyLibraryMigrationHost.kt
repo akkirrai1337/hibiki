@@ -2,6 +2,28 @@ package org.akkirrai.hibiki.feature.migration
 
 import android.app.Application
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.rounded.ArrowDownward
+import androidx.compose.material.icons.rounded.SwapHoriz
+import androidx.compose.material.icons.rounded.UnfoldMore
+import androidx.compose.material3.Button
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.painterResource
+import coil.compose.AsyncImage
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -120,83 +142,156 @@ fun LegacyLibraryMigrationHost() {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun OfferDialog(offer: LegacyMigrationState.Offer, viewModel: LegacyLibraryMigrationViewModel) {
     // Read from the registry inside composition: extensions are installed and loaded while this
-    // dialog is open, and the suggestions should appear the moment one is.
+    // sheet is open, and the suggestions should appear the moment one is.
     val installed = AnimeSourceRegistry.sources
     val targets = offer.sources.mapNotNull { legacy ->
         val target = offer.chosen[legacy.id]?.let { id -> installed.firstOrNull { it.id == id } }
             ?: LegacyLibraryMatching.suggestTarget(legacy.name, installed) { it.info.name }
         target?.let { legacy.id to it.id }
     }.toMap()
+    val titlesToMove = offer.sources.filter { it.id in targets }.sumOf { it.entryCount }
 
-    AlertDialog(
+    ModalBottomSheet(
         onDismissRequest = viewModel::later,
-        title = { Text(stringResource(R.string.migration_title)) },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text(stringResource(R.string.migration_message), style = MaterialTheme.typography.bodyMedium)
-                LazyColumn(
-                    modifier = Modifier.heightIn(max = 320.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+    ) {
+        Column(
+            modifier = Modifier
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp)
+                .padding(bottom = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            Row(horizontalArrangement = Arrangement.spacedBy(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier.size(48.dp).background(MaterialTheme.colorScheme.primaryContainer, CircleShape),
+                    contentAlignment = Alignment.Center,
                 ) {
-                    items(offer.sources, key = LegacySource::id) { legacy ->
-                        LegacySourceRow(
-                            legacy = legacy,
-                            installed = installed,
-                            selected = installed.firstOrNull { it.id == targets[legacy.id] },
-                            onSelect = { viewModel.choose(legacy.id, it?.id) },
-                        )
-                    }
+                    Icon(
+                        Icons.Rounded.SwapHoriz,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                    )
                 }
-                if (installed.isEmpty()) {
+                Text(
+                    stringResource(R.string.migration_title),
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold,
+                )
+            }
+            Text(
+                stringResource(R.string.migration_message),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            offer.sources.forEach { legacy ->
+                LegacySourceCard(
+                    legacy = legacy,
+                    installed = installed,
+                    selected = installed.firstOrNull { it.id == targets[legacy.id] },
+                    onSelect = { viewModel.choose(legacy.id, it?.id) },
+                )
+            }
+            if (installed.isEmpty()) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f), RoundedCornerShape(16.dp))
+                        .padding(14.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(Icons.Outlined.Info, contentDescription = null, tint = MaterialTheme.colorScheme.onSecondaryContainer)
                     Text(
                         stringResource(R.string.migration_install_hint),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer,
                     )
                 }
             }
-        },
-        confirmButton = {
-            TextButton(onClick = { viewModel.start(targets) }, enabled = targets.isNotEmpty()) {
-                Text(stringResource(R.string.migration_start))
+            Button(
+                onClick = { viewModel.start(targets) },
+                enabled = targets.isNotEmpty(),
+                modifier = Modifier.fillMaxWidth().height(52.dp),
+            ) {
+                Text(
+                    if (titlesToMove > 0) {
+                        stringResource(R.string.migration_start_count, titlesToMove)
+                    } else {
+                        stringResource(R.string.migration_start)
+                    },
+                )
             }
-        },
-        dismissButton = {
-            Row {
-                TextButton(onClick = viewModel::never) { Text(stringResource(R.string.migration_never)) }
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
                 TextButton(onClick = viewModel::later) { Text(stringResource(R.string.migration_later)) }
+                TextButton(onClick = viewModel::never) {
+                    Text(stringResource(R.string.migration_never), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
             }
-        },
-    )
+        }
+    }
 }
 
 @Composable
-private fun LegacySourceRow(
+private fun LegacySourceCard(
     legacy: LegacySource,
     installed: List<AnimeSourceDescriptor>,
     selected: AnimeSourceDescriptor?,
     onSelect: (AnimeSourceDescriptor?) -> Unit,
 ) {
     var expanded by remember { mutableStateOf(false) }
-    Column {
-        Text(legacy.name, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
-        Text(
-            pluralStringResource(R.plurals.migration_entries, legacy.entryCount, legacy.entryCount),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Row(
-            modifier = Modifier.fillMaxWidth().clickable { expanded = true }.padding(vertical = 6.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                text = selected?.info?.name ?: stringResource(R.string.migration_no_target),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.primary,
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(MaterialTheme.colorScheme.surfaceContainerHigh, RoundedCornerShape(20.dp))
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(legacy.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                Text(
+                    pluralStringResource(R.plurals.migration_entries, legacy.entryCount, legacy.entryCount),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Icon(
+                Icons.Rounded.ArrowDownward,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(20.dp),
             )
+        }
+        Box {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(MaterialTheme.colorScheme.surface)
+                    .border(
+                        1.dp,
+                        if (selected != null) MaterialTheme.colorScheme.primary.copy(alpha = 0.6f) else MaterialTheme.colorScheme.outlineVariant,
+                        RoundedCornerShape(14.dp),
+                    )
+                    .clickable { expanded = true }
+                    .padding(horizontal = 12.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                if (selected != null) SourceIcon(selected)
+                Text(
+                    text = selected?.info?.name ?: stringResource(R.string.migration_no_target),
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = if (selected != null) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.weight(1f),
+                )
+                Icon(Icons.Rounded.UnfoldMore, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
             DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
                 DropdownMenuItem(
                     text = { Text(stringResource(R.string.migration_skip_source)) },
@@ -205,12 +300,24 @@ private fun LegacySourceRow(
                 installed.forEach { source ->
                     DropdownMenuItem(
                         text = { Text(source.info.name) },
+                        leadingIcon = { SourceIcon(source) },
                         onClick = { expanded = false; onSelect(source) },
                     )
                 }
             }
         }
     }
+}
+
+@Composable
+private fun SourceIcon(source: AnimeSourceDescriptor) {
+    AsyncImage(
+        model = source.iconUrl,
+        placeholder = painterResource(source.iconRes),
+        error = painterResource(source.iconRes),
+        contentDescription = null,
+        modifier = Modifier.size(24.dp).clip(CircleShape),
+    )
 }
 
 @Composable

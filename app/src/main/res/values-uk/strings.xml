@@ -746,4 +746,5 @@
     <string name="onboarding_anilist_manage">Керування синхронізацією</string>
     <string name="onboarding_anilist_needs_source">Спочатку встанови джерело, щоб тайтли AniList можна було знайти в ньому.</string>
     <string name="onboarding_anilist_skip_hint">Можна пропустити й налаштувати пізніше в налаштуваннях.</string>
+    <string name="migration_start_count">Перенести тайтлів: %1$d</string>
 </resources>
