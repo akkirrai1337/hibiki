@@ -51,6 +51,7 @@ import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.Palette
 import androidx.compose.material.icons.outlined.Public
 import androidx.compose.material.icons.outlined.Share
+import androidx.compose.material.icons.outlined.Sync
 import androidx.compose.material.icons.outlined.Translate
 import androidx.compose.material3.Icon
 import androidx.compose.material3.RadioButton
@@ -132,6 +133,7 @@ fun SettingsScreen(
     val appPreferences = LocalAppPreferences.current
     val preferences = LocalAppPreferencesState.current
     var isLanguageDialogOpen by rememberSaveable { mutableStateOf(false) }
+    var isAniListSyncOpen by rememberSaveable { mutableStateOf(false) }
     val discordRpcManager = remember(context) { DiscordRpcManager.get(context) }
     var isDiscordAuthDialogOpen by remember { mutableStateOf(false) }
     var pendingDiscordToken by remember { mutableStateOf<String?>(null) }
@@ -235,14 +237,25 @@ fun SettingsScreen(
 
         item(key = "sources") {
             SettingsSection(title = stringResource(R.string.settings_sources)) {
-                SettingsItems(count = 1) { _, shape ->
-                    SettingsSwitchItem(
-                        icon = Icons.Filled.VisibilityOff,
-                        title = stringResource(R.string.settings_hide_nsfw_sources),
-                        checked = preferences.hideNsfwSources,
-                        shape = shape,
-                        onCheckedChange = appPreferences::setHideNsfwSources,
-                    )
+                SettingsItems(count = 2) { index, shape ->
+                    when (index) {
+                        0 -> SettingsSwitchItem(
+                            icon = Icons.Filled.VisibilityOff,
+                            title = stringResource(R.string.settings_hide_nsfw_sources),
+                            checked = preferences.hideNsfwSources,
+                            shape = shape,
+                            onCheckedChange = appPreferences::setHideNsfwSources,
+                        )
+
+                        1 -> SettingsActionItem(
+                            icon = Icons.Outlined.Sync,
+                            title = stringResource(R.string.settings_anilist_sync),
+                            subtitle = stringResource(R.string.settings_anilist_sync_summary),
+                            shape = shape,
+                            showNavigationArrow = true,
+                            onClick = { isAniListSyncOpen = true },
+                        )
+                    }
                 }
             }
         }
@@ -393,6 +406,13 @@ fun SettingsScreen(
                 )
             }
         }
+    }
+
+    if (isAniListSyncOpen) {
+        AniListSyncDialog(
+            defaultSourceId = preferences.animeSource.value,
+            onDismiss = { isAniListSyncOpen = false },
+        )
     }
 
     if (isLanguageDialogOpen) {

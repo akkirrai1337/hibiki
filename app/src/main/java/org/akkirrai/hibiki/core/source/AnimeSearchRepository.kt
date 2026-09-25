@@ -30,6 +30,7 @@ import org.akkirrai.beakokit.model.AnimeSearchRequest
 import org.akkirrai.beakokit.model.AnimeSearchSort
 import org.akkirrai.beakokit.model.AnimeReleaseStatus
 import org.akkirrai.hibiki.core.model.ReleaseStatusText
+import org.akkirrai.beakokit.api.SourceId
 import org.akkirrai.beakokit.model.AnimeTitle
 import org.akkirrai.beakokit.model.AnimeTrailerTitle
 import org.akkirrai.hibiki.app.settings.AppPreferences
@@ -121,6 +122,21 @@ class AnimeSearchRepository(
         )
         trimOldestEntries(searchCache, MAX_SEARCH_CACHE_ENTRIES) { it.cachedAt }
         return results
+    }
+
+    /**
+     * A search on one specific source rather than the selected one, returning the source's own title
+     * (for matching on its names, year and episode count) next to the card the app would show for it.
+     * Not cached: it is used for one-off lookups such as library sync.
+     */
+    suspend fun findOnSource(sourceId: SourceId, query: String, limit: Int = 8): List<Pair<AnimeTitle, Anime>> {
+        ensureInternetConnection()
+        val runtime = sourceManager?.runtime(sourceId)
+            ?: error("Anime source selection requires an Android context")
+        val preferEnglish = preferEnglish()
+        return runtime.search(
+            AnimeSearchRequest(query = query.trim(), limit = limit, offset = 0, sort = AnimeSearchSort.RELEVANCE),
+        ).map { title -> title to title.toAnime(preferEnglish = preferEnglish).copy(title = title.displayName) }
     }
 
     suspend fun getSearchFilterCatalog(): AnimeSearchFilterCatalog {

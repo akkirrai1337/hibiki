@@ -675,4 +675,17 @@
     <string name="source_extensions_external_installer_unknown">an unknown app</string>
     <string name="filter_rating_any">Any rating</string>
     <string name="filter_rating_up_to">Up to %1$s</string>
+    <string name="settings_anilist_sync">AniList library sync</string>
+    <string name="settings_anilist_sync_summary">Import your AniList list into the library</string>
+    <string name="anilist_sync_hint">One way, from AniList to Hibiki. Reads a public list; nothing is changed on AniList or removed from Hibiki.</string>
+    <string name="anilist_sync_username">AniList username</string>
+    <string name="anilist_sync_source">Find titles on the source</string>
+    <string name="anilist_sync_start">Sync</string>
+    <string name="anilist_sync_close">Close</string>
+    <string name="anilist_sync_running">Syncing… %1$d / %2$d</string>
+    <string name="anilist_sync_result">Added %1$d · updated %2$d · not found %3$d</string>
+    <string name="anilist_sync_unmatched">Titles not found on this source</string>
+    <string name="anilist_sync_private">The AniList profile or its list is private. Make it public and try again.</string>
+    <string name="anilist_sync_user_missing">No AniList user with this name.</string>
+    <string name="anilist_sync_failed">Sync failed</string>
 </resources>

@@ -673,4 +673,17 @@
     <string name="source_extensions_external_installer_unknown">неизвестное приложение</string>
     <string name="filter_rating_any">Любой рейтинг</string>
     <string name="filter_rating_up_to">До %1$s</string>
+    <string name="settings_anilist_sync">Синхронизация с AniList</string>
+    <string name="settings_anilist_sync_summary">Импорт списка AniList в библиотеку</string>
+    <string name="anilist_sync_hint">В одну сторону: из AniList в Hibiki. Читается публичный список; в AniList ничего не меняется, из Hibiki ничего не удаляется.</string>
+    <string name="anilist_sync_username">Имя пользователя AniList</string>
+    <string name="anilist_sync_source">Искать тайтлы на источнике</string>
+    <string name="anilist_sync_start">Синхронизировать</string>
+    <string name="anilist_sync_close">Закрыть</string>
+    <string name="anilist_sync_running">Синхронизация… %1$d / %2$d</string>
+    <string name="anilist_sync_result">Добавлено %1$d · обновлено %2$d · не найдено %3$d</string>
+    <string name="anilist_sync_unmatched">Тайтлы, не найденные на этом источнике</string>
+    <string name="anilist_sync_private">Профиль AniList или его список закрыт. Сделайте его публичным и повторите.</string>
+    <string name="anilist_sync_user_missing">Пользователь AniList с таким именем не найден.</string>
+    <string name="anilist_sync_failed">Ошибка синхронизации</string>
 </resources>
