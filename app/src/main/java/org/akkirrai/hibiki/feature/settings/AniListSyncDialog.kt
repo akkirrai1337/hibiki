@@ -135,6 +135,7 @@ internal fun AniListSyncDialog(
     }
     var useAccount by remember { mutableStateOf(sync.useAccount) }
     var skipNsfw by remember { mutableStateOf(sync.skipNsfw) }
+    var autoSync by remember { mutableStateOf(sync.autoEnabled) }
     var running by remember { mutableStateOf(false) }
     var progress by remember { mutableStateOf(0 to 0) }
     var report by remember { mutableStateOf<AniListSyncReport?>(sync.lastReport()) }
@@ -327,6 +328,29 @@ internal fun AniListSyncDialog(
                                 onCheckedChange = {
                                     skipNsfw = it
                                     sync.skipNsfw = it
+                                },
+                            )
+                        }
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Column(Modifier.weight(1f)) {
+                                Text(
+                                    text = stringResource(R.string.anilist_sync_auto),
+                                    style = MaterialTheme.typography.bodyLarge,
+                                )
+                                Text(
+                                    text = stringResource(R.string.anilist_sync_auto_hint),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                            Switch(
+                                checked = autoSync,
+                                onCheckedChange = {
+                                    autoSync = it
+                                    sync.autoEnabled = it
                                 },
                             )
                         }

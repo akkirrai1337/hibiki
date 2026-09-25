@@ -61,6 +61,35 @@ class AniListLibrarySync(context: Context) {
         get() = prefs.getBoolean(KEY_USE_ACCOUNT, true)
         set(value) { prefs.edit().putBoolean(KEY_USE_ACCOUNT, value).apply() }
 
+    /** Whether the sync runs by itself when the app starts (see [AniListAutoSync]). */
+    var autoEnabled: Boolean
+        get() = prefs.getBoolean(KEY_AUTO, false)
+        set(value) { prefs.edit().putBoolean(KEY_AUTO, value).apply() }
+
+    /** When a sync last finished, by hand or automatically; zero if none has. */
+    var lastSyncAt: Long
+        get() = prefs.getLong(KEY_LAST_SYNC, 0L)
+        private set(value) { prefs.edit().putLong(KEY_LAST_SYNC, value).apply() }
+
+    /** Whether the library holds a title that was not in it when the last sync finished. */
+    fun hasNewTitles(): Boolean {
+        val known = prefs.getStringSet(KEY_KNOWN_TITLES, emptySet()).orEmpty()
+        return libraryTitleIds().any { it !in known }
+    }
+
+    /** Called when a sync finishes: restarts the wait for the next automatic one and records what the library holds. */
+    internal fun markSynced() {
+        prefs.edit()
+            .putLong(KEY_LAST_SYNC, System.currentTimeMillis())
+            .putStringSet(KEY_KNOWN_TITLES, libraryTitleIds())
+            .apply()
+    }
+
+    // Saved only mirrors downloads, so a download alone is not a new title worth syncing.
+    private fun libraryTitleIds(): Set<String> = library.getLibraryEntries()
+        .filter { it.category != LibraryCategory.Saved }
+        .mapTo(mutableSetOf()) { it.anime.id }
+
     /** Leave out titles from sources marked 18+: they are neither imported nor sent to AniList. */
     var skipNsfw: Boolean
         get() = prefs.getBoolean(KEY_SKIP_NSFW, true)
@@ -144,6 +173,7 @@ class AniListLibrarySync(context: Context) {
                 }
             }
             saveState(state)
+            markSynced()
             return AniListSyncReport(added, updated, unmatched, failed, System.currentTimeMillis()).also { report ->
                 prefs.edit().putString(
                     KEY_REPORT,
@@ -361,6 +391,9 @@ class AniListLibrarySync(context: Context) {
         const val KEY_SOURCE = "source"
         const val KEY_USE_ACCOUNT = "use_account"
         const val KEY_SKIP_NSFW = "skip_nsfw"
+        const val KEY_AUTO = "auto"
+        const val KEY_LAST_SYNC = "last_sync"
+        const val KEY_KNOWN_TITLES = "known_titles"
         const val KEY_STATE = "state"
         const val KEY_REPORT = "report"
         const val LOOKUP_CONCURRENCY = 3

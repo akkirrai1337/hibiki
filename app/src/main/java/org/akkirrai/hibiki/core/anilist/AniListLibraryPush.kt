@@ -180,6 +180,7 @@ class AniListLibraryPush(context: Context) {
                 kotlinx.coroutines.delay(BATCH_DELAY_MILLIS)
             }
             savePushed(pushed)
+            if (failed == 0) sync.markSynced()
             return AniListPushResult(sent, failed)
         } finally {
             client.close()

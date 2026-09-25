@@ -710,4 +710,9 @@
     <string name="anilist_stat_missing">Not found</string>
     <string name="anilist_sync_signed_in">Signed in</string>
     <string name="anilist_push_send_count">Send %1$d titles</string>
+    <string name="anilist_sync_auto">Sync on launch</string>
+    <string name="anilist_sync_auto_hint">At most every 12 hours, if the library has a new title. Changes for AniList are only announced, not sent.</string>
+    <string name="anilist_auto_channel">AniList sync</string>
+    <string name="anilist_auto_notification_title">AniList sync</string>
+    <string name="anilist_auto_notification_text">%1$d changes are ready to send to AniList</string>
 </resources>

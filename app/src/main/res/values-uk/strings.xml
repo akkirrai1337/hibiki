@@ -698,4 +698,9 @@
     <string name="anilist_stat_missing">Не знайдено</string>
     <string name="anilist_sync_signed_in">Ви увійшли</string>
     <string name="anilist_push_send_count">Надіслати тайтлів: %1$d</string>
+    <string name="anilist_sync_auto">Синхронізація під час запуску</string>
+    <string name="anilist_sync_auto_hint">Не частіше ніж раз на 12 годин і лише якщо в бібліотеці зʼявився новий тайтл. Зміни для AniList лише оголошуються, не надсилаються.</string>
+    <string name="anilist_auto_channel">Синхронізація AniList</string>
+    <string name="anilist_auto_notification_title">Синхронізація AniList</string>
+    <string name="anilist_auto_notification_text">Готово змін для надсилання в AniList: %1$d</string>
 </resources>

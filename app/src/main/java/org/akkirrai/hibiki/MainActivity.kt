@@ -143,6 +143,11 @@ class MainActivity : ComponentActivity() {
             OfflineMediaCache.migrateLegacyStreamingCacheIfSafe(applicationContext)
         }
 
+        // At most every 12 hours, and only when the library has a new title (see AniListAutoSync).
+        lifecycleScope.launch(Dispatchers.IO) {
+            org.akkirrai.hibiki.core.anilist.AniListAutoSync.runIfDue(applicationContext)
+        }
+
         enableEdgeToEdge()
         synchronizeNotificationPermissionState()
 
