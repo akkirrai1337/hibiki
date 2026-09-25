@@ -705,4 +705,10 @@
     <string name="anilist_push_episode">ep. %1$d</string>
     <string name="anilist_push_send">Send</string>
     <string name="anilist_push_result">Sent %1$d · failed %2$d</string>
+    <string name="anilist_import_button">Import from AniList</string>
+    <string name="anilist_stat_added">Added</string>
+    <string name="anilist_stat_updated">Updated</string>
+    <string name="anilist_stat_missing">Not found</string>
+    <string name="anilist_sync_signed_in">Signed in</string>
+    <string name="anilist_push_send_count">Send %1$d titles</string>
 </resources>

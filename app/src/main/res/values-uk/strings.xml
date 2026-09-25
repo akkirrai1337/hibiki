@@ -693,4 +693,10 @@
     <string name="anilist_push_episode">сер. %1$d</string>
     <string name="anilist_push_send">Надіслати</string>
     <string name="anilist_push_result">Надіслано %1$d · помилок %2$d</string>
+    <string name="anilist_import_button">Імпортувати з AniList</string>
+    <string name="anilist_stat_added">Додано</string>
+    <string name="anilist_stat_updated">Оновлено</string>
+    <string name="anilist_stat_missing">Не знайдено</string>
+    <string name="anilist_sync_signed_in">Ви увійшли</string>
+    <string name="anilist_push_send_count">Надіслати тайтлів: %1$d</string>
 </resources>

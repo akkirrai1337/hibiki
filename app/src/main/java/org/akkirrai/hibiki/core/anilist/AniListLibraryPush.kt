@@ -24,6 +24,7 @@ import org.akkirrai.hibiki.core.source.WatchStateRepository
 data class AniListPushItem(
     val titleId: String,
     val name: String,
+    val posterUrl: String?,
     val mediaId: Int,
     val status: AniListMediaListStatus?,
     val statusCategory: LibraryCategory?,
@@ -123,6 +124,7 @@ class AniListLibraryPush(context: Context) {
                             items += AniListPushItem(
                                 titleId = anime.id,
                                 name = anime.title,
+                                posterUrl = anime.posterUrl,
                                 mediaId = mediaId,
                                 status = effectiveStatus,
                                 statusCategory = if (statusToSend != null) status else null,

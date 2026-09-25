@@ -703,4 +703,10 @@
     <string name="anilist_push_episode">сер. %1$d</string>
     <string name="anilist_push_send">Отправить</string>
     <string name="anilist_push_result">Отправлено %1$d · ошибок %2$d</string>
+    <string name="anilist_import_button">Импортировать из AniList</string>
+    <string name="anilist_stat_added">Добавлено</string>
+    <string name="anilist_stat_updated">Обновлено</string>
+    <string name="anilist_stat_missing">Не найдено</string>
+    <string name="anilist_sync_signed_in">Вы вошли</string>
+    <string name="anilist_push_send_count">Отправить тайтлов: %1$d</string>
 </resources>
