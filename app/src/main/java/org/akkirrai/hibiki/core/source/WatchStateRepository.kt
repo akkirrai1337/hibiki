@@ -1,5 +1,9 @@
 package org.akkirrai.hibiki.core.source
 
+import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import android.content.Context
 import java.time.Instant
 import java.time.LocalDate
@@ -70,7 +74,10 @@ class WatchStateRepository(context: Context) {
             .also { cachedProgressEntries = it }
     }
 
-    private fun invalidateProgressEntries() = synchronized(progressCacheLock) { cachedProgressEntries = null }
+    private fun invalidateProgressEntries() {
+        synchronized(progressCacheLock) { cachedProgressEntries = null }
+        _changes.tryEmit(Unit)
+    }
 
     fun getSelectedSource(titleId: String): WatchSourceSelection {
         val normalizedTitleId = YummyIdMigration.normalizeTitleId(titleId)
@@ -442,6 +449,11 @@ class WatchStateRepository(context: Context) {
 
     companion object {
         private val progressCacheLock = Any()
+
+        private val _changes = MutableSharedFlow<Unit>(extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
+
+        /** Fires after any watch-progress write, so screens showing it can update without a re-entry. */
+        val changes: SharedFlow<Unit> = _changes.asSharedFlow()
 
         @Volatile
         private var cachedProgressEntries: Map<String, String>? = null

@@ -16,10 +16,12 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.app.di.hibikiDependencies
 import org.akkirrai.hibiki.app.settings.AppPreferences
@@ -29,6 +31,7 @@ import org.akkirrai.hibiki.core.model.Anime
 import org.akkirrai.hibiki.core.model.AnimeSearchFilters
 import org.akkirrai.hibiki.core.model.SearchUiState
 import org.akkirrai.hibiki.core.source.AnimeSourceRegistry
+import org.akkirrai.hibiki.core.source.WatchStateRepository
 import org.akkirrai.hibiki.core.source.toSearchErrorMessage
 
 class HomeViewModel(
@@ -47,6 +50,7 @@ class HomeViewModel(
         load()
         observeLanguageChanges()
         observeSourceChanges()
+        observeWatchProgress()
         observeSourceRegistryReadiness()
     }
 
@@ -283,6 +287,28 @@ class HomeViewModel(
                 .collect { ids ->
                     if (ids.isNotEmpty() && _uiState.value.errorMessage != null && !_uiState.value.isLoading) {
                         load()
+                    }
+                }
+        }
+    }
+
+    /** A finished or cleared watch shows up in the continue rows at once instead of after a restart. */
+    @OptIn(kotlinx.coroutines.FlowPreview::class)
+    private fun observeWatchProgress() {
+        viewModelScope.launch {
+            WatchStateRepository.changes
+                .debounce(600)
+                .collect {
+                    val (continueAnime, recentlyWatched) = withContext(Dispatchers.IO) {
+                        runCatching { repository.loadWatchRows() }.getOrNull()
+                    } ?: return@collect
+                    _uiState.update { state ->
+                        if (state.isLoading) state
+                        else state.copy(
+                            continueAnime = continueAnime,
+                            recentlyWatched = recentlyWatched,
+                            hasContinueHistory = continueAnime != null,
+                        )
                     }
                 }
         }

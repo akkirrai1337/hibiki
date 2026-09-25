@@ -183,6 +183,7 @@ import java.util.Locale
 import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.CancellationException
@@ -426,6 +427,11 @@ fun DetailsScreen(
 
     LaunchedEffect(anime.id) {
         refreshWatchStateSnapshot()
+    }
+
+    // Clearing or saving progress while this page is open updates the resume banner immediately.
+    LaunchedEffect(anime.id) {
+        WatchStateRepository.changes.debounce(150).collect { refreshWatchStateSnapshot() }
     }
 
     LaunchedEffect(anime.id) {

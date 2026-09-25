@@ -147,6 +147,12 @@ class HomeRepository(
         watchStateRepository.clearTitleProgress(titleId)
     }
 
+    /** The continue card and the recently-watched row as stored, without touching the network. */
+    fun loadWatchRows(): Pair<Anime?, List<Anime>> {
+        val recentlyWatched = loadRecentlyWatchedAnime()
+        return loadContinueAnimeFromStorage() to recentlyWatched.drop(1).take(RECENTLY_WATCHED_LIMIT)
+    }
+
     fun hasContinueHistory(): Boolean = watchStateRepository.getRecentTitleWatchState() != null
 
     suspend fun search(query: String): List<Anime> {
