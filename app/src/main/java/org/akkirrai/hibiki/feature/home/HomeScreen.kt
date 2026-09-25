@@ -346,27 +346,14 @@ private fun LazyListScope.homeFeedContent(
             )
         }
     }
-    continueAnime?.let { anime ->
+    // The most recent title first, then the rest of what was watched: one shelf of frames.
+    val continueItems = listOfNotNull(continueAnime) + recentlyWatched
+    if (continueItems.isNotEmpty()) {
         item {
-            Box(modifier = Modifier.padding(horizontal = UiDimens.ScreenPadding)) {
-                ContinueWatchingCard(
-                    anime = anime,
-                    onClick = { onAnimeClick(anime) },
-                    onLongClick = { onWatchedAnimeLongClick(anime) },
-                )
-            }
-        }
-    }
-    if (recentlyWatched.isNotEmpty()) {
-        item {
-            AnimeSection(
-                title = stringResource(R.string.home_recently_watched),
-                icon = Icons.Outlined.History,
-                items = recentlyWatched,
+            ContinueWatchingRow(
+                items = continueItems,
                 onAnimeClick = onAnimeClick,
                 onAnimeLongClick = onWatchedAnimeLongClick,
-                sharedCardModifier = sharedCardModifier,
-                sharedPosterModifier = sharedPosterModifier,
             )
         }
     }
@@ -410,46 +397,23 @@ private fun HomeLoadingState(
         )
 
         if (hasContinueHistory) {
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 HomeSectionHeader(
                     title = stringResource(R.string.home_continue_title),
                     icon = Icons.Outlined.History,
                 )
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(24.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceContainer,
-                    ),
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(12.dp),
-                        horizontalArrangement = Arrangement.spacedBy(14.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        AppShimmerBlock(
-                            Modifier.width(72.dp).aspectRatio(2f / 3f).clip(
-                                RoundedCornerShape(UiDimens.CardCorner),
-                            ),
-                        )
-                        // Shaped like the real card's text: a two-line title, the meta line with the source
-                        // badge, then the hint. Thin, softly rounded bars read as text, thick pills do not.
+                // Two 16:9 frame cards, the second cut off by the edge like the real row.
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    repeat(2) {
                         Column(
-                            modifier = Modifier.weight(1f),
-                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.width(260.dp),
+                            verticalArrangement = Arrangement.spacedBy(6.dp),
                         ) {
-                            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                                SkeletonLine(widthFraction = 0.9f, height = 14.dp)
-                                SkeletonLine(widthFraction = 0.55f, height = 14.dp)
-                            }
-                            Row(
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                SkeletonLine(widthFraction = 0.34f, height = 11.dp)
-                                AppShimmerBlock(Modifier.size(width = 36.dp, height = 18.dp).clip(RoundedCornerShape(9.dp)))
-                            }
-                            SkeletonLine(widthFraction = 0.46f, height = 10.dp)
+                            AppShimmerBlock(
+                                Modifier.fillMaxWidth().aspectRatio(16f / 9f).clip(RoundedCornerShape(16.dp)),
+                            )
+                            SkeletonLine(widthFraction = 0.7f, height = 14.dp)
+                            SkeletonLine(widthFraction = 0.4f, height = 10.dp)
                         }
                     }
                 }
@@ -458,10 +422,8 @@ private fun HomeLoadingState(
 
         Column {
             HomeSectionHeader(
-                title = stringResource(
-                    if (hasContinueHistory) R.string.home_recently_watched else R.string.home_trending,
-                ),
-                icon = if (hasContinueHistory) Icons.Outlined.History else Icons.AutoMirrored.Outlined.TrendingUp,
+                title = stringResource(R.string.home_trending),
+                icon = Icons.AutoMirrored.Outlined.TrendingUp,
             )
             Spacer(Modifier.height(12.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(PortraitGridSpacing)) {
@@ -789,136 +751,6 @@ private fun FeaturedAnimeCard(
 }
 
 @Composable
-private fun ContinueWatchingCard(
-    anime: Anime?,
-    onClick: () -> Unit,
-    onLongClick: () -> Unit,
-) {
-    Column(
-        verticalArrangement = Arrangement.spacedBy(10.dp)
-    ) {
-        HomeSectionHeader(
-            title = stringResource(R.string.home_continue_title),
-            icon = Icons.Outlined.History,
-        )
-
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(24.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceContainer
-            )
-        ) {
-            if (anime == null) {
-                EmptyContinueContent()
-            } else {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .combinedClickable(onClick = onClick, onLongClick = onLongClick)
-                        .padding(12.dp),
-                    horizontalArrangement = Arrangement.spacedBy(14.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    AnimePoster(
-                        anime = anime,
-                        modifier = Modifier
-                            .width(72.dp)
-                            .aspectRatio(2f / 3f)
-                    )
-
-                    Column(
-                        modifier = Modifier
-                            .weight(1f)
-                            .align(Alignment.CenterVertically),
-                        verticalArrangement = Arrangement.spacedBy(3.dp)
-                    ) {
-                        AnimeTitleText(
-                            text = anime.title,
-                            style = MaterialTheme.typography.titleMedium.copy(
-                                fontWeight = FontWeight.SemiBold,
-                            ),
-                            color = MaterialTheme.colorScheme.onSurface,
-                            baseMaxLines = 3,
-                            extraLongTitleLines = 0,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-
-                        val meta = buildHomeMeta(
-                            anime = anime,
-                            announcementLabel = stringResource(R.string.anime_meta_announcement),
-                            movieLabel = stringResource(R.string.anime_meta_movie),
-                        )
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            if (meta.isNotBlank()) {
-                                Text(
-                                    text = meta,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                )
-                            }
-                            AnimeSourceBadge(titleId = anime.id)
-                        }
-
-                        Text(
-                            text = stringResource(R.string.home_open_title_hint),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun EmptyContinueContent() {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(16.dp),
-        horizontalArrangement = Arrangement.spacedBy(14.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        AppTonalSurface(
-            modifier = Modifier
-                .size(56.dp),
-            shape = RoundedCornerShape(UiDimens.MediumCorner),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = Icons.Outlined.History,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-
-        Column(
-            verticalArrangement = Arrangement.spacedBy(2.dp)
-        ) {
-            Text(
-                text = stringResource(R.string.home_continue_empty_title),
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            Text(
-                text = stringResource(R.string.home_continue_empty_message),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-    }
-}
-
-@Composable
 private fun AnimeSection(
     title: String,
     actionLabel: String? = null,
@@ -974,7 +806,7 @@ private fun AnimeSection(
 }
 
 @Composable
-private fun HomeSectionHeader(
+internal fun HomeSectionHeader(
     title: String,
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     modifier: Modifier = Modifier,
