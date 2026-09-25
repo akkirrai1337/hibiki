@@ -170,6 +170,16 @@ fun HomeScreen(
     modifier: Modifier = Modifier
 ) {
     val state by viewModel.uiState.collectAsState()
+    // The same instance the filter sheet uses. The filter button waits for the source to say it has
+    // filters, so a source without any does not show a button that opens an empty sheet.
+    val filtersViewModel: org.akkirrai.hibiki.feature.search.SearchViewModel = androidx.lifecycle.viewmodel.compose.viewModel(
+        key = "home-filters",
+        factory = org.akkirrai.hibiki.feature.search.SearchViewModel.Factory(androidx.compose.ui.platform.LocalContext.current),
+    )
+    val filtersState by filtersViewModel.uiState.collectAsState()
+    val showFilterControl = filtersState.filterCatalog?.let {
+        it.capabilities.supportedFilters.isNotEmpty() || it.sourceFilters.isNotEmpty()
+    } ?: false
     val featuredAnime = state.featuredAnime
     val continueAnime = state.continueAnime
     val recentlyWatched = state.recentlyWatched
@@ -324,7 +334,7 @@ fun HomeScreen(
             onQueryChange = { query -> if (query.isNotBlank()) onSearch(query) },
             onClear = {},
             onFilterClick = { showFilters = true },
-            showFilter = true,
+            showFilter = showFilterControl,
             extraAction = if (syncAvailable) {
                 {
                     IconButton(
