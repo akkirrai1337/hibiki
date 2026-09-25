@@ -13,6 +13,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.addSingleton
 import uy.kohesive.injekt.api.hasFactory
@@ -47,6 +48,11 @@ class HibikiApplication : Application() {
         }
         AnimeSourceRegistry.initialize(this)
         CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate).launch {
+            // Extensions installed outside Hibiki are matched with the stored repository indexes first (no
+            // network), as the Sources screen would, so they are usable from the start.
+            withContext(Dispatchers.IO) {
+                runCatching { org.akkirrai.hibiki.core.source.extension.ExternalApkExtensions.sync(this@HibikiApplication) }
+            }
             AnimeSourceRegistry.refreshApkExtensions(this@HibikiApplication)
         }
     }

@@ -71,7 +71,14 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import org.akkirrai.hibiki.app.settings.AppPreferences
+import org.akkirrai.hibiki.core.network.AndroidHttpClientFactory
+import org.akkirrai.hibiki.core.source.extension.ExternalApkExtensions
+import org.akkirrai.hibiki.core.source.extension.ExtensionMarketplaceClient
+import org.akkirrai.hibiki.core.source.extension.RepositoryCatalogCache
 import org.akkirrai.beakokit.api.SourceId
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.core.migration.LegacyLibraryMatching
@@ -106,7 +113,10 @@ class LegacyLibraryMigrationViewModel(application: Application) : AndroidViewMod
         if (!migration.dismissedForever) {
             viewModelScope.launch {
                 val sources = runCatching { migration.scan() }.getOrDefault(emptyList())
-                if (sources.isNotEmpty()) _state.value = LegacyMigrationState.Offer(sources, emptyMap())
+                if (sources.isNotEmpty()) {
+                    _state.value = LegacyMigrationState.Offer(sources, emptyMap())
+                    prepareInstalledSources()
+                }
             }
         }
     }
@@ -118,9 +128,34 @@ class LegacyLibraryMigrationViewModel(application: Application) : AndroidViewMod
                 val sources = runCatching { migration.scan() }.getOrDefault(emptyList())
                 if (sources.isNotEmpty() && _state.value is LegacyMigrationState.Hidden) {
                     _state.value = LegacyMigrationState.Offer(sources, emptyMap())
+                    prepareInstalledSources()
                 }
             }
         }
+    }
+
+    /**
+     * Extensions installed outside Hibiki only become sources once they are matched with an added repository,
+     * which the Sources screen normally does when it is opened. Straight after an update that has not happened
+     * yet, so the offer would list nothing: do it here (fetching an index only where none is stored).
+     */
+    private suspend fun prepareInstalledSources() {
+        val app = getApplication<Application>()
+        val changed = withContext(Dispatchers.IO) {
+            val missing = AppPreferences.readSourceRepositoryUrls(app).filter { RepositoryCatalogCache.get(app, it) == null }
+            if (missing.isNotEmpty()) {
+                val client = AndroidHttpClientFactory.create()
+                try {
+                    missing.forEach { url ->
+                        runCatching { RepositoryCatalogCache.put(app, url, ExtensionMarketplaceClient(client, url).fetchCatalog()) }
+                    }
+                } finally {
+                    client.close()
+                }
+            }
+            runCatching { ExternalApkExtensions.sync(app).changed }.getOrDefault(false)
+        }
+        if (changed) AnimeSourceRegistry.refreshApkExtensions(app)
     }
 
     fun choose(legacyId: String, target: SourceId?) {
