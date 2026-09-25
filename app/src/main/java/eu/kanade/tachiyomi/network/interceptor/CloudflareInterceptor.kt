@@ -12,6 +12,7 @@ import eu.kanade.tachiyomi.network.AndroidCookieJar
 import okhttp3.Cookie
 import okhttp3.Headers
 import okhttp3.HttpUrl.Companion.toHttpUrl
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.Interceptor
 import okhttp3.Request
 import okhttp3.Response
@@ -36,7 +37,10 @@ class CloudflareInterceptor(
     override fun intercept(chain: Interceptor.Chain): Response {
         val request = chain.request()
         val response = chain.proceed(request)
-        if (!shouldIntercept(response)) return response
+        if (!shouldIntercept(response)) {
+            CloudflareChallenges.clearHost(request.url.toString())
+            return response
+        }
         if (!supportsWebView()) return response
 
         try {
@@ -44,10 +48,12 @@ class CloudflareInterceptor(
             cookieJar.remove(request.url, COOKIE_NAMES, 0)
             val oldCookie = cookieJar.get(request.url).firstOrNull { it.name == "cf_clearance" }
             resolveWithWebView(request, oldCookie)
+            CloudflareChallenges.clearHost(request.url.toString())
             return chain.proceed(request)
         } catch (error: CloudflareBypassException) {
             // OkHttp's enqueue only handles IOException; anything else would crash the app.
-            throw IOException("Cloudflare challenge could not be solved", error)
+            CloudflareChallenges.report(request.url.toString())
+            throw CloudflareChallengeException(request.url.toString(), error)
         } catch (error: Exception) {
             throw if (error is IOException) error else IOException(error)
         }
@@ -140,4 +146,44 @@ class CloudflareInterceptor(
             return !(name == "connection" && value == "upgrade")
         }
     }
+}
+
+/**
+ * A page was answered with a Cloudflare challenge that the hidden WebView could not solve, typically one that
+ * needs a person (a captcha or a checkbox). Solving it by hand in a visible WebView (see WebViewActivity)
+ * leaves a clearance cookie that the same client then uses, so the request can simply be repeated.
+ */
+class CloudflareChallengeException(val url: String, cause: Throwable? = null) :
+    IOException("Cloudflare challenge could not be solved for $url", cause)
+
+/** Whether [error], or anything it was caused by, is an unsolved Cloudflare challenge. */
+fun Throwable.isCloudflareChallenge(): Boolean = generateSequence(this) { it.cause }.any { it is CloudflareChallengeException }
+
+/** The address of the unsolved challenge in [this] error, if there is one. */
+fun Throwable.cloudflareChallengeUrl(): String? =
+    generateSequence(this) { it.cause }.filterIsInstance<CloudflareChallengeException>().firstOrNull()?.url
+
+/**
+ * The page whose Cloudflare challenge is still unsolved, for the screens that can offer to open it in a
+ * WebView. In memory only; it clears itself as soon as a request to the same site goes through.
+ */
+object CloudflareChallenges {
+    private val _pending = kotlinx.coroutines.flow.MutableStateFlow<String?>(null)
+    val pending: kotlinx.coroutines.flow.StateFlow<String?> = _pending
+
+    fun report(url: String) {
+        _pending.value = url
+    }
+
+    fun clear() {
+        _pending.value = null
+    }
+
+    /** Forgets the pending challenge when it belongs to [url]'s site. */
+    fun clearHost(url: String) {
+        val current = _pending.value ?: return
+        if (hostOf(current) == hostOf(url)) _pending.value = null
+    }
+
+    fun hostOf(url: String): String? = url.toHttpUrlOrNull()?.host
 }

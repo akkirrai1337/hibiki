@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import org.akkirrai.hibiki.core.design.component.AppCenteredLoading
 import org.akkirrai.hibiki.core.design.component.AppMessageState
+import org.akkirrai.hibiki.core.web.rememberCloudflareWebViewAction
 import org.akkirrai.hibiki.core.model.Anime
 import org.akkirrai.hibiki.core.model.SearchUiState
 
@@ -85,9 +86,15 @@ fun AppErrorCard(
                 text = message,
                 style = MaterialTheme.typography.bodyMedium,
             )
+            val webView = rememberCloudflareWebViewAction(onSolved = { onActionClick?.invoke() })
             if (actionLabel != null && onActionClick != null) {
                 FilledTonalButton(onClick = onActionClick) {
                     Text(text = actionLabel)
+                }
+            }
+            if (webView != null) {
+                androidx.compose.material3.OutlinedButton(onClick = webView.open) {
+                    Text(text = webView.label)
                 }
             }
         }

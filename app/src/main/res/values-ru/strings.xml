@@ -777,4 +777,9 @@
     <string name="anilist_sync_removal_hint_local">Тайтл уходит из библиотеки, запись в AniList остаётся.</string>
     <string name="anilist_sync_removal_hint_everywhere">Запись в AniList тоже удаляется.</string>
     <string name="anilist_sync_preparing">Готовлю изменения…</string>
+    <string name="action_open_web_view">Открыть в WebView</string>
+    <string name="webview_close">Закрыть</string>
+    <string name="webview_open_browser">В браузере</string>
+    <string name="webview_clear_cookies">Очистить cookie</string>
+    <string name="webview_cookies_cleared">Cookie этого сайта очищены</string>
 </resources>

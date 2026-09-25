@@ -258,6 +258,15 @@ object AnimeSourceRegistry {
         return ApkSourceSettings(adapter.aniyomiSourceId, configurable)
     }
 
+    /** What a WebView needs to open [sourceId]'s site the way the source itself would; null if it has no site. */
+    fun webViewTarget(sourceId: SourceId): SourceWebViewTarget? {
+        val adapter = apkRuntimeSourcesState[sourceId] as? AniyomiAnimeSourceAdapter ?: return null
+        val baseUrl = adapter.webViewBaseUrl ?: return null
+        return SourceWebViewTarget(baseUrl, adapter.webViewHeaders)
+    }
+
+    class SourceWebViewTarget(val baseUrl: String, val headers: Map<String, String>)
+
     class ApkSourceSettings(val sourceId: Long, val configurable: eu.kanade.tachiyomi.animesource.ConfigurableAnimeSource)
 
     fun apkExtensionLoadErrors(): Map<String, String> = apkExtensionLoadErrorsState

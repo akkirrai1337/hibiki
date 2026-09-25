@@ -73,6 +73,15 @@ class AniyomiAnimeSourceAdapter(
     /** The extension's settings screen, when it declares one (Aniyomi's ConfigurableAnimeSource). */
     val configurableSource: ConfigurableAnimeSource? get() = source as? ConfigurableAnimeSource
 
+    /** The site the source reads from, for opening it in a WebView; null for a source that is not an HTTP source. */
+    val webViewBaseUrl: String? get() = runCatching { (source as? AnimeHttpSource)?.baseUrl }.getOrNull()?.takeIf { it.isNotBlank() }
+
+    /** The headers the source sends with its own requests (its User-Agent, Referer, ...). */
+    val webViewHeaders: Map<String, String>
+        get() = runCatching {
+            (source as? AnimeHttpSource)?.headers?.toMultimap()?.mapValues { it.value.firstOrNull().orEmpty() }
+        }.getOrNull().orEmpty()
+
     /** The Aniyomi source id, which names the SharedPreferences file the extension reads. */
     val aniyomiSourceId: Long get() = source.id
 

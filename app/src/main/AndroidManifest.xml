@@ -55,6 +55,12 @@
         </activity>
 
         <activity
+            android:name=".core.web.WebViewActivity"
+            android:exported="false"
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:theme="@style/Theme.Hibiki" />
+
+        <activity
             android:name=".core.discord.DiscordAuthActivity"
             android:exported="false"
             android:label="@string/discord_rpc_title"

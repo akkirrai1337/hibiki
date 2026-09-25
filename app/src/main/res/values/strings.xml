@@ -779,4 +779,9 @@
     <string name="anilist_sync_removal_hint_local">It leaves your library; its AniList entry stays.</string>
     <string name="anilist_sync_removal_hint_everywhere">Its AniList entry is deleted too.</string>
     <string name="anilist_sync_preparing">Preparing the changes…</string>
+    <string name="action_open_web_view">Open in WebView</string>
+    <string name="webview_close">Close</string>
+    <string name="webview_open_browser">Browser</string>
+    <string name="webview_clear_cookies">Clear cookies</string>
+    <string name="webview_cookies_cleared">Cookies for this site cleared</string>
 </resources>
