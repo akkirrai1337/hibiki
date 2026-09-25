@@ -52,7 +52,7 @@ object AniListAutoSync {
             if (sync.useAccount && signedIn) {
                 val plan = AniListLibraryPush(appContext).plan()
                 val changes = plan.items.size + plan.removals.size
-                if (changes > 0) notify(appContext, changes)
+                if (changes > 0) notify(appContext, changes, plan.removals.size)
             }
         } catch (error: CancellationException) {
             throw error
@@ -62,7 +62,7 @@ object AniListAutoSync {
         }
     }
 
-    private fun notify(context: Context, changes: Int) {
+    private fun notify(context: Context, changes: Int, removals: Int) {
         if (ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) !=
             PackageManager.PERMISSION_GRANTED
         ) return
@@ -81,7 +81,13 @@ object AniListAutoSync {
             NotificationCompat.Builder(context, CHANNEL_ID)
                 .setSmallIcon(R.drawable.ic_stat_hibiki)
                 .setContentTitle(context.getString(R.string.anilist_auto_notification_title))
-                .setContentText(context.getString(R.string.anilist_auto_notification_text, changes))
+                .setContentText(
+                    if (removals > 0) {
+                        context.getString(R.string.anilist_auto_notification_removals, changes, removals)
+                    } else {
+                        context.getString(R.string.anilist_auto_notification_text, changes)
+                    },
+                )
                 .setContentIntent(open)
                 .setAutoCancel(true)
                 .build(),

@@ -719,4 +719,5 @@
     <string name="anilist_push_removals_title">Будет удалено из AniList (%1$d)</string>
     <string name="anilist_push_removals_warning">Эти тайтлы уже синхронизировались и больше не в вашей библиотеке. Отправка удалит их записи из вашего списка AniList.</string>
     <string name="anilist_push_remove_chip">Удалить из AniList</string>
+    <string name="anilist_auto_notification_removals">Готово изменений для AniList: %1$d, из них удалений записей: %2$d. Ничего не отправится, пока вы не подтвердите.</string>
 </resources>

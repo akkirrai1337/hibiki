@@ -721,4 +721,5 @@
     <string name="anilist_push_removals_title">Will be removed from AniList (%1$d)</string>
     <string name="anilist_push_removals_warning">These titles were synced before and are no longer in your library. Sending deletes their entries from your AniList list.</string>
     <string name="anilist_push_remove_chip">Remove from AniList</string>
+    <string name="anilist_auto_notification_removals">%1$d changes are ready to send to AniList, %2$d of them delete entries. Nothing is sent until you confirm.</string>
 </resources>
