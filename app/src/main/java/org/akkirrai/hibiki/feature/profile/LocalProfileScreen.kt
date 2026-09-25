@@ -81,6 +81,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import org.akkirrai.hibiki.R
+import org.akkirrai.hibiki.core.profile.ProfileRules
 import coil.compose.AsyncImage
 import org.akkirrai.hibiki.app.settings.LocalAppLanguage
 import org.akkirrai.hibiki.app.settings.withLanguage
@@ -446,6 +447,7 @@ private fun LocalProfileContent(
 ) {
     var selectedTab by rememberSaveable { mutableIntStateOf(0) }
     var showAchievements by rememberSaveable { mutableStateOf(false) }
+    var openedAchievement by remember { mutableStateOf<ProfileRules.Achievement?>(null) }
     val tabTitles = listOf(
         stringResource(R.string.local_profile_tab_overview),
         stringResource(R.string.local_profile_tab_library),
@@ -498,6 +500,7 @@ private fun LocalProfileContent(
                         achievements = snapshot.achievements,
                         edgePadding = AnimiteLargePadding,
                         onSeeAll = { showAchievements = true },
+                        onOpen = { openedAchievement = it },
                     )
                     Box(inset) { ActivitySection(snapshot) }
                     Box(inset) { GenreSection(snapshot.genreSegments) }
@@ -513,6 +516,10 @@ private fun LocalProfileContent(
                 }
             }
         }
+    }
+
+    openedAchievement?.let { achievement ->
+        AchievementDetailSheet(achievement, onDismiss = { openedAchievement = null })
     }
 
     if (showAchievements) {

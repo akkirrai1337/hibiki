@@ -1,6 +1,12 @@
 package org.akkirrai.hibiki.feature.profile
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.getValue
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -222,6 +228,7 @@ internal fun AchievementsStrip(
     achievements: List<ProfileRules.Achievement>,
     edgePadding: Dp,
     onSeeAll: () -> Unit,
+    onOpen: (ProfileRules.Achievement) -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Row(
@@ -251,7 +258,7 @@ internal fun AchievementsStrip(
             horizontalArrangement = Arrangement.spacedBy(10.dp),
             contentPadding = PaddingValues(horizontal = edgePadding),
         ) {
-            items(achievements, key = { it.id }) { AchievementTile(it, onClick = onSeeAll) }
+            items(achievements, key = { it.id }) { AchievementTile(it, onClick = { onOpen(it) }) }
         }
     }
 }
@@ -324,6 +331,8 @@ internal fun AchievementsSheet(
     streak: ProfileRules.StreakInfo,
     onDismiss: () -> Unit,
 ) {
+    var detail by remember { mutableStateOf<ProfileRules.Achievement?>(null) }
+    detail?.let { AchievementDetailSheet(it, onDismiss = { detail = null }) }
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
@@ -346,21 +355,25 @@ internal fun AchievementsSheet(
             // the run that is still going.
             if (streak.best > 0) {
                 Text(
-                    stringResource(R.string.local_profile_streak_best, streak.best),
+                    stringResource(R.string.local_profile_streak_best_long, streak.best),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            achievements.forEach { AchievementRow(it) }
+            achievements.forEach { achievement -> AchievementRow(achievement, onClick = { detail = achievement }) }
         }
     }
 }
 
 @Composable
-private fun AchievementRow(achievement: ProfileRules.Achievement) {
+private fun AchievementRow(achievement: ProfileRules.Achievement, onClick: () -> Unit) {
     val tierId = activeTierId(achievement)
     val done = achievement.unlocked
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+    Row(
+        modifier = Modifier.clip(RoundedCornerShape(12.dp)).clickable(onClick = onClick).padding(vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
         Box(
             Modifier
                 .size(36.dp)
@@ -388,7 +401,7 @@ private fun AchievementRow(achievement: ProfileRules.Achievement) {
                     color = MaterialTheme.colorScheme.onSurface,
                 )
                 // A family with one tier is not "level 1 of 1" - it is just done or not.
-                if (achievement.maxLevel > 1) {
+                if (achievement.maxLevel > 1 && achievement.level > 0) {
                     Text(
                         "  " + stringResource(
                             R.string.local_profile_achievement_level,
@@ -426,6 +439,33 @@ private fun AchievementRow(achievement: ProfileRules.Achievement) {
     }
 }
 
+/** The condition to clear a tier, worded like the desktop ("10 titles in your library"). */
+@Composable
+private fun achievementDescription(tierId: String, target: Double): String = stringResource(
+    when (tierId) {
+        "first_title" -> R.string.local_profile_achievement_first_title_desc
+        "collector_10" -> R.string.local_profile_achievement_collector_10_desc
+        "collector_25" -> R.string.local_profile_achievement_collector_25_desc
+        "collector_50" -> R.string.local_profile_achievement_collector_50_desc
+        "finisher" -> R.string.local_profile_achievement_finisher_desc
+        "marathoner_10" -> R.string.local_profile_achievement_marathoner_10_desc
+        "marathoner_50" -> R.string.local_profile_achievement_marathoner_50_desc
+        "streak_7" -> R.string.local_profile_achievement_streak_7_desc
+        "streak_14" -> R.string.local_profile_achievement_streak_14_desc
+        "streak_30" -> R.string.local_profile_achievement_streak_30_desc
+        "watch_24h" -> R.string.local_profile_achievement_watch_24h_desc
+        "watch_100h" -> R.string.local_profile_achievement_watch_100h_desc
+        "watch_500h" -> R.string.local_profile_achievement_watch_500h_desc
+        "episodes_50" -> R.string.local_profile_achievement_episodes_50_desc
+        "episodes_100" -> R.string.local_profile_achievement_episodes_100_desc
+        "episodes_300" -> R.string.local_profile_achievement_episodes_300_desc
+        "genre_explorer" -> R.string.local_profile_achievement_genre_5_desc
+        "genre_explorer_10" -> R.string.local_profile_achievement_genre_10_desc
+        else -> R.string.local_profile_achievement_genre_15_desc
+    },
+    formatAmount(target),
+)
+
 /** Tier ids are shared with the desktop, so their titles are looked up by the same id rather than
  * carried around in the rules. */
 @Composable
@@ -454,3 +494,188 @@ private fun achievementTitle(tierId: String): String = stringResource(
 )
 
 private val CircleShapeSmall = RoundedCornerShape(8.dp)
+
+
+/**
+ * What one achievement asks for and where it leads: the current goal and how close it is, then every level
+ * of the family as a timeline - cleared ones ticked, the one in progress with its bar, the rest locked
+ * with their goals and rewards, so nothing about what comes next has to be guessed.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+internal fun AchievementDetailSheet(achievement: ProfileRules.Achievement, onDismiss: () -> Unit) {
+    val tiers = ProfileRules.FAMILY_TIERS.getValue(achievement.id)
+    val activeIndex = if (achievement.level >= tiers.size) tiers.size - 1 else achievement.level
+    val activeTier = tiers[activeIndex]
+    val primary = MaterialTheme.colorScheme.primary
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+    ) {
+        Column(
+            modifier = Modifier
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp)
+                .padding(bottom = 32.dp),
+            verticalArrangement = Arrangement.spacedBy(20.dp),
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                Box(Modifier.size(72.dp), contentAlignment = Alignment.Center) {
+                    val track = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)
+                    Canvas(Modifier.size(72.dp)) {
+                        val stroke = 5.dp.toPx()
+                        val arcSize = androidx.compose.ui.geometry.Size(size.width - stroke, size.height - stroke)
+                        val topLeft = androidx.compose.ui.geometry.Offset(stroke / 2, stroke / 2)
+                        drawArc(track, -90f, 360f, false, topLeft, arcSize, style = Stroke(stroke, cap = StrokeCap.Round))
+                        val fraction = if (achievement.unlocked) 1f else achievement.fraction()
+                        if (fraction > 0f) {
+                            drawArc(primary, -90f, 360f * fraction, false, topLeft, arcSize, style = Stroke(stroke, cap = StrokeCap.Round))
+                        }
+                    }
+                    Icon(tierIcon(activeTier.id), contentDescription = null, tint = primary, modifier = Modifier.size(30.dp))
+                }
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(
+                        achievementTitle(activeTier.id),
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                    Text(
+                        achievementDescription(activeTier.id, activeTier.target),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                DetailChip("${formatAmount(achievement.current)} / ${formatAmount(achievement.target)}")
+                DetailChip(stringResource(R.string.local_profile_achievement_xp, activeTier.xp))
+                if (achievement.unlocked) DetailChip(stringResource(R.string.local_profile_achievement_maxed), highlighted = true)
+            }
+            if (tiers.size > 1) {
+                Text(
+                    stringResource(R.string.local_profile_achievement_levels),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Column {
+                    tiers.forEachIndexed { index, tier ->
+                        val cleared = index < achievement.level
+                        val current = index == activeIndex && !achievement.unlocked
+                        TierTimelineRow(
+                            tier = tier,
+                            cleared = cleared,
+                            current = current,
+                            currentValue = achievement.current,
+                            isLast = index == tiers.lastIndex,
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun DetailChip(text: String, highlighted: Boolean = false) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.labelLarge,
+        fontWeight = FontWeight.SemiBold,
+        color = if (highlighted) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
+        modifier = Modifier
+            .background(
+                if (highlighted) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f),
+                androidx.compose.foundation.shape.CircleShape,
+            )
+            .padding(horizontal = 12.dp, vertical = 6.dp),
+    )
+}
+
+@Composable
+private fun TierTimelineRow(
+    tier: ProfileRules.Tier,
+    cleared: Boolean,
+    current: Boolean,
+    currentValue: Double,
+    isLast: Boolean,
+) {
+    val primary = MaterialTheme.colorScheme.primary
+    val muted = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.14f)
+    Row(Modifier.height(androidx.compose.foundation.layout.IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Box(
+                Modifier
+                    .size(34.dp)
+                    .background(
+                        when {
+                            cleared -> primary
+                            current -> primary.copy(alpha = 0.16f)
+                            else -> muted
+                        },
+                        androidx.compose.foundation.shape.CircleShape,
+                    ),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = when {
+                        cleared -> Icons.Filled.Check
+                        current -> tierIcon(tier.id)
+                        else -> Icons.Filled.Lock
+                    },
+                    contentDescription = null,
+                    tint = when {
+                        cleared -> MaterialTheme.colorScheme.onPrimary
+                        current -> primary
+                        else -> MaterialTheme.colorScheme.onSurfaceVariant
+                    },
+                    modifier = Modifier.size(18.dp),
+                )
+            }
+            if (!isLast) {
+                Box(Modifier.width(2.dp).weight(1f).background(if (cleared) primary else muted))
+            }
+        }
+        Column(
+            modifier = Modifier.weight(1f).padding(bottom = if (isLast) 0.dp else 18.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    achievementTitle(tier.id),
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    color = if (cleared || current) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.weight(1f),
+                )
+                Text(
+                    stringResource(R.string.local_profile_achievement_xp, tier.xp),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Text(
+                achievementDescription(tier.id, tier.target),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            if (current) {
+                Box(Modifier.fillMaxWidth().height(5.dp).background(muted, RoundedCornerShape(3.dp))) {
+                    Box(
+                        Modifier
+                            .fillMaxWidth((currentValue / tier.target).toFloat().coerceIn(0f, 1f))
+                            .height(5.dp)
+                            .background(primary, RoundedCornerShape(3.dp)),
+                    )
+                }
+                Text(
+                    "${formatAmount(currentValue)} / ${formatAmount(tier.target)}",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+    }
+}
