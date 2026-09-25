@@ -761,6 +761,9 @@
     <string name="anilist_removal_dont_ask">Більше не питати</string>
     <string name="anilist_removal_done">Видалено й в AniList</string>
     <string name="anilist_removal_failed">Не вдалося видалити з AniList</string>
-    <string name="anilist_sync_removal_ask">Питати під час видалення</string>
-    <string name="anilist_sync_removal_ask_hint">Для синхронізованих тайтлів. Вимкнено: завжди вибір нижче.</string>
+    <string name="anilist_sync_removal_title">Під час видалення синхронізованого тайтла</string>
+    <string name="anilist_sync_removal_option_ask">Питати</string>
+    <string name="anilist_sync_removal_hint_ask">Вибір щоразу.</string>
+    <string name="anilist_sync_removal_hint_local">Тайтл іде з бібліотеки, запис в AniList залишається.</string>
+    <string name="anilist_sync_removal_hint_everywhere">Запис в AniList теж видаляється.</string>
 </resources>

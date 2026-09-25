@@ -398,46 +398,42 @@ internal fun AniListSyncDialog(
                                 },
                             )
                         }
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Column(Modifier.weight(1f)) {
-                                Text(
-                                    text = stringResource(R.string.anilist_sync_removal_ask),
-                                    style = MaterialTheme.typography.bodyLarge,
-                                )
-                                Text(
-                                    text = stringResource(R.string.anilist_sync_removal_ask_hint),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
+                    }
+
+                    SyncCard {
+                        Text(
+                            text = stringResource(R.string.anilist_sync_removal_title),
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                        val modes = listOf(
+                            AniListRemovalMode.ASK to R.string.anilist_sync_removal_option_ask,
+                            AniListRemovalMode.LOCAL to R.string.anilist_removal_local,
+                            AniListRemovalMode.EVERYWHERE to R.string.anilist_removal_everywhere,
+                        )
+                        SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                            modes.forEachIndexed { index, (mode, label) ->
+                                SegmentedButton(
+                                    selected = removalMode == mode,
+                                    onClick = {
+                                        removalMode = mode
+                                        sync.removalMode = mode
+                                    },
+                                    shape = SegmentedButtonDefaults.itemShape(index = index, count = modes.size),
+                                ) { Text(stringResource(label), maxLines = 1) }
                             }
-                            Switch(
-                                checked = removalMode == AniListRemovalMode.ASK,
-                                onCheckedChange = {
-                                    removalMode = if (it) AniListRemovalMode.ASK else AniListRemovalMode.LOCAL
-                                    sync.removalMode = removalMode
+                        }
+                        Text(
+                            text = stringResource(
+                                when (removalMode) {
+                                    AniListRemovalMode.LOCAL -> R.string.anilist_sync_removal_hint_local
+                                    AniListRemovalMode.EVERYWHERE -> R.string.anilist_sync_removal_hint_everywhere
+                                    else -> R.string.anilist_sync_removal_hint_ask
                                 },
-                            )
-                        }
-                        if (removalMode != AniListRemovalMode.ASK) {
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                listOf(
-                                    AniListRemovalMode.LOCAL to R.string.anilist_removal_local,
-                                    AniListRemovalMode.EVERYWHERE to R.string.anilist_removal_everywhere,
-                                ).forEach { (mode, label) ->
-                                    androidx.compose.material3.FilterChip(
-                                        selected = removalMode == mode,
-                                        onClick = {
-                                            removalMode = mode
-                                            sync.removalMode = mode
-                                        },
-                                        label = { Text(stringResource(label)) },
-                                    )
-                                }
-                            }
-                        }
+                            ),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
                     }
 
                     Button(
