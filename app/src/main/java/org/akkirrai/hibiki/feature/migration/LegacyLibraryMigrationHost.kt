@@ -202,7 +202,7 @@ private fun InstallSourcesDialog(onClose: () -> Unit) {
                         fontWeight = FontWeight.SemiBold,
                     )
                 }
-                SourceExtensionsScreen(onboarding = true, modifier = Modifier.weight(1f))
+                SourceExtensionsScreen(showAvailable = true, modifier = Modifier.weight(1f))
             }
         }
     }

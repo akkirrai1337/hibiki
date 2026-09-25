@@ -136,6 +136,8 @@ fun SourceExtensionsScreen(
     modifier: Modifier = Modifier,
     bottomContentPadding: Dp = UiDimens.ScreenPadding,
     onboarding: Boolean = false,
+    /** Lists the repositories' installable extensions under the installed ones on the Extensions tab. */
+    showAvailable: Boolean = onboarding,
     onInstallationActiveChanged: (Boolean) -> Unit = {},
 ) {
     val context = LocalContext.current
@@ -176,7 +178,7 @@ fun SourceExtensionsScreen(
     val haptic = LocalHapticFeedback.current
     val updateChecker = remember(context) { SourceExtensionUpdateChecker.get(context) }
 
-    val pagerState = rememberPagerState(initialPage = 0) { 2 }
+    val pagerState = rememberPagerState(initialPage = 0) { if (onboarding) 1 else 2 }
     val tabScope = rememberCoroutineScope()
     val lifecycleOwner = LocalLifecycleOwner.current
     val pendingApkInstall = remember(pendingApkInstallPackage, pendingApkInstallPath) {
@@ -551,7 +553,7 @@ fun SourceExtensionsScreen(
                 repositoryContent(repositoryUrl)
             } else {
                 Column(Modifier.fillMaxSize()) {
-                    PrimaryTabRow(
+                    if (!onboarding) PrimaryTabRow(
                         selectedTabIndex = pagerState.currentPage,
                         containerColor = MaterialTheme.colorScheme.background,
                     ) {
@@ -594,6 +596,9 @@ fun SourceExtensionsScreen(
                                 installedApkExtensions = installedApkExtensions,
                                 externalExtensions = externalExtensions,
                                 apkRepositoryExtensions = apkRepositoryExtensions,
+                                availableExtensions = if (showAvailable) apkRepositoryExtensions else emptyList(),
+                                repositoryUrlByPackage = repositoryUrlByPackage,
+                                onInstallAvailable = installApkExtension,
                                 apkLoadErrors = installedApkLoadErrors,
                                 onUpdate = { extension ->
                                     repositoryUrlByPackage[extension.pkg]?.let { installApkExtension(it, extension) }
@@ -1111,6 +1116,9 @@ private fun InstalledSourcesList(
     installedApkExtensions: Map<String, InstalledApkExtensionInfo>,
     externalExtensions: List<ExternalApkExtension>,
     apkRepositoryExtensions: List<ApkRepositoryExtension>,
+    availableExtensions: List<ApkRepositoryExtension>,
+    repositoryUrlByPackage: Map<String, String>,
+    onInstallAvailable: (String, ApkRepositoryExtension) -> Unit,
     apkLoadErrors: Map<String, String>,
     onUpdate: (ApkRepositoryExtension) -> Unit,
     onSelect: (String) -> Unit,
@@ -1205,12 +1213,19 @@ private fun InstalledSourcesList(
         matchesQuery && matchesLanguage && matchesContentRating
     }
 
+    val available = availableExtensions.filter { extension ->
+        installedApkExtensions[extension.pkg]?.isSystemInstalled != true &&
+            (query.isBlank() || extension.name.contains(query, ignoreCase = true) || extension.pkg.contains(query, ignoreCase = true)) &&
+            (selectedLanguages.isEmpty() || extension.lang in selectedLanguages) &&
+            (!hideNsfwSources || extension.nsfw == 0)
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(top = 8.dp),
     ) {
-        if (entries.isEmpty()) {
+        if (entries.isEmpty() && available.isEmpty()) {
             if (extensionsLoaded) SourceRepositoryMessage(stringResource(R.string.source_extensions_installed_empty))
         } else {
             val updates = entries.filter { it.repositoryEntry?.isUpdateAvailable(installedVersions) == true }
@@ -1261,6 +1276,27 @@ private fun InstalledSourcesList(
                             onSelect = onSelect,
                             onUninstall = onUninstall,
                             onOpenSettings = { settingsSheetSourceId = it },
+                        )
+                    }
+                }
+                if (available.isNotEmpty()) {
+                    item(key = "available_extensions") {
+                        SourceExtensionSectionHeader(
+                            title = stringResource(R.string.source_extensions_available_section, available.size),
+                            separatedFromPrevious = entries.isNotEmpty(),
+                        )
+                    }
+                    items(available, key = { "available_${it.pkg}" }) { extension ->
+                        ApkRepositoryExtensionRow(
+                            repositoryUrl = repositoryUrlByPackage[extension.pkg].orEmpty(),
+                            extension = extension,
+                            installingPackages = installingPackages,
+                            installErrors = installErrors,
+                            installedExtensions = installedApkExtensions,
+                            selectedSource = selectedSource,
+                            onInstall = onInstallAvailable,
+                            onSelect = {},
+                            onUninstall = {},
                         )
                     }
                 }
