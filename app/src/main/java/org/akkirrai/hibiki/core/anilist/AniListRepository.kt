@@ -40,7 +40,9 @@ class AniListRepository(
     fun completeAuthorization(redirectUrl: String): AniListAuthorizationResult {
         val callback = AniListOAuth.parseRedirect(redirectUrl) ?: return AniListAuthorizationResult.InvalidRedirect
         val current = tokenStore.read()
-        if (current?.pendingState.isNullOrBlank() || current?.pendingState != callback.state) {
+        // AniList does not echo a state back, so a sign-in this app started (a pending one) is what
+        // authorises the redirect; a state, if one does arrive, must still match.
+        if (current?.pendingState.isNullOrBlank() || (callback.state != null && current.pendingState != callback.state)) {
             return AniListAuthorizationResult.StateMismatch
         }
 

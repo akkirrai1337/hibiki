@@ -6,13 +6,14 @@ import org.junit.Test
 
 class AniListOAuthTest {
     @Test
-    fun `authorization request uses implicit grant and state`() {
+    fun `authorization request is client id and implicit grant only`() {
         val request = AniListOAuth.createAuthorizationRequest("51178")
 
         assertNotNull(request)
         assertEquals(true, request!!.url.contains("client_id=51178"))
         assertEquals(true, request.url.contains("response_type=token"))
-        assertEquals(true, request.url.contains("state=${request.state}"))
+        assertEquals(false, request.url.contains("redirect_uri"))
+        assertEquals(false, request.url.contains("state="))
     }
 
     @Test

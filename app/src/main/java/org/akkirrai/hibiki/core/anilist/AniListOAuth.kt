@@ -21,9 +21,10 @@ object AniListOAuth {
         val url = buildString {
             append("https://anilist.co/api/v2/oauth/authorize?")
             append("client_id=").append(clientId.encodeQueryComponent())
-            append("&redirect_uri=").append(redirectUri.encodeQueryComponent())
+            // Only client_id and response_type: AniList sends the token to the redirect URL registered for the
+            // app, and the server rejected the flow (unsupported_grant_type) when it was also given a
+            // redirect_uri and a state, which the other AniList clients do not send either.
             append("&response_type=token")
-            append("&state=").append(state.encodeQueryComponent())
         }
         return AniListAuthorizationRequest(url = url, state = state)
     }
