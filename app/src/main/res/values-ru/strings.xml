@@ -713,4 +713,7 @@
     <string name="anilist_auto_channel">Синхронизация AniList</string>
     <string name="anilist_auto_notification_title">Синхронизация AniList</string>
     <string name="anilist_auto_notification_text">Готово изменений для отправки в AniList: %1$d</string>
+    <string name="anilist_removal_title">Удалить тайтл, пришедший из AniList?</string>
+    <string name="anilist_removal_message">Этот тайтл был импортирован из AniList. Он будет удалён только здесь: в AniList он останется, а импорт больше не будет добавлять его, пока вы не добавите его сами.</string>
+    <string name="anilist_removal_confirm">Удалить</string>
 </resources>

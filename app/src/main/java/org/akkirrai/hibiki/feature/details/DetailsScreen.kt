@@ -174,6 +174,7 @@ import org.akkirrai.hibiki.core.source.AnimeSourceDescriptor
 import org.akkirrai.hibiki.core.source.AnimeSourceRegistry
 import org.akkirrai.hibiki.app.settings.LocalAppPreferencesState
 import org.akkirrai.hibiki.core.source.LibraryCategory
+import org.akkirrai.hibiki.core.anilist.AniListLibrarySync
 import org.akkirrai.hibiki.core.source.LibraryRepository
 import org.akkirrai.hibiki.core.source.OfflineTitleMetadataRepository
 import org.akkirrai.hibiki.core.source.ResumeFrameRepository
@@ -267,6 +268,7 @@ fun DetailsScreen(
         mutableStateOf(libraryRepository.getLibraryCategory(anime.id))
     }
     var isLibrarySheetOpen by remember(anime.id) { mutableStateOf(false) }
+    var isAniListRemovalOpen by remember(anime.id) { mutableStateOf(false) }
     var isPosterPreviewOpen by remember(anime.id) { mutableStateOf(false) }
     var isTitleDetailsSheetOpen by remember(anime.id) { mutableStateOf(false) }
     var isScreenTransitionSettled by remember(anime.id) { mutableStateOf(false) }
@@ -759,6 +761,18 @@ fun DetailsScreen(
             )
         }
 
+        if (isAniListRemovalOpen) {
+            org.akkirrai.hibiki.feature.library.AniListRemovalDialog(
+                onConfirm = {
+                    isAniListRemovalOpen = false
+                    AniListLibrarySync(context).exclude(currentAnime.id)
+                    libraryRepository.removeFromLibrary(currentAnime.id)
+                    libraryCategory = libraryRepository.getLibraryCategory(currentAnime.id)
+                },
+                onDismiss = { isAniListRemovalOpen = false },
+            )
+        }
+
         if (isLibrarySheetOpen) {
             LibraryCategorySheet(
                 selectedCategory = libraryCategory,
@@ -768,9 +782,13 @@ fun DetailsScreen(
                     isLibrarySheetOpen = false
                 },
                 onRemoveClick = {
-                    libraryRepository.removeFromLibrary(currentAnime.id)
-                    libraryCategory = libraryRepository.getLibraryCategory(currentAnime.id)
                     isLibrarySheetOpen = false
+                    if (AniListLibrarySync(context).isSynced(currentAnime.id)) {
+                        isAniListRemovalOpen = true
+                    } else {
+                        libraryRepository.removeFromLibrary(currentAnime.id)
+                        libraryCategory = libraryRepository.getLibraryCategory(currentAnime.id)
+                    }
                 },
                 onDismiss = { isLibrarySheetOpen = false }
             )

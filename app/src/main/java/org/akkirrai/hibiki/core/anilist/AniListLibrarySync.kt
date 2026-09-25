@@ -71,6 +71,35 @@ class AniListLibrarySync(context: Context) {
         get() = prefs.getLong(KEY_LAST_SYNC, 0L)
         private set(value) { prefs.edit().putLong(KEY_LAST_SYNC, value).apply() }
 
+    /**
+     * Whether a title came in through an AniList sync (it is linked to an AniList entry whose status was
+     * applied). Removing such a title is the one removal that the sync has to be told about.
+     */
+    fun isSynced(titleId: String): Boolean {
+        val mediaId = linkedMediaIds()[titleId] ?: return false
+        return appliedCategory(mediaId) != null
+    }
+
+    /** Stops the import from adding [titleId] again; it is forgotten once the title is back in the library. */
+    fun exclude(titleId: String) {
+        val current = prefs.getStringSet(KEY_EXCLUDED, emptySet()).orEmpty()
+        prefs.edit().putStringSet(KEY_EXCLUDED, current + titleId).apply()
+    }
+
+    /** AniList entries the import must skip because their title was removed from the library on purpose. */
+    private fun excludedMediaIds(links: Map<String, Link>): Set<Int> {
+        val stored = prefs.getStringSet(KEY_EXCLUDED, emptySet()).orEmpty()
+        if (stored.isEmpty()) return emptySet()
+        // A title that has been added back by hand is in the library again, so it is no longer excluded.
+        val active = stored.filterTo(mutableSetOf()) { id ->
+            library.getLibraryCategories(id).none { it != LibraryCategory.Saved }
+        }
+        if (active.size != stored.size) prefs.edit().putStringSet(KEY_EXCLUDED, active).apply()
+        return links.entries
+            .filter { it.value.titleId in active }
+            .mapTo(mutableSetOf()) { it.key.substringAfterLast(':').toInt() }
+    }
+
     /** Whether the library holds a title that was not in it when the last sync finished. */
     fun hasNewTitles(): Boolean {
         val known = prefs.getStringSet(KEY_KNOWN_TITLES, emptySet()).orEmpty()
@@ -124,7 +153,9 @@ class AniListLibrarySync(context: Context) {
             val all = entries + favourites.filter { fav -> entries.none { it.mediaId == fav.mediaId } }
 
             val state = loadState()
+            val excluded = excludedMediaIds(state.links)
             val pending = all.filter { entry ->
+                if (entry.mediaId in excluded) return@filter false
                 val key = "$source:${entry.mediaId}"
                 val category = entry.status?.toCategory()
                 (category != null && state.applied[key] != category.storageValue) ||
@@ -392,6 +423,7 @@ class AniListLibrarySync(context: Context) {
         const val KEY_USE_ACCOUNT = "use_account"
         const val KEY_SKIP_NSFW = "skip_nsfw"
         const val KEY_AUTO = "auto"
+        const val KEY_EXCLUDED = "excluded"
         const val KEY_LAST_SYNC = "last_sync"
         const val KEY_KNOWN_TITLES = "known_titles"
         const val KEY_STATE = "state"

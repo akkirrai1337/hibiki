@@ -70,6 +70,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.delay
 import org.akkirrai.hibiki.R
+import org.akkirrai.hibiki.core.anilist.AniListLibrarySync
 import org.akkirrai.hibiki.app.settings.LocalAppLanguage
 import org.akkirrai.hibiki.core.design.icon
 import org.akkirrai.hibiki.core.design.UiDimens
@@ -114,6 +115,8 @@ fun LibraryScreen(
     val hasMoreEntries = visibleCount < allVisibleEntries.size
     val hapticFeedback = LocalHapticFeedback.current
     var titleWithActions by remember { mutableStateOf<Anime?>(null) }
+    var pendingAniListRemoval by remember { mutableStateOf<Anime?>(null) }
+    val context = androidx.compose.ui.platform.LocalContext.current
 
     LaunchedEffect(Unit) {
         PerfLogger.mark("LibraryScreen composed")
@@ -249,6 +252,17 @@ fun LibraryScreen(
         }
     }
 
+    pendingAniListRemoval?.let { anime ->
+        AniListRemovalDialog(
+            onConfirm = {
+                pendingAniListRemoval = null
+                AniListLibrarySync(context).exclude(anime.id)
+                viewModel.removeFromLibrary(anime.id)
+            },
+            onDismiss = { pendingAniListRemoval = null },
+        )
+    }
+
     titleWithActions?.let { anime ->
         AnimeQuickActionsSheet(
             anime = anime,
@@ -260,7 +274,11 @@ fun LibraryScreen(
                     isDestructive = true,
                     onClick = {
                         titleWithActions = null
-                        viewModel.removeFromLibrary(anime.id)
+                        if (AniListLibrarySync(context).isSynced(anime.id)) {
+                            pendingAniListRemoval = anime
+                        } else {
+                            viewModel.removeFromLibrary(anime.id)
+                        }
                     },
                 ),
             ),
