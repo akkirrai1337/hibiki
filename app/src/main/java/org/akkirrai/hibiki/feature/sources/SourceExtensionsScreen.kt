@@ -178,7 +178,7 @@ fun SourceExtensionsScreen(
     val haptic = LocalHapticFeedback.current
     val updateChecker = remember(context) { SourceExtensionUpdateChecker.get(context) }
 
-    val pagerState = rememberPagerState(initialPage = 0) { if (onboarding) 1 else 2 }
+    val pagerState = rememberPagerState(initialPage = 0) { 2 }
     val tabScope = rememberCoroutineScope()
     val lifecycleOwner = LocalLifecycleOwner.current
     val pendingApkInstall = remember(pendingApkInstallPackage, pendingApkInstallPath) {
@@ -553,7 +553,7 @@ fun SourceExtensionsScreen(
                 repositoryContent(repositoryUrl)
             } else {
                 Column(Modifier.fillMaxSize()) {
-                    if (!onboarding) PrimaryTabRow(
+                    PrimaryTabRow(
                         selectedTabIndex = pagerState.currentPage,
                         containerColor = MaterialTheme.colorScheme.background,
                     ) {
