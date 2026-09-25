@@ -52,6 +52,13 @@ import org.akkirrai.hibiki.core.source.WatchStateRepository
 private data class ContinueInfo(val progress: EpisodeWatchProgress?, val frame: File?)
 
 /**
+ * The last loaded info per title. Home leaves composition while details are open and is composed again on
+ * the way back; starting from empty made every card show its poster for a moment and then swap to the
+ * frame in the middle of the return transition, so the page seemed to jump into place.
+ */
+private val continueInfoCache = HashMap<String, ContinueInfo>()
+
+/**
  * Continue watching as one row of 16:9 cards, the last captured frame of each title with the episode and
  * how far it got, most recent first - the same shelf the desktop app has.
  */
@@ -65,7 +72,7 @@ fun ContinueWatchingRow(
 ) {
     val context = LocalContext.current.applicationContext
     val ids = items.map { it.id }
-    val info by produceState(emptyMap<String, ContinueInfo>(), ids) {
+    val info by produceState(ids.mapNotNull { id -> continueInfoCache[id]?.let { id to it } }.toMap(), ids) {
         val watchState = WatchStateRepository(context)
         val frames = ResumeFrameRepository(context)
         // Read again whenever progress is written, so a frame or an episode change shows up in place.
@@ -77,7 +84,7 @@ fun ContinueWatchingRow(
                         ?: episodes.maxByOrNull { it.updatedAt }
                     ContinueInfo(latest, frames.getFrame(id))
                 }
-            }
+            }.also { loaded -> continueInfoCache.putAll(loaded) }
         }
     }
 
