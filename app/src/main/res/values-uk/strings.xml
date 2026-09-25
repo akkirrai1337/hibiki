@@ -676,4 +676,9 @@
     <string name="anilist_sync_private">Профіль AniList або його список закритий. Зробіть його публічним і повторіть.</string>
     <string name="anilist_sync_user_missing">Користувача AniList з таким ім’ям не знайдено.</string>
     <string name="anilist_sync_failed">Помилка синхронізації</string>
+    <string name="anilist_auth_failed">Не вдалося увійти в AniList</string>
+    <string name="anilist_sync_sign_in">Увійти через AniList</string>
+    <string name="anilist_sync_sign_out">Вийти</string>
+    <string name="anilist_sync_connected_as">Ви увійшли як %1$s</string>
+    <string name="anilist_sync_or_public">Або прочитати публічний список за іменем:</string>
 </resources>

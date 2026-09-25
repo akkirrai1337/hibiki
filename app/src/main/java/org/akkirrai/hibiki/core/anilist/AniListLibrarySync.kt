@@ -59,12 +59,18 @@ class AniListLibrarySync(context: Context) {
         ?.let { AniListSyncReport(it.added, it.updated, it.unmatched, it.failed, it.finishedAt) }
 
     suspend fun run(onProgress: (done: Int, total: Int) -> Unit = { _, _ -> }): AniListSyncReport {
-        val user = userName.ifBlank { error("AniList user name is not set") }
         val source = sourceId.ifBlank { error("Sync source is not chosen") }
         val client = AndroidHttpClientFactory.create()
         val search = AnimeSearchRepository(appContext, client = client, closeClientOnClose = false)
         try {
-            val remote = AniListPublicLibrary(client)
+            // Signed in, the account decides whose list this is and private lists are readable.
+            val token = AniListRepository(appContext, client).currentAccessToken()
+            val user = if (token != null) {
+                AniListRepository(appContext, client).getViewer().name
+            } else {
+                userName.ifBlank { error("AniList user name is not set") }
+            }
+            val remote = AniListPublicLibrary(client, token)
             val entries = remote.library(user)
             val favourites = remote.favourites(user)
             val favouriteIds = favourites.mapTo(mutableSetOf()) { it.mediaId }

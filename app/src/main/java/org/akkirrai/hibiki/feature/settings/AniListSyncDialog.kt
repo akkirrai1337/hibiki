@@ -17,6 +17,8 @@ import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -28,6 +30,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -35,6 +40,7 @@ import kotlinx.coroutines.withContext
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.core.anilist.AniListLibrarySync
 import org.akkirrai.hibiki.core.anilist.AniListPrivateListException
+import org.akkirrai.hibiki.core.anilist.AniListRepository
 import org.akkirrai.hibiki.core.anilist.AniListSyncReport
 import org.akkirrai.hibiki.core.anilist.AniListUserNotFoundException
 import org.akkirrai.hibiki.core.network.NoInternetConnectionException
@@ -50,6 +56,29 @@ internal fun AniListSyncDialog(
     val sync = remember { AniListLibrarySync(context) }
     val scope = rememberCoroutineScope()
     val sources = AnimeSourceRegistry.sources
+    val account = remember { AniListRepository(context) }
+    var connected by remember { mutableStateOf(account.currentAccessToken() != null) }
+    var viewerName by remember { mutableStateOf<String?>(null) }
+    // The sign-in happens in the browser and returns through AniListAuthActivity, so the state is
+    // read again whenever this screen comes back to the front.
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) connected = account.currentAccessToken() != null
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+            account.close()
+        }
+    }
+    LaunchedEffect(connected) {
+        viewerName = if (connected) {
+            runCatching { withContext(Dispatchers.IO) { account.getViewer().name } }.getOrNull()
+        } else {
+            null
+        }
+    }
     var userName by remember { mutableStateOf(sync.userName) }
     var sourceId by remember {
         mutableStateOf(
@@ -82,14 +111,54 @@ internal fun AniListSyncDialog(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                OutlinedTextField(
-                    value = userName,
-                    onValueChange = { userName = it },
-                    label = { Text(stringResource(R.string.anilist_sync_username)) },
-                    singleLine = true,
-                    enabled = !running,
-                    modifier = Modifier.fillMaxWidth(),
-                )
+                if (connected) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                    ) {
+                        Text(
+                            text = stringResource(R.string.anilist_sync_connected_as, viewerName.orEmpty()),
+                            style = MaterialTheme.typography.bodyLarge,
+                            modifier = Modifier.weight(1f),
+                        )
+                        TextButton(enabled = !running, onClick = { account.disconnect(); connected = false }) {
+                            Text(stringResource(R.string.anilist_sync_sign_out))
+                        }
+                    }
+                } else {
+                    if (account.isConfigured) {
+                        Button(
+                            enabled = !running,
+                            onClick = {
+                                account.beginAuthorization()?.let { request ->
+                                    runCatching {
+                                        context.startActivity(
+                                            android.content.Intent(
+                                                android.content.Intent.ACTION_VIEW,
+                                                android.net.Uri.parse(request.url),
+                                            ),
+                                        )
+                                    }
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                        ) { Text(stringResource(R.string.anilist_sync_sign_in)) }
+                        Text(
+                            text = stringResource(R.string.anilist_sync_or_public),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    OutlinedTextField(
+                        value = userName,
+                        onValueChange = { userName = it },
+                        label = { Text(stringResource(R.string.anilist_sync_username)) },
+                        singleLine = true,
+                        enabled = !running,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
                 Text(
                     text = stringResource(R.string.anilist_sync_source),
                     style = MaterialTheme.typography.labelLarge,
@@ -157,7 +226,7 @@ internal fun AniListSyncDialog(
         },
         confirmButton = {
             Button(
-                enabled = !running && userName.isNotBlank() && sourceId.isNotBlank(),
+                enabled = !running && (connected || userName.isNotBlank()) && sourceId.isNotBlank(),
                 onClick = {
                     sync.userName = userName
                     sync.sourceId = sourceId

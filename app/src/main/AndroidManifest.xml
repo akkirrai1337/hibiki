@@ -42,6 +42,19 @@
         </service>
 
         <activity
+            android:name=".core.anilist.AniListAuthActivity"
+            android:exported="true"
+            android:launchMode="singleTask"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="hibiki" android:host="anilist-auth" />
+            </intent-filter>
+        </activity>
+
+        <activity
             android:name=".core.discord.DiscordAuthActivity"
             android:exported="false"
             android:label="@string/discord_rpc_title"

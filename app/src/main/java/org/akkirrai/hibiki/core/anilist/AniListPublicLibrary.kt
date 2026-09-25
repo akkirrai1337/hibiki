@@ -2,6 +2,7 @@ package org.akkirrai.hibiki.core.anilist
 
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
+import io.ktor.client.request.header
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
@@ -30,7 +31,11 @@ class AniListUserNotFoundException : IllegalStateException("AniList user not fou
  * Reads a user's list and favourites without signing in. This is all a one-way pull needs: a public
  * profile is readable by anyone, and it keeps the feature free of OAuth (and of a client id) entirely.
  */
-class AniListPublicLibrary(private val client: HttpClient) {
+class AniListPublicLibrary(
+    private val client: HttpClient,
+    /** A signed-in user's token, which also opens a private list; without it only public lists are read. */
+    private val accessToken: String? = null,
+) {
 
     suspend fun library(userName: String): List<AniListSyncEntry> {
         val data = execute<CollectionData>(
@@ -86,6 +91,7 @@ class AniListPublicLibrary(private val client: HttpClient) {
 
     private suspend inline fun <reified T> execute(query: String, variables: JsonObject): T {
         val response = client.post(GRAPHQL_URL) {
+            accessToken?.let { header(io.ktor.http.HttpHeaders.Authorization, "Bearer $it") }
             contentType(ContentType.Application.Json)
             setBody(GraphQlRequest(query, variables))
         }
