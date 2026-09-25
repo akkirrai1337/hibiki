@@ -1,6 +1,12 @@
 package org.akkirrai.hibiki.core.design.component.search
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.isImeVisible
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -38,6 +44,7 @@ import androidx.compose.ui.unit.dp
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.core.design.UiDimens
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun AppSearchTopBar(
     query: String,
@@ -53,6 +60,14 @@ fun AppSearchTopBar(
     modifier: Modifier = Modifier,
 ) {
     val innerBarHeight = barHeight - 2.dp
+    // Back with the keyboard open must only put the keyboard away. Some systems hand that gesture to the
+    // app instead of the keyboard, and then it would leave the search (or the screen) with the keyboard up.
+    val keyboardController = LocalSoftwareKeyboardController.current
+    val focusManager = LocalFocusManager.current
+    BackHandler(enabled = WindowInsets.isImeVisible) {
+        keyboardController?.hide()
+        focusManager.clearFocus()
+    }
     // A plain String value resets the cursor to the start whenever the text is set from outside
     // (text handed over from another screen), so the next letters would land in front of it.
     var edited by remember { mutableStateOf(TextFieldValue(query, TextRange(query.length))) }
