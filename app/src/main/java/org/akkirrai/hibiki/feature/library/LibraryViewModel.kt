@@ -112,7 +112,18 @@ class LibraryViewModel(
 
     private fun reconcileSavedDownloads(): Boolean {
         var changed = false
-        offlineDownloadRepository.getOfflineTitleIds().forEach { titleId ->
+        val offlineIds = offlineDownloadRepository.getOfflineTitleIds().toSet()
+        // Saved only mirrors what is downloaded, and its cards have no actions of their own, so a Saved
+        // entry without files (a leftover duplicate, or a download removed elsewhere) could never be removed.
+        libraryRepository.getLibraryEntries()
+            .filter { it.category == LibraryCategory.Saved && it.anime.id !in offlineIds }
+            .map { it.anime.id }
+            .distinct()
+            .forEach { titleId ->
+                libraryRepository.removeSavedFromLibrary(titleId)
+                changed = true
+            }
+        offlineIds.forEach { titleId ->
             val metadata = offlineTitleMetadataRepository.get(titleId) ?: return@forEach
             if (LibraryCategory.Saved !in libraryRepository.getLibraryCategories(titleId)) {
                 libraryRepository.saveToLibrary(metadata, LibraryCategory.Saved)
