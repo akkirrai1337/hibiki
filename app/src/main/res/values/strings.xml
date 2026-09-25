@@ -750,4 +750,12 @@
     <string name="local_profile_achievement_maxed">All levels completed</string>
     <string name="local_profile_achievement_xp">+%1$d XP</string>
     <string name="local_profile_streak_best_long">Best streak: %1$d days</string>
+    <string name="onboarding_anilist_title">Sync your AniList library</string>
+    <string name="onboarding_anilist_description">Bring your AniList lists into hibiki and send your library back. Nothing is changed without your confirmation.</string>
+    <string name="onboarding_anilist_set_up">Set up AniList sync</string>
+    <string name="onboarding_anilist_connected">AniList is connected</string>
+    <string name="onboarding_anilist_imported">Imported %1$d titles from AniList</string>
+    <string name="onboarding_anilist_manage">Manage sync</string>
+    <string name="onboarding_anilist_needs_source">Install a source first, then AniList titles can be matched to it.</string>
+    <string name="onboarding_anilist_skip_hint">You can skip this and set it up later in Settings.</string>
 </resources>

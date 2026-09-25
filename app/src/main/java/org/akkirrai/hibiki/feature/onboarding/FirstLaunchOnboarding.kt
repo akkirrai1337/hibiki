@@ -29,6 +29,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.NotificationsActive
+import androidx.compose.material.icons.rounded.Sync
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -38,12 +39,14 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
@@ -54,11 +57,16 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.app.settings.NotificationPermissionState
+import org.akkirrai.hibiki.core.anilist.AniListLibrarySync
+import org.akkirrai.hibiki.core.anilist.AniListRepository
+import org.akkirrai.hibiki.core.source.AnimeSourceRegistry
+import org.akkirrai.hibiki.feature.settings.AniListSyncDialog
 import org.akkirrai.hibiki.feature.sources.SourceExtensionsScreen
 
 private enum class OnboardingStep {
     WELCOME,
     SOURCES,
+    ANILIST,
     NOTIFICATIONS,
 }
 
@@ -74,11 +82,7 @@ fun FirstLaunchOnboarding(
     var installationActive by remember { mutableStateOf(false) }
     BackHandler(enabled = step != OnboardingStep.WELCOME) {
         if (installationActive) return@BackHandler
-        stepName = when (step) {
-            OnboardingStep.WELCOME -> OnboardingStep.WELCOME.name
-            OnboardingStep.SOURCES -> OnboardingStep.WELCOME.name
-            OnboardingStep.NOTIFICATIONS -> OnboardingStep.SOURCES.name
-        }
+        stepName = OnboardingStep.entries[maxOf(0, step.ordinal - 1)].name
     }
 
     Surface(
@@ -121,6 +125,8 @@ fun FirstLaunchOnboarding(
                         modifier = Modifier.fillMaxSize(),
                     )
 
+                    OnboardingStep.ANILIST -> AniListStep(modifier = Modifier.fillMaxSize())
+
                     OnboardingStep.NOTIFICATIONS -> NotificationsStep(
                         permissionState = notificationPermissionState,
                         onRequestPermission = onRequestNotificationPermission,
@@ -137,18 +143,14 @@ fun FirstLaunchOnboarding(
                 step = step,
                 navigationEnabled = !installationActive,
                 onBack = {
-                    stepName = when (step) {
-                        OnboardingStep.WELCOME -> OnboardingStep.WELCOME.name
-                        OnboardingStep.SOURCES -> OnboardingStep.WELCOME.name
-                        OnboardingStep.NOTIFICATIONS -> OnboardingStep.SOURCES.name
-                    }
+                    stepName = OnboardingStep.entries[maxOf(0, step.ordinal - 1)].name
                 },
                 onNext = {
-                    when (step) {
-                        OnboardingStep.WELCOME -> stepName = OnboardingStep.SOURCES.name
-                        OnboardingStep.SOURCES -> stepName = OnboardingStep.NOTIFICATIONS.name
-                        OnboardingStep.NOTIFICATIONS -> onComplete()
-                        }
+                    if (step == OnboardingStep.NOTIFICATIONS) {
+                        onComplete()
+                    } else {
+                        stepName = OnboardingStep.entries[step.ordinal + 1].name
+                    }
                 },
             )
         }
@@ -293,6 +295,94 @@ private fun NotificationsStep(
                 text = stringResource(R.string.onboarding_notifications_denied),
             )
         }
+    }
+}
+
+@Composable
+private fun AniListStep(modifier: Modifier = Modifier) {
+    val context = LocalContext.current
+    var dialogOpen by remember { mutableStateOf(false) }
+    // Bumped whenever the sync screen closes, so the status below reads the fresh state.
+    var refresh by remember { mutableIntStateOf(0) }
+    val hasSource = AnimeSourceRegistry.sources.isNotEmpty()
+    val connected = remember(refresh) {
+        val account = AniListRepository(context)
+        try {
+            account.currentAccessToken() != null
+        } finally {
+            account.close()
+        }
+    }
+    val report = remember(refresh) { AniListLibrarySync(context).lastReport() }
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        Icon(
+            imageVector = Icons.Rounded.Sync,
+            contentDescription = null,
+            modifier = Modifier.size(112.dp),
+            tint = MaterialTheme.colorScheme.primary,
+        )
+        Spacer(Modifier.height(32.dp))
+        Text(
+            text = stringResource(R.string.onboarding_anilist_title),
+            style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center,
+        )
+        Spacer(Modifier.height(14.dp))
+        Text(
+            text = stringResource(R.string.onboarding_anilist_description),
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+        )
+        Spacer(Modifier.height(32.dp))
+        if (connected) {
+            PermissionStatus(
+                text = report?.let { stringResource(R.string.onboarding_anilist_imported, it.added + it.updated) }
+                    ?: stringResource(R.string.onboarding_anilist_connected),
+            )
+            Spacer(Modifier.height(12.dp))
+        }
+        if (hasSource) {
+            if (connected && report != null) {
+                TextButton(onClick = { dialogOpen = true }) {
+                    Text(stringResource(R.string.onboarding_anilist_manage))
+                }
+            } else {
+                Button(onClick = { dialogOpen = true }) {
+                    Text(stringResource(R.string.onboarding_anilist_set_up))
+                }
+            }
+        } else {
+            Text(
+                text = stringResource(R.string.onboarding_anilist_needs_source),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+            )
+        }
+        Spacer(Modifier.height(12.dp))
+        Text(
+            text = stringResource(R.string.onboarding_anilist_skip_hint),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+        )
+    }
+    if (dialogOpen) {
+        AniListSyncDialog(
+            defaultSourceId = "",
+            onDismiss = {
+                dialogOpen = false
+                refresh++
+            },
+        )
     }
 }
 

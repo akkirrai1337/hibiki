@@ -738,4 +738,12 @@
     <string name="local_profile_achievement_maxed">Усі рівні пройдено</string>
     <string name="local_profile_achievement_xp">+%1$d XP</string>
     <string name="local_profile_streak_best_long">Найкраща серія: %1$d дн.</string>
+    <string name="onboarding_anilist_title">Синхронізація з AniList</string>
+    <string name="onboarding_anilist_description">Перенеси списки з AniList у hibiki та надсилай бібліотеку назад. Нічого не змінюється без твого підтвердження.</string>
+    <string name="onboarding_anilist_set_up">Налаштувати синхронізацію</string>
+    <string name="onboarding_anilist_connected">AniList підключено</string>
+    <string name="onboarding_anilist_imported">Імпортовано тайтлів з AniList: %1$d</string>
+    <string name="onboarding_anilist_manage">Керування синхронізацією</string>
+    <string name="onboarding_anilist_needs_source">Спочатку встанови джерело, щоб тайтли AniList можна було знайти в ньому.</string>
+    <string name="onboarding_anilist_skip_hint">Можна пропустити й налаштувати пізніше в налаштуваннях.</string>
 </resources>
