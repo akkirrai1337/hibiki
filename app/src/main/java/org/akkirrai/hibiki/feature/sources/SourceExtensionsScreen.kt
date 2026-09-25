@@ -393,7 +393,12 @@ fun SourceExtensionsScreen(
             .distinctUntilChanged()
             .collect { selectedTab = it }
     }
-    BackHandler(enabled = searchOpen || selectedRepositoryUrl != null) {
+    // Onboarding has nothing to browse but the default repository, so it opens straight into it: the
+    // list there already carries installed and installable extensions together.
+    LaunchedEffect(onboarding, sourceRepositoryUrls) {
+        if (onboarding && selectedRepositoryUrl == null) selectedRepositoryUrl = sourceRepositoryUrls.firstOrNull()
+    }
+    BackHandler(enabled = searchOpen || (selectedRepositoryUrl != null && !onboarding)) {
         if (searchOpen) {
             query = ""
             searchOpen = false
@@ -484,7 +489,7 @@ fun SourceExtensionsScreen(
         SourceExtensionsToolbar(
             title = selectedRepositoryUrl?.let(::repositoryTitle)
                 ?: stringResource(R.string.nav_sources),
-            onBack = selectedRepositoryUrl?.let { { selectedRepositoryUrl = null } },
+            onBack = selectedRepositoryUrl?.takeUnless { onboarding }?.let { { selectedRepositoryUrl = null } },
             searchOpen = searchOpen,
             showFilter = showLanguageFilter,
             filterCount = selectedLanguages.size,
