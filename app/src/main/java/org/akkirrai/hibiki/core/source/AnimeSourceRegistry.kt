@@ -22,6 +22,7 @@ import org.akkirrai.hibiki.app.settings.RememberedAnimeSourceAppearance
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.core.log.AppLogger
 import java.util.concurrent.atomic.AtomicInteger
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -95,6 +96,9 @@ object AnimeSourceRegistry {
     // Retain APK class loaders while their adapters remain registered.
     private var loadedApkExtensionsState by mutableStateOf<List<LoadedAnimeExtension>>(emptyList())
     private val apkRefreshMutex = Mutex()
+    // Completed once the first load of the installed extensions has finished, whether it found any or not.
+    // Until then an empty registry means "not loaded yet", not "nothing installed".
+    private val initialLoad = CompletableDeferred<Unit>()
     // Bumped whenever the set of loaded sources changes, so long-lived AnimeSourceRuntimeManager
     // instances (one per repository, surviving across screen navigation) discard runtimes they
     // created for sources that have since been replaced.
@@ -107,9 +111,29 @@ object AnimeSourceRegistry {
         applicationContext = context.applicationContext
     }
 
+    /** Suspends until the extensions installed at startup have been loaded (or failed to). */
+    suspend fun awaitInitialLoad() = initialLoad.await()
+
+    /**
+     * For callers that already run off the main thread and cannot suspend: wait for the first load rather
+     * than report a source as missing just because it is still loading. The main thread is never held.
+     */
+    private fun awaitInitialLoadOffMainThread() {
+        if (initialLoad.isCompleted || android.os.Looper.myLooper() == android.os.Looper.getMainLooper()) return
+        kotlinx.coroutines.runBlocking { initialLoad.await() }
+    }
+
     /** Loads only APKs installed by Android's package installer. DEX work runs off the UI thread. */
     suspend fun refreshApkExtensions(context: Context) {
         val appContext = context.applicationContext
+        try {
+            refreshApkExtensionsLocked(appContext)
+        } finally {
+            initialLoad.complete(Unit)
+        }
+    }
+
+    private suspend fun refreshApkExtensionsLocked(appContext: Context) {
         apkRefreshMutex.withLock {
             var scanned: Map<String, InstalledApkExtensionInfo> = emptyMap()
             val (loaded, adapters, loadErrors) = withContext(Dispatchers.IO) {
@@ -284,9 +308,12 @@ object AnimeSourceRegistry {
         )
     }
 
-    private fun registration(sourceId: SourceId): Registration =
-        registrationsState.firstOrNull { it.descriptor.id == sourceId }
+    private fun registration(sourceId: SourceId): Registration {
+        registrationsState.firstOrNull { it.descriptor.id == sourceId }?.let { return it }
+        awaitInitialLoadOffMainThread()
+        return registrationsState.firstOrNull { it.descriptor.id == sourceId }
             ?: throw NoSourcesInstalledException(sourceId)
+    }
 }
 
 data class StoredSourceAppearance(
