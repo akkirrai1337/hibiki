@@ -86,6 +86,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.first
 import kotlin.math.roundToInt
+import org.akkirrai.hibiki.feature.details.extractNextEpisodeNumber
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.app.di.hibikiDependencies
 import org.akkirrai.hibiki.core.design.UiDimens
@@ -190,8 +191,11 @@ fun EpisodesScreen(
             )
         }
     }
-    val nextEpisodeNumber = remember(episodeItems) {
-        (episodeItems.maxOfOrNull { it.number }?.toInt() ?: 0) + 1
+    // The countdown belongs to the episode the metadata says airs next, which is the number the title page
+    // shows; a source that lags behind would otherwise label it with its own next number.
+    val nextEpisodeNumber = remember(episodeItems, cachedAnime) {
+        cachedAnime?.episodesLabel?.let(::extractNextEpisodeNumber)
+            ?: ((episodeItems.maxOfOrNull { it.number }?.toInt() ?: 0) + 1)
     }
     LaunchedEffect(state.result, sourceId, lifecycleOwner) {
         val content = state.result as? EpisodesUiState.Content ?: return@LaunchedEffect
