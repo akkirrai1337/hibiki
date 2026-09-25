@@ -710,4 +710,9 @@
     <string name="anilist_push_removals_warning">Ці тайтли вже синхронізувалися і більше не у вашій бібліотеці. Надсилання видалить їхні записи з вашого списку AniList.</string>
     <string name="anilist_push_remove_chip">Видалити з AniList</string>
     <string name="anilist_auto_notification_removals">Готово змін для AniList: %1$d, з них видалень записів: %2$d. Нічого не буде надіслано, доки ви не підтвердите.</string>
+    <string name="anilist_banner_pending">Готово змін для AniList: %1$d</string>
+    <string name="anilist_banner_removals">Змін для AniList: %1$d, з них видалень записів: %2$d</string>
+    <string name="anilist_banner_review">Натисніть, щоб перевірити перед надсиланням</string>
+    <string name="anilist_banner_sign_in">Вхід в AniList закінчився</string>
+    <string name="anilist_banner_sign_in_action">Натисніть, щоб увійти знову</string>
 </resources>

@@ -114,6 +114,12 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.launch
 import org.akkirrai.hibiki.R
+import org.akkirrai.hibiki.feature.settings.AniListSyncDialog
+import org.akkirrai.hibiki.core.anilist.AniListSyncStatus
+import org.akkirrai.hibiki.core.anilist.AniListLibrarySync
+import androidx.compose.material3.BadgedBox
+import androidx.compose.material3.Badge
+import androidx.compose.material.icons.outlined.Sync
 import org.akkirrai.hibiki.core.download.OfflineDownloadRepository
 import org.akkirrai.hibiki.core.design.UiDimens
 import org.akkirrai.hibiki.core.design.component.AppFilledIconButton
@@ -177,6 +183,21 @@ fun HomeScreen(
     // removed: a long press is easy to trigger by accident while scrolling a row.
     var pendingProgressRemoval by remember { mutableStateOf<Anime?>(null) }
     var showFilters by rememberSaveable { mutableStateOf(false) }
+    // The AniList sync screen, opened from the search bar icon, the banner, or a notification.
+    var syncDialog by remember { mutableStateOf<HomeSyncDialog?>(null) }
+    val syncPending by AniListSyncStatus.pending.collectAsState()
+    val syncRunning by AniListSyncStatus.syncing.collectAsState()
+    val syncNeedsSignIn by AniListSyncStatus.needsSignIn.collectAsState()
+    val previewRequested by AniListSyncStatus.previewRequested.collectAsState()
+    LaunchedEffect(previewRequested) {
+        if (previewRequested) {
+            AniListSyncStatus.consumePreviewRequest()
+            syncDialog = HomeSyncDialog.Preview
+        }
+    }
+    // Shown once a first sync has been done, so the icon is not there for people who never set it up.
+    val syncContext = LocalContext.current.applicationContext
+    val syncAvailable = remember(syncDialog, syncRunning) { AniListLibrarySync(syncContext).lastSyncAt > 0L }
     val pullToRefreshState = rememberPullToRefreshState()
     val sharedCardModifier: @Composable (Anime) -> Modifier = { anime ->
         animeDetailsSharedCardModifier(anime.id, sharedTransitionScope, animatedVisibilityScope, origin = "home")
@@ -258,6 +279,19 @@ fun HomeScreen(
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             homeFeedContent(
+                                syncBanner = if (syncPending != null || syncNeedsSignIn) {
+                                    {
+                                        AniListSyncBanner(
+                                            pending = syncPending,
+                                            needsSignIn = syncNeedsSignIn,
+                                            onClick = {
+                                                syncDialog = if (syncPending != null) HomeSyncDialog.Preview else HomeSyncDialog.Open
+                                            },
+                                        )
+                                    }
+                                } else {
+                                    null
+                                },
                                 featuredAnime = featuredAnime,
                                 continueAnime = continueAnime,
                                 recentlyWatched = recentlyWatched,
@@ -291,6 +325,32 @@ fun HomeScreen(
             onClear = {},
             onFilterClick = { showFilters = true },
             showFilter = true,
+            extraAction = if (syncAvailable) {
+                {
+                    IconButton(
+                        onClick = { syncDialog = HomeSyncDialog.Open },
+                        modifier = Modifier.size(42.dp),
+                    ) {
+                        BadgedBox(badge = { if (syncPending != null || syncNeedsSignIn) Badge() }) {
+                            if (syncRunning) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(20.dp),
+                                    strokeWidth = 2.dp,
+                                )
+                            } else {
+                                Icon(
+                                    imageVector = Icons.Outlined.Sync,
+                                    contentDescription = stringResource(R.string.settings_anilist_sync),
+                                    modifier = Modifier.size(22.dp),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
+                    }
+                }
+            } else {
+                null
+            },
             modifier = Modifier
                 .align(Alignment.TopCenter)
                 .fillMaxWidth()
@@ -300,6 +360,14 @@ fun HomeScreen(
                     end = UiDimens.ScreenPadding,
                 )
         )
+
+        syncDialog?.let { mode ->
+            AniListSyncDialog(
+                defaultSourceId = selectedSourceId.value,
+                onDismiss = { syncDialog = null },
+                startWithPreview = mode == HomeSyncDialog.Preview,
+            )
+        }
 
         if (showFilters) {
             HomeFiltersSheet(
@@ -333,6 +401,7 @@ fun HomeScreen(
 }
 
 private fun LazyListScope.homeFeedContent(
+    syncBanner: (@Composable () -> Unit)?,
     featuredAnime: List<Anime>,
     continueAnime: Anime?,
     recentlyWatched: List<Anime>,
@@ -346,6 +415,11 @@ private fun LazyListScope.homeFeedContent(
     sharedCardModifier: @Composable (Anime) -> Modifier,
     sharedPosterModifier: @Composable (Anime) -> Modifier,
 ) {
+    syncBanner?.let { banner ->
+        item(key = "anilist_sync_banner") {
+            Box(modifier = Modifier.padding(horizontal = UiDimens.ScreenPadding)) { banner() }
+        }
+    }
     item {
         if (featuredAnime.isNotEmpty()) {
             FeaturedCarousel(
@@ -902,3 +976,5 @@ private fun buildHomeMeta(
         includeRating = includeRating,
     )
 }
+
+private enum class HomeSyncDialog { Open, Preview }

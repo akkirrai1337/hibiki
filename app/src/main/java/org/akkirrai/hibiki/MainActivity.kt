@@ -143,6 +143,7 @@ class MainActivity : ComponentActivity() {
             OfflineMediaCache.migrateLegacyStreamingCacheIfSafe(applicationContext)
         }
 
+        handleAniListIntent(intent)
         // At most every 12 hours, and only when the library has a new title (see AniListAutoSync).
         lifecycleScope.launch(Dispatchers.IO) {
             org.akkirrai.hibiki.core.anilist.AniListAutoSync.runIfDue(applicationContext)
@@ -195,6 +196,17 @@ class MainActivity : ComponentActivity() {
             ContextCompat.RECEIVER_NOT_EXPORTED,
         )
         checkForAppUpdate()
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        handleAniListIntent(intent)
+    }
+
+    private fun handleAniListIntent(intent: Intent?) {
+        if (intent?.getBooleanExtra(org.akkirrai.hibiki.core.anilist.AniListSyncStatus.EXTRA_OPEN_PREVIEW, false) == true) {
+            org.akkirrai.hibiki.core.anilist.AniListSyncStatus.requestPreview()
+        }
     }
 
     override fun onResume() {

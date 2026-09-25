@@ -45,6 +45,8 @@ fun AppSearchTopBar(
     onClear: () -> Unit,
     onFilterClick: () -> Unit = {},
     showFilter: Boolean = true,
+    /** An extra icon button placed before the filter button. */
+    extraAction: (@Composable () -> Unit)? = null,
     @StringRes placeholderResId: Int = R.string.search_placeholder,
     barHeight: Dp = UiDimens.SearchBarHeight,
     focusRequester: FocusRequester? = null,
@@ -115,6 +117,7 @@ fun AppSearchTopBar(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(2.dp),
             ) {
+                extraAction?.invoke()
                 if (showFilter) {
                     IconButton(
                         onClick = onFilterClick,

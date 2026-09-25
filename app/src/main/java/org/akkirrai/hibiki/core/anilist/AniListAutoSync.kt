@@ -37,20 +37,25 @@ object AniListAutoSync {
         if (!sync.autoEnabled || sync.sourceId.isBlank()) return
         val lastSync = sync.lastSyncAt
         // Nothing to be automatic about until a first sync has been done by hand.
-        if (lastSync == 0L || System.currentTimeMillis() - lastSync < INTERVAL_MILLIS) return
+        if (lastSync == 0L) return
         val signedIn = AniListRepository(appContext).let { repository ->
             val token = repository.currentAccessToken()
             repository.close()
             token != null
         }
+        // Signed out after a sync has been set up means the year-long token ran out.
+        AniListSyncStatus.setNeedsSignIn(sync.useAccount && !signedIn)
         if (sync.useAccount && !signedIn) return
         if (!sync.useAccount && sync.userName.isBlank()) return
+        if (System.currentTimeMillis() - lastSync < INTERVAL_MILLIS) return
         if (!sync.hasNewTitles()) return
 
+        AniListSyncStatus.setSyncing(true)
         try {
             sync.run()
             if (sync.useAccount && signedIn) {
                 val plan = AniListLibraryPush(appContext).plan()
+                AniListSyncStatus.setPending(plan)
                 val changes = plan.items.size + plan.removals.size
                 if (changes > 0) notify(appContext, changes, plan.removals.size)
             }
@@ -59,6 +64,8 @@ object AniListAutoSync {
         } catch (error: Throwable) {
             // Left for the next launch: the sync time only moves when a run finishes.
             AppLogger.w(TAG, "Automatic AniList sync did not finish", error)
+        } finally {
+            AniListSyncStatus.setSyncing(false)
         }
     }
 
@@ -73,7 +80,9 @@ object AniListAutoSync {
         val open = PendingIntent.getActivity(
             context,
             0,
-            Intent(context, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP),
+            Intent(context, MainActivity::class.java)
+                .addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
+                .putExtra(AniListSyncStatus.EXTRA_OPEN_PREVIEW, true),
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
         )
         manager.notify(

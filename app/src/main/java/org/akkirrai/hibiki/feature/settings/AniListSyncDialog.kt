@@ -82,6 +82,7 @@ import org.akkirrai.hibiki.core.anilist.AniListPushRemoval
 import org.akkirrai.hibiki.core.anilist.AniListPushResult
 import org.akkirrai.hibiki.core.anilist.AniListRepository
 import org.akkirrai.hibiki.core.anilist.AniListSyncReport
+import org.akkirrai.hibiki.core.anilist.AniListSyncStatus
 import org.akkirrai.hibiki.core.anilist.AniListUserNotFoundException
 import org.akkirrai.hibiki.core.anilist.AniListViewer
 import org.akkirrai.hibiki.core.design.component.anime.AnimeSourceBadge
@@ -96,6 +97,8 @@ import org.akkirrai.hibiki.core.source.AnimeSourceRegistry
 internal fun AniListSyncDialog(
     defaultSourceId: String,
     onDismiss: () -> Unit,
+    /** Open straight into the send preview (from the Home banner or a notification). */
+    startWithPreview: Boolean = false,
 ) {
     val context = LocalContext.current
     val sync = remember { AniListLibrarySync(context) }
@@ -160,6 +163,37 @@ internal fun AniListSyncDialog(
     }
 
     val accountMode = useAccount && account.isConfigured
+
+    fun startPush() {
+        sync.sourceId = sourceId
+        sync.useAccount = useAccount
+        errorMessage = null
+        pushResult = null
+        running = true
+        progress = 0 to 0
+        scope.launch {
+            try {
+                val plan = withContext(Dispatchers.IO) {
+                    push.plan { done, total -> progress = done to total }
+                }
+                AniListSyncStatus.setPending(plan)
+                pushPlan = plan
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Throwable) {
+                errorMessage = describe(error)
+            } finally {
+                running = false
+            }
+        }
+    }
+
+    LaunchedEffect(connected) {
+        if (connected) AniListSyncStatus.setNeedsSignIn(false)
+    }
+    LaunchedEffect(startWithPreview) {
+        if (startWithPreview && accountMode && connected && sourceId.isNotBlank() && !running) startPush()
+    }
     val canImport = !running && sourceId.isNotBlank() && (if (accountMode) connected else userName.isNotBlank())
 
     Dialog(
@@ -241,7 +275,14 @@ internal fun AniListSyncDialog(
                                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         )
                                     }
-                                    TextButton(enabled = !running, onClick = { account.disconnect(); connected = false }) {
+                                    TextButton(
+                                        enabled = !running,
+                                        onClick = {
+                                            account.disconnect()
+                                            connected = false
+                                            AniListSyncStatus.clearPending()
+                                        },
+                                    ) {
                                         Text(stringResource(R.string.anilist_sync_sign_out))
                                     }
                                 }
@@ -392,27 +433,7 @@ internal fun AniListSyncDialog(
                         FilledTonalButton(
                             enabled = !running && sourceId.isNotBlank(),
                             modifier = Modifier.fillMaxWidth().height(52.dp),
-                            onClick = {
-                                sync.sourceId = sourceId
-                                sync.useAccount = useAccount
-                                errorMessage = null
-                                pushResult = null
-                                running = true
-                                progress = 0 to 0
-                                scope.launch {
-                                    try {
-                                        pushPlan = withContext(Dispatchers.IO) {
-                                            push.plan { done, total -> progress = done to total }
-                                        }
-                                    } catch (error: CancellationException) {
-                                        throw error
-                                    } catch (error: Throwable) {
-                                        errorMessage = describe(error)
-                                    } finally {
-                                        running = false
-                                    }
-                                }
-                            },
+                            onClick = { startPush() },
                         ) {
                             Icon(Icons.Outlined.Upload, contentDescription = null, modifier = Modifier.size(20.dp))
                             Text(
@@ -498,7 +519,7 @@ internal fun AniListSyncDialog(
                     try {
                         pushResult = withContext(Dispatchers.IO) {
                             push.execute(plan) { done, total -> progress = done to total }
-                        }
+                        }.also { if (it.failed == 0) AniListSyncStatus.clearPending() }
                     } catch (error: CancellationException) {
                         throw error
                     } catch (error: Throwable) {
