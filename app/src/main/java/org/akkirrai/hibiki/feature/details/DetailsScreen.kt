@@ -783,7 +783,7 @@ fun DetailsScreen(
                 },
                 onRemoveClick = {
                     isLibrarySheetOpen = false
-                    if (AniListLibrarySync(context).isSynced(currentAnime.id)) {
+                    if (AniListLibrarySync(context).isSyncedTitle(currentAnime.id)) {
                         isAniListRemovalOpen = true
                     } else {
                         libraryRepository.removeFromLibrary(currentAnime.id)

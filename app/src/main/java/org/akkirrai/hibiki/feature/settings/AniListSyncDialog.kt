@@ -78,6 +78,7 @@ import org.akkirrai.hibiki.core.anilist.AniListNsfwSourceException
 import org.akkirrai.hibiki.core.anilist.AniListPrivateListException
 import org.akkirrai.hibiki.core.anilist.AniListPushItem
 import org.akkirrai.hibiki.core.anilist.AniListPushPlan
+import org.akkirrai.hibiki.core.anilist.AniListPushRemoval
 import org.akkirrai.hibiki.core.anilist.AniListPushResult
 import org.akkirrai.hibiki.core.anilist.AniListRepository
 import org.akkirrai.hibiki.core.anilist.AniListSyncReport
@@ -451,7 +452,7 @@ internal fun AniListSyncDialog(
                     pushResult?.let { result ->
                         SyncCard {
                             Text(
-                                text = stringResource(R.string.anilist_push_result, result.sent, result.failed),
+                                text = stringResource(R.string.anilist_push_result, result.sent, result.removed, result.failed),
                                 style = MaterialTheme.typography.bodyLarge,
                             )
                         }
@@ -492,7 +493,7 @@ internal fun AniListSyncDialog(
                 pushPlan = null
                 errorMessage = null
                 running = true
-                progress = 0 to plan.items.size
+                progress = 0 to (plan.items.size + plan.removals.size)
                 scope.launch {
                     try {
                         pushResult = withContext(Dispatchers.IO) {
@@ -575,10 +576,10 @@ private fun PushPreview(
                     )
                 }
                 Text(
-                    text = if (plan.items.isEmpty()) {
+                    text = if (plan.items.isEmpty() && plan.removals.isEmpty()) {
                         stringResource(R.string.anilist_push_nothing)
                     } else {
-                        stringResource(R.string.anilist_push_summary, plan.items.size)
+                        stringResource(R.string.anilist_push_summary, plan.items.size + plan.removals.size)
                     },
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -590,6 +591,24 @@ private fun PushPreview(
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     items(plan.items, key = { it.titleId }) { item -> PushItemCard(item) }
+                    if (plan.removals.isNotEmpty()) {
+                        item {
+                            Column(Modifier.padding(top = 8.dp, start = 4.dp, end = 4.dp)) {
+                                Text(
+                                    text = stringResource(R.string.anilist_push_removals_title, plan.removals.size),
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.error,
+                                )
+                                Text(
+                                    text = stringResource(R.string.anilist_push_removals_warning),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
+                        items(plan.removals, key = { "remove-${it.mediaId}" }) { removal -> RemovalCard(removal) }
+                    }
                     if (plan.skipped.isNotEmpty()) {
                         item {
                             TextButton(onClick = { showSkipped = !showSkipped }) {
@@ -608,14 +627,14 @@ private fun PushPreview(
                         }
                     }
                 }
-                if (plan.items.isNotEmpty()) {
+                if (plan.items.isNotEmpty() || plan.removals.isNotEmpty()) {
                     Button(
                         onClick = onSend,
                         modifier = Modifier.fillMaxWidth().padding(16.dp).height(52.dp),
                     ) {
                         Icon(Icons.Outlined.Upload, contentDescription = null, modifier = Modifier.size(20.dp))
                         Text(
-                            text = stringResource(R.string.anilist_push_send_count, plan.items.size),
+                            text = stringResource(R.string.anilist_push_send_count, plan.items.size + plan.removals.size),
                             modifier = Modifier.padding(start = 8.dp),
                         )
                     }
@@ -686,6 +705,48 @@ private fun PushItemCard(item: AniListPushItem) {
                     }
                 }
                 AnimeSourceBadge(titleId = item.titleId)
+            }
+        }
+    }
+}
+
+@Composable
+private fun RemovalCard(removal: AniListPushRemoval) {
+    Surface(
+        shape = RoundedCornerShape(20.dp),
+        color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.35f),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(10.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            AsyncImage(
+                model = removal.coverUrl,
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .width(48.dp)
+                    .height(68.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(MaterialTheme.colorScheme.surfaceContainerHighest),
+            )
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(
+                    text = removal.name,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Surface(shape = CircleShape, color = MaterialTheme.colorScheme.errorContainer) {
+                    Text(
+                        text = stringResource(R.string.anilist_push_remove_chip),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onErrorContainer,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                    )
+                }
             }
         }
     }

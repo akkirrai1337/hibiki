@@ -701,7 +701,7 @@
     <string name="anilist_push_skipped">Пропущено %1$d (нет уверенного совпадения или в AniList уже стоит другое):</string>
     <string name="anilist_push_episode">сер. %1$d</string>
     <string name="anilist_push_send">Отправить</string>
-    <string name="anilist_push_result">Отправлено %1$d · ошибок %2$d</string>
+    <string name="anilist_push_result">Отправлено %1$d · удалено %2$d · ошибок %3$d</string>
     <string name="anilist_import_button">Импортировать из AniList</string>
     <string name="anilist_stat_added">Добавлено</string>
     <string name="anilist_stat_updated">Обновлено</string>
@@ -714,6 +714,9 @@
     <string name="anilist_auto_notification_title">Синхронизация AniList</string>
     <string name="anilist_auto_notification_text">Готово изменений для отправки в AniList: %1$d</string>
     <string name="anilist_removal_title">Удалить тайтл, пришедший из AniList?</string>
-    <string name="anilist_removal_message">Этот тайтл был импортирован из AniList. Он будет удалён только здесь: в AniList он останется, а импорт больше не будет добавлять его, пока вы не добавите его сами.</string>
+    <string name="anilist_removal_message">Этот тайтл был импортирован из AniList. Здесь он удаляется сейчас. Импорт не добавит его снова, пока вы не вернёте его сами, а при следующей отправке в AniList предложит удалить и его запись там (вы подтвердите это отдельно).</string>
     <string name="anilist_removal_confirm">Удалить</string>
+    <string name="anilist_push_removals_title">Будет удалено из AniList (%1$d)</string>
+    <string name="anilist_push_removals_warning">Эти тайтлы уже синхронизировались и больше не в вашей библиотеке. Отправка удалит их записи из вашего списка AniList.</string>
+    <string name="anilist_push_remove_chip">Удалить из AniList</string>
 </resources>

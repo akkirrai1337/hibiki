@@ -32,13 +32,23 @@ data class AniListPushItem(
     val favourite: Boolean,
 )
 
+/** A title synced before that is no longer in the library: sending would delete its AniList entry. */
+data class AniListPushRemoval(
+    val titleId: String,
+    val name: String,
+    val coverUrl: String?,
+    val mediaId: Int,
+    val entryId: Int,
+)
+
 data class AniListPushPlan(
     val items: List<AniListPushItem>,
+    val removals: List<AniListPushRemoval>,
     /** Titles left out, with the name to show: no confident match, or already set differently on AniList. */
     val skipped: List<String>,
 )
 
-data class AniListPushResult(val sent: Int, val failed: Int)
+data class AniListPushResult(val sent: Int, val removed: Int, val failed: Int)
 
 /**
  * One-way library sync, Hibiki to AniList, in two steps: [plan] works out what would change and writes
@@ -135,7 +145,28 @@ class AniListLibraryPush(context: Context) {
                     }
                 }.awaitAll()
             }
-            return AniListPushPlan(items.sortedBy { it.name }, skipped.sorted())
+
+            // A title that was synced and has since left the library is offered for removal from AniList,
+            // but only while AniList still shows the status the two sides last agreed on: an entry changed
+            // there in the meantime is somebody's newer decision and is left alone.
+            val present = library.getLibraryEntries()
+                .filter { it.category != LibraryCategory.Saved }
+                .mapTo(mutableSetOf()) { it.anime.id }
+            val syncedTitles = (
+                sync.linkedMediaIds().filter { (_, mediaId) -> sync.appliedCategory(mediaId) != null }.toList() +
+                    loadPushedState().titles.map { (mediaId, titleId) -> titleId to mediaId.toInt() }
+                ).distinctBy { it.second }
+            val removals = syncedTitles.mapNotNull { (titleId, mediaId) ->
+                if (titleId in present) return@mapNotNull null
+                if (skipNsfw && sync.isNsfwTitle(titleId)) return@mapNotNull null
+                val current = remote[mediaId] ?: return@mapNotNull null
+                val entryId = current.entryId ?: return@mapNotNull null
+                val baseline = pushed[mediaId.toString()] ?: sync.appliedCategory(mediaId)
+                    ?: return@mapNotNull null
+                if (current.status != LibraryCategory.fromStorageValue(baseline)?.toAniList()) return@mapNotNull null
+                AniListPushRemoval(titleId, current.names.firstOrNull() ?: titleId, current.coverUrl, mediaId, entryId)
+            }.sortedBy { it.name }
+            return AniListPushPlan(items.sortedBy { it.name }, removals, skipped.sorted())
         } finally {
             client.close()
         }
@@ -150,11 +181,15 @@ class AniListLibraryPush(context: Context) {
             val token = AniListRepository(appContext, client).currentAccessToken()
                 ?: throw AniListAuthenticationException()
             val api = AniListPublicLibrary(client, token)
-            val pushed = loadPushed()
+            val state = loadPushedState()
+            val pushed = state.statuses.toMutableMap()
+            val titles = state.titles.toMutableMap()
+            val total = plan.items.size + plan.removals.size
             var sent = 0
+            var removed = 0
             var failed = 0
             var done = 0
-            onProgress(0, plan.items.size)
+            onProgress(0, total)
             plan.items.chunked(BATCH_SIZE).forEach { batch ->
                 val saves = batch.filter { it.status != null || it.progress != null }
                 val ok = try {
@@ -170,22 +205,52 @@ class AniListLibraryPush(context: Context) {
                 }
                 if (ok) {
                     sent += batch.size
-                    batch.forEach { item -> item.statusCategory?.let { pushed[item.mediaId.toString()] = it.storageValue } }
+                    batch.forEach { item ->
+                        item.statusCategory?.let { pushed[item.mediaId.toString()] = it.storageValue }
+                        titles[item.mediaId.toString()] = item.titleId
+                    }
                 } else {
                     failed += batch.size
                 }
                 done += batch.size
-                onProgress(done, plan.items.size)
+                onProgress(done, total)
                 // AniList allows about 90 requests a minute; batches are far below that, this only spaces them.
                 kotlinx.coroutines.delay(BATCH_DELAY_MILLIS)
             }
-            savePushed(pushed)
+            plan.removals.chunked(BATCH_SIZE).forEach { batch ->
+                val ok = try {
+                    api.deleteEntries(batch.map { it.entryId })
+                    true
+                } catch (error: CancellationException) {
+                    throw error
+                } catch (error: Throwable) {
+                    AppLogger.w(TAG, "Removing entries from AniList failed", error)
+                    false
+                }
+                if (ok) {
+                    removed += batch.size
+                    batch.forEach { removal ->
+                        pushed.remove(removal.mediaId.toString())
+                        titles.remove(removal.mediaId.toString())
+                        sync.forgetApplied(removal.mediaId)
+                    }
+                } else {
+                    failed += batch.size
+                }
+                done += batch.size
+                onProgress(done, total)
+                kotlinx.coroutines.delay(BATCH_DELAY_MILLIS)
+            }
+            savePushedState(Pushed(pushed, titles))
             if (failed == 0) sync.markSynced()
-            return AniListPushResult(sent, failed)
+            return AniListPushResult(sent, removed, failed)
         } finally {
             client.close()
         }
     }
+
+    /** Whether a title has been sent to AniList by this app. */
+    fun wasPushed(titleId: String): Boolean = loadPushedState().titles.containsValue(titleId)
 
     /** The highest episode finished, as AniList counts progress; zero when nothing is finished. */
     private fun watchedEpisodes(titleId: String): Int = watchState.getEpisodeProgress(titleId)
@@ -220,16 +285,21 @@ class AniListLibraryPush(context: Context) {
         LibraryCategory.Favorite, LibraryCategory.Saved -> null
     }
 
-    private fun loadPushed(): MutableMap<String, String> = prefs.getString(KEY_PUSHED, null)
-        ?.let { runCatching { json.decodeFromString<Pushed>(it).statuses }.getOrNull() }
-        ?.toMutableMap() ?: mutableMapOf()
+    private fun loadPushed(): MutableMap<String, String> = loadPushedState().statuses.toMutableMap()
 
-    private fun savePushed(statuses: Map<String, String>) {
-        prefs.edit().putString(KEY_PUSHED, json.encodeToString(Pushed(statuses))).apply()
+    private fun loadPushedState(): Pushed = prefs.getString(KEY_PUSHED, null)
+        ?.let { runCatching { json.decodeFromString<Pushed>(it) }.getOrNull() } ?: Pushed()
+
+    private fun savePushedState(state: Pushed) {
+        prefs.edit().putString(KEY_PUSHED, json.encodeToString(state)).apply()
     }
 
+    /** What was last sent, by AniList id: the category, and which of the app's titles it was sent for. */
     @Serializable
-    private data class Pushed(val statuses: Map<String, String> = emptyMap())
+    private data class Pushed(
+        val statuses: Map<String, String> = emptyMap(),
+        val titles: Map<String, String> = emptyMap(),
+    )
 
     private companion object {
         const val TAG = "AniListLibraryPush"

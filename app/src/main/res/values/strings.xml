@@ -703,7 +703,7 @@
     <string name="anilist_push_skipped">Skipped %1$d (no confident match, or already set differently on AniList):</string>
     <string name="anilist_push_episode">ep. %1$d</string>
     <string name="anilist_push_send">Send</string>
-    <string name="anilist_push_result">Sent %1$d · failed %2$d</string>
+    <string name="anilist_push_result">Sent %1$d · removed %2$d · failed %3$d</string>
     <string name="anilist_import_button">Import from AniList</string>
     <string name="anilist_stat_added">Added</string>
     <string name="anilist_stat_updated">Updated</string>
@@ -716,6 +716,9 @@
     <string name="anilist_auto_notification_title">AniList sync</string>
     <string name="anilist_auto_notification_text">%1$d changes are ready to send to AniList</string>
     <string name="anilist_removal_title">Remove a title from AniList sync?</string>
-    <string name="anilist_removal_message">This title was imported from AniList. It will be removed here only: it stays on AniList, and the import will not add it again unless you add it back yourself.</string>
+    <string name="anilist_removal_message">This title was imported from AniList. It is removed here now. The import will not add it again unless you add it back, and the next send to AniList will offer to delete its entry there too (you confirm that first).</string>
     <string name="anilist_removal_confirm">Remove</string>
+    <string name="anilist_push_removals_title">Will be removed from AniList (%1$d)</string>
+    <string name="anilist_push_removals_warning">These titles were synced before and are no longer in your library. Sending deletes their entries from your AniList list.</string>
+    <string name="anilist_push_remove_chip">Remove from AniList</string>
 </resources>

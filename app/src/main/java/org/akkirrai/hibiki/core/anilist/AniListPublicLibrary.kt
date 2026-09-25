@@ -14,6 +14,9 @@ import kotlinx.serialization.json.JsonPrimitive
 
 /** A title in someone's AniList library, with the names and facts needed to find it on a source. */
 data class AniListSyncEntry(
+    /** The id of the list entry itself (needed to delete it); null for a favourite that is on no list. */
+    val entryId: Int? = null,
+    val coverUrl: String? = null,
     val mediaId: Int,
     val status: AniListMediaListStatus?,
     val progress: Int,
@@ -50,6 +53,8 @@ class AniListPublicLibrary(
             .map { item ->
                 val media = item.media
                 AniListSyncEntry(
+                    entryId = item.id,
+                    coverUrl = media?.coverImage?.large,
                     mediaId = item.mediaId,
                     status = item.status,
                     progress = item.progress,
@@ -123,6 +128,14 @@ class AniListPublicLibrary(
         execute<JsonObject>("mutation {\n$body\n}", JsonObject(emptyMap()))
     }
 
+    /** Deletes list entries by their entry ids. This removes them from the user's AniList list. */
+    suspend fun deleteEntries(entryIds: List<Int>) {
+        if (entryIds.isEmpty()) return
+        val body = entryIds.mapIndexed { index, id -> "d$index: DeleteMediaListEntry(id: $id) { deleted }" }
+            .joinToString("\n")
+        execute<JsonObject>("mutation {\n$body\n}", JsonObject(emptyMap()))
+    }
+
     /** Toggles favourites on: the caller passes only titles that are not favourites yet. */
     suspend fun toggleFavourites(mediaIds: List<Int>) {
         if (mediaIds.isEmpty()) return
@@ -156,13 +169,13 @@ class AniListPublicLibrary(
         const val GRAPHQL_URL = "https://graphql.anilist.co"
         const val MAX_FAVOURITE_PAGES = 20
         const val MEDIA_FIELDS = "id episodes format seasonYear startDate { year } synonyms " +
-            "title { romaji english native }"
+            "title { romaji english native } coverImage { large }"
         const val COLLECTION_QUERY = """
             query Library(${'$'}userName: String) {
               MediaListCollection(userName: ${'$'}userName, type: ANIME) {
                 lists {
                   isCustomList
-                  entries { mediaId status progress updatedAt media { $MEDIA_FIELDS } }
+                  entries { id mediaId status progress updatedAt media { $MEDIA_FIELDS } }
                 }
               }
             }
@@ -199,6 +212,7 @@ class AniListPublicLibrary(
 @Serializable private data class CollectionDto(val lists: List<ListDto>? = null)
 @Serializable private data class ListDto(val isCustomList: Boolean? = null, val entries: List<EntryDto>? = null)
 @Serializable private data class EntryDto(
+    val id: Int? = null,
     val mediaId: Int,
     val status: AniListMediaListStatus? = null,
     val progress: Int = 0,
@@ -224,6 +238,7 @@ class AniListPublicLibrary(
     val startDate: DateDto? = null,
     val synonyms: List<String>? = null,
     val title: TitleDto? = null,
+    val coverImage: CoverDto? = null,
 ) {
     fun year(): Int? = seasonYear ?: startDate?.year
 
@@ -232,5 +247,6 @@ class AniListPublicLibrary(
         addAll(synonyms.orEmpty())
     }.filter(String::isNotBlank).distinct()
 }
+@Serializable private data class CoverDto(val large: String? = null)
 @Serializable private data class DateDto(val year: Int? = null)
 @Serializable private data class TitleDto(val romaji: String? = null, val english: String? = null, val native: String? = null)

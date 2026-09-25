@@ -80,6 +80,9 @@ class AniListLibrarySync(context: Context) {
         return appliedCategory(mediaId) != null
     }
 
+    /** Synced through an import or a send: removing it here is something AniList has to be told about. */
+    fun isSyncedTitle(titleId: String): Boolean = isSynced(titleId) || AniListLibraryPush(appContext).wasPushed(titleId)
+
     /** Stops the import from adding [titleId] again; it is forgotten once the title is back in the library. */
     fun exclude(titleId: String) {
         val current = prefs.getStringSet(KEY_EXCLUDED, emptySet()).orEmpty()
@@ -227,6 +230,15 @@ class AniListLibrarySync(context: Context) {
     /** The category the last import applied for a title, whichever source it went through. */
     internal fun appliedCategory(mediaId: Int): String? = loadState().applied.entries
         .firstOrNull { it.key.endsWith(":$mediaId") }?.value
+
+    /** Forgets what the import applied for a title, once its entry has been removed from AniList. */
+    internal fun forgetApplied(mediaId: Int) {
+        val state = loadState()
+        val keys = state.applied.keys.filter { it.endsWith(":$mediaId") }
+        if (keys.isEmpty()) return
+        keys.forEach(state.applied::remove)
+        saveState(state)
+    }
 
     /** The best AniList candidate for a title of the app, or null unless it clearly wins. */
     internal fun pickBestAniList(local: AnimeTitle, candidates: List<AniListSyncEntry>): Int? {

@@ -274,7 +274,7 @@ fun LibraryScreen(
                     isDestructive = true,
                     onClick = {
                         titleWithActions = null
-                        if (AniListLibrarySync(context).isSynced(anime.id)) {
+                        if (AniListLibrarySync(context).isSyncedTitle(anime.id)) {
                             pendingAniListRemoval = anime
                         } else {
                             viewModel.removeFromLibrary(anime.id)

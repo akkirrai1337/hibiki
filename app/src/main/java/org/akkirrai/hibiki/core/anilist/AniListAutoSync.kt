@@ -51,7 +51,8 @@ object AniListAutoSync {
             sync.run()
             if (sync.useAccount && signedIn) {
                 val plan = AniListLibraryPush(appContext).plan()
-                if (plan.items.isNotEmpty()) notify(appContext, plan.items.size)
+                val changes = plan.items.size + plan.removals.size
+                if (changes > 0) notify(appContext, changes)
             }
         } catch (error: CancellationException) {
             throw error
