@@ -675,7 +675,6 @@
     <string name="filter_rating_up_to">До %1$s</string>
     <string name="settings_anilist_sync">Синхронизация с AniList</string>
     <string name="settings_anilist_sync_summary">Импорт списка AniList в библиотеку</string>
-    <string name="anilist_sync_hint">В одну сторону: из AniList в Hibiki. В AniList ничего не меняется, из Hibiki ничего не удаляется.</string>
     <string name="anilist_sync_username">Имя пользователя AniList</string>
     <string name="anilist_sync_source">Искать тайтлы на источнике</string>
     <string name="anilist_sync_start">Синхронизировать</string>

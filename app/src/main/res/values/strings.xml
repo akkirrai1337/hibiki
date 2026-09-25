@@ -677,7 +677,6 @@
     <string name="filter_rating_up_to">Up to %1$s</string>
     <string name="settings_anilist_sync">AniList library sync</string>
     <string name="settings_anilist_sync_summary">Import your AniList list into the library</string>
-    <string name="anilist_sync_hint">One way, from AniList to Hibiki. Nothing is changed on AniList or removed from Hibiki.</string>
     <string name="anilist_sync_username">AniList username</string>
     <string name="anilist_sync_source">Find titles on the source</string>
     <string name="anilist_sync_start">Sync</string>
