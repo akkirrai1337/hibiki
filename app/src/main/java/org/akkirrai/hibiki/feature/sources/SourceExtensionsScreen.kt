@@ -624,11 +624,7 @@ fun SourceExtensionsScreen(
                                 },
                             )
                         } else {
-                            val defaultRepositoryUrl = sourceRepositoryUrls.firstOrNull()
-                            if (onboarding && defaultRepositoryUrl != null) {
-                                // Onboarding has one repository to offer, so it lists it right away.
-                                repositoryContent(defaultRepositoryUrl)
-                            } else RepositoriesList(
+                            RepositoriesList(
                                 urls = sourceRepositoryUrls,
                                 repoStates = repoStates,
                                 bottomContentPadding = bottomContentPadding,
