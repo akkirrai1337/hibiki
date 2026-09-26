@@ -620,6 +620,10 @@ fun PlayerScreen(
         playbackSpeed = playbackSpeed,
         onPrepare = { playerPrepareStartedAt.longValue = SystemClock.elapsedRealtime() },
         keepControlsVisible = { keepControlsVisible() },
+        onStartPositionApplied = {
+            pendingSeekMs = 0L
+            viewModel.consumePendingSeek()
+        },
     )
 
     PlayerSubtitleSelectionEffect(
@@ -3114,6 +3118,7 @@ private fun PlayerMediaPreparationEffect(
     playbackSpeed: Float,
     onPrepare: () -> Unit,
     keepControlsVisible: () -> Unit,
+    onStartPositionApplied: () -> Unit,
 ) {
     // A track choice is applied independently below. Recreating the source for every subtitle
     // toggle made the video buffer and resume from the start.
@@ -3153,6 +3158,10 @@ private fun PlayerMediaPreparationEffect(
         AppLogger.d(PLAYBACK_LOG_TAG, "[player.subtitles.formats] tracks=${playback.subtitles.size} sniffed=${subtitleMimeTypes.values.groupingBy { it }.eachCount()}")
         exoPlayer.stop()
         exoPlayer.clearMediaItems()
+        // The saved position is where loading starts, not a jump made once playback is running: a jump into the
+        // middle of some streams (HLS through an extension's local proxy) never resumes.
+        val savedStartMs = state.pendingSeekMs.coerceAtLeast(0L)
+        val startPositionMs = if (resumePositionMs > 0L) resumePositionMs else savedStartMs
         exoPlayer.setMediaSource(
             playback.toMediaSource(
                 context = context,
@@ -3161,6 +3170,7 @@ private fun PlayerMediaPreparationEffect(
                 customSubtitle = customSubtitle,
                 subtitleMimeTypes = subtitleMimeTypes,
             ),
+            if (startPositionMs > 0L) startPositionMs else C.TIME_UNSET,
         )
         exoPlayer.trackSelectionParameters = exoPlayer.trackSelectionParameters
             .buildUpon()
@@ -3169,9 +3179,19 @@ private fun PlayerMediaPreparationEffect(
         exoPlayer.playbackParameters = PlaybackParameters(playbackSpeed)
         onPrepare()
         exoPlayer.prepare()
-        if (resumePositionMs > 0L) exoPlayer.seekTo(resumePositionMs)
+        if (resumePositionMs == 0L && savedStartMs > 0L) onStartPositionApplied()
         exoPlayer.playWhenReady = resumeWhenReady || resumePositionMs == 0L
         onPlaybackPrepared(playbackKey)
+        // If it still cannot start from that position, start from the beginning instead of loading for ever.
+        if (startPositionMs > 0L) {
+            kotlinx.coroutines.delay(SEEK_RESTORE_STALL_MS)
+            val stuck = exoPlayer.playbackState == Player.STATE_BUFFERING && exoPlayer.totalBufferedDuration == 0L
+            if (stuck) {
+                AppLogger.w(PLAYBACK_LOG_TAG, "[player.seek_restore.stalled] startMs=$startPositionMs, starting from the beginning")
+                exoPlayer.seekTo(0L)
+                android.widget.Toast.makeText(context, R.string.player_resume_seek_failed, android.widget.Toast.LENGTH_LONG).show()
+            }
+        }
     }
 }
 
@@ -3199,10 +3219,14 @@ private fun playbackDataSourceFactory(
     offline: Boolean,
     headers: Map<String, String>,
     resourceHeadersByUrl: Map<String, Map<String, String>> = emptyMap(),
-): DataSource.Factory = if (offline) {
-    OfflineMediaCache.buildDownloadedPlaybackDataSourceFactory(context)
-} else {
-    OfflineMediaCache.buildPlaybackDataSourceFactory(context, headers, resourceHeadersByUrl)
+): DataSource.Factory {
+    val factory = if (offline) {
+        OfflineMediaCache.buildDownloadedPlaybackDataSourceFactory(context)
+    } else {
+        OfflineMediaCache.buildPlaybackDataSourceFactory(context, headers, resourceHeadersByUrl)
+    }
+    // Segments with a damaged PAT are repaired on the way in (see TsPatRepairDataSource).
+    return TsPatRepairDataSourceFactory(factory)
 }
 
 private fun PlaybackStream.toMediaSource(
@@ -3628,8 +3652,32 @@ private fun PlayerPlaybackListenerEffect(
     subtitleLines: MutableState<List<String>>,
     onDisposed: () -> Unit,
 ) {
+    val context = LocalContext.current
     DisposableEffect(exoPlayer) {
         var loggedFirstCue = false
+        // Some streams (HLS through an extension's local proxy) start fine but never load anything after a jump into
+        // the middle. Restoring the saved position is such a jump, so if it leaves the player buffering with nothing
+        // ahead, the stream is started from the beginning instead of loading forever.
+        val guardHandler = android.os.Handler(exoPlayer.applicationLooper)
+        var seekGuard: Runnable? = null
+        fun cancelSeekGuard() {
+            seekGuard?.let(guardHandler::removeCallbacks)
+            seekGuard = null
+        }
+        fun armSeekGuard(targetMs: Long) {
+            cancelSeekGuard()
+            val check = Runnable {
+                seekGuard = null
+                // The position is not part of the test: a nearest-keyframe seek lands before the target.
+                val stuck = exoPlayer.playbackState == Player.STATE_BUFFERING && exoPlayer.totalBufferedDuration == 0L
+                if (!stuck) return@Runnable
+                AppLogger.w(PLAYBACK_LOG_TAG, "[player.seek_restore.stalled] targetMs=$targetMs, starting from the beginning")
+                exoPlayer.seekTo(0L)
+                android.widget.Toast.makeText(context, R.string.player_resume_seek_failed, android.widget.Toast.LENGTH_LONG).show()
+            }
+            seekGuard = check
+            guardHandler.postDelayed(check, SEEK_RESTORE_STALL_MS)
+        }
         val listener = object : Player.Listener {
             override fun onRenderedFirstFrame() {
                 val preparedAt = playerPrepareStartedAt.longValue
@@ -3678,12 +3726,15 @@ private fun PlayerPlaybackListenerEffect(
                 isBuffering.value = playbackState == Player.STATE_BUFFERING
                 durationMs.longValue = exoPlayer.duration.takeIf { it > 0 } ?: 0L
                 if (playbackState == Player.STATE_READY && pendingSeekMs.longValue > 0L) {
+                    armSeekGuard(pendingSeekMs.longValue)
                     exoPlayer.seekTo(pendingSeekMs.longValue)
                     positionMs.longValue = pendingSeekMs.longValue
                     sliderPositionMs.longValue = pendingSeekMs.longValue
                     pendingSeekMs.longValue = 0L
                     viewModel.consumePendingSeek()
                 }
+                // Playing again after the jump (the READY that follows it) means it worked.
+                if (playbackState == Player.STATE_READY && pendingSeekMs.longValue <= 0L) cancelSeekGuard()
                 if (playbackState == Player.STATE_ENDED && autoPlayNextEpisode) {
                     val currentState = state()
                     val currentEpisodeId = currentState.currentEpisodeId
@@ -3741,6 +3792,7 @@ private fun PlayerPlaybackListenerEffect(
         }
         exoPlayer.addListener(listener)
         onDispose {
+            cancelSeekGuard()
             onDisposed()
             viewModel.savePlaybackProgress(
                 positionMs = exoPlayer.currentPosition.coerceAtLeast(0L),
@@ -3839,3 +3891,6 @@ private fun PlayerProgressPersistenceEffect(
         }
     }
 }
+
+/** How long a restored position may leave the player buffering with an empty buffer before it starts over. */
+private const val SEEK_RESTORE_STALL_MS = 6_000L

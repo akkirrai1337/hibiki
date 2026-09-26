@@ -772,4 +772,5 @@
     <string name="webview_open_browser">У браузері</string>
     <string name="webview_clear_cookies">Очистити cookie</string>
     <string name="webview_cookies_cleared">Cookie цього сайту очищено</string>
+    <string name="player_resume_seek_failed">Не вдалося продовжити зі збереженої позиції, починаю спочатку</string>
 </resources>
