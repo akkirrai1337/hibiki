@@ -1,16 +1,22 @@
 ## hibiki 2.8.0
 
 **Sources**
-- Aniyomi APK extensions are now the only kind of source: they can be installed, updated and configured in the app, and their filters, sorts, hosters, DASH streams and skip timestamps are supported.
+- Aniyomi APK extensions are now the only kind of source: they can be installed, updated and configured in the app, and their filters and sorts are supported.
 - Extensions installed outside Hibiki are detected and trusted by the repository they come from.
 - Added an offer to move a library from the retired JS sources to their extension counterparts, also reachable from Settings.
 - Removed the external metadata aggregators.
+- A Cloudflare check that cannot be solved automatically can be completed in a built-in WebView, and covers of such sources load.
 
 **AniList**
 - Added AniList library sync: sign-in with OAuth or by username, import into Hibiki and sending the library back with a confirmed preview.
 - Added episode progress, a skip-18+ setting, sync on launch (at most every 12 hours) and a Home sync button with a pending-changes banner.
 - Removing a synced title asks whether to delete it only in Hibiki or on AniList too.
 - Added an AniList step to the first-launch onboarding.
+
+**Playback**
+- Improved subtitles: added subtitle track selection, detected the format of remote tracks and remembered the chosen track across toggles and episodes.
+- Extension hosters are selectable as players, and DASH streams and the source's skip timestamps are now used.
+- Fixed resuming and seeking on streams with a damaged segment table (AnimePahe), and playback through an extension's local proxy.
 
 **Home and details**
 - Merged continue watching and recently watched into one row of last-frame cards with a shared transition into the title page.
