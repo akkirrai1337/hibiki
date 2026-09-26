@@ -1,34 +1,12 @@
 ## hibiki 2.8.1
 
 **Sources**
-- Aniyomi APK extensions are now the only kind of source: they can be installed, updated and configured in the app, and their filters and sorts are supported.
-- Extensions installed outside Hibiki are detected and trusted by the repository they come from.
-- Added an offer to move a library from the retired JS sources to their extension counterparts, also reachable from Settings.
-- Removed the external metadata aggregators.
-- A Cloudflare check that cannot be solved automatically can be completed in a built-in WebView, and covers of such sources load.
-
-**AniList**
-- Added AniList library sync: sign-in with OAuth or by username, import into Hibiki and sending the library back with a confirmed preview.
-- Added episode progress, a skip-18+ setting, sync on launch (at most every 12 hours) and a Home sync button that opens the changes waiting to be sent.
-- Removing a synced title asks whether to delete it only in Hibiki or on AniList too.
-- Added an AniList step to the first-launch onboarding.
+- A Cloudflare check that cannot be solved automatically can now be completed by hand in a built-in WebView, opened from the error screens of Home, Catalog and Search.
+- Covers of sources behind Cloudflare load again.
 
 **Playback**
-- Improved subtitles: added subtitle track selection, detected the format of remote tracks and remembered the chosen track across toggles and episodes.
-- Extension hosters are selectable as players, and DASH streams and the source's skip timestamps are now used.
-- Fixed resuming and seeking on streams with a damaged segment table (AnimePahe), and playback through an extension's local proxy.
+- Fixed resuming from a saved position and seeking on AnimePahe, where playback used to load forever.
+- Fixed playback of streams that an extension serves through its own local proxy.
 
-**Home and details**
-- Merged continue watching and recently watched into one row of last-frame cards with a shared transition into the title page.
-- Added the source's own filters to Home and search, with filter and sort controls redrawn to match the app.
-- Moved the episode list onto the details page and read studio, producers, score and age rating from extension descriptions.
-- Trimmed the empty banner area on titles without a banner.
-
-**Profile**
-- Library-based achievements are now kept once earned, use the same names and conditions as the desktop app and open a detail sheet with every level.
-
-**Fixes**
-- Fixed a false "no internet" message right after unlocking the phone.
-- Fixed duplicate titles in Saved, Downloads and the continue-watching row.
-- Fixed back with the keyboard open leaving the search instead of hiding the keyboard.
-- Fixed a startup crash in release builds and the upcoming-episode number in the episode list.
+**Interface**
+- Fixed the Home loading placeholder overlapping the "Trending now" heading.

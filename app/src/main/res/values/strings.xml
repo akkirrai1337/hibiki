@@ -784,5 +784,4 @@
     <string name="webview_open_browser">Browser</string>
     <string name="webview_clear_cookies">Clear cookies</string>
     <string name="webview_cookies_cleared">Cookies for this site cleared</string>
-    <string name="player_resume_seek_failed">Could not resume from the saved position, starting from the beginning</string>
 </resources>
