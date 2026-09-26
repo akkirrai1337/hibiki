@@ -11,5 +11,8 @@
          never leaves the device, and it re-fetches everything through a real WebView anyway. -->
     <domain-config cleartextTrafficPermitted="true">
         <domain includeSubdomains="false">127.0.0.1</domain>
+        <!-- Extensions that proxy a stream through a local server (AnimePahe's Kwik, for one) hand the
+             player a "localhost" address instead of the IPv4 literal. -->
+        <domain includeSubdomains="false">localhost</domain>
     </domain-config>
 </network-security-config>

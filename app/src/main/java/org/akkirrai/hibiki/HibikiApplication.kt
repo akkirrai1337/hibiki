@@ -20,10 +20,20 @@ import uy.kohesive.injekt.api.hasFactory
 import java.io.File
 
 @OptIn(ExperimentalSerializationApi::class)
-class HibikiApplication : Application() {
+class HibikiApplication : Application(), coil.ImageLoaderFactory {
     val dependencies: HibikiDependencies by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
         HibikiDependencies(this)
     }
+
+    /**
+     * Covers are loaded through the same OkHttp setup as the sources (their cookie store and browser User-Agent), so a
+     * site behind Cloudflare that answered the source's requests also serves its images; the default loader would send
+     * neither and get HTTP 403. The variant without the challenge interceptor is used so that one blocked image never
+     * starts a WebView.
+     */
+    override fun newImageLoader(): coil.ImageLoader = coil.ImageLoader.Builder(this)
+        .okHttpClient { NetworkHelper.instance().nonCloudflareClient }
+        .build()
 
     override fun onCreate() {
         super.onCreate()
