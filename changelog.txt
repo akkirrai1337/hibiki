@@ -1,4 +1,4 @@
-## hibiki 2.8.0
+## hibiki 2.8.1
 
 **Sources**
 - Aniyomi APK extensions are now the only kind of source: they can be installed, updated and configured in the app, and their filters and sorts are supported.
@@ -9,7 +9,7 @@
 
 **AniList**
 - Added AniList library sync: sign-in with OAuth or by username, import into Hibiki and sending the library back with a confirmed preview.
-- Added episode progress, a skip-18+ setting, sync on launch (at most every 12 hours) and a Home sync button with a pending-changes banner.
+- Added episode progress, a skip-18+ setting, sync on launch (at most every 12 hours) and a Home sync button that opens the changes waiting to be sent.
 - Removing a synced title asks whether to delete it only in Hibiki or on AniList too.
 - Added an AniList step to the first-launch onboarding.
 
