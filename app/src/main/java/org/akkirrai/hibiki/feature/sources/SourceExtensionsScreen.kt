@@ -83,6 +83,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
+import org.akkirrai.hibiki.core.web.SourceWebView
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -1324,6 +1325,7 @@ private fun InstalledSourceRow(
     onUninstall: (String) -> Unit,
     onOpenSettings: (String) -> Unit,
 ) {
+    val context = LocalContext.current
     MarketplaceExtensionRow(
         extension = entry.extension,
         installedVersion = entry.installedVersion,
@@ -1338,6 +1340,14 @@ private fun InstalledSourceRow(
         onOpenSettings = entry.takeIf { it.selectable && it.settingsAvailable }?.let { AnimeSourceRegistry.apkSourceSettings(SourceId(it.extension.id)) }?.let {
             { onOpenSettings(entry.extension.id) }
         },
+        // Lets a person clear a site's Cloudflare check by hand, from a calm settings menu, before
+        // it ever blocks a catalog load or an episode -- the same visible WebView the app opens
+        // reactively when a request hits one, just started ahead of time instead of after a failure.
+        onOpenWebView = entry.takeIf { it.selectable }
+            ?.let { AnimeSourceRegistry.webViewTarget(SourceId(it.extension.id)) }
+            ?.let {
+                { SourceWebView.intent(context, SourceId(entry.extension.id))?.let(context::startActivity) }
+            },
     )
 }
 
@@ -1637,6 +1647,7 @@ private fun MarketplaceExtensionRow(
     onSelect: () -> Unit,
     onUninstall: () -> Unit,
     onOpenSettings: (() -> Unit)? = null,
+    onOpenWebView: (() -> Unit)? = null,
 ) {
     val upToDate = installedVersion != null && !isExtensionVersionNewer(extension.version, installedVersion)
     val versionLabel = when {
@@ -1722,6 +1733,7 @@ private fun MarketplaceExtensionRow(
                     onUpdate = onInstall,
                     onUninstall = onUninstall,
                     onOpenSettings = onOpenSettings,
+                    onOpenWebView = onOpenWebView,
                 )
             }
         }
@@ -1743,6 +1755,7 @@ private fun ExtensionManageButton(
     onUpdate: () -> Unit,
     onUninstall: () -> Unit,
     onOpenSettings: (() -> Unit)? = null,
+    onOpenWebView: (() -> Unit)? = null,
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
     Box {
@@ -1768,6 +1781,15 @@ private fun ExtensionManageButton(
                     onClick = {
                         menuExpanded = false
                         onOpenSettings()
+                    },
+                )
+            }
+            if (onOpenWebView != null) {
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.source_extensions_verify_site)) },
+                    onClick = {
+                        menuExpanded = false
+                        onOpenWebView()
                     },
                 )
             }

@@ -36,13 +36,17 @@ fun rememberCloudflareWebViewAction(onSolved: () -> Unit): CloudflareWebViewActi
         }
     }
     val label = stringResource(R.string.action_open_web_view)
-    val url = pending ?: return null
+    val challenge = pending ?: return null
     // Only the current source's own site: a challenge left by another one is not what this screen failed on.
     val target = AnimeSourceRegistry.webViewTarget(sourceId) ?: return null
-    if (CloudflareChallenges.hostOf(target.baseUrl) != CloudflareChallenges.hostOf(url)) return null
-    return remember(url, sourceId, label) {
+    if (CloudflareChallenges.hostOf(target.baseUrl) != CloudflareChallenges.hostOf(challenge.url)) return null
+    return remember(challenge, sourceId, label) {
         CloudflareWebViewAction(label) {
-            SourceWebView.intent(context, sourceId, url)?.let(launcher::launch)
+            // Reopen with the exact headers the failing request used, not the source's generic
+            // home-page headers -- Cloudflare (or the origin behind it) can answer the same URL
+            // differently depending on them, e.g. by serving the page's raw JS/JSON instead of
+            // the challenge that was shown to that original request.
+            SourceWebView.intent(context, sourceId, challenge.url, challenge.headers)?.let(launcher::launch)
         }
     }
 }

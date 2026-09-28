@@ -43,16 +43,17 @@ class CloudflareInterceptor(
         }
         if (!supportsWebView()) return response
 
+        val headers = safeHeaders(request.headers)
         try {
             response.close()
             cookieJar.remove(request.url, COOKIE_NAMES, 0)
             val oldCookie = cookieJar.get(request.url).firstOrNull { it.name == "cf_clearance" }
-            resolveWithWebView(request, oldCookie)
+            resolveWithWebView(request, oldCookie, headers)
             CloudflareChallenges.clearHost(request.url.toString())
             return chain.proceed(request)
         } catch (error: CloudflareBypassException) {
             // OkHttp's enqueue only handles IOException; anything else would crash the app.
-            CloudflareChallenges.report(request.url.toString())
+            CloudflareChallenges.report(request.url.toString(), headers)
             throw CloudflareChallengeException(request.url.toString(), error)
         } catch (error: Exception) {
             throw if (error is IOException) error else IOException(error)
@@ -69,14 +70,13 @@ class CloudflareInterceptor(
 
     private fun supportsWebView(): Boolean = runCatching { CookieManager.getInstance(); true }.getOrDefault(false)
 
-    private fun resolveWithWebView(originalRequest: Request, oldCookie: Cookie?) {
+    private fun resolveWithWebView(originalRequest: Request, oldCookie: Cookie?, headers: Map<String, String>) {
         // OkHttp has no asynchronous interceptors, so this thread waits for the WebView.
         val latch = CountDownLatch(1)
         var webView: WebView? = null
         var challengeFound = false
         var bypassed = false
         val requestUrl = originalRequest.url.toString()
-        val headers = safeHeaders(originalRequest.headers)
 
         executor.execute {
             val view = WebView(context).apply {
@@ -168,11 +168,20 @@ fun Throwable.cloudflareChallengeUrl(): String? =
  * WebView. In memory only; it clears itself as soon as a request to the same site goes through.
  */
 object CloudflareChallenges {
-    private val _pending = kotlinx.coroutines.flow.MutableStateFlow<String?>(null)
-    val pending: kotlinx.coroutines.flow.StateFlow<String?> = _pending
+    private val _pending = kotlinx.coroutines.flow.MutableStateFlow<PendingChallenge?>(null)
+    val pending: kotlinx.coroutines.flow.StateFlow<PendingChallenge?> = _pending
 
-    fun report(url: String) {
-        _pending.value = url
+    /**
+     * A failed request's URL together with the headers it was made with. A manual retry in a
+     * visible WebView needs the *same* headers the failing request used (User-Agent, Referer, any
+     * source-specific header) -- a generic set of headers for the site's home page can make
+     * Cloudflare (or the origin behind it) answer this same URL completely differently, which
+     * showed up as the WebView rendering the page's raw JS/JSON instead of the challenge.
+     */
+    data class PendingChallenge(val url: String, val headers: Map<String, String>)
+
+    fun report(url: String, headers: Map<String, String>) {
+        _pending.value = PendingChallenge(url, headers)
     }
 
     fun clear() {
@@ -182,7 +191,7 @@ object CloudflareChallenges {
     /** Forgets the pending challenge when it belongs to [url]'s site. */
     fun clearHost(url: String) {
         val current = _pending.value ?: return
-        if (hostOf(current) == hostOf(url)) _pending.value = null
+        if (hostOf(current.url) == hostOf(url)) _pending.value = null
     }
 
     fun hostOf(url: String): String? = url.toHttpUrlOrNull()?.host

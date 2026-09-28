@@ -173,11 +173,12 @@ class WebViewActivity : ComponentActivity() {
 object SourceWebView {
     /**
      * An intent to open [url] (or, when null, the source's home page) the way [sourceId] would request it, or
-     * null when the source has no site to open.
+     * null when the source has no site to open. [headers] overrides the source's generic headers when the
+     * caller already knows the exact ones the target URL needs (e.g. replaying a specific failed request).
      */
-    fun intent(context: Context, sourceId: SourceId, url: String? = null): Intent? {
+    fun intent(context: Context, sourceId: SourceId, url: String? = null, headers: Map<String, String>? = null): Intent? {
         val target = AnimeSourceRegistry.webViewTarget(sourceId) ?: return null
-        return WebViewActivity.newIntent(context, url ?: target.baseUrl, target.headers)
+        return WebViewActivity.newIntent(context, url ?: target.baseUrl, headers ?: target.headers)
     }
 
     /** Forgets every cookie held for [url]'s site, including a stale clearance; returns how many were removed. */
