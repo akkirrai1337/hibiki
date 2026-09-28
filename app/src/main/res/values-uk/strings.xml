@@ -199,6 +199,15 @@
     <string name="watch_episode_headline">Серія %1$s</string>
     <string name="watch_episode_headline_watched">Серія %1$s</string>
     <string name="watch_status_queued">У черзі</string>
+    <string name="watch_status_resolving">Отримання посилання…</string>
+    <string name="watch_status_resolving_retry">Отримання посилання, спроба %1$d/%2$d…</string>
+    <string name="download_options_title">Параметри завантаження</string>
+    <string name="download_options_voiceover">Озвучення</string>
+    <string name="download_options_quality">Якість</string>
+    <string name="download_options_subtitles">Субтитри</string>
+    <string name="download_options_subtitles_unknown">Невідомо</string>
+    <string name="download_options_remember">Запам\'ятати для цього тайтла</string>
+    <string name="download_options_error">Не вдалося завантажити параметри</string>
     <string name="watch_status_downloading">Завантаження %1$d%%</string>
     <string name="watch_status_paused">Призупинено</string>
     <string name="watch_status_failed">Не вдалося завантажити</string>
@@ -247,6 +256,8 @@
     <string name="watch_error_voiceover_not_found">Озвучення не знайдено</string>
     <string name="watch_error_episode_not_found">Серію не знайдено</string>
     <string name="watch_error_source_failed">Джерело не змогло завантажити цей епізод: %1$s</string>
+    <string name="watch_error_reason_rate_limited">відеохостинг зараз тимчасово обмежує запити, спробуйте за кілька хвилин</string>
+    <string name="watch_error_reason_host_unavailable">відеохостинг тимчасово недоступний</string>
     <string name="watch_error_no_players">Немає доступних плеєрів для вибраного озвучення</string>
     <string name="watch_error_extractor_missing">%1$s: екстрактор відсутній</string>
     <string name="watch_error_timeout">%1$s: час очікування вичерпано</string>
@@ -416,6 +427,7 @@
     <string name="source_extensions_refresh">Оновити</string>
     <string name="source_extensions_manage">Керувати</string>
     <string name="source_extensions_settings">Налаштування</string>
+    <string name="source_extensions_verify_site">Пройти перевірку сайту</string>
     <string name="source_extensions_settings_description">Параметри самого розширення. Діють лише для цього джерела.</string>
     <string name="source_extensions_update">Оновити</string>
     <string name="source_extensions_resolver_update">доступне оновлення плеєра</string>

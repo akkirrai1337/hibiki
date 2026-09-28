@@ -201,6 +201,15 @@
     <string name="watch_episode_headline">Серия %1$s</string>
     <string name="watch_episode_headline_watched">Серия %1$s</string>
     <string name="watch_status_queued">В очереди</string>
+    <string name="watch_status_resolving">Получение ссылки…</string>
+    <string name="watch_status_resolving_retry">Получение ссылки, попытка %1$d/%2$d…</string>
+    <string name="download_options_title">Параметры загрузки</string>
+    <string name="download_options_voiceover">Озвучка</string>
+    <string name="download_options_quality">Качество</string>
+    <string name="download_options_subtitles">Субтитры</string>
+    <string name="download_options_subtitles_unknown">Неизвестно</string>
+    <string name="download_options_remember">Запомнить для этого тайтла</string>
+    <string name="download_options_error">Не удалось загрузить параметры</string>
     <string name="watch_status_downloading">Скачивается %1$d%%</string>
     <string name="watch_status_paused">На паузе</string>
     <string name="watch_status_failed">Ошибка загрузки</string>
@@ -246,6 +255,8 @@
     <string name="watch_error_voiceover_not_found">Озвучка не найдена</string>
     <string name="watch_error_episode_not_found">Серия не найдена</string>
     <string name="watch_error_source_failed">Источник не смог загрузить эту серию: %1$s</string>
+    <string name="watch_error_reason_rate_limited">видеохостинг сейчас временно ограничивает запросы, попробуйте через пару минут</string>
+    <string name="watch_error_reason_host_unavailable">видеохостинг временно недоступен</string>
     <string name="watch_error_no_players">Для выбранной озвучки нет доступных плееров</string>
     <string name="watch_error_extractor_missing">%1$s: экстрактор не найден</string>
     <string name="watch_error_timeout">%1$s: таймаут</string>
@@ -422,6 +433,7 @@
     <string name="source_extensions_refresh">Обновить</string>
     <string name="source_extensions_manage">Управление</string>
     <string name="source_extensions_settings">Настройки</string>
+    <string name="source_extensions_verify_site">Пройти проверку сайта</string>
     <string name="source_extensions_settings_description">Параметры самого расширения. Действуют только для этого источника.</string>
     <string name="source_extensions_update">Обновить</string>
     <string name="source_extensions_resolver_update">доступно обновление плеера</string>

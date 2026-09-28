@@ -203,6 +203,15 @@
     <string name="watch_episode_headline">Episode %1$s</string>
     <string name="watch_episode_headline_watched">Episode %1$s</string>
     <string name="watch_status_queued">Queued</string>
+    <string name="watch_status_resolving">Fetching link…</string>
+    <string name="watch_status_resolving_retry">Fetching link, attempt %1$d/%2$d…</string>
+    <string name="download_options_title">Download options</string>
+    <string name="download_options_voiceover">Voiceover</string>
+    <string name="download_options_quality">Quality</string>
+    <string name="download_options_subtitles">Subtitles</string>
+    <string name="download_options_subtitles_unknown">Unknown</string>
+    <string name="download_options_remember">Remember for this title</string>
+    <string name="download_options_error">Could not load download options</string>
     <string name="watch_status_downloading">Downloading %1$d%%</string>
     <string name="watch_status_paused">Paused</string>
     <string name="watch_status_failed">Download failed</string>
@@ -256,6 +265,8 @@
     <string name="watch_error_voiceover_not_found">Voiceover not found</string>
     <string name="watch_error_episode_not_found">Episode not found</string>
     <string name="watch_error_source_failed">The source could not load this episode: %1$s</string>
+    <string name="watch_error_reason_rate_limited">the video host is rate-limiting requests right now, try again in a few minutes</string>
+    <string name="watch_error_reason_host_unavailable">the video host is temporarily unavailable</string>
     <string name="watch_error_no_players">No available players for the selected voiceover</string>
     <string name="watch_error_selected_player_unavailable">This player did not provide a stream in time. Open Player settings to choose another player.</string>
     <string name="watch_error_extractor_missing">%1$s: extractor missing</string>
@@ -430,6 +441,7 @@
     <string name="source_extensions_refresh">Refresh</string>
     <string name="source_extensions_manage">Manage</string>
     <string name="source_extensions_settings">Settings</string>
+    <string name="source_extensions_verify_site">Verify site access</string>
     <string name="source_extensions_settings_description">Options provided by the extension itself. They apply to this source only.</string>
     <string name="source_extensions_update">Update</string>
     <string name="source_extensions_resolver_update">player update available</string>
