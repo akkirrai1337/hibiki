@@ -359,8 +359,10 @@ private fun <T> AppThreeStateFilterFlowRow(
     }
 }
 
+/** The chip look filter option rows use -- reused as-is wherever the app needs a single filter-style
+ * pick (e.g. the download options sheet's quality/subtitle/voiceover choices), not just here. */
 @Composable
-private fun AppFilterChip(color: Color, icon: ImageVector?, text: String, onClick: () -> Unit) {
+fun AppFilterChip(color: Color, icon: ImageVector?, text: String, onClick: () -> Unit) {
     // The colour eases between states and the "+ " / "− " prefix cross-fades, as the chip always did.
     val animatedColor by animateColorAsState(color, label = "filter_chip_color")
     Row(modifier = Modifier.clip(CircleShape).combinedClickable(onClick = onClick, onLongClick = {}).background(animatedColor.copy(alpha = 0.2f)).padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {

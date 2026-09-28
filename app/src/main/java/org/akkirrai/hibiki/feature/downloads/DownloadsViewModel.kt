@@ -80,6 +80,7 @@ class DownloadsViewModel(
 
     private fun OfflineEpisodeDownloadState.isActiveDownload(): Boolean = when (this) {
         OfflineEpisodeDownloadState.Queued,
+        is OfflineEpisodeDownloadState.Resolving,
         is OfflineEpisodeDownloadState.Downloading,
         OfflineEpisodeDownloadState.Paused -> true
         OfflineEpisodeDownloadState.NotDownloaded,

@@ -19,12 +19,24 @@ class OfflineDownloadRepository(
     suspend fun enqueueEpisodes(
         source: WatchSource,
         episodes: List<WatchEpisode>,
+        preferredQuality: String? = null,
+        preferredSubtitleLanguages: Set<String> = emptySet(),
     ): Int = withContext(Dispatchers.IO) {
         OfflineDownloadQueue.enqueue(
             context = appContext,
             source = source,
             episodes = episodes,
+            preferredQuality = preferredQuality,
+            preferredSubtitleLanguages = preferredSubtitleLanguages,
         )
+    }
+
+    suspend fun getDownloadPreference(titleId: String): DownloadPreference? = withContext(Dispatchers.IO) {
+        OfflineDownloadQueue.getPreference(appContext, titleId)
+    }
+
+    suspend fun setDownloadPreference(titleId: String, preference: DownloadPreference) = withContext(Dispatchers.IO) {
+        OfflineDownloadQueue.setPreference(appContext, titleId, preference)
     }
 
     fun getOfflinePlayback(

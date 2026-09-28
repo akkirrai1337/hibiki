@@ -18,6 +18,7 @@ import org.akkirrai.hibiki.core.download.DownloadDao
 import org.akkirrai.hibiki.core.download.DownloadFailedEntity
 import org.akkirrai.hibiki.core.download.DownloadPendingEntity
 import org.akkirrai.hibiki.core.download.DownloadPlaybackEntity
+import org.akkirrai.hibiki.core.download.DownloadPreferenceEntity
 import org.akkirrai.hibiki.core.download.DownloadStoredEntity
 
 /**
@@ -34,10 +35,15 @@ import org.akkirrai.hibiki.core.download.DownloadStoredEntity
         DownloadStoredEntity::class,
         DownloadFailedEntity::class,
         DownloadPlaybackEntity::class,
+        DownloadPreferenceEntity::class,
     ],
-    version = 4,
+    version = 5,
     exportSchema = true,
-    autoMigrations = [AutoMigration(from = 1, to = 2), AutoMigration(from = 2, to = 3)],
+    autoMigrations = [
+        AutoMigration(from = 1, to = 2),
+        AutoMigration(from = 2, to = 3),
+        AutoMigration(from = 4, to = 5),
+    ],
 )
 abstract class HibikiDatabase : RoomDatabase() {
     abstract fun offlineTitleDao(): OfflineTitleDao

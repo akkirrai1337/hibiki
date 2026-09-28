@@ -36,6 +36,19 @@ data class DownloadPlaybackEntity(
 )
 
 /**
+ * A user's "remember for this title" choice from the download options sheet, so later downloads
+ * of the same title skip straight to enqueueing instead of asking again. `subtitleLanguage` is
+ * a language code, not a URL, because the actual subtitle URL is per-episode; `null` means "no
+ * subtitles" was the remembered choice, as opposed to no row existing at all (never asked).
+ */
+@Entity(tableName = "download_preference")
+data class DownloadPreferenceEntity(
+    @PrimaryKey @ColumnInfo(name = "title_id") val titleId: String,
+    @ColumnInfo(name = "quality_label") val qualityLabel: String?,
+    @ColumnInfo(name = "subtitle_language") val subtitleLanguage: String?,
+)
+
+/**
  * Storage behind [OfflineDownloadQueue]. The queue still reads and writes whole lists under its own
  * lock, but each write is now one transaction instead of a JSON array rewritten through
  * SharedPreferences' asynchronous apply(), where a process death between two list writes could
@@ -78,6 +91,15 @@ abstract class DownloadDao {
 
     @Query("DELETE FROM download_playback WHERE download_id = :downloadId")
     abstract fun deletePlayback(downloadId: String)
+
+    @Query("SELECT * FROM download_preference WHERE title_id = :titleId")
+    abstract fun preference(titleId: String): DownloadPreferenceEntity?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    abstract fun setPreference(preference: DownloadPreferenceEntity)
+
+    @Query("DELETE FROM download_preference WHERE title_id = :titleId")
+    abstract fun clearPreference(titleId: String)
 
     /** One-time import of the SharedPreferences queue. */
     @Transaction

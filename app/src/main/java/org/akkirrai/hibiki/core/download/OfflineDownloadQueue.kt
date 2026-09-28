@@ -14,9 +14,12 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.TimeoutCancellationException
 import org.akkirrai.hibiki.core.model.PlaybackSegment
 import org.akkirrai.hibiki.core.model.PlaybackSegmentType
 import org.akkirrai.hibiki.core.model.PlaybackStream
+import org.akkirrai.hibiki.core.model.PlaybackSubtitle
 import org.akkirrai.hibiki.core.model.PlaybackStreamType
 import org.akkirrai.hibiki.core.model.WatchEpisode
 import org.akkirrai.hibiki.core.model.WatchSource
@@ -46,6 +49,7 @@ object OfflineDownloadQueue {
     private const val STOP_REASON_PAUSED_BY_USER = 1
     private const val DEFAULT_SOURCE_TITLE = "Озвучка"
     private val RESOLVE_RETRY_DELAYS_MS = longArrayOf(0L, 1_000L, 3_000L)
+    private const val RESOLVE_ATTEMPT_TIMEOUT_MS = 20_000L
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val processingLock = Any()
@@ -62,6 +66,14 @@ object OfflineDownloadQueue {
      * window, visibly reverting the UI's optimistic "queued" state until resolution finishes.
      */
     private val resolvingIds = mutableSetOf<String>()
+
+    /**
+     * Current attempt number (1-based) for each id in [resolvingIds], so [getEpisodeStates] can
+     * surface which stage of stream resolution is in flight (e.g. "retrying 2/3") instead of a
+     * single generic "queued" label that looks identical whether nothing is happening yet or a
+     * retry is under way.
+     */
+    private val resolvingAttempts = ConcurrentHashMap<String, Int>()
 
     @Volatile
     private var isProcessing = false
@@ -151,6 +163,8 @@ object OfflineDownloadQueue {
         context: Context,
         source: WatchSource,
         episodes: List<WatchEpisode>,
+        preferredQuality: String? = null,
+        preferredSubtitleLanguages: Set<String> = emptySet(),
     ): Int {
         val appContext = context.applicationContext
         if (episodes.isEmpty()) return 0
@@ -174,6 +188,8 @@ object OfflineDownloadQueue {
                     episodeId = episode.id,
                     episodeNumber = episode.number,
                     episodeTitle = episode.title,
+                    preferredQuality = preferredQuality,
+                    preferredSubtitleLanguages = preferredSubtitleLanguages,
                 )
             }.filter { existingIds.add(it.downloadId) }
             if (newEntries.isNotEmpty()) {
@@ -215,7 +231,11 @@ object OfflineDownloadQueue {
                 val current = manager.currentDownloads.firstOrNull { it.request.id == id }
                 val stored = current ?: runCatching { manager.downloadIndex.getDownload(id) }.getOrNull()
                 val state = when {
-                    episodeId in pendingIds || id in resolving -> OfflineEpisodeDownloadState.Queued
+                    id in resolving -> OfflineEpisodeDownloadState.Resolving(
+                        attempt = resolvingAttempts[id] ?: 1,
+                        totalAttempts = RESOLVE_RETRY_DELAYS_MS.size,
+                    )
+                    episodeId in pendingIds -> OfflineEpisodeDownloadState.Queued
                     stored != null -> stored.toEpisodeDownloadState()
                     id in failedIds -> OfflineEpisodeDownloadState.Failed
                     else -> OfflineEpisodeDownloadState.NotDownloaded
@@ -273,6 +293,11 @@ object OfflineDownloadQueue {
             )
             clearFailedEntries(appContext, setOf(id))
             removeFromSession(appContext, id)
+            // Cancelling while the episode is still being resolved (stream lookup in flight, not
+            // yet handed to Media3) left it stuck reporting Queued forever: it was already off the
+            // pending queue, so this was the only place left that could clear resolvingIds.
+            resolvingIds.remove(id)
+            resolvingAttempts.remove(id)
             dao(appContext).playback(id)
                 ?.let { encoded -> runCatching { decodePlayback(JSONObject(encoded)) }.getOrNull() }
                 ?.let { playback -> OfflineStreamHeaders.remove(appContext, playback.streamUrl) }
@@ -381,6 +406,7 @@ object OfflineDownloadQueue {
             episodeTitle = downloaded.episodeTitle.ifBlank { snapshot.episodeTitle },
             qualityLabel = snapshot.qualityLabel,
             availableQualityLabels = snapshot.availableQualityLabels,
+            subtitles = snapshot.subtitles,
             segments = snapshot.segments,
             videoId = snapshot.videoId,
         )
@@ -496,10 +522,18 @@ object OfflineDownloadQueue {
                     runCatching {
                         val source = entry.toWatchSource()
                         val episode = entry.toWatchEpisode()
-                        val playback = resolveStreamForDownload(
+                        val resolved = resolveStreamForDownload(
                             repository = repository,
                             source = source,
                             episode = episode,
+                            downloadId = entry.downloadId,
+                            preferredQuality = entry.preferredQuality,
+                        )
+                        // The resolver returns every subtitle track it found; only the ones the user
+                        // picked (or none) should be kept for offline playback, matched by language
+                        // since a "remembered" preference only stores language codes, not URLs.
+                        val playback = resolved.copy(
+                            subtitles = resolved.subtitles.filter { it.language in entry.preferredSubtitleLanguages },
                         )
                         synchronized(requestLock) {
                             if (!isCurrentRequest(context, entry)) return@runCatching
@@ -534,6 +568,7 @@ object OfflineDownloadQueue {
                         removeFromSession(context, entry.downloadId)
                     }
                     synchronized(requestLock) { resolvingIds.remove(entry.downloadId) }
+                    resolvingAttempts.remove(entry.downloadId)
                 }
             } finally {
                 synchronized(processingLock) { isProcessing = false }
@@ -567,32 +602,49 @@ object OfflineDownloadQueue {
         repository: AnimeWatchRepository,
         source: WatchSource,
         episode: WatchEpisode,
+        downloadId: String,
+        preferredQuality: String?,
     ): PlaybackStream {
         var lastError: Throwable? = null
         RESOLVE_RETRY_DELAYS_MS.forEachIndexed { attempt, delayMs ->
+            resolvingAttempts[downloadId] = attempt + 1
             if (attempt > 0) delay(delayMs)
             try {
-                val resolved = repository.resolveFastestStream(
-                    sourceId = source.sourceId,
-                    episodeId = episode.id,
-                    forceRefresh = attempt > 0,
-                    preferredPlayerName = successfulDownloadPlayers[source.sourceId],
-                )
+                // A hung network call here (e.g. an unresponsive source) used to leave the episode
+                // in resolvingIds indefinitely, reporting Queued forever with no way to cancel it
+                // until the call eventually returned or the process was killed.
+                val resolved = withTimeout(RESOLVE_ATTEMPT_TIMEOUT_MS) {
+                    repository.resolveFastestStream(
+                        sourceId = source.sourceId,
+                        episodeId = episode.id,
+                        forceRefresh = attempt > 0,
+                        preferredPlayerName = successfulDownloadPlayers[source.sourceId],
+                        preferredQuality = preferredQuality,
+                    )
+                }
                 resolved.playerName?.let { successfulDownloadPlayers[source.sourceId] = it }
                 return resolved.playback
+            } catch (error: TimeoutCancellationException) {
+                lastError = error
+                successfulDownloadPlayers.remove(source.sourceId)
+                AppLogger.w(
+                    TAG,
+                    "Stream resolve attempt ${attempt + 1}/${RESOLVE_RETRY_DELAYS_MS.size} timed out: " +
+                        "id=$downloadId",
+                )
             } catch (error: Throwable) {
                 lastError = error
                 successfulDownloadPlayers.remove(source.sourceId)
                 AppLogger.w(
                     TAG,
                     "Stream resolve attempt ${attempt + 1}/${RESOLVE_RETRY_DELAYS_MS.size} failed: " +
-                        "id=${downloadId(source.sourceId, episode.id)}",
+                        "id=$downloadId",
                     error,
                 )
             }
         }
         throw lastError ?: IllegalStateException(
-            "Unable to resolve stream for ${downloadId(source.sourceId, episode.id)}",
+            "Unable to resolve stream for $downloadId",
         )
     }
 
@@ -728,6 +780,18 @@ object OfflineDownloadQueue {
             put("headers", JSONObject().apply {
                 playback.headers.forEach { (key, value) -> put(key, value) }
             })
+            put("subtitles", JSONArray().apply {
+                playback.subtitles.forEach { subtitle ->
+                    put(JSONObject().apply {
+                        put("url", subtitle.url)
+                        put("label", subtitle.label)
+                        put("language", subtitle.language)
+                        put("headers", JSONObject().apply {
+                            subtitle.headers.forEach { (key, value) -> put(key, value) }
+                        })
+                    })
+                }
+            })
             put("segments", JSONArray().apply {
                 playback.segments.forEach { segment ->
                     put(JSONObject().apply {
@@ -750,8 +814,27 @@ object OfflineDownloadQueue {
                 .getOrDefault(PlaybackStreamType.HLS),
             qualityLabel = json.optString("qualityLabel").ifBlank { null },
             headers = json.optJSONObject("headers").toStringMap(),
+            subtitles = json.optJSONArray("subtitles").toPlaybackSubtitles(),
             segments = json.optJSONArray("segments").toPlaybackSegments(),
         )
+    }
+
+    private fun JSONArray?.toPlaybackSubtitles(): List<PlaybackSubtitle> {
+        if (this == null) return emptyList()
+        return buildList {
+            for (index in 0 until length()) {
+                val item = optJSONObject(index) ?: continue
+                val url = item.optString("url").takeIf(String::isNotBlank) ?: continue
+                add(
+                    PlaybackSubtitle(
+                        url = url,
+                        label = item.optString("label").ifBlank { null },
+                        language = item.optString("language").ifBlank { null },
+                        headers = item.optJSONObject("headers").toStringMap(),
+                    ),
+                )
+            }
+        }
     }
 
     private fun JSONObject?.toStringMap(): Map<String, String> {
@@ -789,6 +872,32 @@ object OfflineDownloadQueue {
             PlaybackStreamType.DASH -> MimeTypes.APPLICATION_MPD
         }
     }
+
+    fun getPreference(context: Context, titleId: String): DownloadPreference? {
+        val entity = dao(context).preference(titleId) ?: return null
+        return DownloadPreference(
+            qualityLabel = entity.qualityLabel,
+            subtitleLanguages = entity.subtitleLanguage.decodeSubtitleLanguages(),
+        )
+    }
+
+    fun setPreference(context: Context, titleId: String, preference: DownloadPreference) {
+        dao(context).setPreference(
+            DownloadPreferenceEntity(
+                titleId = titleId,
+                qualityLabel = preference.qualityLabel,
+                subtitleLanguage = preference.subtitleLanguages.encodeSubtitleLanguages(),
+            ),
+        )
+    }
+
+    // The DB column stores a single nullable string, kept as-is rather than adding a column just
+    // for this -- a comma is safe because BCP-47 language codes never contain one.
+    private fun Set<String>.encodeSubtitleLanguages(): String? =
+        takeIf(Set<String>::isNotEmpty)?.joinToString(",")
+
+    private fun String?.decodeSubtitleLanguages(): Set<String> =
+        this?.split(",")?.mapNotNullTo(mutableSetOf()) { it.takeIf(String::isNotBlank) } ?: emptySet()
 
     fun getPendingCount(context: Context): Int = pendingEntries(context).size
 
@@ -931,6 +1040,8 @@ object OfflineDownloadQueue {
         val episodeId: String,
         val episodeNumber: Double,
         val episodeTitle: String?,
+        val preferredQuality: String? = null,
+        val preferredSubtitleLanguages: Set<String> = emptySet(),
         val requestToken: String = UUID.randomUUID().toString(),
     ) {
         val downloadId: String = downloadId(sourceId, episodeId)
@@ -964,6 +1075,8 @@ object OfflineDownloadQueue {
                 put("episodeId", episodeId)
                 put("episodeNumber", episodeNumber)
                 put("episodeTitle", episodeTitle)
+                put("preferredQuality", preferredQuality)
+                put("preferredSubtitleLanguages", JSONArray(preferredSubtitleLanguages.toList()))
                 put("requestToken", requestToken)
             }
         }
@@ -982,6 +1095,10 @@ object OfflineDownloadQueue {
                     episodeId = episodeId,
                     episodeNumber = json.optDouble("episodeNumber", 0.0),
                     episodeTitle = json.optString("episodeTitle").ifBlank { null },
+                    preferredQuality = json.optString("preferredQuality").ifBlank { null },
+                    preferredSubtitleLanguages = json.optJSONArray("preferredSubtitleLanguages")
+                        ?.let { array -> (0 until array.length()).mapNotNullTo(mutableSetOf()) { array.optString(it).takeIf(String::isNotBlank) } }
+                        ?: emptySet(),
                     requestToken = json.optString("requestToken")
                         .ifBlank { "$sourceId:$episodeId" },
                 )
@@ -990,9 +1107,16 @@ object OfflineDownloadQueue {
     }
 }
 
+/** A user's remembered download choice for a title, from the "remember for this title" toggle. */
+data class DownloadPreference(
+    val qualityLabel: String?,
+    val subtitleLanguages: Set<String> = emptySet(),
+)
+
 sealed interface OfflineEpisodeDownloadState {
     data object NotDownloaded : OfflineEpisodeDownloadState
     data object Queued : OfflineEpisodeDownloadState
+    data class Resolving(val attempt: Int, val totalAttempts: Int) : OfflineEpisodeDownloadState
     data class Downloading(val progress: Float) : OfflineEpisodeDownloadState
     data object Paused : OfflineEpisodeDownloadState
     data object Completed : OfflineEpisodeDownloadState
