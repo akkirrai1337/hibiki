@@ -83,8 +83,7 @@ private fun SourceFilter(
     fun set(value: String) =
         onValuesChange(if (value == def.defaultValue) values - def.key else values + (def.key to value))
 
-    if (isYearFilter(def)) {
-        YearSourceFilter(def, values, onValuesChange)
+    if (isYearFilter(def) && YearSourceFilter(def, values, onValuesChange)) {
         return
     }
 
@@ -319,11 +318,18 @@ private fun isPlaceholderOption(option: String?): Boolean {
 
 private const val SORTED_OPTION_MINIMUM = 50
 
-/** The source's own year filter, which the filter window draws as a slider instead of a wall of chips. */
-private fun isYearFilter(def: SourceFilterDef): Boolean =
-    def.title.trim().lowercase() in YEAR_FILTER_TITLES
+/**
+ * The source's own year filter, which the filter window draws as a slider instead of a wall of
+ * chips. Matched by whole word rather than the exact title, since sources phrase this filter
+ * differently ("Year", "Release Year", "Browse by Year", "Сортировать по году"...) and an exact
+ * match against a fixed title list silently fell back to the chip wall for anything not in it.
+ */
+private fun isYearFilter(def: SourceFilterDef): Boolean {
+    val title = def.title.trim().lowercase()
+    return YEAR_FILTER_WORDS.any { word -> Regex("\\b${Regex.escape(word)}\\b").containsMatchIn(title) }
+}
 
-private val YEAR_FILTER_TITLES = setOf("year", "years", "release year", "year of release", "год", "рік", "год выпуска", "рік випуску")
+private val YEAR_FILTER_WORDS = setOf("year", "years", "год", "года", "году", "лет", "рік", "року", "років")
 
 /**
  * Icons for options that name a season, a release status or a sub/dub language, matched
@@ -485,20 +491,22 @@ private fun yearOf(title: String): Int? = title.trim().toIntOrNull()?.takeIf { i
 /**
  * A year filter as a slider. A source that takes several years (a group of toggles) gets the app's range
  * slider; one that takes a single year (a list to choose from) gets a slider with one thumb. Anything
- * else, such as a free-text year, is not drawn, since a slider could not fill it in.
+ * else, such as a free-text year, is not drawn here -- [isYearFilter] only matches on the title, so a
+ * filter that merely mentions "year" without year-shaped children/options falls back to its normal
+ * rendering (returns false) instead of silently disappearing.
  */
 @Composable
 private fun YearSourceFilter(
     def: SourceFilterDef,
     values: Map<String, String>,
     onValuesChange: (Map<String, String>) -> Unit,
-) {
+): Boolean {
     val multiple = def.type == SourceFilterType.GROUP &&
         def.children.all { it.type == SourceFilterType.CHECKBOX || it.type == SourceFilterType.TRISTATE }
     when {
         multiple -> {
             val byYear = def.children.mapNotNull { child -> yearOf(child.title)?.let { it to child } }.sortedBy { it.first }
-            if (byYear.size < 2) return
+            if (byYear.size < 2) return false
             val full = byYear.first().first..byYear.last().first
             fun on(child: SourceFilterDef) = if (child.type == SourceFilterType.CHECKBOX) "true" else "1"
             fun isOn(child: SourceFilterDef) = (values[child.key] ?: child.defaultValue) == on(child)
@@ -517,12 +525,13 @@ private fun YearSourceFilter(
                     onValuesChange(next)
                 },
             )
+            return true
         }
 
         def.type == SourceFilterType.SELECT -> {
             val defaultIndex = def.defaultValue.toIntOrNull()
             val byYear = def.options.mapIndexedNotNull { index, title -> yearOf(title)?.let { it to index } }.sortedBy { it.first }
-            if (byYear.size < 2) return
+            if (byYear.size < 2) return false
             val current = (values[def.key] ?: def.defaultValue).toIntOrNull()
             val position = byYear.indexOfFirst { it.second == current }.let { if (it == -1) 0 else it + 1 }
             SingleYearSlider(
@@ -536,7 +545,10 @@ private fun YearSourceFilter(
                     )
                 },
             )
+            return true
         }
+
+        else -> return false
     }
 }
 

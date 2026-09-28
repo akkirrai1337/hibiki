@@ -132,7 +132,10 @@ fun CatalogScreen(
 ) {
     val uiState = viewModel.uiState.collectAsState()
     val state = uiState.value
-    val noSourcesInstalled = AnimeSourceRegistry.sources.isEmpty()
+    // Before the extension scan finishes, `sources` is empty regardless of what's installed --
+    // treating that as "no sources" flashed "Go to sources" for a frame before flipping to
+    // "Retry" once the scan caught up.
+    val noSourcesInstalled = AnimeSourceRegistry.hasCompletedInitialLoad && AnimeSourceRegistry.sources.isEmpty()
     val context = LocalContext.current
     val isOffline = state.errorMessage != null &&
         state.errorMessage == stringResource(R.string.home_error_no_internet)

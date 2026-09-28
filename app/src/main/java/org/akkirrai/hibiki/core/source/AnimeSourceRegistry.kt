@@ -99,6 +99,14 @@ object AnimeSourceRegistry {
     // Completed once the first load of the installed extensions has finished, whether it found any or not.
     // Until then an empty registry means "not loaded yet", not "nothing installed".
     private val initialLoad = CompletableDeferred<Unit>()
+    // Compose-observable twin of [initialLoad]'s completion, for screens that read `sources`
+    // synchronously during composition (e.g. to decide "no sources installed" vs. "still loading")
+    // and cannot suspend on the deferred. Without this, a screen composing before the extension
+    // scan finishes sees an empty `sources` and shows "no sources installed" for one frame, even
+    // when extensions are in fact installed and about to appear.
+    private var hasCompletedInitialLoadState by mutableStateOf(false)
+    val hasCompletedInitialLoad: Boolean
+        get() = hasCompletedInitialLoadState
     // Bumped whenever the set of loaded sources changes, so long-lived AnimeSourceRuntimeManager
     // instances (one per repository, surviving across screen navigation) discard runtimes they
     // created for sources that have since been replaced.
@@ -130,6 +138,7 @@ object AnimeSourceRegistry {
             refreshApkExtensionsLocked(appContext)
         } finally {
             initialLoad.complete(Unit)
+            hasCompletedInitialLoadState = true
         }
     }
 
