@@ -21,7 +21,9 @@ import java.util.concurrent.ConcurrentHashMap
 
 class HttpStreamValidator(
     private val client: HttpClient,
-    private val onTiming: ((stage: String, elapsedMs: Long, success: Boolean) -> Unit)? = null,
+    private val onTiming: (
+        (stage: String, elapsedMs: Long, success: Boolean, statusCode: Int?, message: String?) -> Unit
+    )? = null,
 ) : StreamValidator {
     private val successfulValidations = ConcurrentHashMap<ValidationKey, CachedValidation>()
 
@@ -30,7 +32,7 @@ class HttpStreamValidator(
         // fetch the upstream stream once more before the player fetches it again. A dead stream
         // still surfaces as a player error, which the watch flow retries with another candidate.
         if (stream.isLoopback()) {
-            onTiming?.invoke("loopback_skipped", 0L, true)
+            onTiming?.invoke("loopback_skipped", 0L, true, null, null)
             return StreamValidationResult(
                 success = true,
                 streamType = stream.type,
@@ -43,7 +45,7 @@ class HttpStreamValidator(
         val cacheKey = stream.validationKey()
         successfulValidations[cacheKey]?.let { cached ->
             if (System.currentTimeMillis() - cached.cachedAt < SUCCESS_CACHE_TTL_MS) {
-                onTiming?.invoke("cache_hit", 0L, true)
+                onTiming?.invoke("cache_hit", 0L, true, cached.result.statusCode, null)
                 return cached.result
             }
             successfulValidations.remove(cacheKey, cached)
@@ -63,7 +65,7 @@ class HttpStreamValidator(
                 },
             )
         }
-        reportTiming("total", validationStartedAt, result.success)
+        reportTiming("total", validationStartedAt, result.success, result.statusCode, result.message)
         if (result.success) {
             successfulValidations[cacheKey] = CachedValidation(result, System.currentTimeMillis())
             trimValidationCache()
@@ -144,7 +146,7 @@ class HttpStreamValidator(
             stream.headers.forEach { (name, value) -> header(name, value) }
         }
         if (!firstResponse.status.isSuccess()) {
-            reportTiming("$track.hls_master", requestStartedAt, success = false)
+            reportTiming("$track.hls_master", requestStartedAt, success = false, statusCode = firstResponse.status.value)
             return failure(stream, firstResponse.status.value, "m3u8 вернул HTTP ${firstResponse.status.value}")
         }
 
@@ -163,7 +165,7 @@ class HttpStreamValidator(
                 stream.headers.forEach { (name, value) -> header(name, value) }
             }
             if (!mediaResponse.status.isSuccess()) {
-                reportTiming("$track.hls_media_playlist", requestStartedAt, success = false)
+                reportTiming("$track.hls_media_playlist", requestStartedAt, success = false, statusCode = mediaResponse.status.value)
                 return failure(stream, mediaResponse.status.value, "media playlist вернул HTTP ${mediaResponse.status.value}")
             }
             playlist = mediaResponse.bodyAsText()
@@ -190,6 +192,7 @@ class HttpStreamValidator(
             "$track.hls_first_segment",
             requestStartedAt,
             segmentResponse.status.isSuccess() && segmentBytes.isNotEmpty(),
+            statusCode = segmentResponse.status.value,
         )
         if (!segmentResponse.status.isSuccess() || segmentBytes.isEmpty()) {
             return failure(
@@ -209,9 +212,15 @@ class HttpStreamValidator(
         )
     }
 
-    private fun reportTiming(stage: String, startedAtNanos: Long, success: Boolean) {
+    private fun reportTiming(
+        stage: String,
+        startedAtNanos: Long,
+        success: Boolean,
+        statusCode: Int? = null,
+        message: String? = null,
+    ) {
         val elapsedMs = ((System.nanoTime() - startedAtNanos) / 1_000_000L).coerceAtLeast(0L)
-        onTiming?.invoke(stage, elapsedMs, success)
+        onTiming?.invoke(stage, elapsedMs, success, statusCode, message)
     }
 
     private suspend fun validateMp4(stream: VideoStream): StreamValidationResult {

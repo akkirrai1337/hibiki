@@ -91,8 +91,12 @@ class AnimeWatchRepository(
     private val appContext = context?.applicationContext
     private val appPreferences = appContext?.let(::AppPreferences)
     private val sourceManager = sourceManager ?: appContext?.let { AnimeSourceRuntimeManager(it, client) }
-    private val validator = HttpStreamValidator(client) { stage, elapsedMs, success ->
-        AppLogger.d(TAG, "[playback.validation.$stage] elapsedMs=$elapsedMs success=$success")
+    private val validator = HttpStreamValidator(client) { stage, elapsedMs, success, statusCode, message ->
+        val detail = buildString {
+            statusCode?.let { append(" statusCode=$it") }
+            message?.takeIf(String::isNotBlank)?.let { append(" message=$it") }
+        }
+        AppLogger.d(TAG, "[playback.validation.$stage] elapsedMs=$elapsedMs success=$success$detail")
     }
     @Volatile
     private var extractorsGeneration = -1
@@ -504,6 +508,12 @@ class AnimeWatchRepository(
         }
         val groups = runCatching { runtime.getPlaybackGroups(title) }
             .onFailure { error ->
+                // A screen leaving composition (navigating back, switching titles) while this call
+                // is in flight cancels it with a CancellationException -- swallowing that here made
+                // it look exactly like "this source has zero voiceovers", which then got surfaced
+                // as a real "no voiceovers found" error instead of just letting the load retry
+                // cleanly next time the title page opens.
+                if (error is CancellationException) throw error
                 AppLogger.w(TAG, "${runtime.descriptor.name} source discovery failed: ${error.message}")
             }
             .getOrDefault(emptyList())
@@ -614,9 +624,21 @@ class AnimeWatchRepository(
             } catch (error: CancellationException) {
                 throw error
             } catch (error: Throwable) {
-                providerFailures[payload.source.sourceId] = error.message ?: error.javaClass.simpleName
-                if (error.message?.contains("HTTP 444") == true || error.message?.contains("HTTP 5") == true) {
+                // A 429 means the host is already rate-limiting us; retrying immediately (as a user
+                // re-opening the episode does) just extends the rate limit instead of recovering
+                // from it, so back off the same way a dead (444/5xx) provider is backed off.
+                val rateLimited = error.message?.contains("HTTP 429") == true
+                val hostDown = error.message?.contains("HTTP 444") == true || error.message?.contains("HTTP 5") == true
+                if (rateLimited || hostDown) {
                     unavailablePlayerLinks[cacheKey] = System.currentTimeMillis()
+                }
+                // The raw message ("AnimePahe returned no playable videos (kwik.cx: HTTP 429)") is
+                // meant for the log, not the screen -- it names an internal hostname and an HTTP
+                // status code a person has no reason to know how to read.
+                providerFailures[payload.source.sourceId] = when {
+                    rateLimited -> appString(R.string.watch_error_reason_rate_limited)
+                    hostDown -> appString(R.string.watch_error_reason_host_unavailable)
+                    else -> error.message ?: error.javaClass.simpleName
                 }
                 AppLogger.w(
                     TAG,
