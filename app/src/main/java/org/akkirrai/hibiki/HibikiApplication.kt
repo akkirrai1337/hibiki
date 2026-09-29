@@ -42,7 +42,10 @@ class HibikiApplication : Application(), coil.ImageLoaderFactory {
             Injekt.addSingleton<Application>(this)
         }
         if (!Injekt.hasFactory<Json>()) {
-            Injekt.addSingleton(Json { ignoreUnknownKeys = true })
+            Injekt.addSingleton(Json {
+                ignoreUnknownKeys = true
+                explicitNulls = false
+            })
         }
         if (!Injekt.hasFactory<ProtoBuf>()) {
             Injekt.addSingleton(ProtoBuf {})
