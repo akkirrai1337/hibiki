@@ -580,14 +580,15 @@ private fun SingleYearSlider(
                 )
                 Slider(
                     value = sliderValue,
-                    onValueChange = { sliderValue = it },
+                    // Snap to whole years without drawing a tick for each of the ~60 of them.
+                    onValueChange = { sliderValue = it.roundToInt().toFloat() },
                     onValueChangeFinished = {
                         val picked = sliderValue.roundToInt().coerceIn(0, years.size)
                         sliderValue = picked.toFloat()
                         onPositionChange(picked)
                     },
                     valueRange = 0f..years.size.toFloat(),
-                    steps = (years.size - 1).coerceAtLeast(0),
+                    steps = 0,
                     modifier = Modifier.weight(1f),
                 )
                 Text(
