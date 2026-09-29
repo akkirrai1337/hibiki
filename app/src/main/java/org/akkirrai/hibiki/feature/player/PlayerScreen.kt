@@ -3227,12 +3227,13 @@ private fun PlaybackStream.toMediaSource(
     subtitleMimeTypes: Map<String, String> = emptyMap(),
 ): MediaSource {
     // Download requests contain the primary stream only. Never attach separately resolved audio
-    // or subtitle URLs while offline: they are not guaranteed to be in the download cache and a
-    // missing optional track must not make the saved video unplayable.
+    // or remote subtitle URLs while offline: they are not guaranteed to be in the download cache
+    // and a missing optional track must not make the saved video unplayable. Subtitles saved to
+    // disk at download time (file: URIs) are safe to keep.
     val playback = if (offline) copy(
         audioStreamUrl = null,
         audioHeaders = emptyMap(),
-        subtitles = emptyList(),
+        subtitles = subtitles.filter { it.url.startsWith("file:") },
     ) else {
         this
     }
@@ -3243,7 +3244,7 @@ private fun PlaybackStream.toMediaSource(
             language = subtitle.language,
             headers = subtitle.headers,
             mimeType = subtitleMimeTypes[subtitle.url] ?: subtitleMimeTypeFromUrl(subtitle.url) ?: TEXT_VTT,
-            isLocal = false,
+            isLocal = subtitle.url.startsWith("file:"),
         )
     } + listOfNotNull(customSubtitle?.let { subtitle ->
         MediaSubtitle(

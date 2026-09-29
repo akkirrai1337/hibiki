@@ -93,10 +93,8 @@ import org.akkirrai.hibiki.core.design.UiDimens
 import org.akkirrai.hibiki.core.design.component.AppCenteredLoading
 import org.akkirrai.hibiki.core.design.component.AppFilledIconButton
 import org.akkirrai.hibiki.core.design.component.AppFilledIconButtonStyle
-import org.akkirrai.hibiki.core.download.DownloadPreference
 import org.akkirrai.hibiki.core.download.OfflineDownloadRepository
 import org.akkirrai.hibiki.core.download.OfflineEpisodeDownloadState
-import org.akkirrai.hibiki.feature.download.DownloadOptionsSheet
 import org.akkirrai.hibiki.core.model.EpisodeProgressStatus
 import org.akkirrai.hibiki.core.model.EpisodeWatchProgress
 import org.akkirrai.hibiki.core.model.formatEpisodeNumber
@@ -148,13 +146,6 @@ fun EpisodesScreen(
     val libraryRepository = remember(dependencies) { dependencies.libraryRepository() }
     val animeWatchRepository = remember(dependencies) { dependencies.animeWatchRepository() }
     val titleId = remember(sourceId) { watchTitleIdFromSourceId(sourceId) }
-    var downloadPreference by remember(titleId) { mutableStateOf<DownloadPreference?>(null) }
-    LaunchedEffect(titleId) {
-        downloadPreference = withContext(Dispatchers.IO) {
-            offlineDownloadRepository.getDownloadPreference(titleId)
-        }
-    }
-    var downloadOptionsEpisode by remember(sourceId) { mutableStateOf<WatchEpisode?>(null) }
     var savedProgress by remember(titleId) {
         mutableStateOf(watchStateRepository.getEpisodeProgressForSource(titleId, sourceId))
     }
@@ -274,16 +265,13 @@ fun EpisodesScreen(
                         episodeCount = result.items.size,
                     )
                 }
-                val startDownload: (WatchSource, WatchEpisode, String?, Set<String>) -> Unit = { downloadSourceChoice, episode, quality, subtitleLanguages ->
-                    if (downloadSourceChoice.sourceId == sourceId) {
-                        downloadStates = downloadStates + (episode.id to OfflineEpisodeDownloadState.Queued)
-                    }
+                // Like Aniyomi: no picker, best quality and every subtitle track.
+                val startDownload: (WatchEpisode) -> Unit = { episode ->
+                    downloadStates = downloadStates + (episode.id to OfflineEpisodeDownloadState.Queued)
                     coroutineScope.launch(Dispatchers.IO) {
                         offlineDownloadRepository.enqueueEpisodes(
-                            source = downloadSourceChoice,
+                            source = downloadSource,
                             episodes = listOf(episode),
-                            preferredQuality = quality,
-                            preferredSubtitleLanguages = subtitleLanguages,
                         )
                         cachedAnime?.let { anime ->
                             libraryRepository.saveToLibrary(anime, LibraryCategory.Saved)
@@ -357,14 +345,7 @@ fun EpisodesScreen(
                                     }
                                 }
                             },
-                            onDownloadClick = {
-                                val remembered = downloadPreference
-                                if (remembered != null) {
-                                    startDownload(downloadSource, episode, remembered.qualityLabel, remembered.subtitleLanguages)
-                                } else {
-                                    downloadOptionsEpisode = episode
-                                }
-                            },
+                            onDownloadClick = { startDownload(episode) },
                             onPauseClick = {
                                 offlineDownloadRepository.pauseEpisode(sourceId, episode.id)
                                 downloadStates = downloadStates + (episode.id to OfflineEpisodeDownloadState.Paused)
@@ -404,27 +385,6 @@ fun EpisodesScreen(
                             )
                         }
                     }
-                }
-
-                downloadOptionsEpisode?.let { episode ->
-                    DownloadOptionsSheet(
-                        source = downloadSource,
-                        episode = episode,
-                        animeWatchRepository = animeWatchRepository,
-                        initialPreference = downloadPreference,
-                        onDismissRequest = { downloadOptionsEpisode = null },
-                        onConfirm = { chosenSource, chosenEpisode, quality, subtitleLanguages, remember ->
-                            if (remember) {
-                                val preference = DownloadPreference(quality, subtitleLanguages)
-                                downloadPreference = preference
-                                coroutineScope.launch(Dispatchers.IO) {
-                                    offlineDownloadRepository.setDownloadPreference(titleId, preference)
-                                }
-                            }
-                            startDownload(chosenSource, chosenEpisode, quality, subtitleLanguages)
-                            downloadOptionsEpisode = null
-                        },
-                    )
                 }
             }
         }

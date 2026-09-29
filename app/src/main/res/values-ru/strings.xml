@@ -203,13 +203,6 @@
     <string name="watch_status_queued">В очереди</string>
     <string name="watch_status_resolving">Получение ссылки…</string>
     <string name="watch_status_resolving_retry">Получение ссылки, попытка %1$d/%2$d…</string>
-    <string name="download_options_title">Параметры загрузки</string>
-    <string name="download_options_voiceover">Озвучка</string>
-    <string name="download_options_quality">Качество</string>
-    <string name="download_options_subtitles">Субтитры</string>
-    <string name="download_options_subtitles_unknown">Неизвестно</string>
-    <string name="download_options_remember">Запомнить для этого тайтла</string>
-    <string name="download_options_error">Не удалось загрузить параметры</string>
     <string name="watch_status_downloading">Скачивается %1$d%%</string>
     <string name="watch_status_paused">На паузе</string>
     <string name="watch_status_failed">Ошибка загрузки</string>

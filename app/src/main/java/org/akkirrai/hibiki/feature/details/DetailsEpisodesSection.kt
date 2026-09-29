@@ -43,7 +43,6 @@ import kotlinx.coroutines.withContext
 import org.akkirrai.hibiki.R
 import org.akkirrai.hibiki.app.di.hibikiDependencies
 import org.akkirrai.hibiki.core.design.component.AppShimmerBlock
-import org.akkirrai.hibiki.core.download.DownloadPreference
 import org.akkirrai.hibiki.core.download.OfflineEpisodeDownloadState
 import org.akkirrai.hibiki.core.model.Anime
 import org.akkirrai.hibiki.core.model.EpisodeProgressStatus
@@ -59,7 +58,6 @@ import org.akkirrai.hibiki.feature.player.EpisodeRowCornerRadius
 import org.akkirrai.hibiki.feature.player.EpisodesUiState
 import org.akkirrai.hibiki.feature.player.ShowMoreEpisodesRow
 import org.akkirrai.hibiki.feature.player.UpcomingEpisodeRow
-import org.akkirrai.hibiki.feature.download.DownloadOptionsSheet
 import org.akkirrai.hibiki.feature.player.keepsTitleSaved
 import org.akkirrai.hibiki.feature.player.resolveEpisodeAutoScrollIndex
 import org.akkirrai.hibiki.feature.player.resolveEpisodeStatus
@@ -96,13 +94,6 @@ internal fun DetailsEpisodesSection(
     val lifecycleOwner = LocalLifecycleOwner.current
     val scope = rememberCoroutineScope()
     val titleId = remember(sourceId) { watchTitleIdFromSourceId(sourceId) }
-    var downloadPreference by remember(titleId) { mutableStateOf<DownloadPreference?>(null) }
-    LaunchedEffect(titleId) {
-        downloadPreference = withContext(Dispatchers.IO) {
-            offlineDownloadRepository.getDownloadPreference(titleId)
-        }
-    }
-    var downloadOptionsEpisode by remember(sourceId) { mutableStateOf<WatchEpisode?>(null) }
 
     var savedProgress by remember(titleId, sourceId) {
         mutableStateOf(watchStateRepository.getEpisodeProgressForSource(titleId, sourceId))
@@ -214,16 +205,13 @@ internal fun DetailsEpisodesSection(
                     val downloadSource = remember(selectedSource, state.items.size) {
                         selectedSource.copy(episodeCount = state.items.size)
                     }
-                    val startDownload: (WatchSource, WatchEpisode, String?, Set<String>) -> Unit = { downloadSourceChoice, episode, quality, subtitleLanguages ->
-                        if (downloadSourceChoice.sourceId == sourceId) {
-                            downloadStates = downloadStates + (episode.id to OfflineEpisodeDownloadState.Queued)
-                        }
+                    // Like Aniyomi: no picker, best quality and every subtitle track.
+                    val startDownload: (WatchEpisode) -> Unit = { episode ->
+                        downloadStates = downloadStates + (episode.id to OfflineEpisodeDownloadState.Queued)
                         scope.launch(Dispatchers.IO) {
                             offlineDownloadRepository.enqueueEpisodes(
-                                source = downloadSourceChoice,
+                                source = downloadSource,
                                 episodes = listOf(episode),
-                                preferredQuality = quality,
-                                preferredSubtitleLanguages = subtitleLanguages,
                             )
                             libraryRepository.saveToLibrary(anime, LibraryCategory.Saved)
                         }
@@ -247,14 +235,7 @@ internal fun DetailsEpisodesSection(
                                     }
                                 }
                             },
-                            onDownloadClick = {
-                                val remembered = downloadPreference
-                                if (remembered != null) {
-                                    startDownload(downloadSource, episode, remembered.qualityLabel, remembered.subtitleLanguages)
-                                } else {
-                                    downloadOptionsEpisode = episode
-                                }
-                            },
+                            onDownloadClick = { startDownload(episode) },
                             onPauseClick = {
                                 offlineDownloadRepository.pauseEpisode(sourceId, episode.id)
                                 downloadStates = downloadStates + (episode.id to OfflineEpisodeDownloadState.Paused)
@@ -289,27 +270,6 @@ internal fun DetailsEpisodesSection(
                                 shape = shape,
                             )
                         }
-                    }
-
-                    downloadOptionsEpisode?.let { episode ->
-                        DownloadOptionsSheet(
-                            source = downloadSource,
-                            episode = episode,
-                            animeWatchRepository = animeWatchRepository,
-                            initialPreference = downloadPreference,
-                            onDismissRequest = { downloadOptionsEpisode = null },
-                            onConfirm = { chosenSource, chosenEpisode, quality, subtitleLanguages, remember ->
-                                if (remember) {
-                                    val preference = DownloadPreference(quality, subtitleLanguages)
-                                    downloadPreference = preference
-                                    scope.launch(Dispatchers.IO) {
-                                        offlineDownloadRepository.setDownloadPreference(titleId, preference)
-                                    }
-                                }
-                                startDownload(chosenSource, chosenEpisode, quality, subtitleLanguages)
-                                downloadOptionsEpisode = null
-                            },
-                        )
                     }
                 }
             }

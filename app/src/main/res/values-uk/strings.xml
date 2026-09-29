@@ -201,13 +201,6 @@
     <string name="watch_status_queued">У черзі</string>
     <string name="watch_status_resolving">Отримання посилання…</string>
     <string name="watch_status_resolving_retry">Отримання посилання, спроба %1$d/%2$d…</string>
-    <string name="download_options_title">Параметри завантаження</string>
-    <string name="download_options_voiceover">Озвучення</string>
-    <string name="download_options_quality">Якість</string>
-    <string name="download_options_subtitles">Субтитри</string>
-    <string name="download_options_subtitles_unknown">Невідомо</string>
-    <string name="download_options_remember">Запам\'ятати для цього тайтла</string>
-    <string name="download_options_error">Не вдалося завантажити параметри</string>
     <string name="watch_status_downloading">Завантаження %1$d%%</string>
     <string name="watch_status_paused">Призупинено</string>
     <string name="watch_status_failed">Не вдалося завантажити</string>

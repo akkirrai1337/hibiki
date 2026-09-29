@@ -302,6 +302,7 @@ object OfflineDownloadQueue {
                 ?.let { encoded -> runCatching { decodePlayback(JSONObject(encoded)) }.getOrNull() }
                 ?.let { playback -> OfflineStreamHeaders.remove(appContext, playback.streamUrl) }
             dao(appContext).deletePlayback(id)
+            OfflineSubtitleStore.remove(appContext, id)
             val isManagedDownload = manager.currentDownloads.any { it.request.id == id } ||
                 runCatching { manager.downloadIndex.getDownload(id) != null }.getOrDefault(false)
             if (isManagedDownload) {
@@ -529,11 +530,14 @@ object OfflineDownloadQueue {
                             downloadId = entry.downloadId,
                             preferredQuality = entry.preferredQuality,
                         )
-                        // The resolver returns every subtitle track it found; only the ones the user
-                        // picked (or none) should be kept for offline playback, matched by language
-                        // since a "remembered" preference only stores language codes, not URLs.
+                        // Keep every subtitle track the resolver found, like Aniyomi does, as local files.
                         val playback = resolved.copy(
-                            subtitles = resolved.subtitles.filter { it.language in entry.preferredSubtitleLanguages },
+                            subtitles = OfflineSubtitleStore.download(
+                                context = context,
+                                downloadId = entry.downloadId,
+                                subtitles = resolved.subtitles,
+                                streamHeaders = resolved.headers,
+                            ),
                         )
                         synchronized(requestLock) {
                             if (!isCurrentRequest(context, entry)) return@runCatching
