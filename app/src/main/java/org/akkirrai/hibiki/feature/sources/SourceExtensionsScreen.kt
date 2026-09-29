@@ -82,6 +82,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.platform.LocalContext
 import org.akkirrai.hibiki.core.web.SourceWebView
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -256,12 +257,17 @@ fun SourceExtensionsScreen(
     }
 
     LaunchedEffect(context) { refreshInstalledApkExtensions() }
+    // The observer below is created once per lifecycle owner, so reading `pendingApkInstall`
+    // directly captured its value from the first composition (always null): after the person
+    // granted "install unknown apps" and came back, nothing resumed the install and the row
+    // stayed on "Installing..." forever.
+    val latestPendingApkInstall by rememberUpdatedState(pendingApkInstall)
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
                 tabScope.launch {
                     refreshInstalledApkExtensions()
-                    val pending = pendingApkInstall
+                    val pending = latestPendingApkInstall
                     if (awaitingApkInstallPermission && pending != null) {
                         if (ApkExtensionInstaller.canRequestPackageInstalls(context)) {
                             awaitingApkInstallPermission = false
