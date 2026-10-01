@@ -1,18 +1,8 @@
-## hibiki 2.8.2
-
-**Downloads**
-- Episodes now download with one tap: best available quality and every subtitle track, saved for offline playback.
-- A download shows what it is doing (finding the stream, checking it, downloading) instead of a bare "Queued", and can be cancelled while it is still being prepared.
-- Fixed downloads that stayed in the queue forever when a source did not respond.
+## hibiki 2.8.3
 
 **Sources**
-- Extensions no longer fail on responses with missing optional fields, which broke KickAssAnime's Home.
-- Fixed the endless "Installing..." spinner after allowing installs from unknown apps.
-- Sources behind Cloudflare can be verified ahead of time from the extension menu, and the challenge reopens with the failing request's own headers.
-- Playback errors now say why (rate limit, source unavailable), and the app backs off from a source that answers with HTTP 429.
+- Fixed a crash on the sources screen when an extension installed outside hibiki had not been trusted yet, which could also happen during first-time setup.
 
 **Interface**
-- Year filters are shown as a slider again.
-- Home no longer flashes "Go to sources" before the offline error.
-- Episode lists show a loading shimmer.
+- The title page no longer shifts its poster and text by a different amount from one open to the next when a title has no banner.
 
