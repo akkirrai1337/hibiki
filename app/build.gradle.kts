@@ -56,8 +56,8 @@ android {
         applicationId = "org.akkirrai.hibiki"
         minSdk = 26
         targetSdk = 36
-        versionCode = 282
-        versionName = "2.8.2"
+        versionCode = 283
+        versionName = "2.8.3"
 
         // AniList OAuth client id for optional library sync. The mobile implicit flow deliberately
         // has no client secret, so this public identifier is safe to embed in the app.
