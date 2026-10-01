@@ -1343,13 +1343,16 @@ private fun InstalledSourceRow(
         onSelect = { onSelect(entry.extension.id) },
         onUninstall = { onUninstall("$APK_PACKAGE_ROW_PREFIX${entry.packageName}") },
         // Rows for extensions that produced no source carry a package id, not a source id.
-        onOpenSettings = entry.takeIf { it.selectable && it.settingsAvailable }?.let { AnimeSourceRegistry.apkSourceSettings(SourceId(it.extension.id)) }?.let {
+        onOpenSettings = entry.takeIf {
+            it.selectable && it.settingsAvailable && !it.extension.id.startsWith(APK_PACKAGE_ROW_PREFIX)
+        }?.let { AnimeSourceRegistry.apkSourceSettings(SourceId(it.extension.id)) }?.let {
             { onOpenSettings(entry.extension.id) }
         },
         // Lets a person clear a site's Cloudflare check by hand, from a calm settings menu, before
         // it ever blocks a catalog load or an episode -- the same visible WebView the app opens
         // reactively when a request hits one, just started ahead of time instead of after a failure.
-        onOpenWebView = entry.takeIf { it.selectable }
+        // Untrusted external rows also carry a package id, which is not a valid SourceId.
+        onOpenWebView = entry.takeIf { it.selectable && !it.extension.id.startsWith(APK_PACKAGE_ROW_PREFIX) }
             ?.let { AnimeSourceRegistry.webViewTarget(SourceId(it.extension.id)) }
             ?.let {
                 { SourceWebView.intent(context, SourceId(entry.extension.id))?.let(context::startActivity) }
