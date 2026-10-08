@@ -1,0 +1,859 @@
+{
+  "nav": {
+    "browse": "Browse",
+    "home": "Home",
+    "catalog": "Catalog",
+    "sources": "Sources",
+    "yourSpace": "Your space",
+    "profile": "Profile",
+    "settings": "Settings",
+    "customize": "Show in the sidebar",
+    "search": "Search"
+  },
+  "onboarding": {
+    "getStarted": "Get started",
+    "back": "Back",
+    "next": "Next",
+    "done": "Done",
+    "welcome": {
+      "title": "Welcome to hibiki",
+      "description": "Let's set up the app in a couple of steps so you can start watching right away.",
+      "kicker": "Welcome",
+      "lead": "A catalog, a player and a library that remembers where you stopped. The anime comes from sources you add.",
+      "note": "hibiki doesn't host or share any content: sources are installed from outside repositories."
+    },
+    "sources": {
+      "title": "Add sources",
+      "description": "Install at least one source and pick it as active - without one there's nothing to work with.",
+      "mobileDescription": "Install at least one: the catalog starts from it. You can add more later in Settings."
+    },
+    "skip": "Skip for now",
+    "continue": "Continue"
+  },
+  "common": {
+    "secondsShort": "{{count}} s",
+    "loadFailed": "Failed to load: {{message}}",
+    "playbackTimeout": "The stream did not become playable within 15 seconds. Check your connection or choose another player.",
+    "offlineHint": "Looks like you're offline — you can watch what's already downloaded.",
+    "openDownloads": "Open downloaded episodes",
+    "noPoster": "No poster",
+    "anime": "Anime",
+    "episodesShort": "{{count}} ep.",
+    "readDescription": "Read description",
+    "hideDescription": "Hide description",
+    "typeFallback": "ANIME",
+    "cancel": "Cancel",
+    "retry": "Retry",
+    "save": "Save",
+    "scrollLeft": "Scroll left",
+    "scrollRight": "Scroll right",
+    "cloudflareBlocked": "{{host}} asks to pass a Cloudflare check.",
+    "cloudflareSolve": "Pass the check",
+    "cloudflareSolving": "Waiting for the check…"
+  },
+  "catalog": {
+    "searchPlaceholder": "Search anime",
+    "trendingOnPrefix": "Trending on",
+    "heroFallbackDescription": "One of the titles people are watching right now.",
+    "openTitle": "Open",
+    "continueWatching": "Continue watching",
+    "removeProgress": "Remove watch progress",
+    "viewHistory": "History",
+    "popularNow": "Popular right now",
+    "becauseYouWatched": "You might like",
+    "genreSection": "Genre: {{genre}}",
+    "openCatalog": "Open catalog",
+    "emptySourcesTitle": "Your catalog starts with a source",
+    "emptySourcesText": "Add an anime source to see what is popular, browse its catalog, and continue watching.",
+    "openSources": "Open sources",
+    "sourceUnavailableTitle": "{{source}} isn't responding",
+    "sourceUnavailableText": "Check your connection or try again in a bit.",
+    "continuations": "Continue the story",
+    "forYou": "For you on {{source}}",
+    "latestReleases": "New episodes"
+  },
+  "detail": {
+    "back": "Back",
+    "episodes": "Episodes",
+    "loadingEpisodes": "Loading episodes…",
+    "noEpisodesYet": "This title has no episodes yet.",
+    "status": {
+      "ongoing": "Ongoing",
+      "released": "Finished",
+      "announced": "Announced"
+    },
+    "watch": "Watch",
+    "remainingMinutes": "{{minutes}} min left",
+    "remainingUnderMinute": "Less than a minute left",
+    "playbackFinished": "Finished watching",
+    "continueRemaining": "Continue · {{minutes}} min left",
+    "continueLessThanMinute": "Continue · less than a minute left",
+    "continueNext": "Continue · Ep. {{number}}",
+    "rewatch": "Watch again",
+    "noEpisodes": "No episodes",
+    "nextEpisodeToday": "New episode today",
+    "nextEpisodeTomorrow": "New episode tomorrow",
+    "nextEpisodeInDays": "New episode in {{count}}d",
+    "nextEpisodeOn": "New episode {{date}}",
+    "addToLibrary": "Add to library",
+    "removeFromLibrary": "Remove from library",
+    "episodeFallback": "Episode {{number}}",
+    "downloadDialog": {
+      "title": "Download episode",
+      "translation": "Dub",
+      "quality": "Quality",
+      "loadingQualities": "Loading options…",
+      "qualityUnknown": "Quality unknown, but this episode can be downloaded",
+      "subtitles": "Subtitles: {{list}} — saved with the episode"
+    },
+    "relatedTitles": "Related titles",
+    "relatedCurrentTitle": "You're currently here",
+    "similarTitles": "Similar titles",
+    "openOnSite": "Open on the site",
+    "episodeMenu": {
+      "download": "Download episode",
+      "downloading": "Downloading… {{percent}}%",
+      "queued": "Queued",
+      "cancelDownload": "Cancel download",
+      "removeDownload": "Remove download",
+      "pauseDownload": "Pause",
+      "resumeDownload": "Resume download",
+      "downloadQueued": "Episode queued for download",
+      "downloadDone": "Episode downloaded",
+      "downloadFailed": "Couldn't download: {{message}}",
+      "downloadCancelled": "Download cancelled",
+      "downloadUnsupported": "This episode can't be downloaded",
+      "favoriteAdd": "Add to favorites",
+      "favoriteRemove": "Remove from favorites",
+      "markWatched": "Mark as watched",
+      "clearProgress": "Clear watch data"
+    },
+    "comments": {
+      "title": "Comments",
+      "empty": "No comments yet.",
+      "placeholder": "Write a comment…",
+      "replyPlaceholder": "Write a reply…",
+      "post": "Post",
+      "posting": "Posting…",
+      "loading": "Loading…",
+      "loadMore": "Show more",
+      "reply": "Reply",
+      "showReplies": "Show replies ({{count}})",
+      "hideReplies": "Hide replies"
+    },
+    "rating": {
+      "rate": "Rate",
+      "clear": "Remove rating",
+      "votes": "{{count}} votes",
+      "pick": "Pick a score",
+      "yours": "Your score: {{rating}}",
+      "notRated": "Not rated yet",
+      "labels": {
+        "1": "Awful",
+        "2": "Very bad",
+        "3": "Bad",
+        "4": "Weak",
+        "5": "So-so",
+        "6": "Decent",
+        "7": "Good",
+        "8": "Great",
+        "9": "Superb",
+        "10": "Masterpiece"
+      },
+      "localOnly": {
+        "unsupported": "Saved here only",
+        "signed-out": "Saved here - sign in to sync",
+        "failed": "Saved here - the source did not accept it"
+      }
+    },
+    "episodesNewestFirst": "Newest first",
+    "episodesOldestFirst": "Oldest first",
+    "episodesView": {
+      "tiles": "Tiles",
+      "list": "List"
+    },
+    "episodeStatus": {
+      "watched": "Watched",
+      "progress": "{{percent}}% watched",
+      "next": "Up next",
+      "downloaded": "Downloaded"
+    },
+    "relatedHere": "You are here",
+    "relatedShowMore": "Show {{count}} more",
+    "relatedShowLess": "Show less",
+    "screenshots": "Screenshots",
+    "recommended": {
+      "similarBefore": "Like ",
+      "similarMore_one": " and {{count}} more",
+      "similarMore_other": " and {{count}} more",
+      "similarAfter": " from your history",
+      "continuesBefore": "Later in the franchise of ",
+      "continuesAfter": " you watched",
+      "genres": "In your genres: {{genres}}",
+      "taste": "Picked for your taste"
+    }
+  },
+  "watch": {
+    "loadingLink": "Loading link…",
+    "linkError": "Could not get link: {{message}}",
+    "unsupportedPlayer": "This player isn't supported. Pick another one in the player settings.",
+    "noLinks": "This source has no playable link for this episode",
+    "playerSwitchedToast": "Player switched automatically",
+    "availableSources": "Available sources: {{count}}",
+    "player": {
+      "previousEpisode": "Previous episode",
+      "nextEpisode": "Next episode",
+      "play": "Play",
+      "pause": "Pause",
+      "audioOnly": "Audio only",
+      "pictureInPicture": "Picture in picture",
+      "skip": "Skip",
+      "watch": "Watch"
+    },
+    "settings": {
+      "speed": "Speed",
+      "autoSkipSegments": "Skip opening/ending",
+      "autoPlayNextEpisode": "Auto-play next episode",
+      "translation": "Voiceover",
+      "dub": "Dub",
+      "player": "Player",
+      "quality": "Quality",
+      "audioTrack": "Audio track",
+      "subtitles": "Subtitles",
+      "orientation": "Screen",
+      "orientationLandscape": "Landscape only",
+      "orientationAny": "Follow the phone"
+    },
+    "subtitles": {
+      "off": "Off",
+      "addFile": "Add file",
+      "dragHint": "Drag to reposition"
+    },
+    "toggleTimeDisplay": "Switch between elapsed and remaining"
+  },
+  "search": {
+    "prompt": "Start typing an anime title",
+    "minChars": "Enter at least {{count}} characters to search",
+    "empty": "No results for \"{{query}}\"",
+    "filteredResults": "Filtered results",
+    "filteredEmpty": "No titles match the selected filters",
+    "source": "source",
+    "errorTooShort": "Enter at least {{count}} characters to search.",
+    "errorUnavailable": "{{source}} is not responding right now. Check your connection and try again.",
+    "errorGeneric": "Could not search {{source}}. Please try again.",
+    "resultsFor": "Results for \"{{query}}\"",
+    "filters": {
+      "button": "Filters",
+      "type": "Type",
+      "status": "Status",
+      "genres": "Genres",
+      "genresExpand": "Show all genres",
+      "genresCollapse": "Collapse genres",
+      "yearAny": "Any year",
+      "ratingAny": "Any rating",
+      "ratingUpTo": "Up to {{rating}}",
+      "year": "Year",
+      "reset": "Reset",
+      "apply": "Apply",
+      "typeLabels": {
+        "tv": "TV",
+        "ona": "ONA",
+        "ova": "OVA",
+        "movie": "Movie",
+        "special": "Special"
+      },
+      "statusLabels": {
+        "ongoing": "Ongoing",
+        "released": "Released",
+        "announced": "Announced",
+        "cancelled": "Cancelled",
+        "hiatus": "Hiatus"
+      },
+      "findOption": "Find…",
+      "done": "Done"
+    },
+    "recent": "Recent searches",
+    "clearRecent": "Clear",
+    "removeRecent": "Right-click to remove",
+    "clear": "Clear the field",
+    "allResults": "All results"
+  },
+  "library": {
+    "title": "Library",
+    "segments": {
+      "saved": "Saved",
+      "history": "History",
+      "downloads": "Downloads"
+    },
+    "empty": "Nothing here yet",
+    "filterAll": "All",
+    "categoryEmpty": "Nothing here yet",
+    "categories": {
+      "watching": "Watching",
+      "planned": "Planned",
+      "completed": "Completed",
+      "dropped": "Dropped",
+      "on_hold": "On hold",
+      "favorite": "Favorite"
+    }
+  },
+  "downloads": {
+    "title": "Downloaded episodes",
+    "empty": "No downloaded episodes yet",
+    "episodeCount": "{{count}} ep.",
+    "remove": "Remove",
+    "removeConfirmTitle": "Remove download?",
+    "removeConfirmMessage": "Episode {{episode}} of {{title}} will be deleted from this device and will have to be downloaded again to watch offline."
+  },
+  "catalogPage": {
+    "empty": "Nothing here yet",
+    "loadMore": "Load more",
+    "sort": {
+      "popularity": "Popularity",
+      "alphabetical": "Alphabetical",
+      "recent": "Recently updated",
+      "names": {
+        "relevance": "Relevance",
+        "top": "Top",
+        "title": "Title",
+        "name": "Name",
+        "year": "Year",
+        "rating": "Rating",
+        "rating_counters": "Number of ratings",
+        "rating_score": "Rating",
+        "score": "Score",
+        "grade": "Rating",
+        "views": "Views",
+        "random": "Random",
+        "id": "Date added",
+        "date": "Date",
+        "added": "Recently added",
+        "updated": "Recently updated",
+        "update": "Recently updated",
+        "latest": "Latest",
+        "recent": "Latest",
+        "fresh": "Newest",
+        "new": "Newest",
+        "popular": "Popularity",
+        "popularity": "Popularity",
+        "trending": "Trending",
+        "default": "Default",
+        "comments": "Comments",
+        "alphabet": "Alphabetical",
+        "alphabetical": "Alphabetical",
+        "az": "A–Z",
+        "release_date": "Release date",
+        "releasedate": "Release date",
+        "weekly": "This week",
+        "monthly": "This month",
+        "alltime": "All time",
+        "all_time": "All time"
+      }
+    },
+    "emptyFiltered": "Nothing matches these filters"
+  },
+  "history": {
+    "title": "Watch history",
+    "empty": "History is empty",
+    "deleteEntry": "Remove from history"
+  },
+  "sources": {
+    "tabs": {
+      "extensions": "Extensions",
+      "repositories": "Repositories"
+    },
+    "searchPlaceholder": "Search sources",
+    "filterLanguages": "Languages",
+    "refresh": "Refresh",
+    "manage": "Manage",
+    "update": "Update",
+    "uninstall": "Uninstall",
+    "noResults": "No sources match your search",
+    "install": "Install",
+    "installedSection": "Installed · {{count}}",
+    "updatesSection": "Updates",
+    "updateAll": "Update all",
+    "availableSection": "Available · {{count}}",
+    "repositoryLoading": "Loading available extensions…",
+    "repositoryError": "Couldn't load the extension repository",
+    "repositoryRetry": "Retry",
+    "repositoryEmpty": "No extensions available right now",
+    "repositoriesAdd": "Add repository",
+    "repositoriesAddHint": "Repository link or its index.json",
+    "repositoriesInvalidUrl": "Enter a valid HTTPS repository index URL",
+    "repositoriesRemove": "Remove",
+    "repositoriesRemoveConfirmTitle": "Remove repository?",
+    "repositoriesRemoveConfirmMessage": "Remove {{name}} from the repository list? Installed extensions will remain available.",
+    "repositoriesEmpty": "No repositories added yet",
+    "repositoriesExtensionCount": "{{count}} extensions",
+    "openInBrowser": "Open in browser",
+    "copyUrl": "Copy link",
+    "nsfwBadge": "18+",
+    "capability": {
+      "latest": "Latest releases",
+      "playback": "Playback",
+      "related": "Related titles",
+      "similar": "Recommendations",
+      "account": "Account",
+      "comments": "Comments",
+      "reviews": "Reviews",
+      "librarySync": "Library sync",
+      "activitySync": "Watch activity"
+    },
+    "settings": "Settings",
+    "settingsTitle": "Source settings",
+    "settingsEmpty": "This source has nothing to configure.",
+    "accountSignIn": "Sign in",
+    "accountSignInOnSite": "Sign in on the site",
+    "accountSigningIn": "Signing in…",
+    "accountSignOut": "Sign out",
+    "accountLogin": "Login or email",
+    "accountPassword": "Password",
+    "accountOpenProfile": "Open profile",
+    "syncCounting": "Checking both libraries…",
+    "syncCounts": "{{here}} titles here, {{there}} in your account.",
+    "syncPushTitle": "Upload mine",
+    "syncPushDescription": "Sends {{count}} titles to your account. Nothing here changes.",
+    "syncPullTitle": "Take the account's",
+    "syncPullDescription": "Replaces this library with the account's {{count}} titles.",
+    "syncMergeTitle": "Merge both",
+    "syncMergeDescription": "Sends {{up}} up and brings {{down}} down. Nothing is deleted.",
+    "syncForwardTitle": "Only from now on",
+    "syncForwardDescription": "Leaves both as they are and syncs changes you make from here.",
+    "syncPullWarning": "{{count}} titles are here but not in the account. They will be removed from this library.",
+    "syncConfirmPull": "Remove them and continue",
+    "syncBack": "Back",
+    "syncProgress": "{{done}} of {{total}}",
+    "syncCancel": "Stop",
+    "signInPrompt": {
+      "title": "Sign-in required",
+      "body": "This action needs an account on {{source}}."
+    },
+    "installPrompt": {
+      "title": "Source not installed",
+      "body": "To open this anime, install the \"{{source}}\" source in Sources first.",
+      "action": "Open Sources"
+    },
+    "repositoriesTrustTitle": "Do you trust this repository?",
+    "repositoriesTrustMessage": "Its sources run inside the app with the same rights as the app: they can see your data and your sign-ins to other sources. Only add repositories you trust.",
+    "repositoriesTrustConfirm": "I trust it, add"
+  },
+  "achievements": {
+    "unlockedToast": "Achievement unlocked"
+  },
+  "profile": {
+    "editAvatar": "Change avatar",
+    "editBanner": "Change banner",
+    "removeBanner": "Remove banner",
+    "editName": "Change name",
+    "statCompletedTitles": "Titles watched",
+    "statLibrarySize": "In your library",
+    "streakBest": "Best streak: {{count}} days",
+    "streakAtRisk": "Watch something today to keep your streak",
+    "xpHistoryTitle": "XP history",
+    "xpHistoryEmpty": "Nothing here yet",
+    "xpHistoryClear": "Clear history",
+    "xpHistoryClearConfirmTitle": "Clear XP history?",
+    "xpHistoryClearConfirmMessage": "This only removes the log below - your level and XP stay exactly as they are.",
+    "statWatchTime": "Watch time",
+    "statPace": "Weekly watch pace",
+    "continueWatchingTitle": "Continue watching",
+    "recentTitle": "Recently added",
+    "recentEmpty": "Nothing added yet",
+    "episodesCompleted": "Episodes watched",
+    "activityTitle": "Last 30 days",
+    "activityTitleShort": "Activity",
+    "activityMinutesShort": "{{count}} min",
+    "activityEpisodes": "{{count}} episodes watched",
+    "activityMinutes": "{{count}} min watched",
+    "hours": "{{hours}}h",
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "daysAgo": "{{count}} days ago",
+    "achievementsTitle": "Achievements",
+    "achievementLevel": "Level {{level}}/{{maxLevel}}",
+    "levelBadge": "Lv. {{level}}",
+    "xp": "XP",
+    "achievements": {
+      "first_title": {
+        "title": "First step",
+        "description": "Add a title to your library"
+      },
+      "collector_10": {
+        "title": "Collector",
+        "description": "{{target}} titles in your library"
+      },
+      "collector_25": {
+        "title": "Enthusiast",
+        "description": "{{target}} titles in your library"
+      },
+      "collector_50": {
+        "title": "Curator",
+        "description": "{{target}} titles in your library"
+      },
+      "finisher": {
+        "title": "Finisher",
+        "description": "Complete your first title"
+      },
+      "marathoner_10": {
+        "title": "Marathoner",
+        "description": "Complete {{target}} titles"
+      },
+      "streak_7": {
+        "title": "Week streak",
+        "description": "{{target}}-day streak"
+      },
+      "streak_14": {
+        "title": "Two-week streak",
+        "description": "{{target}}-day streak"
+      },
+      "streak_30": {
+        "title": "Month streak",
+        "description": "{{target}}-day streak"
+      },
+      "watch_24h": {
+        "title": "Immersed",
+        "description": "24 hours watched"
+      },
+      "watch_100h": {
+        "title": "Veteran",
+        "description": "100 hours watched"
+      },
+      "watch_500h": {
+        "title": "Legend",
+        "description": "500 hours watched"
+      },
+      "marathoner_50": {
+        "title": "Champion",
+        "description": "Complete {{target}} titles"
+      },
+      "episodes_50": {
+        "title": "Viewer",
+        "description": "{{target}} episodes watched"
+      },
+      "episodes_100": {
+        "title": "Century",
+        "description": "{{target}} episodes watched"
+      },
+      "episodes_300": {
+        "title": "Cinephile",
+        "description": "{{target}} episodes watched"
+      },
+      "genre_explorer": {
+        "title": "Genre explorer",
+        "description": "{{target}} different genres in your library"
+      },
+      "genre_explorer_10": {
+        "title": "Genre connoisseur",
+        "description": "{{target}} different genres in your library"
+      },
+      "genre_explorer_15": {
+        "title": "Encyclopedist",
+        "description": "{{target}} different genres in your library"
+      },
+      "streak_3": {
+        "title": "3-day streak",
+        "description": "3-day streak"
+      },
+      "streak_21": {
+        "title": "Three weeks streak",
+        "description": "21-day streak"
+      },
+      "streak_60": {
+        "title": "Two months streak",
+        "description": "60-day streak"
+      },
+      "streak_100": {
+        "title": "Hundred days",
+        "description": "100-day streak"
+      },
+      "watch_3h": {
+        "title": "Warm-up",
+        "description": "3 hours watched"
+      },
+      "watch_6h": {
+        "title": "Hooked",
+        "description": "6 hours watched"
+      },
+      "watch_12h": {
+        "title": "Anime weekend",
+        "description": "12 hours watched"
+      },
+      "watch_50h": {
+        "title": "Regular",
+        "description": "50 hours watched"
+      },
+      "watch_250h": {
+        "title": "Master",
+        "description": "250 hours watched"
+      },
+      "episodes_10": {
+        "title": "Newcomer",
+        "description": "{{target}} episodes watched"
+      },
+      "episodes_25": {
+        "title": "Fan",
+        "description": "{{target}} episodes watched"
+      },
+      "episodes_200": {
+        "title": "Binge watcher",
+        "description": "{{target}} episodes watched"
+      },
+      "episodes_500": {
+        "title": "Five hundred",
+        "description": "{{target}} episodes watched"
+      }
+    },
+    "achievementLevels": "Levels",
+    "achievementMaxed": "All levels completed"
+  },
+  "settings": {
+    "subtitle": "Fine-tune how hibiki looks and plays",
+    "appearance": {
+      "title": "Appearance",
+      "theme": "Theme",
+      "themeHint": "Light or dark color scheme",
+      "light": "Light",
+      "dark": "Dark",
+      "accentColor": "Accent color",
+      "accentColorHint": "Color of buttons and active elements",
+      "backgroundTheme": "App background",
+      "backgroundThemeHint": "A gradient behind the interface",
+      "backgroundThemeNone": "Default",
+      "backgroundThemeCustom": "Custom",
+      "backgroundThemeCustomFrom": "Start color",
+      "backgroundThemeCustomTo": "End color",
+      "customColor": "Custom color"
+    },
+    "general": "General",
+    "language": "Language",
+    "languageNames": {
+      "ru": "Русский",
+      "en": "English",
+      "uk": "Українська"
+    },
+    "player": {
+      "title": "Player",
+      "autoSkipDelay": "Auto-skip delay",
+      "autoSkipDelayHint": "Delay before skipping opening/ending",
+      "skipButtonTimeout": "\"Skip\" button timeout",
+      "skipButtonTimeoutHint": "How long the skip button stays on screen",
+      "watchedThreshold": "Auto-watched threshold",
+      "watchedThresholdHint": "Episode share to mark as watched"
+    },
+    "discord": {
+      "title": "Discord",
+      "enabled": "Show activity in Discord",
+      "hint": "Title, dub, and timeline in your Discord status",
+      "ignoreNsfw": "Hide NSFW sources",
+      "ignoreNsfwHint": "Do not share viewing from sources marked 18+"
+    },
+    "catalogAutoLoad": {
+      "enabled": "Auto-load catalog",
+      "hint": "Loads the next page as you scroll"
+    },
+    "home": {
+      "title": "Home",
+      "sort": "Home page sort",
+      "sortHint": "Which of {{source}}'s own orderings fills the hero and \"Popular\" row",
+      "sortAuto": "Auto"
+    },
+    "data": {
+      "title": "Data",
+      "backup": "Backup",
+      "backupHint": "Library, history, sources, and settings",
+      "backupAction": "Create backup",
+      "backupCreated": "Backup saved: {{path}}",
+      "restore": "Restore",
+      "restoreHint": "Replaces current data with a backup file",
+      "restoreAction": "Restore from backup",
+      "restoreConfirm": "Your current data will be replaced with the backup's contents and the app will restart. This can't be undone.",
+      "restoreConfirmAction": "Yes, restore",
+      "version": "hibiki {{version}}"
+    },
+    "diagnostics": {
+      "title": "Diagnostics",
+      "export": "Application log",
+      "exportHint": "Attach it to a bug report if something doesn't work.",
+      "exportAction": "Export",
+      "openFolder": "Open folder",
+      "show": "Show",
+      "hide": "Hide",
+      "empty": "The log is empty.",
+      "exported": "Log saved to {{path}}",
+      "memory": "Memory",
+      "memoryHint": "How much memory each app process uses. Hidden source windows are used to load episodes and should close on their own.",
+      "memoryShow": "Show usage",
+      "memoryHide": "Hide",
+      "memoryRecord": "Write to log",
+      "memoryRecorded": "Written",
+      "memoryTotal": "Total",
+      "memoryMain": "Main process",
+      "memoryWindow": "App window",
+      "memoryHidden": "Hidden window: {{url}}",
+      "memoryFootnote": "Main process heap: {{heap}} MB. Shared pages are counted in every process, so the total is slightly overstated.",
+      "saveMemory": "Save memory",
+      "saveMemoryHint": "Turns hardware acceleration off: the app uses roughly 250 MB less, but loads the CPU more while scrolling and playing video. Applies after a restart.",
+      "saveMemoryRestart": "Restart now"
+    },
+    "autoUpdate": "Auto-update",
+    "autoUpdateHint": "Check for updates on launch and install them automatically. The app will close and start the installer."
+  },
+  "update": {
+    "button": "Update",
+    "available": "Update available",
+    "availableVersion": "Version {{version}} is available",
+    "dialogTitle": "Update available",
+    "versionLine": "Version {{version}} · {{size}}",
+    "download": "Download update",
+    "retry": "Try again",
+    "close": "Close",
+    "releaseNotes": "Release page",
+    "downloading": "Downloading… {{received}} of {{total}}",
+    "willRestart": "The app will close and start the installer.",
+    "failed": "Update failed: {{message}}",
+    "versionChange": "{{from}} → {{to}} · {{size}}",
+    "whatsNew": "What's new",
+    "noNotes": "The release page has the details.",
+    "install": "Update",
+    "later": "Later",
+    "downloadingMobile": "{{received}} of {{total}}",
+    "backgroundHint": "You can close this — the download keeps going.",
+    "permissionTitle": "One permission first",
+    "permissionHint": "Allow hibiki to install apps, then come back.",
+    "permissionDenied": "Still not allowed, so the update can't be installed.",
+    "permissionAction": "Allow",
+    "downloadFailedTitle": "Download failed",
+    "downloadFailedHint": "Check the connection and try again.",
+    "signatureTitle": "Can't update over this build",
+    "signatureHint": "The installed app is signed with a different key than the release (a test build, for example). Install the release from its page instead.",
+    "badFileTitle": "This release can't be installed",
+    "badFileHint": "Its package doesn't match the app ({{code}}). The release page has the file to install by hand.",
+    "openRelease": "Release page",
+    "settingsVersion": "hibiki {{version}}",
+    "settingsLatest": "Up to date",
+    "settingsAvailable": "Version {{version}} is available",
+    "installNow": "Install"
+  },
+  "tracking": {
+    "settings": {
+      "title": "Sync"
+    },
+    "anilist": {
+      "notConfigured": "This build has no AniList key, so signing in isn't available.",
+      "signedOutHint": "Sign in, and the episodes you finish and the categories you pick will go to your AniList lists.",
+      "signIn": "Sign in with AniList",
+      "signInAgain": "Sign in again",
+      "signOut": "Sign out",
+      "waiting": "Finish signing in in the browser, then come back here.",
+      "expired": "Your AniList sign-in has expired. Sign in again to keep syncing.",
+      "signInFailed": "Couldn't sign in: {{error}}",
+      "howItWorks": "Progress goes up as you finish episodes, and picking a category here sets the status there. Syncing never deletes anything on AniList on its own."
+    },
+    "import": {
+      "title": "Import from AniList",
+      "hint": "Adds the titles on your AniList lists to the library, finding each one on the source you pick.",
+      "source": "Source",
+      "action": "Import",
+      "running": "Importing… {{done}} / {{total}}",
+      "result": "Added {{added}} · updated {{updated}} · not found {{missing}}",
+      "failed": "{{count}} couldn't be checked: the source didn't answer.",
+      "unmatched": "Not found on {{source}}",
+      "error": "Import failed: {{error}}"
+    },
+    "link": {
+      "chipUnlinked": "Link AniList",
+      "notOnList": "Not on your list",
+      "dialogTitle": "AniList",
+      "linkedAuto": "Matched automatically",
+      "linkedUser": "Picked by you",
+      "search": "Search AniList",
+      "noResults": "Nothing found",
+      "open": "Open on AniList",
+      "none": "This title isn't linked yet. Pick it on AniList, and its progress will sync from now on.",
+      "episodes": "{{count}} ep.",
+      "favourite": "Favourite",
+      "addFavourite": "Add to favourites",
+      "removeFavourite": "Remove from favourites",
+      "remove": "Remove from list",
+      "removeAction": "Remove",
+      "removeConfirm": "Remove “{{title}}” from your AniList list? This title will stop syncing.",
+      "wrongTitle": "Wrong title?"
+    },
+    "status": {
+      "watching": "Watching",
+      "planned": "Planning",
+      "completed": "Completed",
+      "dropped": "Dropped",
+      "on_hold": "Paused",
+      "rewatching": "Rewatching"
+    }
+  },
+  "backgroundWork": {
+    "downloadingTitle_one": "Downloading {{count}} episode",
+    "downloadingTitle_other": "Downloading {{count}} episodes"
+  },
+  "deviceSync": {
+    "hint": "Library and progress on all your devices on the same network.",
+    "connectPhone": "Show a code",
+    "connectComputer": "Connect to a device",
+    "connectAnother": "Connect another device",
+    "enterOnPhone": "On the other device: Settings → Sync → Connect to a device, then pick this computer and enter the code:",
+    "waiting": "Waiting for the other device… the code works for 5 minutes.",
+    "findHint": "On the device you are connecting to, open Settings → Sync and show its code (on a computer: “Show a code”). Both need to be on the same network.",
+    "searching": "Looking for devices…",
+    "notFound": "Nothing found. Make sure hibiki is open on the other device, showing its code, and both are on the same Wi-Fi.",
+    "searchAgain": "Search again",
+    "enterCode": "Enter the code shown on {{name}}:",
+    "pair": "Connect",
+    "back": "Back",
+    "lastSync": "Synced {{when}}",
+    "never": "not yet",
+    "justNow": "just now",
+    "minutesAgo_one": "{{count}} min ago",
+    "minutesAgo_other": "{{count}} min ago",
+    "hoursAgo_one": "{{count}} h ago",
+    "hoursAgo_other": "{{count}} h ago",
+    "syncNow": "Sync now",
+    "forget": "Forget this device",
+    "forgetConfirm": "Stop syncing with it? Nothing is deleted on either device.",
+    "forgetAction": "Forget",
+    "error": {
+      "unreachable": "The other device isn't reachable: is hibiki open on it, on the same network? A phone can only be reached while hibiki is on its screen.",
+      "unknownDevice": "The other device no longer knows this one. Forget it here and connect again.",
+      "badCode": "Wrong code. Check the one on the other device's screen.",
+      "notPairing": "The other device isn't showing a code. Open its code first.",
+      "tooMany": "Too many wrong codes. Start connecting on the computer again.",
+      "version": "The two apps are different versions. Update both.",
+      "generic": "Something went wrong. Try again."
+    },
+    "title": "Devices",
+    "hintPhone": "Library and progress on all your devices on the same network.",
+    "showCodePhone": "Show a code for another device",
+    "enterOnOtherPhone": "On the other device: Settings → Sync → Connect to a device, then pick this phone and enter the code. Keep hibiki open on this screen meanwhile:",
+    "codeTitle": "Connection code",
+    "pairReplace": "Connect and replace",
+    "mode": {
+      "title": "Whose data to keep",
+      "merge": "Merge",
+      "mergeHint": "Library, progress, ratings and achievements from both devices are joined. Nothing is lost.",
+      "keepHere": "Keep this device's data",
+      "keepHereHint": "Everything on “{{name}}” is replaced with what is on this device.",
+      "takeThere": "Take “{{name}}”'s data",
+      "takeThereHint": "Everything on this device is replaced with what is on “{{name}}”.",
+      "warning": "The replaced device's library, progress, ratings and achievements are deleted. This cannot be undone."
+    },
+    "missing": {
+      "title": "Install sources",
+      "hint": "The synced data uses sources this device doesn't have. Without them some titles won't open.",
+      "install": "Install",
+      "installAll": "Install all",
+      "notFound_one": "{{count}} more is in none of your repositories.",
+      "notFound_other": "{{count}} more are in none of your repositories.",
+      "later": "Later",
+      "noticeTitle": "Not everything came over",
+      "noticeText": "Some data shows incompletely: its sources aren't installed here. Install them to fix it.",
+      "show": "Install sources"
+    }
+  }
+}

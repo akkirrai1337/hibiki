@@ -1,0 +1,9 @@
+{
+  "appId": "org.akkirrai.hibiki",
+  "appName": "hibiki",
+  "webDir": "dist-android",
+  "android": { "webContentsDebuggingEnabled": true },
+  "plugins": {
+    "SystemBars": { "insetsHandling": "css", "initialViewportFitValueHint": "cover", "style": "DARK" }
+  }
+}

@@ -1,0 +1,1 @@
+ALTER TABLE `downloaded_episodes` ADD `quality` text;

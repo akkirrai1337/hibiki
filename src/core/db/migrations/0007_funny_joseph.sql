@@ -1,0 +1,1 @@
+ALTER TABLE `watch_progress` ADD `thumbnail_data_url` text;

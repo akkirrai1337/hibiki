@@ -6,51 +6,51 @@
 
   [English](README.md)
 
-  **hibiki — Android-приложение с личным каталогом аниме, локальной библиотекой, плеером и прогрессом просмотра на устройстве. Источники подключаются через внешние репозитории; приложение не хранит и не распространяет контент.**
+  **hibiki — аниме-клиент для поиска тайтлов, ведения личной библиотеки и просмотра серий с сохранением прогресса. Источники подключаются через внешние репозитории; приложение не хранит и не распространяет контент.**
 
-  Также есть [десктопное приложение](https://github.com/akkirrai1337/hibiki-desktop) для Windows с тем же форматом источников.
-
-  ![Android 8.0+](https://img.shields.io/badge/android-8.0+-brightgreen)
-  ![Kotlin](https://img.shields.io/badge/kotlin-2.2.10-7F52FF)
-  ![Jetpack Compose](https://img.shields.io/badge/UI-Jetpack%20Compose-4285F4)
   [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
 
 </div>
 
 ### 📚 Основные возможности
 
-* Переключение источников аниме; каталог, поиск, фильтры и сортировка учитывают выбранный источник
-* Внешние репозитории источников; для первого запуска есть один встроенный тестовый репозиторий ([hibiki-sources](https://github.com/akkirrai1337/hibiki-sources))
+* Каталог аниме из выбранных источников с поиском, фильтрами и сортировкой
+* Подключение внешних репозиториев источников и управление расширениями ([hibiki-sources](https://github.com/akkirrai1337/hibiki-sources))
 * Подробные страницы тайтлов с описанием, жанрами, связанными и похожими аниме
-* Выбор серии и озвучки
-* Встроенный Media3-плеер с поддержкой HLS, DASH и MP4
-* Настройки плеера: качество, движок, скорость, автопереход и пропуск опенинга/эндинга
-* Прогресс просмотра, блок «Продолжить просмотр» и локальный профиль со статистикой
-* Локальная библиотека: смотрю, в планах, просмотрено, брошено, отложено, избранное и загрузки
+* Выбор серии и озвучки, настройка качества и скорости воспроизведения
+* Встроенный плеер с поддержкой HLS, DASH и MP4, автопереходом и пропуском опенинга/эндинга
+* Сохранение прогресса, продолжение просмотра, история и статистика просмотров
+* Локальная библиотека: смотрю, в планах, просмотрено, брошено, отложено и избранное
 * Загрузка серий для офлайн-просмотра
-* Светлая, тёмная, системная и AMOLED-темы
-* Русский и английский языки приложения
-* Опциональный Discord Rich Presence
+* Настройка оформления и языка интерфейса, опциональный Discord Rich Presence
+
+### 🖼️ Скриншоты
+
 
 <div align="center">
 
-### 🖼️ Скриншоты приложения
+<h4>Android</h4>
 
-<div align="center">
-    <img src="./docs/screenshots/main.jpg" alt="Главная" width="250"/>
-    <img src="./docs/screenshots/search.jpg" alt="Поиск" width="250"/>
-    <br/>
-    <img src="./docs/screenshots/details.jpg" alt="Страница тайтла" width="250"/>
-    <img src="./docs/screenshots/library.jpg" alt="Библиотека" width="250"/>
-</div>
+<table>
+  <tr>
+    <td><img src="./docs/screenshots/android-home.jpg" alt="Главная — Android" width="250"/></td>
+    <td><img src="./docs/screenshots/android-details.jpg" alt="Страница тайтла — Android" width="250"/></td>
+  </tr>
+</table>
+
+<h4>ПК</h4>
+
+<table>
+  <tr>
+    <td><img src="./docs/screenshots/desktop-home.png" alt="Главная — ПК" width="400"/></td>
+    <td><img src="./docs/screenshots/desktop-details.png" alt="Страница тайтла — ПК" width="400"/></td>
+  </tr>
+</table>
 
 </div>
 
 ### 🎬 Credits
 
-- [anilibria-app](https://github.com/anilibria/anilibria-app): иконки для плеера.
-- [Animite](https://github.com/imashnake0/Animite): референсы для динамической палитры и поведения интерфейса страницы тайтла, оформление таймера и иконка песочных часов.
-- [AniSync](https://github.com/Marco-9456/AniSync): дизайн и стилистические решения страницы тайтла.
 - [Anikku](https://github.com/komikku-app/anikku) и [Yuzono anime-extensions](https://github.com/yuzono/anime-extensions): API расширений Aniyomi и код совместимости, используются по лицензии Apache-2.0.
 
 ### 💬 Связь

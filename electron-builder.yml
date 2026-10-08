@@ -1,0 +1,44 @@
+appId: com.hibiki.desktop
+productName: hibiki
+directories:
+  output: release
+files:
+  - dist
+  - dist-electron
+extraResources:
+  - from: src/core/db/migrations
+    to: migrations
+# Lets the installer itself register the "hibiki://" scheme (a Discord Rich Presence "Watch"
+# button opens one - see main/deepLink.ts) instead of relying only on the runtime
+# app.setAsDefaultProtocolClient call in main/index.ts, which a packaged NSIS/AppImage/dmg install
+# doesn't always have the right permissions or timing to do reliably on its own.
+protocols:
+  name: hibiki-watch
+  schemes:
+    - hibiki
+win:
+  target: nsis
+  icon: electron-builder-resources/hibiki.ico
+nsis:
+  # Overrides the default "${productName} Setup ${version}.exe". Two reasons: a space-separated
+  # filename reads badly as a download and has to be quoted in every script that touches it, and
+  # release.yml has to *find* this file afterwards - globbing for any .exe in the output
+  # directory would also match the uninstaller electron-builder writes there while building. A
+  # fixed, predictable name makes that lookup exact instead of a guess.
+  artifactName: ${productName}-v${version}-setup.${ext}
+  # Windows' own "Apps & features" list already shows the version, publisher, and install date as
+  # separate fields (see the second line under the app name) - electron-builder's own default for
+  # this title is "${productName} ${version}", which just repeats the version a second time right
+  # next to those. Plain productName here keeps the title itself clean.
+  uninstallDisplayName: ${productName}
+mac:
+  target: dmg
+  # A 1024x1024 PNG rather than an .icns - electron-builder converts it itself, and it's the one
+  # format both this and the Linux target below can share (the Windows .ico above can't be reused:
+  # it tops out at 256px, under the 512px minimum a mac icon needs).
+  icon: electron-builder-resources/hibiki.png
+  category: public.app-category.entertainment
+linux:
+  target: AppImage
+  icon: electron-builder-resources/hibiki.png
+  category: AudioVideo

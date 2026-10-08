@@ -1,0 +1,318 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@keyframes hibiki-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.animate-shimmer {
+  background: linear-gradient(110deg, rgba(255,255,255,.05) 30%, rgba(255,255,255,.13) 45%, rgba(255,255,255,.05) 60%);
+  background-size: 200% 100%;
+  animation: hibiki-shimmer 1.35s ease-in-out infinite;
+}
+
+/* Loading placeholders on the app's own surfaces (the player's menus keep the white one above). */
+.skeleton {
+  background: linear-gradient(110deg, rgb(var(--color-text) / .05) 30%, rgb(var(--color-text) / .11) 45%, rgb(var(--color-text) / .05) 60%);
+  background-size: 200% 100%;
+  animation: hibiki-shimmer 1.6s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .skeleton { animation: none; }
+}
+
+:root {
+  --color-bg: 250 250 251;
+  --color-surface: 255 255 255;
+  --color-border: 228 228 231;
+  --color-text: 24 24 27;
+  --color-muted: 113 113 122;
+  --color-accent: 236 72 153;
+  /* Text/icon color for anything sitting on a solid --color-accent fill (buttons, active tabs,
+     badges) - kept as its own token (not just "black") since lib/theme.ts recomputes it whenever
+     the user picks a custom accent, so a light accent still gets dark text and vice versa. */
+  --color-accent-fg: 29 12 21;
+  /* Accent-colored text/icons that sit directly on the page (not on a solid accent fill - see
+     --color-accent-fg above for that) - the level badge, XP tags, achievement icons, and similar.
+     Defaults to plain --color-accent, same as always; lib/theme.ts overrides it (to
+     --color-text) only for a custom accent whose own lightness matches this theme's (white in
+     light mode, black in dark mode), where accent-colored text on an accent-tinted badge would
+     otherwise have nothing to contrast against. */
+  --color-accent-text: var(--color-accent);
+  /* A selection filled with the accent, and its text - see applyAccentColor. */
+  --color-accent-solid: var(--color-accent);
+  --color-accent-solid-fg: var(--color-accent-fg);
+}
+
+.mobile {
+  /* Safe areas of an edge-to-edge Android window. Capacitor's SystemBars injects --safe-area-inset-*
+     (correct on every WebView version); env() is the fallback. */
+  --safe-top: var(--safe-area-inset-top, env(safe-area-inset-top, 0px));
+  --safe-bottom: var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px));
+  --safe-left: var(--safe-area-inset-left, env(safe-area-inset-left, 0px));
+  --safe-right: var(--safe-area-inset-right, env(safe-area-inset-right, 0px));
+  /* The floating tab bar's height plus the gap under it - what page content keeps clear of. */
+  --tabbar-space: calc(4.75rem + var(--safe-bottom));
+  -webkit-tap-highlight-color: transparent;
+}
+/* A long press is the app's own (a card's menu): no browser preview of where a link or image leads. */
+.mobile a,
+.mobile img {
+  -webkit-touch-callout: none;
+  -webkit-user-drag: none;
+}
+
+.dark {
+  --color-bg: 12 12 15;
+  --color-surface: 20 20 24;
+  --color-border: 39 39 45;
+  --color-text: 244 244 245;
+  --color-muted: 161 161 170;
+  --color-accent: 244 114 182;
+  --color-accent-fg: 29 12 21;
+  --color-accent-text: var(--color-accent);
+  /* A selection filled with the accent, and its text - see applyAccentColor. */
+  --color-accent-solid: var(--color-accent);
+  --color-accent-solid-fg: var(--color-accent-fg);
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+.bg-app-bg {
+  background-color: rgb(var(--color-bg));
+}
+/* Theme visibility is declarative, including after a stylesheet hot reload. Do not rely on a
+   previously run JS effect to install a new alpha value. */
+.bg-theme-active .bg-app-bg {
+  background-color: rgb(var(--color-bg) / 0.8);
+}
+/* Phone: the theme's tint lives on <main> behind the pages, not on each page's own root. The
+   scroll boxes pad themselves clear of the status bar and the tab bar outside that root (which
+   left a bare, brighter band under the tab bar), and a page transition fades and slides the box -
+   with the tint on the page, the first frames of every transition flashed the bare gradient. */
+.mobile.bg-theme-active .app-main-area {
+  background-color: rgb(var(--color-bg) / 0.8);
+}
+.mobile.bg-theme-active [data-page-scroll] > .bg-app-bg,
+.mobile.bg-theme-active [data-scroll-restoration-id="app-main"] > .bg-app-bg {
+  background-color: transparent;
+}
+/* The status-bar scrim over the page: translucent it would tint it a second time, so it
+   repaints the whole backdrop opaquely instead - the root's gradient (same viewport-sized box, same
+   origin) under the same tint - and reads as the page itself. */
+.mobile.bg-theme-active .mobile-status-scrim {
+  background:
+    linear-gradient(rgb(var(--color-bg) / 0.8), rgb(var(--color-bg) / 0.8)),
+    var(--app-backdrop, none) 0 0 / 100vw 100vh no-repeat,
+    rgb(var(--color-bg));
+}
+/* A bar stuck to the top of a page's scroll box (the search field) sits on the page's own tint, so
+   translucent it would tint twice and read darker; it repaints the backdrop opaquely like the
+   scrim. Always at the viewport's top under the status bar, hence that offset. */
+.mobile.bg-theme-active .mobile-sticky-backdrop {
+  background:
+    linear-gradient(rgb(var(--color-bg) / 0.8), rgb(var(--color-bg) / 0.8)),
+    var(--app-backdrop, none) 0 calc(-1 * var(--safe-top)) / 100vw 100vh no-repeat,
+    rgb(var(--color-bg));
+}
+/* The phone's floating tab bar takes on the background theme too: the page's surface colour, half
+   see-through and blurred, instead of a plain slab over a tinted page. Blurring a small bar is
+   cheap, unlike the full-height layers the note below is about. */
+.mobile.bg-theme-active .mobile-tabbar {
+  background-color: rgb(var(--color-surface) / 0.55);
+  -webkit-backdrop-filter: blur(18px) saturate(1.4);
+  backdrop-filter: blur(18px) saturate(1.4);
+}
+/* The app's slider (SliderControl, the search filters): a thick rounded track, filled with the
+   selection colour up to the value (--fill), and a round thumb with a soft shadow. */
+.range-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 28px;
+  background: transparent;
+  cursor: pointer;
+}
+.range-slider::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 9999px;
+  background: linear-gradient(to right, rgb(var(--color-accent-solid)) var(--fill), rgb(var(--color-text) / 0.12) var(--fill));
+}
+.range-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 22px;
+  height: 22px;
+  margin-top: -8px;
+  border-radius: 9999px;
+  background: rgb(var(--color-accent-solid));
+  border: 3px solid rgb(var(--color-surface));
+  box-shadow: 0 1px 6px rgb(0 0 0 / 0.35);
+  transition: transform 120ms ease-out;
+}
+.range-slider:hover::-webkit-slider-thumb,
+.range-slider:focus-visible::-webkit-slider-thumb {
+  transform: scale(1.08);
+}
+.range-slider:active::-webkit-slider-thumb {
+  transform: scale(1.15);
+}
+.range-slider:focus-visible {
+  outline: none;
+}
+/* The phone's picture-in-picture window (VideoPlayer, data-pip): the picture and its subtitles,
+   nothing else of the player, and subtitles small enough for a window that size. */
+[data-pip] > :not(video):not([data-subtitles]) {
+  display: none !important;
+}
+[data-pip] [data-subtitles] {
+  bottom: 6% !important;
+  padding-left: 0.5rem;
+  padding-right: 0.5rem;
+}
+[data-pip] [data-subtitles] > div {
+  transform: none !important;
+  max-width: 95%;
+  padding: 0.125rem 0.375rem;
+  font-size: 11px;
+}
+.bg-app-surface {
+  background-color: rgb(var(--color-surface));
+}
+/* Popovers paint the theme themselves, including when portaled outside the app.
+   An opaque backing prevents poster artwork from interfering with their text. */
+.bg-app-popover {
+  background-color: rgb(var(--color-surface));
+}
+/* Translucent while a background gradient is picked, so the gradient painted on the root shows
+   through. No `backdrop-filter` here: the only thing behind the Sidebar/TitleBar is that same smooth
+   gradient, which a blur leaves looking exactly the same - while costing a full-height GPU layer
+   that Chromium re-blurs on every repaint beneath it. The same goes for the anime detail page's
+   root, which used to blur the gradient across its whole scroll height. */
+.bg-theme-active .bg-app-surface {
+  background-color: rgb(var(--color-surface) / 0.66);
+}
+
+body {
+  font-family:
+    "Inter",
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    sans-serif;
+  overflow: hidden;
+  background: rgb(var(--color-bg));
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* Opt individual text back in with Tailwind's `select-text` utility — titles, episode names,
+   descriptions, and other content actually worth copying. Everything else (buttons, chrome,
+   images, layout containers) stays unselectable by default. */
+input,
+textarea {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+.app-drag { -webkit-app-region: drag; }
+/* Scoped to inside a drag region (the titlebar itself, plus Sidebar's own .app-no-drag resize
+   handle/links) - `-webkit-app-region: no-drag` only means anything as a hole punched out of a
+   `drag` ancestor, so a blanket `a, button, input { no-drag }` was marking every link on every
+   page (poster cards, ...) with a no-drag region they never needed for their own clickability
+   (they're not descendants of .app-drag to begin with). Confirmed live that this was the actual
+   cause of a real titlebar-drag bug: Chromium's own draggable-region hit-test region would fail
+   specifically over the X-range of whatever poster links happened to be scrolled into view lower
+   on the page, even though they're nowhere near the titlebar vertically - some Chromium region
+   computation is unioning/leaking these page-wide no-drag rects into unrelated space. Keeping
+   no-drag off elements outside .app-drag entirely avoids feeding it inputs to leak from. */
+.app-no-drag, .app-drag a, .app-drag button, .app-drag input { -webkit-app-region: no-drag; }
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(var(--color-border)) transparent;
+}
+
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Hides the native OS spin-button on <input type="number"> - used where we draw our own
+   up/down affordance instead (e.g. the search filters' year inputs). */
+.no-spinner::-webkit-outer-spin-button,
+.no-spinner::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.no-spinner {
+  -moz-appearance: textfield;
+}
+
+/* A dual-thumb range slider made of two overlapping <input type="range"> elements - the
+   standard trick for this without a component library. The input itself (track + fill area) is
+   fully transparent and click-through (pointer-events: none); only the thumb re-enables pointer
+   events, so whichever thumb is under the cursor is the one that grabs a click/drag regardless of
+   which input is painted on top. */
+.range-thumb-only {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  pointer-events: none;
+}
+.range-thumb-only::-webkit-slider-runnable-track {
+  background: transparent;
+  height: 100%;
+}
+.range-thumb-only::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  pointer-events: auto;
+  width: 14px;
+  height: 14px;
+  border-radius: 9999px;
+  background: white;
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+}
+
+/* Centers the titlebar search box on the whole window's width, rather than the flex-distributed
+   space left over between the left icon cluster and the right-hand OS button reservation (which
+   centers off-true by half the left cluster's width) or the *usable* titlebar-area (which visibly
+   skews left of the window's true center, since it excludes the OS button strip on the right).
+   Positioned absolutely so neither of those can skew it. */
+.wco-centered-search {
+  position: absolute;
+  top: 50%;
+  left: 50vw;
+  transform: translate(-50%, -50%);
+}
+
+/* The top tier of a tiered badge (the 500+ streak and the highest level bracket, both in
+   profile.tsx) - a slow color cycle on top of its own tint, marking it as visibly a step above
+   the static gold ring of the tier below it. */
+@keyframes legendary-glow {
+  to {
+    filter: hue-rotate(360deg);
+  }
+}
+.legendary-glow {
+  animation: legendary-glow 3s linear infinite;
+}
+
+/* The home hero carousel's dot-turned-progress-bar (Hero.tsx) - how long is left until the next
+   slide, not just which one is showing. Duration is set inline per instance, not here. */
+@keyframes hero-progress {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}

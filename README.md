@@ -6,51 +6,51 @@
 
   [Русский](README_RU.md)
 
-  **hibiki is an Android app with a personal anime catalogue, local library, player, and on-device watch progress. Content providers are selected through external source repositories; the app does not host or distribute content.**
+  **hibiki is an anime client for browsing titles, managing a personal library, and watching episodes with saved progress. Sources are connected through external repositories; the app does not host or distribute content.**
 
-  There is also a [desktop app](https://github.com/akkirrai1337/hibiki-desktop) for Windows, which uses the same source format.
-
-  ![Android 8.0+](https://img.shields.io/badge/android-8.0+-brightgreen)
-  ![Kotlin](https://img.shields.io/badge/kotlin-2.2.10-7F52FF)
-  ![Jetpack Compose](https://img.shields.io/badge/UI-Jetpack%20Compose-4285F4)
   [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
 
 </div>
 
 ### 📚 Features
 
-* Switchable anime sources, with source-aware catalog, search, filters, and sorting
-* External source repositories, including one built-in test repository for initial setup ([hibiki-sources](https://github.com/akkirrai1337/hibiki-sources))
-* Detailed title pages with descriptions, genres, related and similar titles
-* Episode and voice-over selection
-* Built-in Media3 player with HLS, DASH, and MP4 support
-* Playback controls: quality, player engine, speed, autoplay, and opening/ending skip
-* Watch progress, continue watching, and a local profile with viewing statistics
-* Local library: watching, planned, completed, dropped, on hold, favourites, and downloads
-* Offline episode downloads and playback
-* Light, dark, system, and AMOLED themes
-* Russian and English app languages
-* Optional Discord Rich Presence
+* Browse anime from your chosen sources, with search, filters, and sorting
+* Connect external source repositories and manage extensions ([hibiki-sources](https://github.com/akkirrai1337/hibiki-sources))
+* Explore title details, descriptions, genres, related and similar anime
+* Choose episodes and voice-overs, and adjust playback quality and speed
+* Built-in player with HLS, DASH, and MP4 support, autoplay, and opening/ending skip
+* Save watch progress, resume episodes, and view your watch history and statistics
+* Organize your local library: watching, planned, completed, dropped, on hold, and favourites
+* Download episodes for offline viewing
+* Customize the appearance and interface language, and optionally enable Discord Rich Presence
+
+### 🖼️ Screenshots
+
 
 <div align="center">
 
-### 🖼️ App screenshots
+<h4>Android</h4>
 
-<div align="center">
-    <img src="./docs/screenshots/main.jpg" alt="Home screen" width="250"/>
-    <img src="./docs/screenshots/search.jpg" alt="Search screen" width="250"/>
-    <br/>
-    <img src="./docs/screenshots/details.jpg" alt="Title details screen" width="250"/>
-    <img src="./docs/screenshots/library.jpg" alt="Library screen" width="250"/>
-</div>
+<table>
+  <tr>
+    <td><img src="./docs/screenshots/android-home.jpg" alt="Android home screen" width="250"/></td>
+    <td><img src="./docs/screenshots/android-details.jpg" alt="Android title details" width="250"/></td>
+  </tr>
+</table>
+
+<h4>Desktop</h4>
+
+<table>
+  <tr>
+    <td><img src="./docs/screenshots/desktop-home.png" alt="Desktop home screen" width="400"/></td>
+    <td><img src="./docs/screenshots/desktop-details.png" alt="Desktop title details" width="400"/></td>
+  </tr>
+</table>
 
 </div>
 
 ### 🎬 Credits
 
-- [anilibria-app](https://github.com/anilibria/anilibria-app): player icons.
-- [Animite](https://github.com/imashnake0/Animite): references for the title page's dynamic palette and UI behavior, countdown styling, and the hourglass icon.
-- [AniSync](https://github.com/Marco-9456/AniSync): title page design and styling references.
 - [Anikku](https://github.com/komikku-app/anikku) and [Yuzono anime-extensions](https://github.com/yuzono/anime-extensions): the Aniyomi extension API and compatibility code, used under Apache-2.0.
 
 ### 💬 Contact

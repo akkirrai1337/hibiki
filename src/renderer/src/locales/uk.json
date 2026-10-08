@@ -1,0 +1,869 @@
+{
+  "nav": {
+    "browse": "Огляд",
+    "home": "Головна",
+    "catalog": "Каталог",
+    "sources": "Джерела",
+    "yourSpace": "Ваш простір",
+    "profile": "Профіль",
+    "settings": "Налаштування",
+    "customize": "Показувати в боковому меню",
+    "search": "Пошук"
+  },
+  "onboarding": {
+    "getStarted": "Почати",
+    "back": "Назад",
+    "next": "Далі",
+    "done": "Готово",
+    "welcome": {
+      "title": "Ласкаво просимо до hibiki",
+      "description": "Налаштуємо застосунок за кілька кроків, щоб ви могли одразу почати дивитися.",
+      "kicker": "Ласкаво просимо",
+      "lead": "Каталог, плеєр і бібліотека, яка пам'ятає, де ви зупинилися. Аніме надходить із джерел, які ви підключаєте.",
+      "note": "hibiki не зберігає й не поширює контент: джерела встановлюються із зовнішніх репозиторіїв."
+    },
+    "sources": {
+      "title": "Додайте джерела",
+      "description": "Встановіть хоча б одне джерело і виберіть його активним — без цього нема з чим працювати.",
+      "mobileDescription": "Встановіть хоча б одне — з нього почнеться каталог. Інші можна додати пізніше в налаштуваннях."
+    },
+    "skip": "Пропустити",
+    "continue": "Продовжити"
+  },
+  "common": {
+    "secondsShort": "{{count}} с",
+    "loadFailed": "Не вдалося завантажити: {{message}}",
+    "playbackTimeout": "Потік не почав відтворюватися за 15 секунд. Перевірте з’єднання або виберіть інший плеєр.",
+    "offlineHint": "Схоже, ви офлайн — можна подивитися вже завантажене.",
+    "openDownloads": "Відкрити завантажені серії",
+    "noPoster": "Немає постера",
+    "anime": "Аніме",
+    "episodesShort": "{{count}} еп.",
+    "readDescription": "Читати опис",
+    "hideDescription": "Приховати опис",
+    "typeFallback": "АНІМЕ",
+    "cancel": "Скасувати",
+    "retry": "Повторити",
+    "save": "Зберегти",
+    "scrollLeft": "Прокрутити назад",
+    "scrollRight": "Прокрутити вперед",
+    "cloudflareBlocked": "Сайт {{host}} просить пройти перевірку Cloudflare.",
+    "cloudflareSolve": "Пройти перевірку",
+    "cloudflareSolving": "Чекаємо на перевірку…"
+  },
+  "catalog": {
+    "searchPlaceholder": "Пошук аніме",
+    "trendingOnPrefix": "У тренді на",
+    "heroFallbackDescription": "Один із тайтлів, які зараз дивляться найчастіше.",
+    "openTitle": "Відкрити",
+    "continueWatching": "Продовжити перегляд",
+    "removeProgress": "Видалити дані про перегляд",
+    "viewHistory": "Історія",
+    "popularNow": "Популярне зараз",
+    "becauseYouWatched": "Вам може сподобатися",
+    "genreSection": "Жанр: {{genre}}",
+    "openCatalog": "Відкрити каталог",
+    "emptySourcesTitle": "Каталог починається з джерела",
+    "emptySourcesText": "Додайте джерело аніме, щоб побачити популярне, переглядати каталог і продовжувати перегляд.",
+    "openSources": "Відкрити джерела",
+    "sourceUnavailableTitle": "{{source}} не відповідає",
+    "sourceUnavailableText": "Перевірте з'єднання або спробуйте трохи пізніше.",
+    "continuations": "Продовження",
+    "forYou": "Для вас на {{source}}",
+    "latestReleases": "Нові серії"
+  },
+  "detail": {
+    "back": "Назад",
+    "episodes": "Епізоди",
+    "loadingEpisodes": "Завантаження епізодів…",
+    "noEpisodesYet": "Для цього тайтла поки немає епізодів.",
+    "status": {
+      "ongoing": "Онгоїнг",
+      "released": "Завершено",
+      "announced": "Анонс"
+    },
+    "watch": "Дивитися",
+    "remainingMinutes": "Залишилось {{minutes}} хв",
+    "remainingUnderMinute": "Залишилось менше хвилини",
+    "playbackFinished": "Перегляд завершено",
+    "continueRemaining": "Продовжити · залишилось {{minutes}} хв",
+    "continueLessThanMinute": "Продовжити · менше хвилини",
+    "continueNext": "Продовжити · Еп. {{number}}",
+    "rewatch": "Дивитися знову",
+    "noEpisodes": "Немає епізодів",
+    "nextEpisodeToday": "Нова серія сьогодні",
+    "nextEpisodeTomorrow": "Нова серія завтра",
+    "nextEpisodeInDays": "Нова серія через {{count}} дн.",
+    "nextEpisodeOn": "Нова серія {{date}}",
+    "addToLibrary": "Додати до бібліотеки",
+    "removeFromLibrary": "Прибрати з бібліотеки",
+    "episodeFallback": "Епізод {{number}}",
+    "downloadDialog": {
+      "title": "Завантажити серію",
+      "translation": "Озвучення",
+      "quality": "Якість",
+      "loadingQualities": "Завантаження варіантів…",
+      "qualityUnknown": "Якість невідома, але серію можна завантажити",
+      "subtitles": "Субтитри: {{list}} — завантажаться разом із серією"
+    },
+    "relatedTitles": "Пов'язані тайтли",
+    "relatedCurrentTitle": "Ви зараз тут",
+    "similarTitles": "Схожі тайтли",
+    "openOnSite": "Відкрити на сайті",
+    "episodeMenu": {
+      "download": "Завантажити серію",
+      "downloading": "Завантаження… {{percent}}%",
+      "queued": "У черзі",
+      "cancelDownload": "Скасувати завантаження",
+      "removeDownload": "Видалити завантажене",
+      "pauseDownload": "Призупинити",
+      "resumeDownload": "Продовжити завантаження",
+      "downloadQueued": "Серію поставлено в чергу на завантаження",
+      "downloadDone": "Серію завантажено",
+      "downloadFailed": "Не вдалося завантажити: {{message}}",
+      "downloadCancelled": "Завантаження скасовано",
+      "downloadUnsupported": "Ця серія недоступна для завантаження",
+      "favoriteAdd": "Додати в обране",
+      "favoriteRemove": "Прибрати з обраного",
+      "markWatched": "Позначити переглянутою",
+      "clearProgress": "Видалити дані про перегляд"
+    },
+    "comments": {
+      "title": "Коментарі",
+      "empty": "Коментарів поки немає.",
+      "placeholder": "Написати коментар…",
+      "replyPlaceholder": "Написати відповідь…",
+      "post": "Надіслати",
+      "posting": "Надсилання…",
+      "loading": "Завантаження…",
+      "loadMore": "Показати ще",
+      "reply": "Відповісти",
+      "showReplies": "Показати відповіді ({{count}})",
+      "hideReplies": "Сховати відповіді"
+    },
+    "rating": {
+      "rate": "Оцінити",
+      "clear": "Прибрати оцінку",
+      "votes": "оцінок: {{count}}",
+      "pick": "Виберіть оцінку",
+      "yours": "Ваша оцінка: {{rating}}",
+      "notRated": "Оцінки поки немає",
+      "labels": {
+        "1": "Жахливо",
+        "2": "Дуже погано",
+        "3": "Погано",
+        "4": "Слабко",
+        "5": "Так собі",
+        "6": "Непогано",
+        "7": "Добре",
+        "8": "Відмінно",
+        "9": "Чудово",
+        "10": "Шедевр"
+      },
+      "localOnly": {
+        "unsupported": "Збережено лише тут",
+        "signed-out": "Збережено тут, увійдіть для синхронізації",
+        "failed": "Збережено тут, джерело не прийняло"
+      }
+    },
+    "episodesNewestFirst": "Спочатку нові",
+    "episodesOldestFirst": "Спочатку старі",
+    "episodesView": {
+      "tiles": "Плитки",
+      "list": "Список"
+    },
+    "episodeStatus": {
+      "watched": "Переглянуто",
+      "progress": "Переглянуто {{percent}}%",
+      "next": "Наступна",
+      "downloaded": "Завантажено"
+    },
+    "relatedHere": "Ви тут",
+    "relatedShowMore": "Показати ще {{count}}",
+    "relatedShowLess": "Згорнути",
+    "screenshots": "Кадри",
+    "recommended": {
+      "similarBefore": "Схоже на ",
+      "similarMore_one": " та ще {{count}}",
+      "similarMore_few": " та ще {{count}}",
+      "similarMore_many": " та ще {{count}}",
+      "similarMore_other": " та ще {{count}}",
+      "similarAfter": " з вашої історії",
+      "continuesBefore": "Далі у франшизі ",
+      "continuesAfter": " з вашої історії",
+      "genres": "У ваших жанрах: {{genres}}",
+      "taste": "Підібрано під ваш смак"
+    }
+  },
+  "watch": {
+    "loadingLink": "Завантаження посилання…",
+    "linkError": "Не вдалося отримати посилання: {{message}}",
+    "unsupportedPlayer": "Цей плеєр не підтримується. Оберіть інший у налаштуваннях плеєра.",
+    "noLinks": "У цього джерела немає посилання на цей епізод",
+    "playerSwitchedToast": "Плеєр перемкнено автоматично",
+    "availableSources": "Доступно джерел: {{count}}",
+    "player": {
+      "previousEpisode": "Попередня серія",
+      "nextEpisode": "Наступна серія",
+      "play": "Відтворити",
+      "pause": "Пауза",
+      "audioOnly": "Лише звук",
+      "pictureInPicture": "Картинка в картинці",
+      "skip": "Пропустити",
+      "watch": "Дивитись"
+    },
+    "settings": {
+      "speed": "Швидкість",
+      "autoSkipSegments": "Пропускати опенінг/ендінг",
+      "autoPlayNextEpisode": "Наступний епізод автоматично",
+      "translation": "Озвучення",
+      "dub": "Озвучення",
+      "player": "Плеєр",
+      "quality": "Якість",
+      "audioTrack": "Звукова доріжка",
+      "subtitles": "Субтитри",
+      "orientation": "Екран",
+      "orientationLandscape": "Лише горизонтально",
+      "orientationAny": "Як тримаєте телефон"
+    },
+    "subtitles": {
+      "off": "Вимкнено",
+      "addFile": "Додати файл",
+      "dragHint": "Перетягніть, щоб змінити позицію"
+    },
+    "toggleTimeDisplay": "Перемкнути на час, що залишився"
+  },
+  "search": {
+    "prompt": "Почніть вводити назву аніме",
+    "minChars": "Введіть щонайменше {{count}} символи для пошуку",
+    "empty": "За запитом «{{query}}» нічого не знайдено",
+    "filteredResults": "Результати за фільтрами",
+    "filteredEmpty": "За вибраними фільтрами нічого не знайдено",
+    "source": "джерело",
+    "errorTooShort": "Введіть щонайменше {{count}} символи для пошуку.",
+    "errorUnavailable": "Джерело «{{source}}» зараз не відповідає. Перевірте з’єднання та спробуйте ще раз.",
+    "errorGeneric": "Не вдалося виконати пошук у джерелі «{{source}}». Спробуйте ще раз.",
+    "resultsFor": "Результати за запитом «{{query}}»",
+    "filters": {
+      "button": "Фільтри",
+      "type": "Тип",
+      "status": "Статус",
+      "genres": "Жанри",
+      "genresExpand": "Показати всі жанри",
+      "genresCollapse": "Згорнути жанри",
+      "yearAny": "Будь-який рік",
+      "ratingAny": "Будь-який рейтинг",
+      "ratingUpTo": "До {{rating}}",
+      "year": "Рік",
+      "reset": "Скинути",
+      "apply": "Застосувати",
+      "typeLabels": {
+        "tv": "ТБ",
+        "ona": "ONA",
+        "ova": "OVA",
+        "movie": "Фільм",
+        "special": "Спешл"
+      },
+      "statusLabels": {
+        "ongoing": "Онгоінг",
+        "released": "Завершено",
+        "announced": "Анонс",
+        "cancelled": "Скасовано",
+        "hiatus": "Призупинено"
+      },
+      "findOption": "Знайти…",
+      "done": "Готово"
+    },
+    "recent": "Нещодавні запити",
+    "clearRecent": "Очистити",
+    "removeRecent": "ПКМ, щоб прибрати",
+    "clear": "Очистити поле",
+    "allResults": "Усі результати"
+  },
+  "library": {
+    "title": "Бібліотека",
+    "segments": {
+      "saved": "Збережене",
+      "history": "Історія",
+      "downloads": "Завантаження"
+    },
+    "empty": "Поки що порожньо",
+    "filterAll": "Усі",
+    "categoryEmpty": "Тут поки що порожньо",
+    "categories": {
+      "watching": "Дивлюся",
+      "planned": "Заплановано",
+      "completed": "Переглянуто",
+      "dropped": "Кинуто",
+      "on_hold": "Відкладено",
+      "favorite": "Улюблене"
+    }
+  },
+  "downloads": {
+    "title": "Збережені серії",
+    "empty": "Поки немає завантажених серій",
+    "episodeCount": "{{count}} еп.",
+    "remove": "Видалити",
+    "removeConfirmTitle": "Видалити завантаження?",
+    "removeConfirmMessage": "Серію {{episode}} — {{title}} буде видалено з пристрою. Щоб переглянути офлайн, її доведеться завантажити знову."
+  },
+  "catalogPage": {
+    "empty": "Тут поки що порожньо",
+    "loadMore": "Показати ще",
+    "sort": {
+      "popularity": "За популярністю",
+      "alphabetical": "За алфавітом",
+      "recent": "Нещодавно оновлені",
+      "names": {
+        "relevance": "За релевантністю",
+        "top": "Найкращі",
+        "title": "За назвою",
+        "name": "За назвою",
+        "year": "За роком",
+        "rating": "За рейтингом",
+        "rating_counters": "За кількістю оцінок",
+        "rating_score": "За рейтингом",
+        "score": "За оцінкою",
+        "grade": "За рейтингом",
+        "views": "За переглядами",
+        "random": "Випадково",
+        "id": "За датою додавання",
+        "date": "За датою",
+        "added": "Нещодавно додане",
+        "updated": "Нещодавно оновлене",
+        "update": "Нещодавно оновлене",
+        "latest": "Нове",
+        "recent": "Нове",
+        "fresh": "Новинки",
+        "new": "Новинки",
+        "popular": "За популярністю",
+        "popularity": "За популярністю",
+        "trending": "У тренді",
+        "default": "За замовчуванням",
+        "comments": "За коментарями",
+        "alphabet": "За алфавітом",
+        "alphabetical": "За алфавітом",
+        "az": "А–Я",
+        "release_date": "За датою виходу",
+        "releasedate": "За датою виходу",
+        "weekly": "За тиждень",
+        "monthly": "За місяць",
+        "alltime": "За весь час",
+        "all_time": "За весь час"
+      }
+    },
+    "emptyFiltered": "За цими фільтрами нічого не знайдено"
+  },
+  "history": {
+    "title": "Історія перегляду",
+    "empty": "Історія порожня",
+    "deleteEntry": "Видалити з історії"
+  },
+  "sources": {
+    "tabs": {
+      "extensions": "Розширення",
+      "repositories": "Репозиторії"
+    },
+    "searchPlaceholder": "Пошук джерел",
+    "filterLanguages": "Мови",
+    "refresh": "Оновити",
+    "manage": "Керування",
+    "update": "Оновити",
+    "uninstall": "Видалити",
+    "noResults": "Нічого не знайдено за запитом",
+    "install": "Встановити",
+    "installedSection": "Встановлені · {{count}}",
+    "updatesSection": "Оновлення",
+    "updateAll": "Оновити все",
+    "availableSection": "Доступні · {{count}}",
+    "repositoryLoading": "Завантаження доступних розширень…",
+    "repositoryError": "Не вдалося завантажити репозиторій розширень",
+    "repositoryRetry": "Повторити",
+    "repositoryEmpty": "Зараз немає доступних розширень",
+    "repositoriesAdd": "Додати репозиторій",
+    "repositoriesAddHint": "Посилання на репозиторій або його index.json",
+    "repositoriesInvalidUrl": "Введіть коректну HTTPS-адресу індексу репозиторію",
+    "repositoriesRemove": "Видалити",
+    "repositoriesRemoveConfirmTitle": "Видалити репозиторій?",
+    "repositoriesRemoveConfirmMessage": "Видалити {{name}} зі списку репозиторіїв? Встановлені розширення залишаться доступними.",
+    "repositoriesEmpty": "Репозиторії ще не додано",
+    "repositoriesExtensionCount": "{{count}} розширень",
+    "openInBrowser": "Відкрити в браузері",
+    "copyUrl": "Скопіювати посилання",
+    "nsfwBadge": "18+",
+    "capability": {
+      "latest": "Новинки",
+      "playback": "Перегляд",
+      "related": "Схожі тайтли",
+      "similar": "Рекомендації",
+      "account": "Акаунт",
+      "comments": "Коментарі",
+      "reviews": "Відгуки",
+      "librarySync": "Синхронізація списків",
+      "activitySync": "Активність перегляду"
+    },
+    "settings": "Налаштування",
+    "settingsTitle": "Налаштування джерела",
+    "settingsEmpty": "У цього джерела нічого налаштовувати.",
+    "accountSignIn": "Увійти",
+    "accountSignInOnSite": "Увійти через сайт",
+    "accountSigningIn": "Виконується вхід…",
+    "accountSignOut": "Вийти",
+    "accountLogin": "Логін або пошта",
+    "accountPassword": "Пароль",
+    "accountOpenProfile": "Відкрити профіль",
+    "syncCounting": "Рахую обидві бібліотеки…",
+    "syncCounts": "Тут {{here}} тайтлів, в акаунті {{there}}.",
+    "syncPushTitle": "Залити мої",
+    "syncPushDescription": "Надішле {{count}} тайтлів до акаунта. Тут нічого не зміниться.",
+    "syncPullTitle": "Забрати з акаунта",
+    "syncPullDescription": "Замінить цю бібліотеку на {{count}} тайтлів з акаунта.",
+    "syncMergeTitle": "Об'єднати",
+    "syncMergeDescription": "Надішле {{up}} і забере {{down}}. Нічого не видалиться.",
+    "syncForwardTitle": "Лише з цього моменту",
+    "syncForwardDescription": "Залишить обидві як є і синхронізуватиме подальші зміни.",
+    "syncPullWarning": "{{count}} тайтлів є тут, але немає в акаунті. Їх буде видалено з цієї бібліотеки.",
+    "syncConfirmPull": "Видалити та продовжити",
+    "syncBack": "Назад",
+    "syncProgress": "{{done}} з {{total}}",
+    "syncCancel": "Зупинити",
+    "signInPrompt": {
+      "title": "Потрібен вхід в акаунт",
+      "body": "Для цієї дії потрібно увійти в акаунт джерела «{{source}}»."
+    },
+    "installPrompt": {
+      "title": "Джерело не встановлено",
+      "body": "Щоб відкрити це аніме, спочатку встановіть джерело «{{source}}» у розділі «Джерела».",
+      "action": "Відкрити джерела"
+    },
+    "repositoriesTrustTitle": "Довіряєте цьому репозиторію?",
+    "repositoriesTrustMessage": "Джерела з нього працюють усередині застосунку з тими самими правами, що й він: бачать ваші дані та входи в інші джерела. Додавайте лише репозиторії, яким довіряєте.",
+    "repositoriesTrustConfirm": "Довіряю, додати"
+  },
+  "achievements": {
+    "unlockedToast": "Досягнення відкрито"
+  },
+  "profile": {
+    "editAvatar": "Змінити аватар",
+    "editBanner": "Змінити банер",
+    "removeBanner": "Прибрати банер",
+    "editName": "Змінити ім'я",
+    "statCompletedTitles": "Тайтлів переглянуто",
+    "statLibrarySize": "У бібліотеці",
+    "streakBest": "Найкраща серія: {{count}} днів",
+    "streakAtRisk": "Подивіться щось сьогодні, щоб не втратити серію",
+    "xpHistoryTitle": "Історія XP",
+    "xpHistoryEmpty": "Поки що немає жодного запису",
+    "xpHistoryClear": "Очистити історію",
+    "xpHistoryClearConfirmTitle": "Очистити історію XP?",
+    "xpHistoryClearConfirmMessage": "Видалиться лише список нижче - рівень і XP залишаться як є.",
+    "statWatchTime": "Час перегляду",
+    "statPace": "Темп перегляду за тиждень",
+    "continueWatchingTitle": "Продовжити перегляд",
+    "recentTitle": "Нещодавно додано",
+    "recentEmpty": "Поки що нічого не додано",
+    "episodesCompleted": "Епізодів переглянуто",
+    "activityTitle": "Активність за 30 днів",
+    "activityTitleShort": "Активність",
+    "activityMinutesShort": "{{count}} хв",
+    "activityEpisodes": "{{count}} епізодів переглянуто",
+    "activityMinutes": "{{count}} хв. перегляду",
+    "hours": "{{hours}} год",
+    "today": "Сьогодні",
+    "yesterday": "Вчора",
+    "daysAgo": "{{count}} дн. тому",
+    "achievementsTitle": "Досягнення",
+    "achievementLevel": "Рівень {{level}}/{{maxLevel}}",
+    "levelBadge": "Рів. {{level}}",
+    "xp": "XP",
+    "achievements": {
+      "first_title": {
+        "title": "Перший крок",
+        "description": "Додайте тайтл до бібліотеки"
+      },
+      "collector_10": {
+        "title": "Колекціонер",
+        "description": "{{target}} тайтлів у бібліотеці"
+      },
+      "collector_25": {
+        "title": "Ентузіаст",
+        "description": "{{target}} тайтлів у бібліотеці"
+      },
+      "collector_50": {
+        "title": "Куратор",
+        "description": "{{target}} тайтлів у бібліотеці"
+      },
+      "finisher": {
+        "title": "Фінішер",
+        "description": "Завершіть перший тайтл"
+      },
+      "marathoner_10": {
+        "title": "Марафонець",
+        "description": "Завершіть {{target}} тайтлів"
+      },
+      "streak_7": {
+        "title": "Тиждень поспіль",
+        "description": "Серія {{target}} днів"
+      },
+      "streak_14": {
+        "title": "Два тижні поспіль",
+        "description": "Серія {{target}} днів"
+      },
+      "streak_30": {
+        "title": "Місяць поспіль",
+        "description": "Серія {{target}} днів"
+      },
+      "watch_24h": {
+        "title": "Занурення",
+        "description": "24 години перегляду"
+      },
+      "watch_100h": {
+        "title": "Ветеран",
+        "description": "100 годин перегляду"
+      },
+      "watch_500h": {
+        "title": "Легенда",
+        "description": "500 годин перегляду"
+      },
+      "marathoner_50": {
+        "title": "Чемпіон",
+        "description": "Завершіть {{target}} тайтлів"
+      },
+      "episodes_50": {
+        "title": "Глядач",
+        "description": "{{target}} переглянутих епізодів"
+      },
+      "episodes_100": {
+        "title": "Сотня",
+        "description": "{{target}} переглянутих епізодів"
+      },
+      "episodes_300": {
+        "title": "Кіноман",
+        "description": "{{target}} переглянутих епізодів"
+      },
+      "genre_explorer": {
+        "title": "Різносторонній глядач",
+        "description": "{{target}} різних жанрів у бібліотеці"
+      },
+      "genre_explorer_10": {
+        "title": "Знавець жанрів",
+        "description": "{{target}} різних жанрів у бібліотеці"
+      },
+      "genre_explorer_15": {
+        "title": "Енциклопедист",
+        "description": "{{target}} різних жанрів у бібліотеці"
+      },
+      "streak_3": {
+        "title": "Три дні поспіль",
+        "description": "Стрік 3 дні"
+      },
+      "streak_21": {
+        "title": "Три тижні поспіль",
+        "description": "Стрік 21 день"
+      },
+      "streak_60": {
+        "title": "Два місяці поспіль",
+        "description": "Стрік 60 днів"
+      },
+      "streak_100": {
+        "title": "Сотня днів",
+        "description": "Стрік 100 днів"
+      },
+      "watch_3h": {
+        "title": "Розігрів",
+        "description": "3 години перегляду"
+      },
+      "watch_6h": {
+        "title": "Втягнувся",
+        "description": "6 годин перегляду"
+      },
+      "watch_12h": {
+        "title": "Аніме на вихідних",
+        "description": "12 годин перегляду"
+      },
+      "watch_50h": {
+        "title": "Завсідник",
+        "description": "50 годин перегляду"
+      },
+      "watch_250h": {
+        "title": "Майстер",
+        "description": "250 годин перегляду"
+      },
+      "episodes_10": {
+        "title": "Новачок",
+        "description": "{{target}} переглянутих епізодів"
+      },
+      "episodes_25": {
+        "title": "Любитель",
+        "description": "{{target}} переглянутих епізодів"
+      },
+      "episodes_200": {
+        "title": "Серіаломан",
+        "description": "{{target}} переглянутих епізодів"
+      },
+      "episodes_500": {
+        "title": "Пів тисячі",
+        "description": "{{target}} переглянутих епізодів"
+      }
+    },
+    "achievementLevels": "Рівні",
+    "achievementMaxed": "Усі рівні пройдено"
+  },
+  "settings": {
+    "subtitle": "Налаштуйте, як hibiki виглядає та відтворює відео",
+    "appearance": {
+      "title": "Оформлення",
+      "theme": "Тема",
+      "themeHint": "Світла чи темна схема",
+      "light": "Світла",
+      "dark": "Темна",
+      "accentColor": "Акцентний колір",
+      "accentColorHint": "Колір кнопок та активних елементів",
+      "backgroundTheme": "Фон застосунку",
+      "backgroundThemeHint": "Градієнт за інтерфейсом",
+      "backgroundThemeNone": "Звичайний",
+      "backgroundThemeCustom": "Свій колір",
+      "backgroundThemeCustomFrom": "Початковий колір",
+      "backgroundThemeCustomTo": "Кінцевий колір",
+      "customColor": "Свій колір"
+    },
+    "general": "Загальні",
+    "language": "Мова",
+    "languageNames": {
+      "ru": "Русский",
+      "en": "English",
+      "uk": "Українська"
+    },
+    "player": {
+      "title": "Плеєр",
+      "autoSkipDelay": "Затримка авто-пропуску",
+      "autoSkipDelayHint": "Затримка перед пропуском опенінгу/ендінгу",
+      "skipButtonTimeout": "Час показу кнопки «Пропустити»",
+      "skipButtonTimeoutHint": "Скільки кнопка «Пропустити» видна на екрані",
+      "watchedThreshold": "Поріг автоперегляду",
+      "watchedThresholdHint": "Частка серії для позначки «переглянуто»"
+    },
+    "discord": {
+      "title": "Discord",
+      "enabled": "Показувати активність у Discord",
+      "hint": "Назва, озвучення й таймлайн у статусі Discord",
+      "ignoreNsfw": "Не показувати NSFW-джерела",
+      "ignoreNsfwHint": "Приховувати перегляд із джерел із позначкою 18+"
+    },
+    "catalogAutoLoad": {
+      "enabled": "Автопідвантаження каталогу",
+      "hint": "Підвантажує каталог сама під час прокрутки"
+    },
+    "home": {
+      "title": "Головна",
+      "sort": "Сортування на головній",
+      "sortHint": "Яку підбірку {{source}} показувати в шапці та блоці «Популярне»",
+      "sortAuto": "Авто"
+    },
+    "data": {
+      "title": "Дані",
+      "backup": "Резервна копія",
+      "backupHint": "Бібліотека, історія, джерела та налаштування",
+      "backupAction": "Створити резервну копію",
+      "backupCreated": "Резервну копію збережено: {{path}}",
+      "restore": "Відновлення",
+      "restoreHint": "Замінює поточні дані файлом копії",
+      "restoreAction": "Відновити з копії",
+      "restoreConfirm": "Поточні дані буде замінено вмістом резервної копії, застосунок перезапуститься. Скасувати це буде неможливо.",
+      "restoreConfirmAction": "Так, відновити",
+      "version": "hibiki {{version}}"
+    },
+    "diagnostics": {
+      "title": "Діагностика",
+      "export": "Журнал застосунку",
+      "exportHint": "Додайте його до повідомлення про помилку, якщо щось не працює.",
+      "exportAction": "Експортувати",
+      "openFolder": "Відкрити теку",
+      "show": "Показати",
+      "hide": "Сховати",
+      "empty": "Журнал порожній.",
+      "exported": "Журнал збережено: {{path}}",
+      "memory": "Пам'ять",
+      "memoryHint": "Скільки пам'яті займає кожен процес застосунку. Приховані вікна джерел потрібні для завантаження серій і мають закриватися самі.",
+      "memoryShow": "Показати використання",
+      "memoryHide": "Сховати",
+      "memoryRecord": "Записати в журнал",
+      "memoryRecorded": "Записано",
+      "memoryTotal": "Усього",
+      "memoryMain": "Головний процес",
+      "memoryWindow": "Вікно застосунку",
+      "memoryHidden": "Приховане вікно: {{url}}",
+      "memoryFootnote": "Купа головного процесу: {{heap}} MB. Спільні сторінки пам'яті враховуються в кожному процесі, тому сума трохи завищена.",
+      "saveMemory": "Економія пам'яті",
+      "saveMemoryHint": "Вимикає апаратне прискорення: застосунок займає приблизно на 250 МБ менше, але сильніше навантажує процесор під час прокручування та перегляду відео. Застосовується після перезапуску.",
+      "saveMemoryRestart": "Перезапустити зараз"
+    },
+    "autoUpdate": "Автооновлення",
+    "autoUpdateHint": "Перевіряти оновлення під час запуску та встановлювати їх автоматично. Застосунок закриється та запустить інсталятор."
+  },
+  "update": {
+    "button": "Оновити",
+    "available": "Доступне оновлення",
+    "availableVersion": "Доступна версія {{version}}",
+    "dialogTitle": "Доступне оновлення",
+    "versionLine": "Версія {{version}} · {{size}}",
+    "download": "Завантажити оновлення",
+    "retry": "Спробувати ще раз",
+    "close": "Закрити",
+    "releaseNotes": "Сторінка релізу",
+    "downloading": "Завантаження… {{received}} з {{total}}",
+    "willRestart": "Застосунок закриється та запустить інсталятор.",
+    "failed": "Не вдалося оновитися: {{message}}",
+    "versionChange": "{{from}} → {{to}} · {{size}}",
+    "whatsNew": "Що нового",
+    "noNotes": "Подробиці — на сторінці релізу.",
+    "install": "Оновити",
+    "later": "Пізніше",
+    "downloadingMobile": "{{received}} з {{total}}",
+    "backgroundHint": "Можна закрити — завантаження триватиме.",
+    "permissionTitle": "Спершу один дозвіл",
+    "permissionHint": "Дозвольте hibiki встановлювати застосунки й поверніться.",
+    "permissionDenied": "Дозвіл не надано — встановити оновлення не можна.",
+    "permissionAction": "Дозволити",
+    "downloadFailedTitle": "Не вдалося завантажити",
+    "downloadFailedHint": "Перевірте з'єднання і спробуйте ще раз.",
+    "signatureTitle": "Поверх цієї збірки оновити не можна",
+    "signatureHint": "Встановлений застосунок підписано іншим ключем, ніж реліз (наприклад, це тестова збірка). Встановіть реліз зі сторінки релізу.",
+    "badFileTitle": "Цей реліз не встановити",
+    "badFileHint": "Його пакет не підходить до застосунку ({{code}}). Файл для ручного встановлення — на сторінці релізу.",
+    "openRelease": "Сторінка релізу",
+    "settingsVersion": "hibiki {{version}}",
+    "settingsLatest": "Остання версія",
+    "settingsAvailable": "Доступна версія {{version}}",
+    "installNow": "Встановити"
+  },
+  "tracking": {
+    "settings": {
+      "title": "Синхронізація"
+    },
+    "anilist": {
+      "notConfigured": "У цій збірці немає ключа AniList, тому вхід недоступний.",
+      "signedOutHint": "Увійдіть, і переглянуті серії та вибрані категорії надходитимуть у ваші списки AniList.",
+      "signIn": "Увійти через AniList",
+      "signInAgain": "Увійти знову",
+      "signOut": "Вийти",
+      "waiting": "Завершіть вхід у браузері й поверніться сюди.",
+      "expired": "Вхід до AniList закінчився. Увійдіть знову, щоб синхронізація тривала.",
+      "signInFailed": "Не вдалося увійти: {{error}}",
+      "howItWorks": "Прогрес зростає з переглянутими серіями, а вибрана тут категорія змінює статус там. Сама синхронізація нічого не видаляє в AniList."
+    },
+    "import": {
+      "title": "Імпорт з AniList",
+      "hint": "Додасть до бібліотеки тайтли з ваших списків AniList, знайшовши кожен у вибраному джерелі.",
+      "source": "Джерело",
+      "action": "Імпортувати",
+      "running": "Імпорт… {{done}} / {{total}}",
+      "result": "Додано {{added}} · оновлено {{updated}} · не знайдено {{missing}}",
+      "failed": "Не вдалося перевірити {{count}}: джерело не відповіло.",
+      "unmatched": "Не знайдено в {{source}}",
+      "error": "Імпорт не вдався: {{error}}"
+    },
+    "link": {
+      "chipUnlinked": "Прив'язати AniList",
+      "notOnList": "Немає у списку",
+      "dialogTitle": "AniList",
+      "linkedAuto": "Знайдено автоматично",
+      "linkedUser": "Вибрано вами",
+      "search": "Пошук в AniList",
+      "noResults": "Нічого не знайдено",
+      "open": "Відкрити в AniList",
+      "none": "Тайтл ще не прив'язаний. Виберіть його в AniList, і прогрес почне синхронізуватися.",
+      "episodes": "{{count}} еп.",
+      "favourite": "В обраному",
+      "addFavourite": "До обраного",
+      "removeFavourite": "Прибрати з обраного",
+      "remove": "Видалити зі списку",
+      "removeAction": "Видалити",
+      "removeConfirm": "Видалити «{{title}}» з вашого списку AniList? Цей тайтл перестане синхронізуватися.",
+      "wrongTitle": "Не той тайтл?"
+    },
+    "status": {
+      "watching": "Дивлюся",
+      "planned": "У планах",
+      "completed": "Переглянуто",
+      "dropped": "Кинуто",
+      "on_hold": "Відкладено",
+      "rewatching": "Передивляюся"
+    }
+  },
+  "backgroundWork": {
+    "downloadingTitle_one": "Завантажується {{count}} серія",
+    "downloadingTitle_few": "Завантажуються {{count}} серії",
+    "downloadingTitle_many": "Завантажуються {{count}} серій",
+    "downloadingTitle_other": "Завантажуються {{count}} серії"
+  },
+  "deviceSync": {
+    "hint": "Бібліотека й прогрес на всіх ваших пристроях в одній мережі.",
+    "connectPhone": "Показати код",
+    "connectComputer": "Підключитися до пристрою",
+    "connectAnother": "Підключити ще пристрій",
+    "enterOnPhone": "На іншому пристрої: Налаштування → Синхронізація → «Підключитися до пристрою», виберіть цей комп'ютер і введіть код:",
+    "waiting": "Чекаємо на інший пристрій… код діє 5 хвилин.",
+    "findHint": "На пристрої, до якого підключаєтеся, відкрийте Налаштування → Синхронізація й покажіть код (на комп'ютері — «Показати код»). Обидва мають бути в одній мережі.",
+    "searching": "Шукаємо пристрої…",
+    "notFound": "Нічого не знайдено. Перевірте, що на іншому пристрої відкрито hibiki з кодом на екрані та обидва в одній мережі Wi-Fi.",
+    "searchAgain": "Шукати знову",
+    "enterCode": "Введіть код з екрана «{{name}}»:",
+    "pair": "Підключити",
+    "back": "Назад",
+    "lastSync": "Синхронізовано {{when}}",
+    "never": "ще не було",
+    "justNow": "щойно",
+    "minutesAgo_one": "{{count}} хв тому",
+    "minutesAgo_few": "{{count}} хв тому",
+    "minutesAgo_many": "{{count}} хв тому",
+    "minutesAgo_other": "{{count}} хв тому",
+    "hoursAgo_one": "{{count}} год тому",
+    "hoursAgo_few": "{{count}} год тому",
+    "hoursAgo_many": "{{count}} год тому",
+    "hoursAgo_other": "{{count}} год тому",
+    "syncNow": "Синхронізувати зараз",
+    "forget": "Забути пристрій",
+    "forgetConfirm": "Припинити синхронізацію з ним? На пристроях нічого не видалиться.",
+    "forgetAction": "Забути",
+    "error": {
+      "unreachable": "Інший пристрій недоступний: чи відкрито на ньому hibiki і чи він у тій самій мережі? Телефон доступний, лише поки hibiki відкрито в нього на екрані.",
+      "unknownDevice": "Інший пристрій більше не знає цей. Забудьте його тут і підключіться знову.",
+      "badCode": "Неправильний код. Звірте з кодом на екрані іншого пристрою.",
+      "notPairing": "Інший пристрій не показує код. Спершу відкрийте на ньому код.",
+      "tooMany": "Забагато неправильних кодів. Почніть підключення на комп'ютері знову.",
+      "version": "Версії застосунків різні. Оновіть обидва.",
+      "generic": "Щось пішло не так. Спробуйте ще раз."
+    },
+    "title": "Пристрої",
+    "hintPhone": "Бібліотека й прогрес на всіх ваших пристроях в одній мережі.",
+    "showCodePhone": "Показати код для іншого пристрою",
+    "enterOnOtherPhone": "На іншому пристрої: Налаштування → Синхронізація → «Підключитися до пристрою», виберіть цей телефон і введіть код. Поки не закривайте цей екран:",
+    "codeTitle": "Код для підключення",
+    "pairReplace": "Підключити й замінити",
+    "mode": {
+      "title": "Чиї дані залишити",
+      "merge": "Об'єднати",
+      "mergeHint": "Бібліотека, прогрес, оцінки та досягнення з обох пристроїв поєднаються. Нічого не зникне.",
+      "keepHere": "Залишити дані цього пристрою",
+      "keepHereHint": "Усе на «{{name}}» заміниться тим, що є на цьому пристрої.",
+      "takeThere": "Взяти дані з «{{name}}»",
+      "takeThereHint": "Усе на цьому пристрої заміниться тим, що є на «{{name}}».",
+      "warning": "Бібліотека, прогрес, оцінки та досягнення на пристрої, що замінюється, видаляться. Це не можна скасувати."
+    },
+    "missing": {
+      "title": "Встановіть джерела",
+      "hint": "Синхронізовані дані використовують джерела, яких тут немає. Без них частина тайтлів не відкриється.",
+      "install": "Встановити",
+      "installAll": "Встановити всі",
+      "notFound_one": "Ще {{count}} немає у ваших репозиторіях.",
+      "notFound_few": "Ще {{count}} немає у ваших репозиторіях.",
+      "notFound_many": "Ще {{count}} немає у ваших репозиторіях.",
+      "notFound_other": "Ще {{count}} немає у ваших репозиторіях.",
+      "later": "Пізніше",
+      "noticeTitle": "Не все перенеслося",
+      "noticeText": "Частина даних відображається не повністю: їхні джерела тут не встановлені. Встановіть їх, щоб це виправити.",
+      "show": "Встановити джерела"
+    }
+  }
+}

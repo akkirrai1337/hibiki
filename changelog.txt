@@ -1,8 +1,28 @@
-## hibiki 2.8.3
+## hibiki 3.0.0
+
+**Android**
+- hibiki for Android is now this app: it updates the old Kotlin app in place (same package and signing key) and carries over its library and watch progress on first start.
+- A phone-first interface: tab bar, swipeable home hero, three-column catalog, compact title page, bottom sheets, pull to refresh and page transitions.
+- A landscape player with tap and double-tap gestures, immersive mode, picture in picture and its own screen-orientation setting in the player menu.
+- Sources installed from Aniyomi repositories (APK sources) work next to the JS ones. The yuzono repository comes preinstalled, and the sources your old library used are installed for you.
+- Updates are downloaded from GitHub Releases and handed to the system installer.
 
 **Sources**
-- Fixed a crash on the sources screen when an extension installed outside hibiki had not been trusted yet, which could also happen during first-time setup.
+- When a source stops at a Cloudflare check, the error now has a button to pass it in a separate window, and the answer is reused for the next requests.
+- hibiki-sources is a preinstalled repository. A repository can be added by its GitHub link, a tree or blob link, or the raw index.json, and adding one asks you to confirm that you trust it.
+- Players that offer one dub with several audio tracks (Alloha) get an "Audio track" choice in the player settings.
 
-**Interface**
-- The title page no longer shifts its poster and text by a different amount from one open to the next when a title has no banner.
+**Sync**
+- Library, progress and ratings sync between your devices over the local network. Titles carry their cards, so history shows names, not ids.
+- If the synced data uses sources this device lacks, a window offers to install them, and Settings keeps a note until they are in.
+- Removing a device ends the pairing on both sides.
 
+**Account**
+- AniList live tracking, favourites and removal from the title page.
+
+**Player**
+- A stream that never starts, or keeps parsing to no media, falls back to the next link.
+- Subtitles can be dragged to any place, and stay clear of the controls.
+
+**Windows**
+- Windows icon in every size, and one release workflow for Windows and Android.

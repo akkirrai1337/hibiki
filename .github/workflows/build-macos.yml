@@ -1,0 +1,56 @@
+# Builds the macOS .dmg, which can't be produced on the Windows machine this app is normally
+# built on: better-sqlite3 is a native module compiled for the host, and dmg packaging needs
+# macOS's own tooling. Runs on demand (and for release tags) rather than on every push - a mac
+# runner costs ten times a Linux one per minute, and nothing here gates merging.
+name: Build macOS
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  build:
+    runs-on: macos-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      # `npm ci` (not `install`) so the lockfile decides the tree - a build meant for distribution
+      # shouldn't silently pick up a newer transitive dependency than the one tested locally.
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Test
+        run: npm test
+
+      # CSC_IDENTITY_AUTO_DISCOVERY=false: there's no Apple Developer certificate here, and
+      # without this electron-builder goes looking for one and fails the build instead of just
+      # producing an unsigned app. Unsigned means Gatekeeper will ask on first launch - open it
+      # with a right click -> Open, or run `xattr -dr com.apple.quarantine /Applications/hibiki.app`.
+      #
+      # `-- --publish never` passes the flag through npm to electron-builder itself. It sees the CI
+      # environment variables and assumes a build there is meant to be released, so it went looking
+      # for a GH_TOKEN and failed the job *after* the dmg had already been built. Nothing here
+      # publishes to GitHub Releases - the dmg leaves as a workflow artifact below.
+      - name: Build
+        run: npm run build -- --publish never
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: hibiki-macos-dmg
+          # Only the installer itself - `release/` also holds mac-*-unpacked directories, which are
+          # the same app again, uncompressed, and would multiply the upload for nothing.
+          path: release/*.dmg
+          if-no-files-found: error

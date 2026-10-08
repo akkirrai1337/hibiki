@@ -1,0 +1,9 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">hibiki</string>
+    <string name="title_activity_main">hibiki</string>
+    <string name="package_name">app.hibiki</string>
+    <string name="custom_url_scheme">app.hibiki</string>
+    <!-- The notification channel shown in system settings for the "downloading" notification. -->
+    <string name="background_work_channel">Downloads</string>
+</resources>

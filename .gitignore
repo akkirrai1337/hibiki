@@ -1,57 +1,36 @@
-# Gradle
-.gradle/
-**/build/
-.codex*
+# Dependencies and generated application builds
+node_modules/
+dist/
+dist-electron/
+dist-android/
+release/
+# Staging directory the Windows release workflow copies the renamed installer into.
+dist-release/
 
-# Kotlin
-.kotlin/
+# Local configuration, secrets, and personal agent notes
+.env
+.env.*
+!.env.example
+*.local
+AGENTS.md
+.claude
 
-# Android Studio / IntelliJ
-.idea/
-*.iml
+# Tooling output
+playwright-report/
+test-results/
+coverage/
+*.tsbuildinfo
 
-# Local environment
-local.properties
+tests
+.tanstack
 
-# Android generated files
-captures/
-.externalNativeBuild/
-.cxx/
-
-# Release outputs and signing secrets
-*.apk
-*.aab
-*.ap_
-*.jks
-*.keystore
-keystore.properties
-signing.properties
-app/release/
-
-# OS files
+# OS and editor files
 .DS_Store
 Thumbs.db
+.vscode/
+.idea/
 
-kodik_*
-pages/
+.codex*
 
-AGENTS.md
-
-.tmp
-logs
-
-# Local-only scripted extension fixtures used by parsers tests, not shipped in the main repo
-parsers/src/test/resources/beakokit/extensions/
-parsers/src/test/resources/beakokit/resolvers/
-# Raw captured (obfuscated) API responses used only to test decoding a specific site's response
-# format - real scraped third-party data, not a hand-written fixture, so it doesn't belong in the
-# repo either.
-parsers/src/test/resources/beakokit/miruro/
-.reasonix/
-*.toml
-*.md
-tools/
-
-
-*.js
-node_*
+docs/*.md
+docs/page/

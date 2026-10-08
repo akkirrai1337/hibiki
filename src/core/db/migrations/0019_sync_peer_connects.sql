@@ -1,0 +1,1 @@
+ALTER TABLE `sync_peers` ADD `connects` integer DEFAULT 0 NOT NULL;

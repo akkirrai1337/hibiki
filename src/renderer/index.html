@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: http: hibiki-profile:; media-src 'self' https: http: blob: hibiki-download: hibiki-profile:; connect-src 'self' https: http: blob: data: hibiki-download: hibiki-profile:; frame-src https: http:;"
+    />
+    <title>hibiki</title>
+    <!--
+      Two things happen before React ever paints: (1) the theme class on <html> is normally set by
+      a useEffect in __root.tsx, which only runs after the first render - until then :root falls
+      back to the *light* palette (globals.css), so the window flashes black (Electron's own
+      backgroundColor) -> white (light theme, briefly) -> dark once React catches up. theme-init.js
+      reads the same persisted store synchronously, before body paints, to skip that flash. (2) the
+      app has nothing to show yet regardless - #splash gives it something other than a bare black
+      rectangle for that gap, and splash-init.js removes it once #root actually has content. Both
+      are external files (not inline <script>) because the CSP above doesn't allow inline script.
+    -->
+    <script src="/theme-init.js"></script>
+    <script src="/preview-mock.js"></script>
+    <style>
+      html, body { background: rgb(12 12 15); }
+      #splash {
+        position: fixed;
+        inset: 0;
+        z-index: 9999;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgb(12 12 15);
+        transition: opacity 0.25s ease-out;
+      }
+      #splash.hidden { opacity: 0; pointer-events: none; }
+      #splash-dot {
+        width: 14px;
+        height: 14px;
+        border-radius: 999px;
+        background: rgb(244 114 182);
+        animation: splash-pulse 1.1s ease-in-out infinite;
+      }
+      @keyframes splash-pulse {
+        0%, 100% { transform: scale(0.85); opacity: 0.5; }
+        50% { transform: scale(1.15); opacity: 1; }
+      }
+    </style>
+  </head>
+  <body class="bg-bg text-text">
+    <div id="root"></div>
+    <div id="splash"><div id="splash-dot"></div></div>
+    <script src="/splash-init.js"></script>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

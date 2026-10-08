@@ -1,0 +1,1 @@
+CREATE INDEX `external_metadata_matches_entry_idx` ON `external_metadata_matches` (`provider`,`external_id`);
