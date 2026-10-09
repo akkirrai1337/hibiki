@@ -47,8 +47,7 @@
   /* The hero: what hibiki is and the way to get it. */
   .hero {
     position: relative;
-    isolation: isolate;
-    overflow: hidden;
+    z-index: 2; /* the download menu hangs below the hero, over the screenshots */
     text-align: center;
     padding: 40px 0 32px;
     background:
