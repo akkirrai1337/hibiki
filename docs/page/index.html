@@ -1,0 +1,491 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>hibiki</title>
+<meta name="description" content="hibiki — аниме-клиент для поиска тайтлов, ведения личной библиотеки и просмотра серий с сохранением прогресса.">
+<meta property="og:title" content="hibiki">
+<meta property="og:description" content="Аниме-клиент: подключаемые источники, встроенный плеер, офлайн-загрузки и личная библиотека с прогрессом просмотра.">
+<meta property="og:image" content="home.png">
+<link rel="icon" href="hibiki-round.svg" type="image/svg+xml">
+<style>
+  :root {
+    --bg: #0b0b10;
+    --fg: #f2f2f6;
+    --muted: #9a9aad;
+    --accent: #ff5c9a;
+    --card: #14141c;
+    --border: #24242f;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    line-height: 1.6;
+    overflow-x: hidden;
+  }
+  a { color: inherit; }
+  svg.i { width: 1.15em; height: 1.15em; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  svg.i.solid { fill: currentColor; stroke: none; }
+  .wrap { max-width: 1040px; margin: 0 auto; padding: 0 16px; }
+
+  .lang {
+    position: fixed; top: 14px; right: 14px; z-index: 20;
+    padding: 6px 12px; border-radius: 8px; cursor: pointer;
+    font: inherit; font-size: .85rem; font-weight: 600; color: var(--muted);
+    background: rgba(20, 20, 28, .7); border: 1px solid var(--border);
+    backdrop-filter: blur(8px);
+    transition: color .15s, border-color .15s;
+  }
+  .lang option { background: var(--card); color: var(--fg); }
+  .lang:hover, .lang:focus-visible { color: var(--fg); border-color: var(--accent); outline: none; }
+
+  /* The hero: what hibiki is and the way to get it. */
+  .hero {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    text-align: center;
+    padding: 40px 0 32px;
+    background:
+      radial-gradient(60% 50% at 50% 0%, rgba(255, 92, 154, .18), transparent 70%),
+      var(--bg);
+  }
+  .icon { display: block; margin: 0 auto; width: 72px; height: 72px; border-radius: 50%; box-shadow: 0 10px 40px rgba(255, 92, 154, .4); }
+  h1 { margin: 8px 0 10px; font-size: clamp(2.2rem, 6vw, 3.4rem); line-height: 1.1; letter-spacing: -.03em; }
+  .lead { margin: 0 auto 22px; max-width: 640px; color: var(--muted); font-size: 1.05rem; }
+  .buttons { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 10px;
+    padding: 12px 22px; border-radius: 10px;
+    font-weight: 600; text-decoration: none;
+    background: var(--card); border: 1px solid var(--border);
+    transition: transform .15s, border-color .15s;
+  }
+  .btn:hover { transform: translateY(-2px); border-color: var(--accent); }
+  .btn.primary { background: #fff; color: #0b0b10; border-color: #fff; }
+  button.btn { font: inherit; font-weight: 600; cursor: pointer; }
+  /* Both hero buttons one width, so the pair sits symmetric. */
+  .buttons .btn { min-width: 200px; justify-content: center; }
+  .btn .chev { width: 1em; height: 1em; transition: transform .15s; }
+  .btn[aria-expanded="true"] .chev { transform: rotate(180deg); }
+
+  /* The download menu: one row per platform, each a direct link to that build's file. */
+  .download { position: relative; }
+  .menu {
+    position: absolute; top: calc(100% + 8px); left: 50%; z-index: 10;
+    min-width: 180px;
+    padding: 6px; border-radius: 12px;
+    background: var(--card); border: 1px solid var(--border);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, .6);
+    text-align: left;
+    opacity: 0; visibility: hidden; transform: translate(-50%, -4px);
+    transition: opacity .15s, transform .15s, visibility .15s;
+  }
+  .menu.open { opacity: 1; visibility: visible; transform: translate(-50%, 0); }
+  .menu a {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 12px; border-radius: 8px;
+    text-decoration: none;
+  }
+  .menu a:hover, .menu a:focus-visible { background: rgba(255, 255, 255, .06); outline: none; }
+  .menu a[aria-disabled="true"] { opacity: .45; pointer-events: none; }
+  .menu .os { width: 20px; height: 20px; color: var(--fg); }
+  .menu .name { font-weight: 600; }
+  .meta { margin-top: 12px; font-size: .85rem; color: var(--muted); }
+
+  .shot { display: block; width: 100%; border-radius: 14px; border: 1px solid var(--border); box-shadow: 0 30px 80px rgba(0, 0, 0, .55); }
+
+  .screens { padding: 0 0 64px; }
+  h2 { margin: 0 0 20px; text-align: center; font-size: clamp(1.6rem, 4vw, 2.2rem); letter-spacing: -.02em; }
+  .gallery { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 440px), 1fr)); gap: 16px; }
+  .gallery .shot { box-shadow: none; transition: border-color .15s; }
+  .gallery a:hover .shot { border-color: var(--accent); }
+  /* Two desktop shots stacked beside two phone shots: both halves are the same height. */
+  .gallery { grid-template-columns: 1fr 1fr; }
+  .gallery .col { display: grid; gap: 16px; }
+  .gallery .col.phones { grid-template-columns: 1fr 1fr; }
+  .gallery .col.phones a { display: block; min-height: 0; }
+  .gallery .col.phones .shot { height: 100%; object-fit: cover; object-position: top; }
+  @media (max-width: 720px) {
+    .gallery { grid-template-columns: 1fr; }
+    .gallery .col.phones .shot { height: auto; }
+  }
+
+  /* A screenshot opens large over the page; arrows or a swipe-free tap move through them. */
+  .gallery a { cursor: zoom-in; }
+  .lightbox {
+    position: fixed; inset: 0; z-index: 30;
+    display: flex; align-items: center; justify-content: center;
+    padding: 24px; background: rgba(5, 5, 8, .92);
+    opacity: 0; visibility: hidden; transition: opacity .15s, visibility .15s;
+  }
+  .lightbox.open { opacity: 1; visibility: visible; }
+  .lightbox img { max-width: 100%; max-height: 100%; border-radius: 10px; box-shadow: 0 30px 80px rgba(0, 0, 0, .6); cursor: zoom-out; }
+  .lightbox button {
+    position: absolute; top: 50%; width: 44px; height: 44px; margin-top: -22px; border-radius: 50%; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; padding: 0; color: var(--fg);
+    background: rgba(20, 20, 28, .8); border: 1px solid var(--border);
+  }
+  .lightbox button svg.i { width: 22px; height: 22px; }
+  .lightbox .prev svg.i { transform: rotate(90deg); }
+  .lightbox .next svg.i { transform: rotate(-90deg); }
+  .lightbox button:hover, .lightbox button:focus-visible { border-color: var(--accent); outline: none; }
+  .lightbox .prev { left: 14px; }
+  .lightbox .next { right: 14px; }
+  @media (max-width: 720px) { .lightbox { padding: 12px; } .lightbox button { display: none; } }
+
+  /* Questions: closed rows by default, so the page stays short. */
+  .faq { padding: 8px 0 72px; }
+  .faq-list { display: grid; gap: 10px; max-width: 760px; margin: 0 auto; }
+  .faq details { border: 1px solid var(--border); border-radius: 12px; background: var(--card); transition: border-color .15s; }
+  .faq details[open] { border-color: #34343f; }
+  .faq summary {
+    display: flex; align-items: center; justify-content: space-between; gap: 16px;
+    padding: 16px 20px; cursor: pointer; list-style: none;
+    font-weight: 600;
+  }
+  .faq summary::-webkit-details-marker { display: none; }
+  .faq summary:hover { color: #fff; }
+  .faq summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 12px; }
+  .faq summary .chev { color: var(--muted); transition: transform .2s; }
+  .faq details[open] summary .chev { transform: rotate(180deg); }
+  .faq details p { margin: -4px 20px 18px; color: var(--muted); }
+  .faq b { color: var(--fg); font-weight: 600; }
+  /* A name from the app's own interface, with the icon the app puts beside it. */
+  .faq b.ui { white-space: nowrap; }
+  .faq b.ui svg.i { width: 1em; height: 1em; margin-right: .3em; vertical-align: -.14em; color: var(--muted); }
+
+  footer { padding: 40px 0 56px; border-top: 1px solid var(--border); color: var(--muted); font-size: .82rem; }
+  footer p { max-width: 720px; margin: 0 auto 12px; text-align: center; }
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 3v12m-5-5 5 5 5-5M4 16v5h16v-5"/></symbol>
+  <symbol id="i-chevron" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+  <symbol id="i-radio" viewBox="0 0 24 24"><path d="M16.247 7.761a6 6 0 0 1 0 8.478"/><path d="M19.075 4.933a10 10 0 0 1 0 14.134"/><path d="M4.925 19.067a10 10 0 0 1 0-14.134"/><path d="M7.753 16.239a6 6 0 0 1 0-8.478"/><circle cx="12" cy="12" r="2"/></symbol>
+  <symbol id="i-settings" viewBox="0 0 24 24"><path d="M9.671 4.136a2.34 2.34 0 0 1 4.659 0 2.34 2.34 0 0 0 3.319 1.915 2.34 2.34 0 0 1 2.33 4.033 2.34 2.34 0 0 0 0 3.831 2.34 2.34 0 0 1-2.33 4.033 2.34 2.34 0 0 0-3.319 1.915 2.34 2.34 0 0 1-4.659 0 2.34 2.34 0 0 0-3.32-1.915 2.34 2.34 0 0 1-2.33-4.033 2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915"/><circle cx="12" cy="12" r="3"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M12 5v14"/></symbol>
+  <symbol id="i-sync" viewBox="0 0 24 24"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></symbol>
+  <symbol id="i-windows" viewBox="0 0 24 24"><path d="M3 5.5 10.5 4.4v7.1H3zm8.5-1.2L21 3v8.5h-9.5zM3 12.5h7.5v7.1L3 18.5zm8.5 0H21V21l-9.5-1.3z"/></symbol>
+  <symbol id="i-android" viewBox="0 0 24 24"><path d="M17.6 9.48 19.44 6.3a.38.38 0 0 0-.66-.38l-1.87 3.23a11.5 11.5 0 0 0-9.82 0L5.22 5.92a.38.38 0 0 0-.66.38L6.4 9.48A10.8 10.8 0 0 0 1 18h22a10.8 10.8 0 0 0-5.4-8.52zM7 15.25a1.25 1.25 0 1 1 0-2.5 1.25 1.25 0 0 1 0 2.5zm10 0a1.25 1.25 0 1 1 0-2.5 1.25 1.25 0 0 1 0 2.5z"/></symbol>
+  <symbol id="i-github" viewBox="0 0 24 24"><path d="M12 .5A11.5 11.5 0 0 0 .5 12c0 5.08 3.29 9.39 7.86 10.91.58.1.79-.25.79-.56v-2c-3.2.7-3.88-1.54-3.88-1.54-.52-1.33-1.28-1.69-1.28-1.69-1.04-.71.08-.7.08-.7 1.15.08 1.76 1.19 1.76 1.19 1.03 1.76 2.69 1.25 3.35.96.1-.75.4-1.25.73-1.54-2.55-.29-5.24-1.28-5.24-5.69 0-1.26.45-2.29 1.19-3.1-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.18 1.18a11 11 0 0 1 5.78 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.76.11 3.05.74.81 1.19 1.84 1.19 3.1 0 4.42-2.69 5.39-5.25 5.68.41.36.78 1.06.78 2.14v3.17c0 .31.21.67.8.56A11.5 11.5 0 0 0 23.5 12 11.5 11.5 0 0 0 12 .5z"/></symbol>
+</svg>
+
+<select class="lang" id="lang" aria-label="Language / Язык / Мова">
+  <option value="ru">Русский</option>
+  <option value="en">English</option>
+  <option value="uk">Українська</option>
+</select>
+
+<header class="hero">
+  <div class="wrap">
+    <img class="icon" src="hibiki-round.svg" alt="hibiki icon">
+    <h1>hibiki</h1>
+    <p class="lead" data-i18n="lead">
+      hibiki — аниме-клиент для поиска тайтлов, ведения личной библиотеки и просмотра серий
+      с сохранением прогресса. Подключаемые источники, встроенный плеер и загрузки для просмотра офлайн.
+    </p>
+    <div class="buttons">
+      <div class="download">
+        <button class="btn primary" id="download" type="button" aria-haspopup="true" aria-expanded="false" aria-controls="download-menu">
+          <svg class="i"><use href="#i-download"/></svg> <span data-i18n="download">Скачать</span>
+          <svg class="i chev"><use href="#i-chevron"/></svg>
+        </button>
+        <div class="menu" id="download-menu" role="menu"></div>
+      </div>
+      <a class="btn" href="https://github.com/akkirrai1337/hibiki">
+        <svg class="i solid"><use href="#i-github"/></svg> <span data-i18n="source">Исходный код</span>
+      </a>
+    </div>
+    <p class="meta" data-i18n="meta">Бесплатно · открытый исходный код (GPL-3.0)</p>
+  </div>
+</header>
+
+<section class="screens">
+  <div class="wrap">
+    <h2 data-i18n="screens">Скриншоты</h2>
+    <div class="gallery">
+      <div class="col">
+        <a href="home.png"><img class="shot" src="home.png" data-alt="altHome" alt="Главная" loading="lazy"></a>
+        <a href="details.png"><img class="shot" src="details.png" data-alt="altTitle" alt="Страница тайтла" loading="lazy"></a>
+      </div>
+      <div class="col phones">
+        <a href="android-home.jpg"><img class="shot" src="android-home.jpg" data-alt="altAndroidHome" alt="Главная на Android" loading="lazy"></a>
+        <a href="android-details.jpg"><img class="shot" src="android-details.jpg" data-alt="altAndroidTitle" alt="Страница тайтла на Android" loading="lazy"></a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="faq">
+  <div class="wrap">
+    <h2 data-i18n="faq">Вопросы и ответы</h2>
+    <div class="faq-list">
+      <details>
+        <summary><span data-i18n="q1">Откуда берётся контент?</span> <svg class="i chev"><use href="#i-chevron"/></svg></summary>
+        <p data-i18n="a1">hibiki ничего не хранит и не раздаёт сам. Тайтлы и серии приходят из источников — расширений, которые
+          устанавливаются из внешних репозиториев. Приложение только показывает то, что отдаёт источник.</p>
+      </details>
+      <details>
+        <summary><span data-i18n="q2">Как добавить источники?</span> <svg class="i chev"><use href="#i-chevron"/></svg></summary>
+        <p data-i18n="a2">Откройте <b class="ui"><svg class="i"><use href="#i-radio"/></svg>Источники</b> → <b>Репозитории</b> → <b class="ui"><svg class="i"><use href="#i-plus"/></svg>Добавить репозиторий</b> и вставьте адрес его индекса. После этого
+          источники из репозитория появятся в списке — установите нужные, и их каталог станет доступен в приложении.</p>
+      </details>
+      <details>
+        <summary><span data-i18n="q3">Windows пишет «Система Windows защитила ваш компьютер»</span> <svg class="i chev"><use href="#i-chevron"/></svg></summary>
+        <p data-i18n="a3">Так SmartScreen реагирует на программы без платной цифровой подписи. Нажмите <b>Подробнее → Выполнить
+          в любом случае</b>. Исходный код открыт, а установщик собирается из него на GitHub.</p>
+      </details>
+      <details>
+        <summary><span data-i18n="q4">Android не даёт установить APK</span> <svg class="i chev"><use href="#i-chevron"/></svg></summary>
+        <p data-i18n="a4">Разрешите установку из этого источника: Android сам предложит это при открытии файла (в браузере или
+          файловом менеджере). Дальше обновления приходят прямо в приложении.</p>
+      </details>
+      <details>
+        <summary><span data-i18n="q5">Как перенести библиотеку на другое устройство?</span> <svg class="i chev"><use href="#i-chevron"/></svg></summary>
+        <p data-i18n="a5">В <b class="ui"><svg class="i"><use href="#i-settings"/></svg>Настройки</b> → <b class="ui"><svg class="i"><use href="#i-sync"/></svg>Синхронизация</b> одно устройство показывает код, а другое находит его в сети и вводит
+          этот код. После этого библиотека, прогресс, оценки и достижения синхронизируются сами, пока устройства
+          в одной сети. Работает между компьютером и телефоном, двумя компьютерами или двумя телефонами. Через
+          интернет ничего не передаётся.</p>
+      </details>
+      <details>
+        <summary><span data-i18n="q6">Это бесплатно? Есть реклама?</span> <svg class="i chev"><use href="#i-chevron"/></svg></summary>
+        <p data-i18n="a6">Бесплатно и без рекламы. Исходный код открыт под лицензией GPL-3.0.</p>
+      </details>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <p data-i18n="disclaimer"><strong>Отказ от ответственности.</strong> hibiki не предоставляет, не хранит и не распространяет контент. Источники
+      подключаются из внешних репозиториев, ответственность за соблюдение местного законодательства лежит на пользователе.</p>
+  </div>
+</footer>
+
+<div class="lightbox" id="lightbox" role="dialog" aria-modal="true" hidden>
+  <button class="prev" type="button" aria-label="←"><svg class="i"><use href="#i-chevron"/></svg></button>
+  <img alt="">
+  <button class="next" type="button" aria-label="→"><svg class="i"><use href="#i-chevron"/></svg></button>
+</div>
+
+<script>
+// Always open at the top: browsers otherwise restore the last scroll position on a reload.
+if ("scrollRestoration" in history) history.scrollRestoration = "manual";
+addEventListener("pageshow", () => { if (!location.hash) scrollTo(0, 0); });
+
+// The download menu. Each platform links straight to its file in the newest release that has one,
+// so a click starts the download - no stop at GitHub's release page. A new platform is one more
+// entry in PLATFORMS (and an icon above).
+(() => {
+  const REPO = "akkirrai1337/hibiki";
+  const PLATFORMS = [
+    { id: "windows", name: "Windows", icon: "i-windows", match: /-setup\.exe$/i },
+    { id: "android", name: "Android", icon: "i-android", match: /\.apk$/i },
+  ];
+  const releasesPage = (repo) => `https://github.com/${repo}/releases/latest`;
+
+  const button = document.getElementById("download");
+  const menu = document.getElementById("download-menu");
+  const links = new Map();
+  for (const platform of PLATFORMS) {
+    const a = document.createElement("a");
+    a.setAttribute("role", "menuitem");
+    a.href = releasesPage(platform.fallbackRepo ?? REPO);
+    a.innerHTML = `<svg class="i solid os"><use href="#${platform.icon}"/></svg><span class="name">${platform.name}</span>`;
+    menu.append(a);
+    links.set(platform.id, a);
+  }
+
+  const setOpen = (open) => {
+    menu.classList.toggle("open", open);
+    button.setAttribute("aria-expanded", String(open));
+    if (open) menu.querySelector("a")?.focus({ preventScroll: true });
+  };
+  button.addEventListener("click", () => setOpen(!menu.classList.contains("open")));
+  document.addEventListener("click", (event) => {
+    if (!event.target.closest(".download")) setOpen(false);
+  });
+  document.addEventListener("keydown", (event) => {
+    if (!menu.classList.contains("open")) return;
+    const items = [...menu.querySelectorAll("a")];
+    const index = items.indexOf(document.activeElement);
+    if (event.key === "Escape") {
+      setOpen(false);
+      button.focus();
+    } else if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+      event.preventDefault();
+      const step = event.key === "ArrowDown" ? 1 : -1;
+      items[(index + step + items.length) % items.length].focus();
+    }
+  });
+  menu.addEventListener("click", (event) => {
+    if (event.target.closest("a")) setOpen(false);
+  });
+
+  // GitHub allows 60 unauthenticated API calls an hour per visitor; one per tab session is plenty.
+  async function releases(repo) {
+    const key = `hibiki-releases:${repo}`;
+    try {
+      const cached = JSON.parse(sessionStorage.getItem(key) || "null");
+      if (cached && Date.now() - cached.at < 10 * 60 * 1000) return cached.list;
+    } catch {}
+    const response = await fetch(`https://api.github.com/repos/${repo}/releases?per_page=30`, { headers: { Accept: "application/vnd.github+json" } });
+    if (!response.ok) throw new Error(`GitHub answered ${response.status}`);
+    const list = (await response.json())
+      .filter((r) => !r.draft && !r.prerelease)
+      .map((r) => ({ tag: r.tag_name, assets: r.assets.map((a) => ({ name: a.name, size: a.size, url: a.browser_download_url })) }));
+    try { sessionStorage.setItem(key, JSON.stringify({ at: Date.now(), list })); } catch {}
+    return list;
+  }
+
+  // Releases come newest first: the first one carrying this platform's file is its latest build.
+  function newestBuild(list, platform) {
+    for (const release of list) {
+      const asset = release.assets.find((a) => platform.match.test(a.name));
+      if (asset) return { version: release.tag.replace(/^v/i, ""), ...asset };
+    }
+    return null;
+  }
+
+  async function resolve(platform) {
+    const link = links.get(platform.id);
+    let build = newestBuild(await releases(REPO), platform);
+    if (!build && platform.fallbackRepo) build = newestBuild(await releases(platform.fallbackRepo), platform);
+    if (!build) {
+      link.setAttribute("aria-disabled", "true");
+      link.removeAttribute("href");
+      return;
+    }
+    link.href = build.url;
+    link.setAttribute("download", build.name);
+  }
+
+  // Until (or unless) the API answers, each link opens the latest release page - still one click
+  // from the file, never a dead end.
+  for (const platform of PLATFORMS) resolve(platform).catch(() => {});
+})();
+
+// Russian is what the markup carries; English replaces it. The language is the visitor's saved
+// choice, else their browser's (Ukrainian gets Ukrainian, Russian and Belarusian get Russian, everything else English).
+(() => {
+  const EN = {
+    title: "hibiki",
+    description: "hibiki is an anime client for finding titles, keeping a personal library and watching episodes with saved progress.",
+    lead: "hibiki is an anime client for finding titles, keeping a personal library and watching episodes with saved progress. Pluggable sources, a built-in player and downloads for offline viewing.",
+    download: "Download",
+    source: "Source code",
+    meta: "Free · open source (GPL-3.0)",
+    screens: "Screenshots",
+    altHome: "Home", altTitle: "Title page", altAndroidHome: "Home on Android", altAndroidTitle: "Title page on Android",
+    faq: "Questions and answers",
+    q1: "Where does the content come from?",
+    a1: "hibiki stores and serves nothing itself. Titles and episodes come from sources: extensions installed from external repositories. The app only shows what a source returns.",
+    q2: "How do I add sources?",
+    a2: "Open <b class=\"ui\"><svg class=\"i\"><use href=\"#i-radio\"/></svg>Sources</b> → <b>Repositories</b> → <b class=\"ui\"><svg class=\"i\"><use href=\"#i-plus\"/></svg>Add repository</b> and paste the address of its index. The repository's sources then appear in the list: install the ones you need and their catalog becomes available in the app.",
+    q3: "Windows says \"Windows protected your PC\"",
+    a3: "That is how SmartScreen treats programs without a paid code signature. Click <b>More info → Run anyway</b>. The source code is open, and the installer is built from it on GitHub.",
+    q4: "Android won't let me install the APK",
+    a4: "Allow installs from this source: Android offers it by itself when you open the file (in the browser or a file manager). After that, updates arrive inside the app.",
+    q5: "How do I move my library to another device?",
+    a5: "In <b class=\"ui\"><svg class=\"i\"><use href=\"#i-settings\"/></svg>Settings</b> → <b class=\"ui\"><svg class=\"i\"><use href=\"#i-sync\"/></svg>Sync</b> one device shows a code and the other finds it on the network and enters it. After that the library, progress, ratings and achievements sync by themselves while the devices share a network. It works between a computer and a phone, two computers or two phones. Nothing is sent over the internet.",
+    q6: "Is it free? Are there ads?",
+    a6: "Free and ad-free. The source code is open under the GPL-3.0 license.",
+    disclaimer: "<strong>Disclaimer.</strong> hibiki does not provide, store or distribute content. Sources are connected from external repositories, and complying with local law is the user's responsibility.",
+  };
+  const UK = {
+    title: "hibiki",
+    description: "hibiki — аніме-клієнт для пошуку тайтлів, ведення особистої бібліотеки та перегляду серій зі збереженням прогресу.",
+    lead: "hibiki — аніме-клієнт для пошуку тайтлів, ведення особистої бібліотеки та перегляду серій зі збереженням прогресу. Підключувані джерела, вбудований плеєр і завантаження для перегляду офлайн.",
+    download: "Завантажити",
+    source: "Вихідний код",
+    meta: "Безкоштовно · відкритий вихідний код (GPL-3.0)",
+    screens: "Скріншоти",
+    altHome: "Головна", altTitle: "Сторінка тайтла", altAndroidHome: "Головна на Android", altAndroidTitle: "Сторінка тайтла на Android",
+    faq: "Питання та відповіді",
+    q1: "Звідки береться контент?",
+    a1: "hibiki нічого не зберігає і не роздає сам. Тайтли та серії приходять із джерел — розширень, які встановлюються із зовнішніх репозиторіїв. Застосунок лише показує те, що віддає джерело.",
+    q2: "Як додати джерела?",
+    a2: "Відкрийте <b class=\"ui\"><svg class=\"i\"><use href=\"#i-radio\"/></svg>Джерела</b> → <b>Репозиторії</b> → <b class=\"ui\"><svg class=\"i\"><use href=\"#i-plus\"/></svg>Додати репозиторій</b> і вставте адресу його індексу. Після цього джерела з репозиторію з’являться у списку — встановіть потрібні, і їхній каталог стане доступним у застосунку.",
+    q3: "Windows пише «Система Windows захистила ваш комп’ютер»",
+    a3: "Так SmartScreen реагує на програми без платного цифрового підпису. Натисніть <b>Докладніше → Все одно виконати</b>. Вихідний код відкритий, а інсталятор збирається з нього на GitHub.",
+    q4: "Android не дає встановити APK",
+    a4: "Дозвольте встановлення з цього джерела: Android сам запропонує це під час відкриття файлу (у браузері чи файловому менеджері). Далі оновлення приходять просто в застосунку.",
+    q5: "Як перенести бібліотеку на інший пристрій?",
+    a5: "У <b class=\"ui\"><svg class=\"i\"><use href=\"#i-settings\"/></svg>Налаштування</b> → <b class=\"ui\"><svg class=\"i\"><use href=\"#i-sync\"/></svg>Синхронізація</b> один пристрій показує код, а інший знаходить його в мережі та вводить цей код. Після цього бібліотека, прогрес, оцінки й досягнення синхронізуються самі, поки пристрої в одній мережі. Працює між комп’ютером і телефоном, двома комп’ютерами або двома телефонами. Через інтернет нічого не передається.",
+    q6: "Це безкоштовно? Є реклама?",
+    a6: "Безкоштовно і без реклами. Вихідний код відкритий за ліцензією GPL-3.0.",
+    disclaimer: "<strong>Відмова від відповідальності.</strong> hibiki не надає, не зберігає і не розповсюджує контент. Джерела підключаються із зовнішніх репозиторіїв, відповідальність за дотримання місцевого законодавства лежить на користувачеві.",
+  };
+  const RU = {};
+  const nodes = [...document.querySelectorAll("[data-i18n]")];
+  const alts = [...document.querySelectorAll("[data-alt]")];
+  for (const node of nodes) RU[node.dataset.i18n] = node.innerHTML;
+  for (const node of alts) RU[node.dataset.alt] = node.alt;
+  const metas = [["meta[name=description]", "description"], ["meta[property='og:description']", "description"]];
+  for (const [selector] of metas) RU.description ??= document.querySelector(selector).content;
+  RU.title = document.title;
+
+  const button = document.getElementById("lang");
+  function apply(lang) {
+    const dict = { en: EN, uk: UK }[lang] ?? RU;
+    lang = dict === EN ? "en" : dict === UK ? "uk" : "ru";
+    document.documentElement.lang = lang;
+    document.title = dict.title;
+    for (const [selector] of metas) document.querySelector(selector).content = dict.description;
+    for (const node of nodes) node.innerHTML = dict[node.dataset.i18n];
+    for (const node of alts) node.alt = dict[node.dataset.alt];
+    button.value = lang;
+    try { localStorage.setItem("hibiki-lang", lang); } catch {}
+  }
+  let saved = null;
+  try { saved = localStorage.getItem("hibiki-lang"); } catch {}
+  const guess = /^uk\b/i.test(navigator.language) ? "uk" : /^(ru|be)\b/i.test(navigator.language) ? "ru" : "en";
+  const initial = ["ru", "en", "uk"].includes(saved) ? saved : guess;
+  if (initial !== "ru") apply(initial);
+  button.value = initial;
+  button.addEventListener("change", () => apply(button.value));
+})();
+
+// Screenshots open large; Esc, a click on the picture or the backdrop closes, arrows page through.
+(() => {
+  const box = document.getElementById("lightbox");
+  const image = box.querySelector("img");
+  const links = [...document.querySelectorAll(".gallery a")];
+  let index = 0;
+  const show = (next) => {
+    index = (next + links.length) % links.length;
+    const source = links[index].querySelector("img");
+    image.src = links[index].getAttribute("href");
+    image.alt = source.alt;
+  };
+  const open = (next) => { show(next); box.hidden = false; requestAnimationFrame(() => box.classList.add("open")); };
+  const close = () => { box.classList.remove("open"); setTimeout(() => { if (!box.classList.contains("open")) box.hidden = true; }, 200); };
+  links.forEach((link, i) => link.addEventListener("click", (event) => {
+    if (event.ctrlKey || event.metaKey || event.shiftKey) return;
+    event.preventDefault();
+    open(i);
+  }));
+  box.addEventListener("click", (event) => {
+    if (event.target.closest(".prev")) show(index - 1);
+    else if (event.target.closest(".next")) show(index + 1);
+    else close();
+  });
+  document.addEventListener("keydown", (event) => {
+    if (box.hidden || !box.classList.contains("open")) return;
+    if (event.key === "Escape") close();
+    else if (event.key === "ArrowLeft") show(index - 1);
+    else if (event.key === "ArrowRight") show(index + 1);
+  });
+})();
+</script>
+
+</body>
+</html>
