@@ -2,7 +2,8 @@ import { eq } from "drizzle-orm";
 import type { HibikiApi } from "@shared/hibikiApi";
 import type { RepositoryFetchResult } from "@shared/types";
 import { sourceRepositories } from "../db/schema";
-import { DEFAULT_APK_REPOSITORY_URL, DEFAULT_REPOSITORY_URL, fetchRepositoryResult, resolveRepositoryUrl } from "../marketplace";
+import { repositoryAlreadyAddedError } from "@shared/repositoryErrors";
+import { DEFAULT_APK_REPOSITORY_URL, DEFAULT_REPOSITORY_URL, fetchRepositoryResult, repositoryIndexCandidates, repositoryKey, resolveRepositoryUrl } from "../marketplace";
 import { logger } from "../logger";
 import { getPlatform } from "../platform";
 
@@ -29,7 +30,28 @@ async function listRepositoryUrls(): Promise<string[]> {
   await seedOnce(DEFAULT_REPOSITORY_URL, DEFAULT_REPOSITORY_SEEDED);
   if (getPlatform().apkSources) await seedOnce(DEFAULT_APK_REPOSITORY_URL, APK_REPOSITORY_SEEDED);
   const rows = await getDb().select().from(sourceRepositories).all();
-  return rows.map((r) => r.url);
+  // One URL per repository: copies saved before add() compared addresses (another spelling of the
+  // same index) go, the earliest-added one stays.
+  const seen = new Set<string>();
+  const kept = new Set<string>();
+  for (const { url } of [...rows].sort((a, b) => a.addedAt - b.addedAt)) {
+    const key = repositoryKey(url);
+    if (seen.has(key)) {
+      await getDb().delete(sourceRepositories).where(eq(sourceRepositories.url, url)).run();
+      logger.info("sources", `duplicate repository removed: ${url}`);
+      continue;
+    }
+    seen.add(key);
+    kept.add(url);
+  }
+  return rows.map((r) => r.url).filter((url) => kept.has(url));
+}
+
+/** Throws when the list already holds this repository under any spelling of its address. */
+async function assertNotListed(url: string): Promise<void> {
+  const key = repositoryKey(url);
+  const existing = (await listRepositoryUrls()).find((listed) => repositoryKey(listed) === key);
+  if (existing) throw repositoryAlreadyAddedError(existing);
 }
 
 /** The repository list and marketplace browsing parts of `window.hibiki.sources`. */
@@ -43,7 +65,11 @@ export function createRepositoriesApi(): Pick<HibikiApi["sources"], "repositorie
       async add(input: string): Promise<string[]> {
         let url: string;
         try {
+          // A direct index address is checked before anything is fetched: re-adding one needs no network.
+          const candidates = repositoryIndexCandidates(input);
+          if (candidates.length === 1) await assertNotListed(candidates[0]);
           url = await resolveRepositoryUrl(input);
+          await assertNotListed(url);
         } catch (error) {
           logger.warn("sources", `repository not added, ${input}: ${error instanceof Error ? error.message : String(error)}`);
           throw error;

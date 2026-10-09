@@ -381,6 +381,7 @@
     "repositoriesAdd": "Add repository",
     "repositoriesAddHint": "Repository link or its index.json",
     "repositoriesInvalidUrl": "Enter a valid HTTPS repository index URL",
+    "repositoriesAlreadyAdded": "This repository is already added",
     "repositoriesRemove": "Remove",
     "repositoriesRemoveConfirmTitle": "Remove repository?",
     "repositoriesRemoveConfirmMessage": "Remove {{name}} from the repository list? Installed extensions will remain available.",

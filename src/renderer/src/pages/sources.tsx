@@ -35,6 +35,7 @@ import { TabButton } from "@/components/TabButton";
 import { Modal } from "@/components/Modal";
 import { BottomSheet, SheetOption } from "@/components/BottomSheet";
 import type { MarketplaceExtension, RepositoryFetchResult, SourceCapability } from "@shared/types";
+import { isRepositoryAlreadyAdded } from "@shared/repositoryErrors";
 
 type Tab = "extensions" | "repositories";
 
@@ -314,7 +315,8 @@ export function SourcesPage({ embedded = false }: { embedded?: boolean } = {}) {
       queryClient.setQueryData(["repositories"], updated);
       return null;
     } catch (error) {
-      return error instanceof Error ? error.message : String(error);
+      const message = error instanceof Error ? error.message : String(error);
+      return isRepositoryAlreadyAdded(message) ? t("sources.repositoriesAlreadyAdded") : message;
     }
   }
 

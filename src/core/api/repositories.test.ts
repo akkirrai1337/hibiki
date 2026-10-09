@@ -8,7 +8,7 @@ import { describe, expect, it, vi } from "vitest";
 import * as schema from "../db/schema";
 import { sourceRepositories } from "../db/schema";
 import { applyMigrations, type MigrationJournal } from "../db/migrate";
-import { DEFAULT_APK_REPOSITORY_URL, DEFAULT_REPOSITORY_URL, repositoryIndexCandidates } from "../marketplace";
+import { DEFAULT_APK_REPOSITORY_URL, DEFAULT_REPOSITORY_URL, repositoryIndexCandidates, repositoryKey } from "../marketplace";
 import { getPlatform, installPlatform } from "../platform";
 import type { Platform } from "../../platform/types";
 import { createRepositoriesApi } from "./repositories";
@@ -95,5 +95,32 @@ describe("typed repository addresses", () => {
     };
     expect(await repositories.add("https://github.com/someone/sources")).toEqual(["https://raw.githubusercontent.com/someone/sources/master/repository/index.json"]);
     await expect(repositories.add("https://github.com/someone/nothing-here")).rejects.toThrow("No repository index found");
+  });
+});
+
+describe("the same repository twice", () => {
+  const longForm = "https://raw.githubusercontent.com/akkirrai1337/hibiki-sources/refs/heads/main/repository/index.json";
+
+  it("is one repository under any spelling of its raw address", () => {
+    expect(repositoryKey(longForm)).toBe(repositoryKey(DEFAULT_REPOSITORY_URL));
+    expect(repositoryKey("https://RAW.githubusercontent.com/AkkirRai1337/Hibiki-Sources/main/repository/index.json?x=1#top")).toBe(repositoryKey(DEFAULT_REPOSITORY_URL));
+    expect(repositoryKey("https://raw.githubusercontent.com/akkirrai1337/hibiki-sources/dev/repository/index.json")).not.toBe(repositoryKey(DEFAULT_REPOSITORY_URL));
+  });
+
+  it("is refused before anything is fetched, and through a GitHub page too", async () => {
+    const repositories = await install({ apk: false });
+    const request = vi.fn(async ({ url }: { url: string }) => ({ status: 200, url, headers: {}, body: JSON.stringify({ extensions: [] }) }));
+    (getPlatform() as unknown as Record<string, unknown>).http = { request };
+    await expect(repositories.add(longForm)).rejects.toThrow("[repository-already-added]");
+    await expect(repositories.add(DEFAULT_REPOSITORY_URL)).rejects.toThrow("[repository-already-added]");
+    expect(request).not.toHaveBeenCalled();
+    await expect(repositories.add("github.com/akkirrai1337/hibiki-sources")).rejects.toThrow("[repository-already-added]");
+    expect(await repositories.list()).toEqual([DEFAULT_REPOSITORY_URL]);
+  });
+
+  it("saved before this check is cleaned up, the earliest copy staying", async () => {
+    const repositories = await install({ apk: false, markers: ["default-repository-seeded"], repositories: [DEFAULT_REPOSITORY_URL, longForm] });
+    expect(await repositories.list()).toEqual([DEFAULT_REPOSITORY_URL]);
+    expect(await repositories.remove(DEFAULT_REPOSITORY_URL)).toEqual([]);
   });
 });

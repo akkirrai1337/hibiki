@@ -383,6 +383,7 @@
     "repositoriesAdd": "Добавить репозиторий",
     "repositoriesAddHint": "Ссылка на репозиторий или его index.json",
     "repositoriesInvalidUrl": "Введите корректный HTTPS-адрес индекса репозитория",
+    "repositoriesAlreadyAdded": "Этот репозиторий уже добавлен",
     "repositoriesRemove": "Удалить",
     "repositoriesRemoveConfirmTitle": "Удалить репозиторий?",
     "repositoriesRemoveConfirmMessage": "Удалить {{name}} из списка репозиториев? Установленные расширения останутся доступными.",

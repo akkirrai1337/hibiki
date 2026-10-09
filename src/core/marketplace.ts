@@ -137,6 +137,29 @@ export function repositoryIndexCandidates(input: string): string[] {
   return branches.flatMap((branch) => INDEX_PATHS.map((path) => raw(branch, folder + path)));
 }
 
+/**
+ * What makes two repository URLs the same repository: case-insensitive host, no query or fragment,
+ * no trailing slash, and on raw.githubusercontent.com a case-insensitive owner and repository with
+ * the long branch form (refs/heads/<branch>) read as the short one - so ".../refs/heads/main/..."
+ * typed by hand is the preinstalled ".../main/..." and not a second copy of it.
+ */
+export function repositoryKey(url: string): string {
+  let parsed: URL;
+  try {
+    parsed = new URL(url.trim());
+  } catch {
+    return url.trim();
+  }
+  const host = parsed.hostname.toLowerCase();
+  let segments = parsed.pathname.split("/").filter(Boolean);
+  if (host === "raw.githubusercontent.com" && segments.length >= 2) {
+    const [owner, repo, ...rest] = segments;
+    const path = rest[0] === "refs" && rest[1] === "heads" ? rest.slice(2) : rest;
+    segments = [owner.toLowerCase(), repo.toLowerCase(), ...path];
+  }
+  return `${host}${parsed.port ? `:${parsed.port}` : ""}/${segments.join("/")}`;
+}
+
 /** The first of a typed address's candidates (repositoryIndexCandidates) that really is an index. */
 export async function resolveRepositoryUrl(input: string): Promise<string> {
   const candidates = repositoryIndexCandidates(input);
