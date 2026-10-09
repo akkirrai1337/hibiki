@@ -25,7 +25,7 @@ export async function checkForUpdate(): Promise<AppUpdate | null> {
   const timer = setTimeout(() => controller.abort(), CHECK_TIMEOUT_MS);
   try {
     const response = await fetch(RELEASES_URL, {
-      headers: { Accept: "application/vnd.github+json", "User-Agent": `hibiki-desktop/${app.getVersion()}` },
+      headers: { Accept: "application/vnd.github+json", "User-Agent": `hibiki/${app.getVersion()}` },
       signal: controller.signal,
     });
     if (!response.ok) {
@@ -71,7 +71,7 @@ export async function downloadUpdate(
   const target = path.join(directory, update.fileName);
   const partial = `${target}.part`;
 
-  const response = await fetch(update.downloadUrl, { headers: { "User-Agent": `hibiki-desktop/${app.getVersion()}` } });
+  const response = await fetch(update.downloadUrl, { headers: { "User-Agent": `hibiki/${app.getVersion()}` } });
   if (!response.ok || !response.body) throw new Error(`Download failed with HTTP ${response.status}`);
 
   const total = Number(response.headers.get("content-length")) || update.sizeBytes;

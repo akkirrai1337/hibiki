@@ -425,7 +425,7 @@ app.whenReady().then(async () => {
   ipcMain.handle(IPC.updatesOpenRelease, (_e, url: string) => {
     // Only this project's own releases - shell.openExternal hands the string to the OS, so an
     // arbitrary one from the renderer would be a way to launch anything the shell knows how to.
-    if (/^https:\/\/github\.com\/akkirrai1337\/hibiki-desktop\/releases\//.test(url)) return shell.openExternal(url);
+    if (/^https:\/\/github\.com\/akkirrai1337\/hibiki\/releases\//.test(url)) return shell.openExternal(url);
     logger.warn("update", `refused to open a non-release URL: ${url}`);
     return Promise.resolve();
   });

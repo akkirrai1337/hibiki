@@ -4,7 +4,7 @@ import { isTrustedDownloadUrl, selectUpdate, type GitHubRelease } from "@shared/
 function release(overrides: Partial<GitHubRelease> & { tag_name: string }): GitHubRelease {
   const version = overrides.tag_name.replace(/^v/, "");
   return {
-    html_url: `https://github.com/akkirrai1337/hibiki-desktop/releases/tag/${overrides.tag_name}`,
+    html_url: `https://github.com/akkirrai1337/hibiki/releases/tag/${overrides.tag_name}`,
     body: "",
     draft: false,
     prerelease: false,
@@ -13,7 +13,7 @@ function release(overrides: Partial<GitHubRelease> & { tag_name: string }): GitH
       {
         name: `hibiki-v${version}-setup.exe`,
         size: 120_000_000,
-        browser_download_url: `https://github.com/akkirrai1337/hibiki-desktop/releases/download/${overrides.tag_name}/hibiki-v${version}-setup.exe`,
+        browser_download_url: `https://github.com/akkirrai1337/hibiki/releases/download/${overrides.tag_name}/hibiki-v${version}-setup.exe`,
       },
     ],
     ...overrides,
@@ -64,7 +64,7 @@ describe("selectUpdate", () => {
       assets: [{
         name: "hibiki-v1.1.0-setup.exe.blockmap",
         size: 130_000,
-        browser_download_url: "https://github.com/akkirrai1337/hibiki-desktop/releases/download/v1.1.0/a.blockmap",
+        browser_download_url: "https://github.com/akkirrai1337/hibiki/releases/download/v1.1.0/a.blockmap",
       }],
     });
     expect(selectUpdate([noAssets], "1.0.0")).toBeNull();
