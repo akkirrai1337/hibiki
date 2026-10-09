@@ -27,6 +27,7 @@ import { cloudflareCheckError } from "@shared/cloudflare";
 import { logger } from "../logger";
 import { ExtensionStorage } from "./extensionStorage";
 import { withTitleFacts } from "./titleFacts";
+import { chronologicalGroups } from "./episodeOrder";
 
 const WORKER_TIMEOUT_MS = 30_000;
 const FILTER_TYPES = ["select", "multi", "tristate", "text", "range"];
@@ -587,7 +588,7 @@ export class ExtensionRuntime {
   }
 
   getPlaybackGroups(sourceId: string, titleId: string): Promise<PlaybackGroup[]> {
-    return this.shareRead("getPlaybackGroups", sourceId, [titleId], () => this.run("getPlaybackGroups", sourceId, [titleId]));
+    return this.shareRead("getPlaybackGroups", sourceId, [titleId], async () => chronologicalGroups(await this.run<PlaybackGroup[]>("getPlaybackGroups", sourceId, [titleId])));
   }
 
   getPlayerLinks(sourceId: string, titleId: string, groupId: string, episodeId: string, preference?: PlayerLinkPreference): Promise<PlayerLink[]> {

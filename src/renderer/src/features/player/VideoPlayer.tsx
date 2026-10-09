@@ -32,6 +32,8 @@ import type { Episode, PlayerLink, VideoSegment } from "@shared/types";
 import { audioTrackOptions, pickLinkForAudioTrack, pickLinkForDimension, pickLinkForQuality, playerOptions, qualityOptions, translationOptions } from "@/lib/playerLinks";
 import { playbackUrl } from "@/lib/playbackUrl";
 import { proxiedHlsLoader, streamRequestUrl, usesStreamProxy } from "@/lib/streamProxy";
+import { separateAudioMaster, syntheticManifestLoader } from "@/lib/hlsSeparateAudio";
+import { fillMissingCodecs } from "@/lib/dashCodecs";
 import { isGenericDubTitle } from "@/lib/dubTitle";
 import { subtitleFormatFromUrl, toVtt } from "@/lib/subtitles";
 import { hibiki } from "@/lib/hibiki";
@@ -1084,7 +1086,9 @@ export function VideoPlayer({ link, availableLinks, offlinePlayback, dubOptions,
     // module (DashMediaSource, see PlayerScreen.kt), so this mirrors that with dash.js rather
     // than falling back to the EMBED iframe just because the direct stream happens to be DASH.
     const isDash = link.type === "DIRECT_DASH";
-    trace(`selected ${link.type} ${link.translation ?? "?"}/${link.playerName ?? "?"} ${link.quality ?? "?"} at ${playbackUrlLabel(streamUrl)}; subtitles=${link.subtitles?.length ?? 0}; headers=${Object.keys(link.headers ?? {}).length}`);
+    // A video-only HLS variant whose sound comes as a separate playlist (APK sources).
+    const audioUrl = isHls && link.audioUrl ? playbackUrl(link.audioUrl) : null;
+    trace(`selected ${link.type} ${link.translation ?? "?"}/${link.playerName ?? "?"} ${link.quality ?? "?"} at ${playbackUrlLabel(streamUrl)}; subtitles=${link.subtitles?.length ?? 0}; separateAudio=${audioUrl ? "yes" : "no"}; headers=${Object.keys(link.headers ?? {}).length}`);
     setPlaybackError(null);
     // Nothing owns the element until one of the paths below claims it - an error arriving in
     // between belongs to the stream being torn down, not to this one.
@@ -1119,6 +1123,7 @@ export function VideoPlayer({ link, availableLinks, offlinePlayback, dubOptions,
         }
         await hibiki.player.registerHeaderOrigin(sessionId, subtitleUrl);
       }));
+      if (audioUrl && /^https?:/i.test(audioUrl)) await hibiki.player.registerHeaderOrigin(sessionId, audioUrl);
       trace(`subtitle/header origins ready in ${Math.round(performance.now() - setupStartedAt)}ms`);
       if (cancelled) return;
       if (isHls) {
@@ -1135,6 +1140,12 @@ export function VideoPlayer({ link, availableLinks, offlinePlayback, dubOptions,
         // Which stream this player instance is about to own. A switch that silently kept the old
         // stream, or a torn-down instance still loading, is otherwise invisible in an exported log.
         trace(`creating hls.js; nativeHls=${!HlsEngine.isSupported()}; attach target=${playbackUrlLabel(streamUrl)}`);
+        // A host with a stream proxy (Android) gets every request routed through it; desktop keeps
+        // hls.js's own loader. Separate audio is paired with the video in a master playlist made here.
+        const hlsLoader = (base: typeof HlsEngine.DefaultConfig.loader) => {
+          const network = usesStreamProxy() ? proxiedHlsLoader(base, sessionId) : base;
+          return audioUrl ? syntheticManifestLoader(network, streamUrl, separateAudioMaster(streamUrl, audioUrl)) : network;
+        };
         // hls.js's defaults keep every segment it has ever played (backBufferLength is Infinity) and
         // read ahead up to 10 minutes when the network allows, so a long session's buffered media
         // grew the renderer's memory for as long as the episode played. Thirty seconds behind the
@@ -1144,9 +1155,7 @@ export function VideoPlayer({ link, availableLinks, offlinePlayback, dubOptions,
           maxBufferLength: 40,
           maxMaxBufferLength: 60,
           maxBufferSize: 60 * 1000 * 1000,
-          // A host with a stream proxy (Android) gets every request routed through it; desktop keeps
-          // hls.js's own loader.
-          ...(usesStreamProxy() ? { loader: proxiedHlsLoader(HlsEngine.DefaultConfig.loader, sessionId) } : {}),
+          ...(usesStreamProxy() || audioUrl ? { loader: hlsLoader(HlsEngine.DefaultConfig.loader) } : {}),
         });
         let manifestLoaded = false;
         let firstFragmentLoaded = false;
@@ -1376,14 +1385,35 @@ export function VideoPlayer({ link, availableLinks, offlinePlayback, dubOptions,
         dash.on(DashMediaPlayer.events.ERROR, (e) => {
           log.error("player", "dash.js error:", e);
           dashErrors += 1;
-          if (dashErrors > MAX_DASH_RETRIES) {
+          // Nothing in the manifest is playable: dash.js gives up on its own, so waiting for more
+          // errors (or the startup timeout) would only keep the spinner turning.
+          const code = typeof e.error === "object" && e.error ? e.error.code : undefined;
+          if (code === DashMediaPlayer.errors.MANIFEST_ERROR_ID_NOSTREAMS_CODE || dashErrors > MAX_DASH_RETRIES) {
             const detail = typeof e.error === "object" && e.error ? e.error.message : e.error;
             const reason = detail || "playback failed";
             if (!reportPlaybackFailure(link, reason)) setPlaybackError(reason);
             dash?.destroy();
           }
         });
-        dash.initialize(video, streamUrl, true);
+        // A manifest that names no codecs plays nothing in dash.js ("No streams to play"): read them
+        // from the init segments and hand dash.js the completed manifest instead (lib/dashCodecs.ts).
+        let manifestSource = streamUrl;
+        try {
+          const load = async (url: string) => {
+            const response = await fetch(streamRequestUrl(sessionId, url));
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            return response;
+          };
+          const filled = await fillMissingCodecs(await (await load(streamUrl)).text(), streamUrl, async (url) => new Uint8Array(await (await load(url)).arrayBuffer()));
+          if (filled) {
+            trace("DASH manifest names no codecs; filled them from the init segments");
+            manifestSource = `data:application/dash+xml;base64,${btoa(unescape(encodeURIComponent(filled)))}`;
+          }
+        } catch (error) {
+          trace(`DASH manifest pre-check skipped: ${error instanceof Error ? error.message : String(error)}`);
+        }
+        if (cancelled) return;
+        dash.initialize(video, manifestSource, true);
       } else {
         elementOwnsSourceRef.current = true;
         video.src = streamRequestUrl(sessionId, streamUrl);

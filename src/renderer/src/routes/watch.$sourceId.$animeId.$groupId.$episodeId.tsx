@@ -111,23 +111,38 @@ const DISCORD_UPDATE_INTERVAL_MS = 16_000;
  * on the timeline as a nonsense multi-hour duration before, since hls.js/the <video> element take
  * it at face value for the displayed duration and the 90%-watched threshold alike. An episode
  * downloaded before that was tracked falls back to a permissive placeholder (still wrong, but
- * only discovered as such once real data arrives - see the `ended` handling this leans on). */
-function localFileLink({ filePath, durationMs, quality, subtitles: saved }: DownloadedEpisodeFile): PlayerLink {
+ * only discovered as such once real data arrives - see the `ended` handling this leans on).
+ *
+ * A stream saved as several files gets one such playlist per file: fMP4 fragments behind their
+ * init segment (`#EXT-X-MAP`), and a separate audio track as the link's `audioUrl`, which the
+ * player pairs with the video the same way it does online. */
+function localFileLink({ filePath, durationMs, quality, subtitles: saved, parts }: DownloadedEpisodeFile): PlayerLink {
   // Saved beside the episode as WebVTT when it was downloaded.
   const subtitles = saved.map((subtitle) => ({ url: downloadFileUrl(subtitle.filePath), label: subtitle.label, language: subtitle.language }));
-  if (!filePath.toLowerCase().endsWith(".ts")) return { url: downloadFileUrl(filePath), type: "DIRECT_MP4", quality, subtitles };
+  if (!/\.(ts|m4s)$/i.test(filePath) && !parts.audio) return { url: downloadFileUrl(filePath), type: "DIRECT_MP4", quality, subtitles };
   const durationSeconds = durationMs ? Math.ceil(durationMs / 1000) : 100_000;
-  const playlist = [
-    "#EXTM3U",
-    "#EXT-X-VERSION:3",
-    `#EXT-X-TARGETDURATION:${durationSeconds}`,
-    "#EXT-X-PLAYLIST-TYPE:VOD",
-    `#EXTINF:${durationSeconds},`,
-    downloadFileUrl(filePath),
-    "#EXT-X-ENDLIST",
-    "",
-  ].join("\n");
-  return { url: `data:application/vnd.apple.mpegurl;base64,${btoa(unescape(encodeURIComponent(playlist)))}`, type: "DIRECT_HLS", quality, subtitles };
+  const playlist = (mediaFile: string, initFile: string | undefined) => {
+    const text = [
+      "#EXTM3U",
+      // EXT-X-MAP in a playlist without I-frames needs version 6.
+      `#EXT-X-VERSION:${initFile ? 6 : 3}`,
+      `#EXT-X-TARGETDURATION:${durationSeconds}`,
+      "#EXT-X-PLAYLIST-TYPE:VOD",
+      ...(initFile ? [`#EXT-X-MAP:URI="${downloadFileUrl(initFile)}"`] : []),
+      `#EXTINF:${durationSeconds},`,
+      downloadFileUrl(mediaFile),
+      "#EXT-X-ENDLIST",
+      "",
+    ].join("\n");
+    return `data:application/vnd.apple.mpegurl;base64,${btoa(unescape(encodeURIComponent(text)))}`;
+  };
+  return {
+    url: playlist(filePath, parts.videoInit),
+    type: "DIRECT_HLS",
+    quality,
+    subtitles,
+    ...(parts.audio ? { audioUrl: playlist(parts.audio, parts.audioInit) } : {}),
+  };
 }
 
 /** 83_000 -> "1:23", for the log. */

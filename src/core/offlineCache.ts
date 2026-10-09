@@ -1,7 +1,8 @@
 import { eq, and, or } from "drizzle-orm";
-import type { AnimeTitle, CachedAnimeEntry, CachedPlaybackGroupsEntry, DownloadedEpisode, DownloadedEpisodeFile, DownloadedSubtitle, PlaybackGroup } from "@shared/types";
+import type { AnimeTitle, CachedAnimeEntry, CachedPlaybackGroupsEntry, DownloadedEpisode, DownloadedEpisodeFile, DownloadedParts, DownloadedSubtitle, PlaybackGroup } from "@shared/types";
 import { getPlatform } from "./platform";
 import { cachedAnime, cachedPlaybackGroups, downloadedEpisodes } from "./db/schema";
+import { chronologicalGroups } from "./extensions/episodeOrder";
 
 const getDb = () => getPlatform().db.get();
 
@@ -89,7 +90,7 @@ export async function getCachedPlaybackGroupsEntry(sourceId: string, animeId: st
     .from(cachedPlaybackGroups)
     .where(and(eq(cachedPlaybackGroups.sourceId, sourceId), eq(cachedPlaybackGroups.animeId, animeId)))
     .get();
-  return row ? { groups: JSON.parse(row.groupsJson) as PlaybackGroup[], cachedAt: row.cachedAt } : null;
+  return row ? { groups: chronologicalGroups(JSON.parse(row.groupsJson) as PlaybackGroup[]), cachedAt: row.cachedAt } : null;
 }
 
 export async function recordDownloadedEpisode(entry: {
@@ -104,11 +105,13 @@ export async function recordDownloadedEpisode(entry: {
   durationMs: number | null;
   quality: string | null;
   subtitles: DownloadedSubtitle[];
+  parts: DownloadedParts;
 }): Promise<void> {
   const subtitles = entry.subtitles.length > 0 ? JSON.stringify(entry.subtitles) : null;
+  const parts = Object.keys(entry.parts).length > 0 ? JSON.stringify(entry.parts) : null;
   await getDb()
     .insert(downloadedEpisodes)
-    .values({ ...entry, subtitles, downloadedAt: Date.now() })
+    .values({ ...entry, subtitles, parts, downloadedAt: Date.now() })
     .onConflictDoUpdate({
       target: [downloadedEpisodes.sourceId, downloadedEpisodes.animeId, downloadedEpisodes.episodeId],
       set: {
@@ -120,6 +123,7 @@ export async function recordDownloadedEpisode(entry: {
         durationMs: entry.durationMs,
         quality: entry.quality,
         subtitles,
+        parts,
         downloadedAt: Date.now(),
       },
     })
@@ -169,13 +173,30 @@ function parseSubtitles(raw: string | null): DownloadedSubtitle[] {
   }
 }
 
+/** The stored extra files; anything unreadable is none, leaving the episode its main file. */
+function parseParts(raw: string | null): DownloadedParts {
+  if (!raw) return {};
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object") return {};
+    const parts: DownloadedParts = {};
+    for (const key of ["videoInit", "audio", "audioInit"] as const) {
+      const value = (parsed as Record<string, unknown>)[key];
+      if (typeof value === "string") parts[key] = value;
+    }
+    return parts;
+  } catch {
+    return {};
+  }
+}
+
 export async function getDownloadedEpisode(sourceId: string, animeId: string, episodeId: string): Promise<DownloadedEpisodeFile | null> {
   const row = await getDb()
-    .select({ filePath: downloadedEpisodes.filePath, durationMs: downloadedEpisodes.durationMs, quality: downloadedEpisodes.quality, subtitles: downloadedEpisodes.subtitles })
+    .select({ filePath: downloadedEpisodes.filePath, durationMs: downloadedEpisodes.durationMs, quality: downloadedEpisodes.quality, subtitles: downloadedEpisodes.subtitles, parts: downloadedEpisodes.parts })
     .from(downloadedEpisodes)
     .where(and(eq(downloadedEpisodes.sourceId, sourceId), eq(downloadedEpisodes.animeId, animeId), eq(downloadedEpisodes.episodeId, episodeId)))
     .get();
-  return row ? { ...row, subtitles: parseSubtitles(row.subtitles) } : null;
+  return row ? { ...row, subtitles: parseSubtitles(row.subtitles), parts: parseParts(row.parts) } : null;
 }
 
 export async function deleteDownloadedEpisodeRow(sourceId: string, animeId: string, episodeId: string): Promise<void> {

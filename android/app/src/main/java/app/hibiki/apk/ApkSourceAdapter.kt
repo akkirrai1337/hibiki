@@ -8,6 +8,7 @@ import eu.kanade.tachiyomi.animesource.model.Hoster
 import eu.kanade.tachiyomi.animesource.model.SAnime
 import eu.kanade.tachiyomi.animesource.model.SEpisode
 import eu.kanade.tachiyomi.animesource.model.TimeStamp
+import eu.kanade.tachiyomi.animesource.model.Track
 import eu.kanade.tachiyomi.animesource.model.Video
 import eu.kanade.tachiyomi.animesource.online.AnimeHttpSource
 import eu.kanade.tachiyomi.network.NetworkFailureLog
@@ -173,7 +174,7 @@ class ApkSourceAdapter(
         }
         val startedAt = System.currentTimeMillis()
         val videos = loadVideos(episode)
-        val links = coroutineScope { videos.map { hosted -> async { toPlayerLink(hosted) } }.awaitAll() }.filterNotNull()
+        val links = coroutineScope { videos.map { hosted -> async { toPlayerLinks(hosted) } }.awaitAll() }.flatten()
         if (links.isEmpty()) {
             // Extensions swallow their own network errors and return nothing; the client kept them.
             val cause = NetworkFailureLog.summary(startedAt)
@@ -225,13 +226,13 @@ class ApkSourceAdapter(
     /** A video with the hoster it was listed under, when the source has hosters. */
     private data class HostedVideo(val video: Video, val hosterName: String?)
 
-    private suspend fun toPlayerLink(hosted: HostedVideo): JSONObject? {
+    private suspend fun toPlayerLinks(hosted: HostedVideo): List<JSONObject> {
         val video = hosted.video
         val directUrl = video.videoUrl.takeIf(String::isNotBlank)
         val url = directUrl ?: video.url
-        if (url.isBlank()) return null
+        if (url.isBlank()) return emptyList()
         val headers = video.headers?.toMultimap()?.mapValues { (_, values) -> values.joinToString(", ") }.orEmpty()
-        return JSONObject().apply {
+        val link = JSONObject().apply {
             put("url", url)
             // Aniyomi video URLs are streams, not embed pages; only a page URL the source never resolved is an embed.
             put("type", if (directUrl != null) streamType(directUrl, headers) else "EMBED")
@@ -241,10 +242,6 @@ class ApkSourceAdapter(
             // source without hosters is one player named after the source.
             put("playerName", hosted.hosterName ?: source.name)
             put("segments", JSONArray(video.timestamps.mapNotNull(::toSegment).sortedBy { it.getLong("startMs") }))
-            video.audioTracks.firstOrNull()?.url?.takeIf(String::isNotBlank)?.let {
-                put("audioUrl", it)
-                put("audioHeaders", JSONObject(headers))
-            }
             put("subtitles", JSONArray(video.subtitleTracks.filter { it.url.isNotBlank() }.map { track ->
                 JSONObject().apply {
                     put("url", track.url)
@@ -253,6 +250,29 @@ class ApkSourceAdapter(
                     put("headers", JSONObject(headers))
                 }
             }))
+        }
+        // Sound that comes as its own stream beside a video-only one. Each track becomes a link of its
+        // own, so the player's audio-track menu switches between them; a lone track needs no name.
+        val audioTracks = video.audioTracks.filter { it.url.isNotBlank() }.distinctBy { it.url }
+        if (audioTracks.isEmpty()) return listOf(link)
+        val names = audioTrackNames(audioTracks)
+        return audioTracks.mapIndexed { index, track ->
+            JSONObject(link.toString()).apply {
+                put("audioUrl", track.url)
+                put("audioHeaders", JSONObject(headers))
+                if (audioTracks.size > 1) put("audioTrack", names[index])
+            }
+        }
+    }
+
+    /** Track names as the source gives them, numbered where two share one. */
+    private fun audioTrackNames(tracks: List<Track>): List<String> {
+        val seen = mutableMapOf<String, Int>()
+        return tracks.mapIndexed { index, track ->
+            val name = track.lang.trim().ifEmpty { "Audio ${index + 1}" }
+            val count = (seen[name] ?: 0) + 1
+            seen[name] = count
+            if (count > 1) "$name $count" else name
         }
     }
 

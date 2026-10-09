@@ -1,7 +1,7 @@
 import type { HibikiApi } from "@shared/hibikiApi";
 import { IPC } from "@shared/ipc";
 import { subtitleFormatFromUrl, toVtt } from "@shared/subtitles";
-import type { DownloadedSubtitle, DownloadProgress, DownloadRequest, PlayerLink } from "@shared/types";
+import type { DownloadedParts, DownloadedSubtitle, DownloadProgress, DownloadRequest, PlayerLink } from "@shared/types";
 import type { ExtensionRuntime } from "../extensions/runtime";
 import {
   cacheAnime,
@@ -59,11 +59,11 @@ interface DownloadState {
   // paused (nothing in flight) has nothing for `controller.abort()` to interrupt, so it needs to
   // know to do the cleanup itself instead of relying on runDownload's catch block to get triggered.
   running: boolean;
-  // HLS resume point - the segment list only needs resolving once, then this just tracks how far
-  // through it the file on disk already goes.
-  segmentUris?: string[];
-  playlistUrl?: string;
-  nextSegmentIndex: number;
+  // HLS resume point - the streams (the video, plus its audio when that comes separately) only need
+  // resolving once, then each just tracks how far through its segments its file already goes.
+  hlsTracks?: HlsTrack[];
+  // The files saved beside `outFile` (separate audio, fMP4 init segments).
+  parts: DownloadedParts;
   // Summed from the playlist's own #EXTINF values the moment it's resolved - the real total
   // duration, for the synthetic single-file HLS playlist the watch page wraps a downloaded .ts in
   // to play it back (see localFileLink in the watch route) instead of a made-up placeholder.
@@ -81,87 +81,173 @@ async function fetchText(url: string, headers: Record<string, string> | null | u
   if (res.status < 200 || res.status >= 300) throw new Error(`HTTP ${res.status}`);
   return res.body;
 }
+type Headers = Record<string, string> | null | undefined;
+
+/** One HLS stream being saved into its own file. */
+interface HlsTrack {
+  kind: "video" | "audio";
+  filePath: string;
+  headers: Headers;
+  playlistUrl: string;
+  /** The fMP4 init segment, saved first into a file of its own. */
+  init?: { uri: string; filePath: string; done: boolean };
+  segmentUris: string[];
+  nextIndex: number;
+}
+
+/** An attribute of an HLS tag line (`NAME="value"` or `NAME=value`), unquoted. */
+function tagAttribute(line: string, name: string): string | undefined {
+  const match = new RegExp(`[:,]${name}=("([^"]*)"|[^,]*)`).exec(line);
+  return match ? (match[2] ?? match[1]) : undefined;
+}
 
 /** Resolves a master playlist down to a single media playlist by taking its first listed variant
  * - a direct PlayerLink's own `quality` was already picked upstream, so this only exists to unwrap
- * the occasional source that still hands back a master playlist instead of the final media one. */
-async function resolveMediaPlaylist(url: string, headers: Record<string, string> | null | undefined, signal: AbortSignal): Promise<{ url: string; text: string }> {
+ * the occasional source that still hands back a master playlist instead of the final media one.
+ * When that variant's sound is a separate rendition, its URL comes back as `audioUrl`. */
+async function resolveMediaPlaylist(url: string, headers: Headers, signal: AbortSignal): Promise<{ url: string; text: string; audioUrl?: string }> {
   let currentUrl = url;
   let text = await fetchText(currentUrl, headers, signal);
+  let audioUrl: string | undefined;
   if (text.includes("#EXT-X-STREAM-INF")) {
-    const variantLine = text.split("\n").map((l) => l.trim()).find((l) => l && !l.startsWith("#"));
+    const lines = text.split("\n").map((l) => l.trim());
+    const infIndex = lines.findIndex((l) => l.startsWith("#EXT-X-STREAM-INF"));
+    const variantLine = lines.slice(infIndex + 1).find((l) => l && !l.startsWith("#"));
     if (!variantLine) throw new Error("empty master playlist");
+    const group = tagAttribute(lines[infIndex], "AUDIO");
+    const renditions = group
+      ? lines.filter((l) => l.startsWith("#EXT-X-MEDIA:") && tagAttribute(l, "TYPE") === "AUDIO" && tagAttribute(l, "GROUP-ID") === group && tagAttribute(l, "URI"))
+      : [];
+    const rendition = renditions.find((l) => tagAttribute(l, "DEFAULT") === "YES") ?? renditions[0];
+    if (rendition) audioUrl = new URL(tagAttribute(rendition, "URI")!, currentUrl).toString();
     currentUrl = new URL(variantLine, currentUrl).toString();
     text = await fetchText(currentUrl, headers, signal);
   }
-  return { url: currentUrl, text };
+  return { url: currentUrl, text, audioUrl };
 }
 
-/** Downloads whatever's left of an HLS media playlist (from `state.nextSegmentIndex` on - 0 for a
- * fresh start, wherever a previous pause left off otherwise) and appends each segment's raw bytes
- * to the output file - segments are MPEG-TS, which (unlike, say, raw H.264 NAL units) is a
- * container format designed to be concatenable, so the result plays back fine in VLC/most players
- * without needing an ffmpeg remux this app doesn't bundle. AES-encrypted streams aren't supported
- * (no key exchange/decryption here), nor is a separate audio track (`audioUrl`) - both surface as
- * a plain thrown error, which the caller reports back as a failed download rather than silently
- * producing a video-only or undecodable file.
+/** The segments of a media playlist, its fMP4 init segment and its total #EXTINF duration. */
+function parseMediaPlaylist(text: string): { segmentUris: string[]; initUri?: string; durationSeconds: number } {
+  if (/#EXT-X-KEY:METHOD=(?!NONE)/i.test(text)) throw new Error("an encrypted stream isn't supported");
+  if (/#EXT-X-BYTERANGE/i.test(text)) throw new Error("a byte-range playlist isn't supported");
+  const segmentUris: string[] = [];
+  let initUri: string | undefined;
+  let durationSeconds = 0;
+  let pendingExtinf = 0;
+  for (const rawLine of text.split("\n")) {
+    const line = rawLine.trim();
+    if (line.startsWith("#EXT-X-MAP:")) {
+      if (initUri !== undefined) throw new Error("a playlist with several init segments isn't supported");
+      if (tagAttribute(line, "BYTERANGE")) throw new Error("a byte-range playlist isn't supported");
+      initUri = tagAttribute(line, "URI");
+      continue;
+    }
+    const extinf = /^#EXTINF:([\d.]+)/.exec(line);
+    if (extinf) {
+      pendingExtinf = Number(extinf[1]);
+      continue;
+    }
+    if (!line || line.startsWith("#")) continue;
+    segmentUris.push(line);
+    durationSeconds += pendingExtinf;
+    pendingExtinf = 0;
+  }
+  if (segmentUris.length === 0) throw new Error("the playlist has no segments");
+  return { segmentUris, initUri, durationSeconds };
+}
+
+/** Resolves one stream and decides the files it lands in: `<base><suffix>.<ext>`, plus an
+ * `.init.mp4` beside it for fMP4. */
+async function prepareHlsTrack(kind: HlsTrack["kind"], url: string, headers: Headers, base: string, signal: AbortSignal) {
+  const resolved = await resolveMediaPlaylist(url, headers, signal);
+  const media = parseMediaPlaylist(resolved.text);
+  const suffix = kind === "audio" ? ".audio" : "";
+  // fMP4 fragments only play behind their init segment; packed audio (.aac) keeps its own type.
+  const firstSegmentPath = new URL(media.segmentUris[0], resolved.url).pathname.toLowerCase();
+  const ext = media.initUri ? "m4s" : kind === "audio" && firstSegmentPath.endsWith(".aac") ? "aac" : "ts";
+  const track: HlsTrack = {
+    kind,
+    filePath: `${base}${suffix}.${ext}`,
+    headers,
+    playlistUrl: resolved.url,
+    init: media.initUri ? { uri: media.initUri, filePath: `${base}${suffix}.init.mp4`, done: false } : undefined,
+    segmentUris: media.segmentUris,
+    nextIndex: 0,
+  };
+  return { track, durationSeconds: media.durationSeconds, audioUrl: resolved.audioUrl };
+}
+
+/** Downloads whatever's left of an HLS stream (from each track's `nextIndex` on - 0 for a fresh
+ * start, wherever a previous pause left off otherwise) and appends each segment's raw bytes to that
+ * track's file - MPEG-TS, packed AAC and fMP4 fragments are all made to be concatenated, so the
+ * result plays without an ffmpeg remux this app doesn't bundle. A separate audio track (the link's
+ * `audioUrl`, or the master playlist's audio rendition) is saved the same way into a file of its
+ * own, and an fMP4 init segment into one more; offline playback pairs them up again. AES-encrypted
+ * and byte-range streams aren't supported - those surface as a plain thrown error, which the caller
+ * reports back as a failed download rather than silently producing an undecodable file.
  *
  * Each segment is written only once it has fully arrived (`buffered`), so a pause in the middle of
  * one leaves the file ending exactly at the previous segment and resume appends it whole. */
 async function downloadHls(state: DownloadState, onProgress: (percent: number) => void): Promise<void> {
   const { link, controller } = state;
-  if (link.audioUrl) throw new Error("a separate audio track isn't supported");
-  if (!state.segmentUris) {
-    const { url: playlistUrl, text } = await resolveMediaPlaylist(link.url, link.headers, controller.signal);
-    if (/#EXT-X-KEY:METHOD=(?!NONE)/i.test(text)) throw new Error("an encrypted stream isn't supported");
-    const segmentUris: string[] = [];
-    let durationSeconds = 0;
-    let pendingExtinf = 0;
-    for (const rawLine of text.split("\n")) {
-      const line = rawLine.trim();
-      const extinf = /^#EXTINF:([\d.]+)/.exec(line);
-      if (extinf) {
-        pendingExtinf = Number(extinf[1]);
-        continue;
-      }
-      if (!line || line.startsWith("#")) continue;
-      segmentUris.push(line);
-      durationSeconds += pendingExtinf;
-      pendingExtinf = 0;
-    }
-    if (segmentUris.length === 0) throw new Error("the playlist has no segments");
-    state.segmentUris = segmentUris;
-    state.playlistUrl = playlistUrl;
+  if (!state.hlsTracks) {
+    const base = state.outFile.replace(/\.[^./\\]+$/, "");
+    const video = await prepareHlsTrack("video", link.url, link.headers, base, controller.signal);
+    const tracks = [video.track];
+    const audioUrl = link.audioUrl ?? video.audioUrl;
+    if (audioUrl) tracks.push((await prepareHlsTrack("audio", audioUrl, link.audioHeaders ?? link.headers, base, controller.signal)).track);
+    const audio = tracks.find((track) => track.kind === "audio");
+    state.outFile = video.track.filePath;
+    state.parts = {
+      ...(video.track.init ? { videoInit: video.track.init.filePath } : {}),
+      ...(audio ? { audio: audio.filePath } : {}),
+      ...(audio?.init ? { audioInit: audio.init.filePath } : {}),
+    };
+    state.hlsTracks = tracks;
     // #EXTINF is mandatory per segment in the HLS spec, so this is normally an exact total: only
     // left unset (falling back to the watch page's own placeholder) if the playlist is malformed
     // enough to have none of them at all.
-    if (durationSeconds > 0) state.durationMs = Math.round(durationSeconds * 1000);
+    if (video.durationSeconds > 0) state.durationMs = Math.round(video.durationSeconds * 1000);
   }
-  const { segmentUris, playlistUrl } = state as Required<Pick<DownloadState, "segmentUris" | "playlistUrl">>;
+  const tracks = state.hlsTracks;
+  const total = tracks.reduce((sum, track) => sum + track.segmentUris.length + (track.init ? 1 : 0), 0);
+  const reportProgress = () => {
+    const done = tracks.reduce((sum, track) => sum + track.nextIndex + (track.init?.done ? 1 : 0), 0);
+    onProgress(Math.round((done / total) * 100));
+  };
 
-  // A fresh start replaces whatever file is there; a resume continues it.
-  const startIndex = state.nextSegmentIndex;
-  for (let i = startIndex; i < segmentUris.length; i++) {
-    const segmentUrl = new URL(segmentUris[i], playlistUrl).toString();
-    try {
-      await getPlatform().downloads.fetchToFile({
-        url: segmentUrl,
-        headers: link.headers ?? undefined,
-        filePath: state.outFile,
-        append: !(i === 0 && startIndex === 0),
-        buffered: true,
-        signal: controller.signal,
-      });
-    } catch (error) {
-      if (error instanceof Error && /^HTTP \d+$/.test(error.message)) {
-        throw new Error(`segment ${i + 1}/${segmentUris.length}: ${error.message}`);
+  for (const track of tracks) {
+    const fetchPiece = async (uri: string, filePath: string, append: boolean, what: string) => {
+      try {
+        await getPlatform().downloads.fetchToFile({
+          url: new URL(uri, track.playlistUrl).toString(),
+          headers: track.headers ?? undefined,
+          filePath,
+          append,
+          buffered: true,
+          signal: controller.signal,
+        });
+      } catch (error) {
+        if (error instanceof Error && /^HTTP \d+$/.test(error.message)) throw new Error(`${track.kind} ${what}: ${error.message}`);
+        throw error;
       }
-      throw error;
+    };
+    if (track.init && !track.init.done) {
+      await fetchPiece(track.init.uri, track.init.filePath, false, "init segment");
+      track.init.done = true;
+      reportProgress();
     }
-    state.nextSegmentIndex = i + 1;
-    onProgress(Math.round((state.nextSegmentIndex / segmentUris.length) * 100));
+    // A fresh start replaces whatever file is there; a resume continues it.
+    for (let i = track.nextIndex; i < track.segmentUris.length; i++) {
+      await fetchPiece(track.segmentUris[i], track.filePath, i > 0, `segment ${i + 1}/${track.segmentUris.length}`);
+      track.nextIndex = i + 1;
+      reportProgress();
+    }
   }
 }
+
+/** Every file a download writes: the main one and the parts beside it. */
+const downloadFiles = (state: { outFile: string; parts: DownloadedParts }) => [state.outFile, ...Object.values(state.parts)];
 
 /** A plain progressive download (DIRECT_MP4), resumed via an HTTP Range request when
  * `state.bytesReceived > 0`. If the server doesn't actually honor the range (some don't, and just
@@ -238,9 +324,9 @@ async function downloadSubtitles(state: DownloadState): Promise<DownloadedSubtit
 async function cacheForOffline(state: DownloadState, subtitles: DownloadedSubtitle[]): Promise<void> {
   const { sourceId, animeId, groupId, episodeId, episodeNumber, episodeLabel } = state.request;
   try {
-    const fileStat = await getPlatform().files.stat(state.outFile);
-    if (!fileStat) throw new Error("downloaded file is missing");
-    await recordDownloadedEpisode({ sourceId, animeId, groupId, episodeId, episodeNumber, episodeLabel, filePath: state.outFile, fileSizeBytes: fileStat.size, durationMs: state.durationMs ?? null, quality: state.link.quality ?? null, subtitles });
+    const fileSizeBytes = await downloadedSize(state);
+    if (fileSizeBytes === null) throw new Error("downloaded file is missing");
+    await recordDownloadedEpisode({ sourceId, animeId, groupId, episodeId, episodeNumber, episodeLabel, filePath: state.outFile, fileSizeBytes, durationMs: state.durationMs ?? null, quality: state.link.quality ?? null, subtitles, parts: state.parts });
     const [anime, groups] = await Promise.all([state.runtime.getById(sourceId, animeId), state.runtime.getPlaybackGroups(sourceId, animeId)]);
     await cacheAnime(sourceId, animeId, anime);
     await cachePlaybackGroups(sourceId, animeId, groups);
@@ -251,6 +337,13 @@ async function cacheForOffline(state: DownloadState, subtitles: DownloadedSubtit
 }
 
 const removeQuietly = (filePath: string) => getPlatform().files.remove(filePath).catch(() => {});
+const removeDownloadFiles = (state: { outFile: string; parts: DownloadedParts }) => Promise.all(downloadFiles(state).map(removeQuietly));
+
+/** The bytes on disk across every file of a download; null when one of them is missing. */
+async function downloadedSize(state: { outFile: string; parts: DownloadedParts }): Promise<number | null> {
+  const stats = await Promise.all(downloadFiles(state).map((filePath) => getPlatform().files.stat(filePath)));
+  return stats.every(Boolean) ? stats.reduce((sum, stat) => sum + stat!.size, 0) : null;
+}
 
 // At most this many transfers actually run at once - queuing the rest instead of firing off
 // everything a user selects at once keeps a "download all 10" from saturating bandwidth/disk I/O
@@ -287,7 +380,7 @@ export function createDownloadsApi(runtime: ExtensionRuntime): Omit<HibikiApi["d
     const label = jobLabel(state.request);
     const startedAt = Date.now();
     state.running = true;
-    const resuming = state.nextSegmentIndex > 0 || state.bytesReceived > 0;
+    const resuming = state.hlsTracks?.some((track) => track.nextIndex > 0 || track.init?.done) || state.bytesReceived > 0;
     logger.info("download", `${label}: ${resuming ? `resumed at ${state.lastPercent}%` : "started"} (${state.link.type}, ${state.link.quality ?? "?"}, ${state.link.playerName ?? "?"})`);
     try {
       send({ episodeId, status: "downloading", percent: state.lastPercent });
@@ -301,7 +394,7 @@ export function createDownloadsApi(runtime: ExtensionRuntime): Omit<HibikiApi["d
       const subtitles = await downloadSubtitles(state);
       downloads.delete(episodeId);
       await cacheForOffline(state, subtitles);
-      const size = (await getPlatform().files.stat(state.outFile))?.size ?? 0;
+      const size = (await downloadedSize(state)) ?? 0;
       logger.info("download", `${label}: done in ${Math.round((Date.now() - startedAt) / 1000)}s, ${(size / 1024 / 1024).toFixed(1)} MB`);
       send({ episodeId, status: "done", filePath: state.outFile });
     } catch (err) {
@@ -315,7 +408,7 @@ export function createDownloadsApi(runtime: ExtensionRuntime): Omit<HibikiApi["d
         downloads.delete(episodeId);
         // A half-written file left behind by a cancelled download isn't useful to anyone - clean it
         // up rather than leaving a truncated video sitting in the downloads folder.
-        await removeQuietly(state.outFile);
+        await removeDownloadFiles(state);
         logger.info("download", `${label}: cancelled at ${state.lastPercent}%`);
         send({ episodeId, status: "cancelled" });
       } else {
@@ -339,8 +432,8 @@ export function createDownloadsApi(runtime: ExtensionRuntime): Omit<HibikiApi["d
     try {
       const links = await runtime.getPlayerLinks(request.sourceId, request.animeId, request.groupId, request.episodeId);
       const link = selectPlayerLink(links, request.quality, request.playerName);
-      if (!link || link.type === "EMBED" || link.type === "DIRECT_DASH" || link.audioUrl) {
-        const why = !link ? `no link among ${links.length}` : link.audioUrl ? "separate audio track" : link.type;
+      if (!link || link.type === "EMBED" || link.type === "DIRECT_DASH" || (link.audioUrl && link.type !== "DIRECT_HLS")) {
+        const why = !link ? `no link among ${links.length}` : link.audioUrl && link.type !== "DIRECT_HLS" ? `separate audio beside ${link.type}` : link.type;
         logger.info("download", `${jobLabel(request)}: can't be downloaded (${why})`);
         send({ episodeId: request.episodeId, status: "unsupported" });
         return;
@@ -352,7 +445,7 @@ export function createDownloadsApi(runtime: ExtensionRuntime): Omit<HibikiApi["d
       const ext = link.type === "DIRECT_MP4" ? "mp4" : "ts";
       const outFile = files.join(animeDir, `${sanitizeFilename(request.episodeLabel)}.${ext}`);
 
-      const state: DownloadState = { request, runtime, link, outFile, controller: new AbortController(), cancelled: false, running: false, nextSegmentIndex: 0, bytesReceived: 0, lastPercent: 0 };
+      const state: DownloadState = { request, runtime, link, outFile, controller: new AbortController(), cancelled: false, running: false, parts: {}, bytesReceived: 0, lastPercent: 0 };
       downloads.set(request.episodeId, state);
       await runDownload(state);
     } catch (err) {
@@ -418,7 +511,7 @@ export function createDownloadsApi(runtime: ExtensionRuntime): Omit<HibikiApi["d
         jobQueue.splice(queuedIndex, 1);
         const state = downloads.get(episodeId);
         downloads.delete(episodeId);
-        if (state) await removeQuietly(state.outFile);
+        if (state) await removeDownloadFiles(state);
         send({ episodeId, status: "cancelled" });
         return;
       }
@@ -434,7 +527,7 @@ export function createDownloadsApi(runtime: ExtensionRuntime): Omit<HibikiApi["d
       // interrupt, and so nothing that would otherwise reach runDownload's catch block to do the
       // cleanup. Do it here instead.
       downloads.delete(episodeId);
-      await removeQuietly(state.outFile);
+      await removeDownloadFiles(state);
       send({ episodeId, status: "cancelled" });
     },
 
@@ -445,7 +538,7 @@ export function createDownloadsApi(runtime: ExtensionRuntime): Omit<HibikiApi["d
       const row = await getDownloadedEpisode(sourceId, animeId, episodeId);
       await deleteDownloadedEpisodeRow(sourceId, animeId, episodeId);
       if (row) {
-        await removeQuietly(row.filePath);
+        await removeDownloadFiles({ outFile: row.filePath, parts: row.parts });
         await Promise.all(row.subtitles.map((subtitle) => removeQuietly(subtitle.filePath)));
       }
     },

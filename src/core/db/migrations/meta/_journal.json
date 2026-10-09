@@ -148,6 +148,13 @@
       "when": 1791403263163,
       "tag": "0020_sync_peer_pending_replace",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "6",
+      "when": 1791549294280,
+      "tag": "0021_downloaded_parts",
+      "breakpoints": true
     }
   ]
 }

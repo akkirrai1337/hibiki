@@ -5,6 +5,7 @@
 import type { BrowserFetchResult, BrowserPort, ChallengeSession, HarvestedCookie } from "../types";
 import { HibikiBrowser } from "./native";
 import { disposeResolverPages, performBrowserResolve } from "./browserResolve";
+import { logger } from "../../core/logger";
 
 const SHOW_AFTER_MS = 8_000;
 const GIVE_UP_AFTER_MS = 120_000;
@@ -188,8 +189,20 @@ async function browserFetch(pageUrl: string, targetUrl: string, options?: { meth
 const SOLVED_SETTLE_MS = 1_000;
 const isCloudflareCookie = (name: string) => name === "cf_clearance" || name.startsWith("__cf") || name.startsWith("cf_");
 
+/** The Cloudflare cookies the WebView holds for `url` and its parent domains. */
+async function cloudflareCookies(url: string): Promise<Map<string, string>> {
+  const found = new Map<string, string>();
+  for (const candidate of cookieUrlsFor(url)) {
+    for (const [name, value] of parseCookies((await HibikiBrowser.cookies({ url: candidate })).value)) {
+      if (isCloudflareCookie(name) && !found.has(name)) found.set(name, value);
+    }
+  }
+  return found;
+}
+
 async function solveChallengeVisibly(url: string): Promise<ChallengeSession | null> {
   const key = `check:${new URL(url).origin}`;
+  const host = new URL(url).host;
   let closed = false;
   const listener = await HibikiBrowser.addListener("closed", (event) => {
     if (event.key === key) closed = true;
@@ -198,23 +211,34 @@ async function solveChallengeVisibly(url: string): Promise<ChallengeSession | nu
     await HibikiBrowser.open({ key, url });
     await HibikiBrowser.show({ key });
     let passedAt = 0;
+    let lastState = "";
     for (;;) {
       await sleep(POLL_MS);
-      if (closed) return null;
+      if (closed) {
+        // Closed by the person once the check let them through: the clearance is there all the same.
+        if ((await cloudflareCookies(url)).has("cf_clearance")) {
+          logger.info("cloudflare", `check window for ${host} closed after cf_clearance was set`);
+          break;
+        }
+        return null;
+      }
       const state = await probe(key);
-      if (!state || state.challenged || !state.ready) {
+      const described = state ? `challenged=${state.challenged}, ready=${state.ready}` : "no answer";
+      if (described !== lastState) {
+        logger.debug("cloudflare", `check page for ${host}: ${described}`);
+        lastState = described;
+      }
+      // A site whose page never finishes loading (ads, long-polling) still counts once the
+      // interstitial is gone and the check has handed out its cookie.
+      const through = !!state && !state.challenged && (state.ready || (await cloudflareCookies(url)).has("cf_clearance"));
+      if (!through) {
         passedAt = 0;
         continue;
       }
       if (!passedAt) passedAt = Date.now();
       if (Date.now() - passedAt >= SOLVED_SETTLE_MS) break;
     }
-    const found = new Map<string, string>();
-    for (const candidate of cookieUrlsFor(url)) {
-      for (const [name, value] of parseCookies((await HibikiBrowser.cookies({ url: candidate })).value)) {
-        if (isCloudflareCookie(name) && !found.has(name)) found.set(name, value);
-      }
-    }
+    const found = await cloudflareCookies(url);
     // Pages kept for browserFetch may still hold the check; they load again on next use.
     for (const { key: pageKey, timer } of pages.values()) {
       clearTimeout(timer);

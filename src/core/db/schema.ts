@@ -114,6 +114,9 @@ export const downloadedEpisodes = sqliteTable(
     // The episode's subtitle tracks saved beside the video, converted to WebVTT: a JSON array of
     // { filePath, label, language } (DownloadedSubtitle). Null when there were none.
     subtitles: text("subtitles"),
+    // Files beside `filePath` that playback also needs: a separate audio track and the fMP4 init
+    // segments of either stream. A JSON DownloadedParts; null when the episode is one file.
+    parts: text("parts"),
     downloadedAt: integer("downloaded_at").notNull(),
   },
   (t) => [primaryKey({ columns: [t.sourceId, t.animeId, t.episodeId] })],

@@ -135,12 +135,23 @@ export interface DownloadedSubtitle {
   language: string | null;
 }
 
+/**
+ * The other files of a downloaded episode whose stream was more than one file: the separate audio
+ * track, and the fMP4 init segment each stream's fragments need in front of them.
+ */
+export interface DownloadedParts {
+  videoInit?: string;
+  audio?: string;
+  audioInit?: string;
+}
+
 /** What playback needs to know about a downloaded episode. */
 export interface DownloadedEpisodeFile {
   filePath: string;
   durationMs: number | null;
   quality: string | null;
   subtitles: DownloadedSubtitle[];
+  parts: DownloadedParts;
 }
 
 // A finished download, as listed on the "Downloaded episodes" screen - `animeTitle`/`animePosterUrl`
