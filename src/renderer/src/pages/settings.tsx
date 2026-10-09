@@ -1,7 +1,7 @@
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ListChecks, LogIn, LogOut, MemoryStick, ArrowDownToLine, ArrowUpDown, Ban, Check, CheckCircle2, ChevronDown, ChevronRight, DatabaseBackup, FileText, FolderOpen, Home, Info, Languages, MessageCircle, MonitorPlay, Moon, Palette, Radio, RefreshCw, RotateCcw, ScrollText, SlidersHorizontal, Sparkles, Sun, Timer, TriangleAlert } from "lucide-react";
+import { LogIn, LogOut, MemoryStick, ArrowDownToLine, ArrowUpDown, Ban, Check, CheckCircle2, ChevronDown, ChevronRight, DatabaseBackup, FileText, FolderOpen, Home, Info, Languages, MessageCircle, MonitorPlay, Moon, Palette, Radio, RefreshCw, RotateCcw, ScrollText, SlidersHorizontal, Sparkles, Sun, Timer, TriangleAlert } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { isMobile, useBackHandler } from "@/lib/mobile";
 import { motion } from "motion/react";
@@ -794,7 +794,7 @@ export function SettingsPage() {
     ...(isMobile ? [{ id: "sources" as const, label: t("nav.sources"), icon: Radio }] : []),
     { id: "general" as const, label: t("settings.general"), icon: SlidersHorizontal },
     { id: "player" as const, label: t("settings.player.title"), icon: MonitorPlay },
-    { id: "tracking" as const, label: t("tracking.settings.title"), icon: ListChecks },
+    { id: "tracking" as const, label: t("tracking.settings.title"), icon: RefreshCw },
     ...(hasSource ? [{ id: "home" as const, label: t("settings.home.title"), icon: Home }] : []),
     // Backups write and read a file through the desktop's save/open dialogs; the phone has none yet.
     ...(isMobile ? [] : [{ id: "data" as const, label: t("settings.data.title"), icon: DatabaseBackup }]),

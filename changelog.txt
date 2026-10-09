@@ -1,28 +1,17 @@
 ## hibiki 3.0.0
 
-**Android**
-- hibiki for Android is now this app: it updates the old Kotlin app in place (same package and signing key) and carries over its library and watch progress on first start.
-- A phone-first interface: tab bar, swipeable home hero, three-column catalog, compact title page, bottom sheets, pull to refresh and page transitions.
-- A landscape player with tap and double-tap gestures, immersive mode, picture in picture and its own screen-orientation setting in the player menu.
-- Sources installed from Aniyomi repositories (APK sources) work next to the JS ones. The yuzono repository comes preinstalled, and the sources your old library used are installed for you.
-- Updates are downloaded from GitHub Releases and handed to the system installer.
+**One app on phone and computer**
+- hibiki is now built as one app for Android and Windows, with the same sources, the same library and the same player. The Android app is rebuilt on it: it updates the old one in place and carries over its library and watch progress on first start.
+- Your devices keep each other up to date over the local network: library, progress and ratings follow you from the computer to the phone and back, with the titles' names and posters. If the other device lacks a source the data needs, hibiki offers to install it. Removing a device ends the pairing on both sides.
 
 **Sources**
-- When a source stops at a Cloudflare check, the error now has a button to pass it in a separate window, and the answer is reused for the next requests.
-- hibiki-sources is a preinstalled repository. A repository can be added by its GitHub link, a tree or blob link, or the raw index.json, and adding one asks you to confirm that you trust it.
-- Players that offer one dub with several audio tracks (Alloha) get an "Audio track" choice in the player settings.
-
-**Sync**
-- Library, progress and ratings sync between your devices over the local network. Titles carry their cards, so history shows names, not ids.
-- If the synced data uses sources this device lacks, a window offers to install them, and Settings keeps a note until they are in.
-- Removing a device ends the pairing on both sides.
-
-**Account**
-- AniList live tracking, favourites and removal from the title page.
+- Sources now come from repositories instead of being built in. hibiki-sources and the Aniyomi repository are there from the start, more can be added by a link to the repository on GitHub, and adding one asks you to confirm that you trust it.
+- A source that stops at a Cloudflare check no longer just fails: the error offers to pass the check in a separate window and tries again.
 
 **Player**
-- A stream that never starts, or keeps parsing to no media, falls back to the next link.
-- Subtitles can be dragged to any place, and stay clear of the controls.
+- When an episode comes with several audio tracks (Alloha), you can choose one in the player settings.
+- A stream that does not start or breaks mid-way hands over to the next link by itself.
+- Subtitles can be moved anywhere on the screen and keep clear of the controls, and the screen orientation is chosen in the player's own menu.
 
-**Windows**
-- Windows icon in every size, and one release workflow for Windows and Android.
+**Interface**
+- The phone layout is redone: home with a swipeable hero and lists made for a thumb, a catalog in a grid, a compact title page and bottom sheets for filters and choices.
