@@ -95,3 +95,17 @@ export function toVtt(format: SubtitleFormat, text: string): string {
   if (format === "ass") return assToVtt(text);
   return text;
 }
+
+/**
+ * WebVTT from a subtitle file, read by what it holds rather than what its address says - a source's
+ * subtitle often comes from a proxy or an API with no extension at all, and a file named .vtt is
+ * sometimes SRT. Null when it is not a subtitle file (an error page, an empty answer).
+ */
+export function subtitleTextToVtt(text: string): string | null {
+  const body = text.replace(/^﻿/, "");
+  if (/^WEBVTT/.test(body)) return body;
+  if (/\[Script Info\]|\[Events\]/i.test(body)) return assToVtt(body);
+  // Cues without a header: SRT, or a WebVTT body missing its first line - srtToVtt makes either right.
+  if (/\d{1,2}:\d{2}:\d{2}[,.]\d{1,3}\s*-->/.test(body)) return srtToVtt(body);
+  return null;
+}

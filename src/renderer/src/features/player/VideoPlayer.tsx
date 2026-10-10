@@ -35,7 +35,7 @@ import { proxiedHlsLoader, streamRequestUrl, usesStreamProxy } from "@/lib/strea
 import { separateAudioMaster, syntheticManifestLoader } from "@/lib/hlsSeparateAudio";
 import { fillMissingCodecs } from "@/lib/dashCodecs";
 import { isGenericDubTitle } from "@/lib/dubTitle";
-import { subtitleFormatFromUrl, toVtt } from "@/lib/subtitles";
+import { subtitleFormatFromUrl, subtitleTextToVtt, toVtt } from "@/lib/subtitles";
 import { hibiki } from "@/lib/hibiki";
 import { cn } from "@/lib/cn";
 import { log } from "@/lib/log";
@@ -587,8 +587,8 @@ export function VideoPlayer({ link, availableLinks, offlinePlayback, dubOptions,
   const subtitleFileInputRef = useRef<HTMLInputElement>(null);
   const addCustomSubtitleFile = async (file: File) => {
     try {
-      const format = subtitleFormatFromUrl(file.name);
-      const vtt = toVtt(format, await file.text());
+      const text = await file.text();
+      const vtt = subtitleTextToVtt(text) ?? toVtt(subtitleFormatFromUrl(file.name), text);
       const url = URL.createObjectURL(new Blob([vtt], { type: "text/vtt" }));
       const id = `custom:${crypto.randomUUID()}`;
       setCustomSubtitles((prev) => [...prev, { id, url, label: file.name.replace(/\.[^./]+$/, "") }]);
@@ -597,10 +597,10 @@ export function VideoPlayer({ link, availableLinks, offlinePlayback, dubOptions,
       log.error("player", `failed to load local subtitle "${file.name}":`, error instanceof Error ? error.message : String(error));
     }
   };
-  // <track> only ever parses WebVTT - a source (or a WebView extractor, see hibiki-sources)
-  // handing over SRT/ASS needs converting to a blob URL first (see lib/subtitles.ts). Most tracks
-  // are already .vtt and skip the fetch+convert round trip entirely; only the few that aren't pay
-  // for it. Keyed on `link` itself (stable across renders that don't actually change it, same as
+  // <track> only ever parses WebVTT, and fails without a word on anything else: SRT or ASS behind an
+  // address with no extension, an error page, a file a host serves with the wrong type. So every
+  // track is fetched here, read by what it holds (lib/subtitles.ts) and handed to <track> as a
+  // WebVTT blob; a track that cannot be is left out, with the reason in the log. Keyed on `link` itself (stable across renders that don't actually change it, same as
   // every other effect in this component that reads off it) rather than `link?.subtitles`, which
   // would be a fresh array on every render and re-run this on every keystroke of unrelated state.
   const [resolvedSourceSubtitles, setResolvedSourceSubtitles] = useState<SubtitleOption[]>([]);
@@ -621,13 +621,14 @@ export function VideoPlayer({ link, availableLinks, offlinePlayback, dubOptions,
     };
     void (async () => {
       const resolved = await Promise.all((link?.subtitles ?? []).map(async (subtitle) => {
-        const format = subtitleFormatFromUrl(subtitle.url);
         const label = subtitle.label ?? subtitle.language ?? "?";
-        if (format === "vtt" || format === "unknown") return { id: subtitle.url, url: await subtitleSource(subtitle), label, language: subtitle.language ?? undefined };
         try {
           const response = await fetch(await subtitleSource(subtitle));
-          if (!response.ok) throw new Error(`HTTP ${response.status}`);
-          const url = URL.createObjectURL(new Blob([toVtt(format, await response.text())], { type: "text/vtt" }));
+          if (!response.ok) throw new Error(`HTTP ${response.status}${response.headers.get("X-Hibiki-Error") ? ` (${response.headers.get("X-Hibiki-Error")})` : ""}`);
+          const text = await response.text();
+          const vtt = subtitleTextToVtt(text);
+          if (!vtt) throw new Error(`not a subtitle file (${text.length} bytes, ${response.headers.get("Content-Type") ?? "no type"}): ${JSON.stringify(text.slice(0, 80))}`);
+          const url = URL.createObjectURL(new Blob([vtt], { type: "text/vtt" }));
           blobUrls.push(url);
           return { id: subtitle.url, url, label, language: subtitle.language ?? undefined };
         } catch (error) {

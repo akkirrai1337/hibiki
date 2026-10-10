@@ -1,6 +1,6 @@
 import type { HibikiApi } from "@shared/hibikiApi";
 import { IPC } from "@shared/ipc";
-import { subtitleFormatFromUrl, toVtt } from "@shared/subtitles";
+import { subtitleTextToVtt } from "@shared/subtitles";
 import type { DownloadedParts, DownloadedSubtitle, DownloadProgress, DownloadRequest, PlayerLink } from "@shared/types";
 import type { ExtensionRuntime } from "../extensions/runtime";
 import {
@@ -301,9 +301,8 @@ async function downloadSubtitles(state: DownloadState): Promise<DownloadedSubtit
     const name = track.label ?? track.language ?? `#${index + 1}`;
     try {
       const text = await fetchText(track.url, track.headers ?? state.link.headers, state.controller.signal);
-      const format = subtitleFormatFromUrl(track.url);
-      // An extension-less file is read by what it holds, not guessed from its name.
-      const vtt = format !== "unknown" ? toVtt(format, text) : /^\uFEFF?WEBVTT/.test(text) ? text : /\[Events\]/i.test(text) ? toVtt("ass", text) : /-->/.test(text) ? toVtt("srt", text) : null;
+      // Read by what it holds, the way the player reads it.
+      const vtt = subtitleTextToVtt(text);
       if (!vtt) throw new Error("not a subtitle file");
       const filePath = `${base}.${index + 1}.${subtitleTag(track)}.vtt`;
       await files.writeText(filePath, vtt);

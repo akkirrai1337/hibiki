@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { assToVtt, srtToVtt, subtitleFormatFromUrl, toVtt } from "./subtitles";
+import { assToVtt, srtToVtt, subtitleFormatFromUrl, subtitleTextToVtt, toVtt } from "./subtitles";
 
 describe("subtitleFormatFromUrl", () => {
   it("detects vtt", () => {
@@ -84,5 +84,23 @@ describe("toVtt", () => {
   it("dispatches srt and ass through their own converters", () => {
     expect(toVtt("srt", "1\n00:00:01,000 --> 00:00:02,000\nHi\n")).toContain("00:00:01.000");
     expect(toVtt("ass", "[Events]\nFormat: Start, End, Text\nDialogue: 0:00:01.00,0:00:02.00,Hi\n")).toContain("00:00:01.000");
+  });
+});
+
+describe("subtitleTextToVtt", () => {
+  it("passes WebVTT through", () => {
+    const vtt = "WEBVTT\n\n00:00:01.000 --> 00:00:02.000\nHi\n";
+    expect(subtitleTextToVtt(vtt)).toBe(vtt);
+  });
+
+  it("reads SRT and ASS by their content, whatever the address said", () => {
+    expect(subtitleTextToVtt("1\n00:00:01,000 --> 00:00:02,000\nHi\n")).toContain("00:00:01.000 --> 00:00:02.000");
+    const ass = "[Script Info]\n\n[Events]\nFormat: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\nDialogue: 0,0:00:01.00,0:00:02.00,Default,,0,0,0,,Hi\n";
+    expect(subtitleTextToVtt(ass)).toMatch(/^WEBVTT[\s\S]*00:00:01\.000 --> 00:00:02\.000/);
+  });
+
+  it("refuses what is not a subtitle file", () => {
+    expect(subtitleTextToVtt("<html><body>403 Forbidden</body></html>")).toBeNull();
+    expect(subtitleTextToVtt("")).toBeNull();
   });
 });
