@@ -370,6 +370,7 @@
     "uninstall": "Uninstall",
     "noResults": "No sources match your search",
     "install": "Install",
+    "noInstalled": "No sources installed yet. Open a repository on the Repositories tab to add some.",
     "installedSection": "Installed · {{count}}",
     "updatesSection": "Updates",
     "updateAll": "Update all",

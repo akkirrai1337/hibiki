@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { isMobile } from "@/lib/mobile";
+import { isMobile, useBackHandler } from "@/lib/mobile";
 import { MobilePageHeader } from "@/components/MobilePageHeader";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -24,6 +24,8 @@ import {
   MessageSquare,
   Star,
   Settings2,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { hibiki } from "@/lib/hibiki";
 import { useUiStore } from "@/stores/uiStore";
@@ -130,6 +132,8 @@ export function SourcesPage({ embedded = false }: { embedded?: boolean } = {}) {
   const [languageFilterOpen, setLanguageFilterOpen] = useState(false);
   const [addRepositoryOpen, setAddRepositoryOpen] = useState(false);
   const [repositoryPendingRemoval, setRepositoryPendingRemoval] = useState<string | null>(null);
+  // The repository whose sources are listed on the Repositories tab; null shows the repositories.
+  const [openRepository, setOpenRepository] = useState<string | null>(null);
   const [installingIds, setInstallingIds] = useState<Set<string>>(new Set());
   const installingIdsRef = useRef(new Set<string>());
   const [installErrors, setInstallErrors] = useState<Record<string, string>>({});
@@ -192,7 +196,6 @@ export function SourcesPage({ embedded = false }: { embedded?: boolean } = {}) {
   // nowhere to see or remove it. Those get a card from their own manifest, once the indexes are in.
   const sourceExtensions = useMemo(() => {
     const listed = mergedExtensions.filter((e) => e.type === "source");
-    if (marketplace.isPending) return listed;
     const known = new Set(mergedExtensions.map((e) => e.id));
     const unlisted: MarketplaceExtension[] = (installedSources.data ?? [])
       .filter((source) => !known.has(source.id))
@@ -210,13 +213,7 @@ export function SourcesPage({ embedded = false }: { embedded?: boolean } = {}) {
         manifestUrl: "",
       }));
     return [...listed, ...unlisted];
-  }, [mergedExtensions, marketplace.isPending, installedSources.data]);
-  const languages = useMemo(() => [...new Set(sourceExtensions.map((e) => e.lang).filter(Boolean))].sort(), [sourceExtensions]);
-  // One snapshot of everything installed, sources and resolvers together. They used to be two
-  // queries, and that is what let them drift: the resolver half was read once at app start and
-  // nothing refreshed it, so a source that had genuinely just updated stayed under "updates
-  // available" - the update applied, the screen kept saying it hadn't. Both halves now come from
-  // the same read of the same runtime state, and main tells us when to look again (below).
+  }, [mergedExtensions, installedSources.data]);
   const installed = useQuery({
     queryKey: ["installedVersions"],
     queryFn: () => hibiki.sources.installedVersions(),
@@ -226,6 +223,21 @@ export function SourcesPage({ embedded = false }: { embedded?: boolean } = {}) {
     [installed.data],
   );
 
+  // The Extensions tab lists only what is installed; everything a repository offers is under that
+  // repository, so many repositories don't pile into one list.
+  const openRepositoryResult = openRepository ? resultByUrl.get(openRepository) : undefined;
+  const pool = useMemo(
+    () => openRepository
+      ? (openRepositoryResult?.ok ? openRepositoryResult.extensions.filter((e) => e.type === "source") : [])
+      : sourceExtensions.filter((e) => installedVersions.has(e.id)),
+    [openRepository, openRepositoryResult, sourceExtensions, installedVersions],
+  );
+  const languages = useMemo(() => [...new Set(pool.map((e) => e.lang).filter(Boolean))].sort(), [pool]);
+  // One snapshot of everything installed, sources and resolvers together. They used to be two
+  // queries, and that is what let them drift: the resolver half was read once at app start and
+  // nothing refreshed it, so a source that had genuinely just updated stayed under "updates
+  // available" - the update applied, the screen kept saying it hadn't. Both halves now come from
+  // the same read of the same runtime state, and main tells us when to look again (below).
   // Whatever changed what is installed - this screen's own install button, an uninstall, anything
   // added later - main says so and both queries are re-read. Refreshing by hand at each call site
   // is what went wrong before: the install path updated the sources list and left the resolver
@@ -237,7 +249,7 @@ export function SourcesPage({ embedded = false }: { embedded?: boolean } = {}) {
   }), [queryClient]);
 
   const trimmedQuery = query.trim().toLowerCase();
-  const visibleExtensions = sourceExtensions.filter((extension) => {
+  const visibleExtensions = pool.filter((extension) => {
     const matchesQuery =
       !trimmedQuery ||
       extension.name.toLowerCase().includes(trimmedQuery) ||
@@ -252,12 +264,30 @@ export function SourcesPage({ embedded = false }: { embedded?: boolean } = {}) {
   const upToDateExtensions = installedExtensions.filter((e) => !updateAvailableExtensions.includes(e));
   const availableExtensions = visibleExtensions.filter((e) => !installedVersions.has(e.id));
 
-  const repositoryLoadState: "loading" | "error" | "loaded" =
-    repositoryUrls.length > 0 && repoResults.some((r) => r.ok)
-      ? "loaded"
-      : repositoryUrls.length > 0 && repoResults.length > 0 && repoResults.every((r) => !r.ok)
-        ? "error"
-        : "loading";
+  // Installed sources need no index to be listed; an open repository waits for its own.
+  const listState: "loading" | "error" | "loaded" = !openRepository
+    ? (installedSources.isPending || installed.isPending ? "loading" : "loaded")
+    : !openRepositoryResult ? "loading" : openRepositoryResult.ok ? "loaded" : "error";
+
+  const showRepository = (url: string | null) => {
+    setOpenRepository(url);
+    setQuery("");
+    setSelectedLanguages(new Set());
+  };
+  const switchTab = (next: Tab) => {
+    setTab(next);
+    showRepository(null);
+  };
+  const searching = tab === "extensions" || openRepository !== null;
+  // The phone screen has a header of its own; add and refresh sit at its right end, not in the toolbar.
+  const headerActions = isMobile && !embedded;
+  const refreshButton = (
+    <ToolbarButton onClick={() => setRefreshSignal((v) => v + 1)} label={t("sources.refresh")}>
+      <RefreshCw className={headerActions ? "h-5 w-5" : "h-4 w-4"} strokeWidth={2} />
+    </ToolbarButton>
+  );
+  // The phone's Back leaves an open repository the way the header arrow does.
+  useBackHandler(openRepository !== null, () => showRepository(null));
 
   const installExtension = useCallback(async (extension: MarketplaceExtension) => {
     // State updates do not become visible until React renders again, so `installingIds` alone
@@ -269,7 +299,9 @@ export function SourcesPage({ embedded = false }: { embedded?: boolean } = {}) {
     setInstallErrors((prev) => { const next = { ...prev }; delete next[extension.id]; return next; });
     const hadNoSources = (installedSources.data?.length ?? 0) === 0;
     try {
-      const updated = await hibiki.sources.install(extension, originByExtensionId.get(extension.id) ?? "");
+      // From the repository it was picked in, else the first one to list it.
+      const origin = openRepository && openRepositoryResult?.ok && openRepositoryResult.extensions.some((e) => e.id === extension.id) ? openRepository : originByExtensionId.get(extension.id) ?? "";
+      const updated = await hibiki.sources.install(extension, origin);
       queryClient.setQueryData(["sources"], updated);
       if (hadNoSources) setActiveSourceId(extension.id);
     } catch (error) {
@@ -278,7 +310,7 @@ export function SourcesPage({ embedded = false }: { embedded?: boolean } = {}) {
       installingIdsRef.current.delete(extension.id);
       setInstallingIds((prev) => { const next = new Set(prev); next.delete(extension.id); return next; });
     }
-  }, [installedSources.data, originByExtensionId, queryClient, setActiveSourceId]);
+  }, [installedSources.data, originByExtensionId, openRepository, openRepositoryResult, queryClient, setActiveSourceId]);
 
   const updateAll = useCallback(async () => {
     if (updateAllInProgressRef.current) return;
@@ -323,19 +355,48 @@ export function SourcesPage({ embedded = false }: { embedded?: boolean } = {}) {
   async function removeRepository(url: string) {
     const updated = await hibiki.sources.repositories.remove(url);
     queryClient.setQueryData(["repositories"], updated);
+    if (openRepository === url) showRepository(null);
   }
 
   return (
     <div className={cn("flex min-h-full flex-col bg-app-bg", embedded && "mobile:min-h-0 mobile:bg-transparent")}>
       <div className={cn("px-8 pt-8 mobile:px-4 mobile:pt-2", embedded && "mobile:pt-0")}>
-        {isMobile && !embedded && <MobilePageHeader title={t("nav.sources")} parent="/settings" />}
-        <div className="flex gap-1 border-b border-border mobile:gap-0">
-          <TabButton layoutId="sourcesTabIndicator" active={tab === "extensions"} onClick={() => setTab("extensions")}>{t("sources.tabs.extensions")}</TabButton>
-          <TabButton layoutId="sourcesTabIndicator" active={tab === "repositories"} onClick={() => setTab("repositories")}>{t("sources.tabs.repositories")}</TabButton>
-        </div>
-        <div className="mt-5 flex items-center gap-2">
+        {/* An open repository is one level deeper: the header names it and its arrow goes back to the list. */}
+        {headerActions && (
+          <MobilePageHeader
+            title={openRepository ? repositoryDisplayName(openRepository) : t("nav.sources")}
+            parent="/settings"
+            onBack={openRepository ? () => showRepository(null) : undefined}
+            actions={<>
+              {!searching && (
+                <ToolbarButton onClick={() => setAddRepositoryOpen(true)} label={t("sources.repositoriesAdd")}>
+                  <Plus className="h-5 w-5" strokeWidth={2} />
+                </ToolbarButton>
+              )}
+              {refreshButton}
+            </>}
+          />
+        )}
+        {/* Inside a repository the tabs are left behind: it is a level below them. On the phone the
+            header names it and its arrow leads back; elsewhere this row does, where the tabs were. */}
+        {openRepository ? (
+          !headerActions && (
+            <button onClick={() => showRepository(null)} className="-ml-1 flex h-[46px] max-w-full items-center gap-1 rounded-lg pr-2 text-base font-bold text-text transition-colors hover:text-accent-text">
+              <ChevronLeft className="h-5 w-5 shrink-0" strokeWidth={2} />
+              <span className="truncate">{repositoryDisplayName(openRepository)}</span>
+            </button>
+          )
+        ) : (
+          <div className="flex gap-1 border-b border-border mobile:gap-0">
+            <TabButton layoutId="sourcesTabIndicator" active={tab === "extensions"} onClick={() => switchTab("extensions")}>{t("sources.tabs.extensions")}</TabButton>
+            <TabButton layoutId="sourcesTabIndicator" active={tab === "repositories"} onClick={() => switchTab("repositories")}>{t("sources.tabs.repositories")}</TabButton>
+          </div>
+        )}
+        {/* On the phone the repositories list has nothing left here: its buttons are in the header. */}
+        {(searching || !headerActions) && (
+        <div className={cn("flex items-center gap-2", (!openRepository || !headerActions) && "mt-5")}>
           <AnimatePresence mode="popLayout" initial={false}>
-            {tab === "extensions" ? (
+            {searching ? (
               <motion.div
                 key="extensions-toolbar"
                 initial={{ opacity: 0, x: -6 }}
@@ -416,30 +477,30 @@ export function SourcesPage({ embedded = false }: { embedded?: boolean } = {}) {
               </motion.div>
             )}
           </AnimatePresence>
-          <ToolbarButton onClick={() => setRefreshSignal((v) => v + 1)} label={t("sources.refresh")}>
-            <RefreshCw className="h-4 w-4" strokeWidth={2} />
-          </ToolbarButton>
+          {!headerActions && refreshButton}
         </div>
+        )}
       </div>
 
       <div className="flex-1 px-8 pb-12 pt-6 mobile:px-4 mobile:pb-6 mobile:pt-4">
         <AnimatePresence mode="wait" initial={false}>
-          {tab === "extensions" ? (
+          {searching ? (
             <motion.div
-              key="extensions-tab"
+              key={openRepository ?? "extensions-tab"}
               initial={{ opacity: 0, x: 10 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -10 }}
               transition={{ duration: 0.18, ease: "easeOut" }}
             >
               <ExtensionsTab
-                state={repositoryLoadState}
-                errorMessage={repoResults.filter((r): r is Extract<RepositoryFetchResult, { ok: false }> => !r.ok).map((r) => r.error).join("; ")}
+                state={listState}
+                errorMessage={openRepositoryResult && !openRepositoryResult.ok ? openRepositoryResult.error : ""}
                 onRetry={() => setRefreshSignal((v) => v + 1)}
                 updateAvailable={updateAvailableExtensions}
                 upToDate={upToDateExtensions}
                 available={availableExtensions}
                 isEmpty={visibleExtensions.length === 0}
+                emptyText={!openRepository && pool.length === 0 ? t("sources.noInstalled") : undefined}
                 installedVersions={installedVersions}
                 installingIds={installingIds}
                 installErrors={installErrors}
@@ -464,6 +525,7 @@ export function SourcesPage({ embedded = false }: { embedded?: boolean } = {}) {
               <RepositoriesTab
                 urls={repositoryUrls}
                 resultByUrl={resultByUrl}
+                onOpen={showRepository}
                 onRemove={setRepositoryPendingRemoval}
               />
             </motion.div>
@@ -590,6 +652,7 @@ function ExtensionsTab({
   upToDate,
   available,
   isEmpty,
+  emptyText,
   installedVersions,
   installingIds,
   installErrors,
@@ -609,6 +672,8 @@ function ExtensionsTab({
   upToDate: MarketplaceExtension[];
   available: MarketplaceExtension[];
   isEmpty: boolean;
+  /** What to say when there is nothing to list at all, rather than nothing matching the search. */
+  emptyText?: string;
   installedVersions: Map<string, string>;
   installingIds: Set<string>;
   installErrors: Record<string, string>;
@@ -627,7 +692,7 @@ function ExtensionsTab({
   const { shown: availableShown, sentinel } = useProgressiveList(available.length);
   if (state === "loading") return <CenteredMessage text={t("sources.repositoryLoading")} />;
   if (state === "error") return <CenteredMessage text={t("sources.repositoryError")} detail={errorMessage} onRetry={onRetry} />;
-  if (isEmpty) return <CenteredMessage text={t("sources.noResults")} />;
+  if (isEmpty) return <CenteredMessage text={emptyText ?? t("sources.noResults")} />;
 
   return (
     <div className="max-w-[1400px]">
@@ -880,10 +945,12 @@ function ExtensionCard({
 function RepositoriesTab({
   urls,
   resultByUrl,
+  onOpen,
   onRemove,
 }: {
   urls: string[];
   resultByUrl: Map<string, RepositoryFetchResult>;
+  onOpen: (url: string) => void;
   onRemove: (url: string) => void;
 }) {
   const { t } = useTranslation();
@@ -892,14 +959,14 @@ function RepositoriesTab({
     <div className="flex max-w-2xl flex-col gap-2">
       <AnimatePresence initial={false}>
         {urls.map((url) => (
-          <RepositoryCard key={url} url={url} result={resultByUrl.get(url)} onRemove={() => onRemove(url)} />
+          <RepositoryCard key={url} url={url} result={resultByUrl.get(url)} onOpen={() => onOpen(url)} onRemove={() => onRemove(url)} />
         ))}
       </AnimatePresence>
     </div>
   );
 }
 
-function RepositoryCard({ url, result, onRemove }: { url: string; result: RepositoryFetchResult | undefined; onRemove: () => void }) {
+function RepositoryCard({ url, result, onOpen, onRemove }: { url: string; result: RepositoryFetchResult | undefined; onOpen: () => void; onRemove: () => void }) {
   const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
   const statusText = !result
@@ -915,16 +982,18 @@ function RepositoryCard({ url, result, onRemove }: { url: string; result: Reposi
       animate={{ opacity: 1, height: "auto", scale: 1 }}
       exit={{ opacity: 0, height: 0, scale: 0.98 }}
       transition={{ duration: 0.2, ease: "easeOut" }}
-      className="overflow-hidden rounded-2xl border border-border bg-text/[.03] p-4"
+      onClick={onOpen}
+      className="cursor-pointer overflow-hidden rounded-2xl border border-border bg-text/[.03] p-4 transition-colors hover:border-accent/40 hover:bg-text/[.05]"
     >
       <div className="flex items-start gap-3">
         <Globe className="mt-0.5 h-5 w-5 shrink-0 text-muted" strokeWidth={1.75} />
         <div className="min-w-0 flex-1">
-          <p className="select-text truncate text-sm font-bold text-text">{repositoryDisplayName(url)}</p>
-          <p className={cn("select-text mt-0.5 text-xs", result && !result.ok ? "text-rose-400" : "text-muted")}>{statusText}</p>
+          <p className="truncate text-sm font-bold text-text">{repositoryDisplayName(url)}</p>
+          <p className={cn("mt-0.5 text-xs", result && !result.ok ? "text-rose-400" : "text-muted")}>{statusText}</p>
         </div>
+        <ChevronRight className="mt-0.5 h-5 w-5 shrink-0 text-muted" strokeWidth={1.75} />
       </div>
-      <div className="mt-3 flex items-center justify-end gap-1">
+      <div onClick={(e) => e.stopPropagation()} className="mt-3 flex items-center justify-end gap-1">
         <a href={url} target="_blank" rel="noreferrer" title={t("sources.openInBrowser")} className="flex h-8 w-8 items-center justify-center rounded-lg text-muted transition-colors hover:bg-text/[.06] hover:text-text">
           <Globe className="h-4 w-4" strokeWidth={2} />
         </a>

@@ -8,11 +8,13 @@ import { cn } from "@/lib/cn";
  * Phone only: the top of a screen one level inside a tab (settings and sources under the profile) -
  * its name, with the way back to the tab beside it.
  */
-export function MobilePageHeader({ title, parent, onBack }: {
+export function MobilePageHeader({ title, parent, onBack, actions }: {
   title: string;
   parent: "/library" | "/profile" | "/settings";
   /** Back within the screen itself (a settings section back to the list), instead of leaving it. */
   onBack?: () => void;
+  /** The screen's own buttons, at the right end of the header. */
+  actions?: React.ReactNode;
 }) {
   const { t } = useTranslation();
   const router = useRouter();
@@ -37,6 +39,7 @@ export function MobilePageHeader({ title, parent, onBack }: {
         <ArrowLeft className="h-[22px] w-[22px]" strokeWidth={2.25} />
       </button>
       <h1 className="truncate text-[20px] font-bold tracking-[-.02em] text-text">{title}</h1>
+      {actions && <div className="-mr-2 ml-auto flex shrink-0 items-center">{actions}</div>}
     </div>
   );
 }
