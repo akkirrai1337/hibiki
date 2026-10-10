@@ -30,6 +30,13 @@ object ApkSourceRegistry {
     @Volatile private var loaded: Map<String, LoadedApkExtension> = emptyMap()
     @Volatile private var failures: List<ApkLoadFailure> = emptyList()
     private val lock = Any()
+    private val firstLoad = java.util.concurrent.CountDownLatch(1)
+
+    /** Waits (at most [timeoutMs]) for the installed extensions' first load - for callers that may
+     * arrive before it, such as a poster the page shows from its cache at startup. */
+    fun awaitFirstLoad(timeoutMs: Long) {
+        firstLoad.await(timeoutMs, java.util.concurrent.TimeUnit.MILLISECONDS)
+    }
 
     fun extensions(): Collection<LoadedApkExtension> = loaded.values
     fun failures(): List<ApkLoadFailure> = failures
@@ -39,6 +46,14 @@ object ApkSourceRegistry {
 
     /** Loads what is installed and trusted, keeping extensions already loaded at the same version. */
     fun refresh(context: Context) = synchronized(lock) {
+        try {
+            loadInstalled(context)
+        } finally {
+            firstLoad.countDown()
+        }
+    }
+
+    private fun loadInstalled(context: Context) {
         val installed = ApkExtensionStore.list(context)
         val next = mutableMapOf<String, LoadedApkExtension>()
         val failed = mutableListOf<ApkLoadFailure>()

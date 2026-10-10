@@ -17,6 +17,7 @@ import java.io.ByteArrayInputStream
  */
 object ApkImageProxy {
     const val PATH = "/_hibiki/image"
+    private const val FIRST_LOAD_WAIT_MS = 20_000L
 
     /** The proxied form of [url] for the page, or [url] itself when it is not a web address. */
     fun wrap(sourceId: String, url: String?): String? {
@@ -26,12 +27,19 @@ object ApkImageProxy {
 
     fun handle(request: WebResourceRequest): WebResourceResponse {
         val url = request.url.getQueryParameter("u")
-        val adapter = request.url.getQueryParameter("s")?.let(ApkSourceRegistry::adapter)
+        // A poster from the page's cache can be asked for before the extensions have loaded, and
+        // without its source's headers the site refuses it - the picture stayed broken all session.
+        val adapter = request.url.getQueryParameter("s")?.let { sourceId ->
+            ApkSourceRegistry.adapter(sourceId) ?: run {
+                ApkSourceRegistry.awaitFirstLoad(FIRST_LOAD_WAIT_MS)
+                ApkSourceRegistry.adapter(sourceId)
+            }
+        }
         if (url == null || !(url.startsWith("https://") || url.startsWith("http://"))) return failure(400, "Bad Request")
         return try {
             val builder = Request.Builder().url(url)
             (adapter?.catalogue as? AnimeHttpSource)?.headers?.let { builder.headers(it) }
-            val response = NetworkHelper.instance().nonCloudflareClient.newCall(builder.build()).execute()
+            val response = NetworkHelper.instance().imageClient.newCall(builder.build()).execute()
             if (!response.isSuccessful) {
                 response.close()
                 return failure(response.code, "Upstream ${response.code}")

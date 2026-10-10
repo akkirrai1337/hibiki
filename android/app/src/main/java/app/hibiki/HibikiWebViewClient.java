@@ -8,8 +8,9 @@ import com.getcapacitor.Bridge;
 import com.getcapacitor.BridgeWebViewClient;
 
 /**
- * Three jobs on top of Capacitor's client (the third: /_hibiki/image, APK sources' pictures - see
- * apk/ApkImageProxy):
+ * Four jobs on top of Capacitor's client (the third: /_hibiki/image, APK sources' pictures - see
+ * apk/ApkImageProxy; the fourth: every other picture from the web, with the Referer its own site
+ * would send - see WebImageProxy):
  *  - serves /_hibiki/stream (the header-injecting stream proxy for the player);
  *  - serves /_hibiki/bridge/&lt;id&gt; (how extension workers make synchronous host calls: Android
  *    WebView never becomes crossOriginIsolated, so SharedArrayBuffer/Atomics are not available).
@@ -32,6 +33,10 @@ public class HibikiWebViewClient extends BridgeWebViewClient {
         if (local && path.startsWith("/_hibiki/stream")) return StreamProxy.handle(request);
         if (local && path.startsWith("/_hibiki/bridge/")) return BridgeQueue.await(path.substring("/_hibiki/bridge/".length()));
         if (local && path.equals(app.hibiki.apk.ApkImageProxy.PATH)) return app.hibiki.apk.ApkImageProxy.INSTANCE.handle(request);
+        if (!local && WebImageProxy.INSTANCE.accepts(request)) {
+            WebResourceResponse image = WebImageProxy.INSTANCE.handle(request);
+            if (image != null) return image;
+        }
 
         return super.shouldInterceptRequest(view, request);
     }

@@ -43,6 +43,15 @@ class NetworkHelper(context: Context) {
     /** Without the Cloudflare interceptor, for hosts that must not be loaded in a WebView. */
     val nonCloudflareClient: OkHttpClient by lazy { clientBuilder().build() }
 
+    /**
+     * Posters and icons the page shows through the app (app.hibiki.WebImageProxy, apk/ApkImageProxy).
+     * WebView keeps no cache of responses it was handed, so they get a disk cache of their own - in
+     * a directory of their own, as OkHttp wants one cache per directory.
+     */
+    val imageClient: OkHttpClient by lazy {
+        nonCloudflareClient.newBuilder().cache(Cache(File(appContext.cacheDir, "image_cache"), 100L * 1024 * 1024)).build()
+    }
+
     val client: OkHttpClient by lazy {
         clientBuilder().apply {
             (cookieJar as? AndroidCookieJar)?.let { jar ->
