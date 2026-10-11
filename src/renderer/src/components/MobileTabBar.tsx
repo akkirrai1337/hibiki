@@ -1,19 +1,21 @@
 import { useEffect, useRef } from "react";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
-import { Bookmark, Home, LayoutGrid, Search, User } from "lucide-react";
-import { mobileSearchMemory } from "@/lib/mobile";
+import { Bookmark, Home, LayoutGrid, Radio, User } from "lucide-react";
+import { useSourceUpdateCount } from "@/lib/sourceUpdates";
 import { cn } from "@/lib/cn";
 
 // The phone's whole navigation: five places, each owning the screens reached from it. History and
-// downloads live under the library, settings and sources under the profile - the desktop sidebar's
-// other entries, one level down.
+// downloads live under the library, settings under the profile - the desktop sidebar's other
+// entries, one level down. Sources are a tab of their own, one tap from anywhere: switching where the
+// anime comes from used to be profile > settings > sources. Search is an icon on the screens that
+// browse (MobileSearchButton) and belongs to no tab - the one it was opened from stays lit.
 const tabs = [
   { to: "/", labelKey: "nav.home", icon: Home, owns: ["/"] },
   { to: "/catalog", labelKey: "nav.catalog", icon: LayoutGrid, owns: ["/catalog"] },
-  { to: "/search", labelKey: "nav.search", icon: Search, owns: ["/search"] },
+  { to: "/sources", labelKey: "nav.sources", icon: Radio, owns: ["/sources"] },
   { to: "/library", labelKey: "library.title", icon: Bookmark, owns: ["/library", "/history", "/downloads"] },
-  { to: "/profile", labelKey: "nav.profile", icon: User, owns: ["/profile", "/settings", "/sources"] },
+  { to: "/profile", labelKey: "nav.profile", icon: User, owns: ["/profile", "/settings"] },
 ] as const;
 
 type TabPath = (typeof tabs)[number]["to"];
@@ -61,6 +63,7 @@ export function MobileTabBar() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => (s.resolvedLocation ?? s.location).pathname });
+  const sourceUpdateCount = useSourceUpdateCount();
   // A title page belongs to whichever tab it was opened from, so that tab stays lit under it.
   const lastTab = useRef<TabPath>("/");
   const owner = tabFor(pathname);
@@ -85,13 +88,16 @@ export function MobileTabBar() {
                 document.querySelector<HTMLElement>(`[data-page-scroll="${tab.to}"]`)?.scrollTo({ top: 0, behavior: "smooth" });
                 return;
               }
-              // Search comes back with what it last searched.
-              if (tab.to === "/search") void navigate({ to: "/search", search: { q: mobileSearchMemory.query } });
-              else void navigate({ to: tab.to });
+              void navigate({ to: tab.to });
             }}
             className={cn("flex flex-1 flex-col items-center justify-center gap-0.5 text-[10.5px] font-medium transition-colors", isActive ? "text-accent-text" : "text-muted active:text-text")}
           >
-            <tab.icon className="h-[21px] w-[21px]" strokeWidth={isActive ? 2.3 : 1.9} />
+            <span className="relative">
+              <tab.icon className="h-[21px] w-[21px]" strokeWidth={isActive ? 2.3 : 1.9} />
+              {tab.to === "/sources" && sourceUpdateCount > 0 && (
+                <span className="absolute -right-2 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-bold leading-none text-white">{sourceUpdateCount > 9 ? "9+" : sourceUpdateCount}</span>
+              )}
+            </span>
             <span className="leading-none">{t(tab.labelKey)}</span>
           </button>
         );

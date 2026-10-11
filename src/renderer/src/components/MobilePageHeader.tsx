@@ -5,12 +5,12 @@ import { ArrowLeft } from "lucide-react";
 import { cn } from "@/lib/cn";
 
 /**
- * Phone only: the top of a screen one level inside a tab (settings and sources under the profile) -
- * its name, with the way back to the tab beside it.
+ * Phone only: the top of a screen - its name, and for one a level inside a tab (settings under the
+ * profile) the way back to the tab beside it. A tab's own screen (sources) has no way back.
  */
 export function MobilePageHeader({ title, parent, onBack, actions }: {
   title: string;
-  parent: "/library" | "/profile" | "/settings";
+  parent?: "/library" | "/profile" | "/settings";
   /** Back within the screen itself (a settings section back to the list), instead of leaving it. */
   onBack?: () => void;
   /** The screen's own buttons, at the right end of the header. */
@@ -20,8 +20,8 @@ export function MobilePageHeader({ title, parent, onBack, actions }: {
   const router = useRouter();
   const navigate = useNavigate();
   return (
-    <div className="-ml-2 mb-4 flex items-center gap-1">
-      <button
+    <div className={cn("mb-4 flex items-center gap-1", parent || onBack ? "-ml-2" : "min-h-10")}>
+      {(parent || onBack) && <button
         type="button"
         aria-label={t("detail.back")}
         onClick={() => {
@@ -32,12 +32,12 @@ export function MobilePageHeader({ title, parent, onBack, actions }: {
           // Reached some other way than from its tab (a link, the app restored onto it): to the tab.
           const index = (window.history.state as { __TSR_index?: number } | null)?.__TSR_index ?? 0;
           if (index > 0) router.history.back();
-          else void navigate({ to: parent });
+          else if (parent) void navigate({ to: parent });
         }}
         className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-text active:bg-text/[.08]"
       >
         <ArrowLeft className="h-[22px] w-[22px]" strokeWidth={2.25} />
-      </button>
+      </button>}
       <h1 className="truncate text-[20px] font-bold tracking-[-.02em] text-text">{title}</h1>
       {actions && <div className="-mr-2 ml-auto flex shrink-0 items-center">{actions}</div>}
     </div>

@@ -1,11 +1,10 @@
-import { lazy, Suspense, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Gauge, LogIn, LogOut, MemoryStick, ArrowDownToLine, ArrowUpDown, Ban, Check, CheckCircle2, ChevronDown, ChevronRight, DatabaseBackup, FileText, FolderOpen, Home, Info, Languages, MessageCircle, MonitorPlay, Moon, Palette, Radio, RefreshCw, RotateCcw, ScrollText, SlidersHorizontal, Sparkles, Sun, Timer, TriangleAlert } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { isMobile, useBackHandler } from "@/lib/mobile";
 import { motion } from "motion/react";
-import { useSourceUpdateCount } from "@/lib/sourceUpdates";
 import { MobilePageHeader } from "@/components/MobilePageHeader";
 import { BottomSheet, SheetOption } from "@/components/BottomSheet";
 import { Switch } from "@/components/Switch";
@@ -24,8 +23,6 @@ import { TRACKING_KEY, useTrackerAccount } from "@/lib/tracking";
 import type { TrackerImportProgress, TrackerImportReport } from "@shared/types";
 import type { MemorySnapshot } from "@shared/types";
 
-// Loaded with its category, not with Settings itself (the desktop never shows it here).
-const SourcesPage = lazy(() => import("@/pages/sources").then((module) => ({ default: module.SourcesPage })));
 
 // One category's worth of rows, spaced apart - no heading of its own: the category rail's own
 // label already names it, and repeating that text here just duplicated it right above the content
@@ -824,9 +821,6 @@ export function SettingsPage() {
   const hasSource = (sourcesQuery.data?.length ?? 0) > 0;
   const categories = [
     { id: "appearance" as const, label: t("settings.appearance.title"), icon: Palette },
-    // Phone: where the anime comes from is part of the app's setup, as an Android user expects -
-    // the whole Sources screen, as one more category. The desktop keeps it in the sidebar.
-    ...(isMobile ? [{ id: "sources" as const, label: t("nav.sources"), icon: Radio }] : []),
     { id: "general" as const, label: t("settings.general"), icon: SlidersHorizontal },
     { id: "player" as const, label: t("settings.player.title"), icon: MonitorPlay },
     { id: "tracking" as const, label: t("tracking.settings.title"), icon: RefreshCw },
@@ -1030,7 +1024,6 @@ export function SettingsPage() {
       </SettingsSection>
       )}
 
-      {activeCategory === "sources" && <div className="-mx-4"><Suspense fallback={null}><SourcesPage embedded /></Suspense></div>}
       {activeCategory === "tracking" && <div className="space-y-4"><DeviceSyncSection /><TrackingSection /></div>}
       {activeCategory === "home" && <HomeSortSection />}
       {activeCategory === "data" && <BackupSection />}
@@ -1076,10 +1069,9 @@ function MobileLanguagePicker() {
 
 /** Phone: the settings sections as one card of rows, like a system settings screen. */
 function MobileSettingsList({ categories, onOpen }: {
-  categories: Array<{ id: "appearance" | "sources" | "general" | "player" | "tracking" | "home" | "data" | "diagnostics"; label: string; icon: typeof Sun }>;
-  onOpen: (id: "appearance" | "sources" | "general" | "player" | "tracking" | "home" | "data" | "diagnostics") => void;
+  categories: Array<{ id: "appearance" | "general" | "player" | "tracking" | "home" | "data" | "diagnostics"; label: string; icon: typeof Sun }>;
+  onOpen: (id: "appearance" | "general" | "player" | "tracking" | "home" | "data" | "diagnostics") => void;
 }) {
-  const updates = useSourceUpdateCount();
   return (
     <motion.div initial={{ opacity: 0.6 }} animate={{ opacity: 1 }} transition={{ duration: 0.16 }} className="px-4 pb-6 pt-1">
       <div className="overflow-hidden rounded-2xl border border-border bg-text/[.03]">
@@ -1092,7 +1084,6 @@ function MobileSettingsList({ categories, onOpen }: {
           >
             <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-text/[.07] text-text"><Icon className="h-[18px] w-[18px]" strokeWidth={2} /></span>
             <span className="min-w-0 flex-1 truncate text-[15px] font-medium text-text">{label}</span>
-            {id === "sources" && updates > 0 && <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-500 px-1.5 text-[11px] font-bold text-white">{updates > 9 ? "9+" : updates}</span>}
             <ChevronRight className="h-5 w-5 shrink-0 text-muted" strokeWidth={2} />
           </button>
         ))}

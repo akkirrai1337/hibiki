@@ -15,6 +15,7 @@ import { CatalogFilters } from "@/components/CatalogFilters";
 import { useCatalogIntentStore } from "@/stores/catalogIntentStore";
 import { activeFilterCount, toSearchRequestFilters, type SearchFilters } from "@/lib/searchFilters";
 import { isMobile } from "@/lib/mobile";
+import { MobileSearchButton } from "@/components/MobileSearchButton";
 import type { AnimeTitle } from "@shared/types";
 
 // What "browse" can be sorted by is the source's business: it declares its own orders in
@@ -122,6 +123,7 @@ export function CatalogBrowsePage() {
             loading={settings.isLoading}
           >
             {modes.length > 1 && <SortMenu mode={mode} modes={modes} onChange={setRequestedMode} />}
+            {isMobile && <MobileSearchButton className="-mr-2 ml-auto" />}
           </CatalogFilters>
 
           {isLoading ? (

@@ -8,7 +8,7 @@ import { hibiki } from "@/lib/hibiki";
  */
 export const isMobile = document.documentElement.classList.contains("mobile");
 
-/** The phone's search tab remembers what it last searched, so coming back to the tab shows it again. */
+/** Phone search remembers what it last searched, so opening it again (MobileSearchButton) shows it. */
 export const mobileSearchMemory = { query: "" };
 
 // --- the system Back key ------------------------------------------------------------------------

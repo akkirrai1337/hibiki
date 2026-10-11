@@ -16,7 +16,6 @@ import { useUiStore } from "@/stores/uiStore";
 import { useAchievementsStore } from "@/stores/achievementsStore";
 import { cn } from "@/lib/cn";
 import { isMobile } from "@/lib/mobile";
-import { useSourceUpdateCount } from "@/lib/sourceUpdates";
 import { BottomSheet, SheetOption } from "@/components/BottomSheet";
 import { LIBRARY_CATEGORY_ICONS, LIBRARY_CATEGORY_LABEL_KEYS } from "@/lib/libraryCategories";
 import { AchievementGrid } from "@/components/AchievementCards";
@@ -297,7 +296,6 @@ function MobileProfileLayout({
   recent: LibraryEntry[];
 }) {
   const { t, i18n } = useTranslation();
-  const sourceUpdateCount = useSourceUpdateCount();
   const [sheet, setSheet] = useState<"achievements" | "xp" | "recent" | null>(null);
   const unlocked = achievements.filter((a) => a.unlocked).length;
   // Earned first, then the nearest to done - the same order as the full list.
@@ -322,10 +320,8 @@ function MobileProfileLayout({
               corner where an app keeps them, with the banner's own edit beside. */}
           <div className="absolute right-3 flex items-center gap-2" style={{ top: "calc(0.5rem + var(--safe-top))" }}>
             <BannerActions filename={bannerFilename} onChange={onBannerChange} inline />
-            {/* Sources live in Settings on the phone; their update badge rides on its button. */}
-            <Link to="/settings" aria-label={t("nav.settings")} className={cn(MOBILE_CORNER_BUTTON, "relative")}>
+            <Link to="/settings" aria-label={t("nav.settings")} className={MOBILE_CORNER_BUTTON}>
               <Settings className="h-[18px] w-[18px]" strokeWidth={2} />
-              {sourceUpdateCount > 0 && <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-bold text-white">{sourceUpdateCount > 9 ? "9+" : sourceUpdateCount}</span>}
             </Link>
           </div>
         </div>

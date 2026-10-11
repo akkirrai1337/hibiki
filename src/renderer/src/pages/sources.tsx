@@ -366,7 +366,6 @@ export function SourcesPage({ embedded = false }: { embedded?: boolean } = {}) {
         {headerActions && (
           <MobilePageHeader
             title={openRepository ? repositoryDisplayName(openRepository) : t("nav.sources")}
-            parent="/settings"
             onBack={openRepository ? () => showRepository(null) : undefined}
             actions={<>
               {!searching && (
