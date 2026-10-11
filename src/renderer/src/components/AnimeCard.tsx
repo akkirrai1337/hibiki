@@ -1,4 +1,5 @@
 import { memo } from "react";
+import { useNearViewport } from "@/lib/useNearViewport";
 import { SmoothImage } from "@/components/SmoothImage";
 import { Link } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
@@ -114,12 +115,13 @@ export function PosterCard({ title, posterUrl, type, year, episodeCount, rating,
     episodeCount && t("common.episodesShort", { count: episodeCount }),
     rating != null && `★ ${formatRating(rating)}`,
   ].filter(Boolean).join(" · ");
+  // The poster downloads once its card nears the screen - see useNearViewport.
+  const [frameRef, nearScreen] = useNearViewport<HTMLDivElement>();
   return <>
-    <div className="relative aspect-[2/3] overflow-hidden rounded-xl bg-surface ring-1 ring-border">
+    <div ref={frameRef} className="relative aspect-[2/3] overflow-hidden rounded-xl bg-surface ring-1 ring-border">
       {posterUrl ? <SmoothImage
-        src={posterUrl}
-        alt={title}
-        loading="lazy"
+        src={nearScreen ? posterUrl : undefined}
+        alt={nearScreen ? title : ""}
         // `will-change` only while actually hovered, not unconditionally - applied to every card
         // at once, it makes the browser keep a persistent GPU compositing layer alive for every
         // single poster in the grid for as long as it's mounted, not just the one about to

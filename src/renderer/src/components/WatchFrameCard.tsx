@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNearViewport } from "@/lib/useNearViewport";
 import { Link } from "@tanstack/react-router";
 import { AnimatePresence, motion } from "motion/react";
 import * as ContextMenu from "@radix-ui/react-context-menu";
@@ -40,6 +41,8 @@ export function WatchFrameCard({ slot, sourceById, dateLabel, showWatchedBadge, 
   const queryClient = useQueryClient();
   const knownSources = useKnownSourcesStore((s) => s.byId);
   const popoverTheme = usePopoverTheme();
+  // The poster stand-in downloads once the card nears the screen; a captured frame is local anyway.
+  const [frameRef, nearScreen] = useNearViewport<HTMLDivElement>();
   const [menuOpen, setMenuOpen] = useState(false);
 
   if (slot.anime === undefined) {
@@ -103,10 +106,10 @@ export function WatchFrameCard({ slot, sourceById, dateLabel, showWatchedBadge, 
               `groupId` is known), which TanStack Router's own `to`-driven prop inference can't
               narrow from a plain conditional like that; both branches are well-formed on their own. */}
           <Link {...(linkProps as any)} className="group block">
-            <div className="relative aspect-video overflow-hidden rounded-xl bg-surface ring-1 ring-border transition-shadow duration-300 group-hover:shadow-[0_16px_40px_rgba(0,0,0,.45)]">
+            <div ref={frameRef} className="relative aspect-video overflow-hidden rounded-xl bg-surface ring-1 ring-border transition-shadow duration-300 group-hover:shadow-[0_16px_40px_rgba(0,0,0,.45)]">
               {progress.thumbnailDataUrl ? (
                 <img src={progress.thumbnailDataUrl} alt="" className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]" />
-              ) : anime?.posterUrl ? (
+              ) : anime?.posterUrl && nearScreen ? (
                 <>
                   <img src={anime.posterUrl} alt="" aria-hidden="true" className="absolute inset-0 h-full w-full scale-110 object-cover opacity-[.35] blur-xl" />
                   <div className="absolute inset-0 bg-black/40" />

@@ -25,6 +25,16 @@ export function MobileHero({ slides, label, sourceName }: { slides: HeroSlide[];
   const [index, setIndex] = useState(0);
   const [touching, setTouching] = useState(false);
   const slideKey = slides.map((slide) => slide.key).join(",");
+  // Artwork only for the slide on screen and the ones a swipe reaches next. Every slide's picture
+  // used to download on open, most of them for slides nobody swiped to. Once shown, a slide keeps
+  // its picture, so swiping back never flashes an empty one.
+  const [shownKeys, setShownKeys] = useState<ReadonlySet<string>>(() => new Set());
+  const nearCurrent = (i: number) => Math.abs(i - index) <= 1;
+  useEffect(() => {
+    const keys = slides.filter((_, i) => nearCurrent(i)).map((slide) => slide.key);
+    setShownKeys((shown) => keys.every((key) => shown.has(key)) ? shown : new Set([...shown, ...keys]));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [index, slideKey]);
   const track = useRef<HTMLDivElement>(null);
   const drag = useRef<{ x: number; y: number; dx: number; horizontal: boolean | null } | null>(null);
   // Set by a swipe, so the click the browser sends after it does not also open the slide.
@@ -121,7 +131,7 @@ export function MobileHero({ slides, label, sourceName }: { slides: HeroSlide[];
           // plain page colour cut off hard against a background theme. Per slide, not on the track:
           // a mask clips to its box, and the track's other slides lie outside it.
           <div key={slide.key} className="relative h-full w-full shrink-0" aria-hidden={i !== index} style={HERO_SLIDE_MASK}>
-            {slide.posterUrl && <img src={slide.posterUrl} alt="" draggable={false} className="absolute inset-0 h-full w-full object-cover object-[center_18%]" />}
+            {slide.posterUrl && (nearCurrent(i) || shownKeys.has(slide.key)) && <img src={slide.posterUrl} alt="" draggable={false} className="absolute inset-0 h-full w-full object-cover object-[center_18%]" />}
           </div>
         ))}
       </div>
