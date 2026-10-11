@@ -326,7 +326,7 @@ function SpotlightPanel() {
               return (
                 <button key={`${anime.sourceId}:${anime.id}`} data-row={index} onMouseMove={() => pointAt(index)} onClick={() => openTitle(anime)} className={cn("flex w-full items-center gap-3.5 rounded-xl px-2.5 py-2 text-left transition-colors", effectiveSelected === index && "bg-text/[.08]")}>
                   <div className="h-[54px] w-9 shrink-0 overflow-hidden rounded-md bg-surface ring-1 ring-border">
-                    {anime.posterUrl && <SmoothImage src={anime.posterUrl} alt="" className="h-full w-full object-cover" />}
+                    {anime.posterUrl && <SmoothImage lazy src={anime.posterUrl} alt="" className="h-full w-full object-cover" />}
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="line-clamp-1 text-sm font-semibold text-text">{animeTitle(anime)}</p>

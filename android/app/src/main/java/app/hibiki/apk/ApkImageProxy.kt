@@ -41,12 +41,14 @@ object ApkImageProxy {
             (adapter?.catalogue as? AnimeHttpSource)?.headers?.let { builder.headers(it) }
             val response = NetworkHelper.instance().imageClient.newCall(builder.build()).execute()
             if (!response.isSuccessful) {
+                app.hibiki.ImageStats.failure()
                 response.close()
                 return failure(response.code, "Upstream ${response.code}")
             }
             val type = response.header("Content-Type")?.substringBefore(';')?.trim() ?: "image/jpeg"
-            WebResourceResponse(type, null, 200, "OK", mapOf("Cache-Control" to "max-age=86400", "Access-Control-Allow-Origin" to "*"), response.body.byteStream())
+            WebResourceResponse(type, null, 200, "OK", mapOf("Cache-Control" to "max-age=86400", "Access-Control-Allow-Origin" to "*"), app.hibiki.ImageStats.track(response))
         } catch (error: Exception) {
+            app.hibiki.ImageStats.failure()
             failure(502, "Bad Gateway")
         }
     }

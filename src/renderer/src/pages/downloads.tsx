@@ -8,6 +8,7 @@ import { AnimatePresence } from "motion/react";
 import { Download, Play, Trash2 } from "lucide-react";
 import { hibiki } from "@/lib/hibiki";
 import { Modal } from "@/components/Modal";
+import { PosterImage } from "@/components/PosterImage";
 import type { DownloadedEpisode } from "@shared/types";
 
 // Rendered persistently from __root.tsx instead - see index.tsx for why.
@@ -108,7 +109,7 @@ function AnimeGroup({
     <section>
       <Link to="/anime/$sourceId/$animeId" params={{ sourceId: group.sourceId, animeId: group.animeId }} className="group mb-3 flex items-center gap-3">
         <div className="h-14 w-10 shrink-0 overflow-hidden rounded-lg bg-surface ring-1 ring-border">
-          {group.animePosterUrl && <img src={group.animePosterUrl} alt="" className="h-full w-full object-cover" />}
+          {group.animePosterUrl && <PosterImage lazy src={group.animePosterUrl} alt="" className="h-full w-full object-cover" />}
         </div>
         <div className="min-w-0">
           <p className="truncate text-base font-semibold text-text group-hover:text-accent-text">{group.animeTitle}</p>

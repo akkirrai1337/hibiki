@@ -16,6 +16,7 @@ import { cn } from "@/lib/cn";
 import { useContinueWatching } from "@/lib/continueWatching";
 import { useUiStore } from "@/stores/uiStore";
 import { pickRelevanceSort } from "@/lib/catalogSort";
+import { isDataSaverActive } from "@/lib/connectionQuality";
 import type { AnimeTitle } from "@shared/types";
 
 const RECOMMENDED_COUNT = 20;
@@ -29,8 +30,29 @@ const HERO_SLIDE_COUNT = 5;
 // it'd just be a near-duplicate of "you might like" with 2-3 items.
 const MIN_GENRE_MATCHES = 4;
 
-function randomPoolOffset(): number {
-  return Math.floor(Math.random() * (MAX_POOL_OFFSET + 1));
+const POOL_OFFSET_KEY = "hibiki-home-pool-offset";
+
+// On a slow connection (or with data saver on) the window stays where it was last time: the same
+// titles, whose posters are already on disk, instead of two dozen new ones to download before the
+// page is whole. Variety waits for a better network.
+function poolOffsetFor(sourceId: string | undefined): number {
+  let saved: Record<string, number> = {};
+  try {
+    saved = JSON.parse(localStorage.getItem(POOL_OFFSET_KEY) ?? "{}") as Record<string, number>;
+  } catch {
+    // Unreadable: a fresh window, as always.
+  }
+  const previous = sourceId ? saved[sourceId] : undefined;
+  if (typeof previous === "number" && isDataSaverActive()) return previous;
+  const offset = Math.floor(Math.random() * (MAX_POOL_OFFSET + 1));
+  if (sourceId) {
+    try {
+      localStorage.setItem(POOL_OFFSET_KEY, JSON.stringify({ ...saved, [sourceId]: offset }));
+    } catch {
+      // Not remembered: the next slow start just gets a new window too.
+    }
+  }
+  return offset;
 }
 
 // Fisher-Yates - picked once per fetched pool (see the useMemo below), not on every render, so
@@ -72,7 +94,7 @@ export function CatalogPage() {
   // Compute the source's window in the same render that enables the query. Keeping this in state
   // and replacing it from an effect after `source` arrived let React Query start one request with
   // the old offset and then immediately start a second with the new one.
-  const poolOffset = useMemo(randomPoolOffset, [source?.id]);
+  const poolOffset = useMemo(() => poolOffsetFor(source?.id), [source?.id]);
   const pool = useQuery({
     queryKey: ["popular-pool", source?.id, poolOffset, sortMode ?? ""],
     enabled: !!source && settingsReady,

@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { AnimatePresence, animate, motion, useMotionValue } from "motion/react";
 import { ChevronDown, Radio, Star } from "lucide-react";
 import { GenreChip } from "@/components/GenreChip";
+import { useResizeProxyFallback } from "@/components/PosterImage";
 import { cn } from "@/lib/cn";
 
 /** The look of a hero's own call to action, so every caller's Link matches without the carousel
@@ -191,11 +192,15 @@ function Hero({ slide, label, sourceName, paused, onHeightChange }: { slide: Her
   const [descriptionOpen, setDescriptionOpen] = useState(false);
   const description = slide.description || t("catalog.heroFallbackDescription");
   const genres = (slide.genres ?? []).slice(0, 3);
+  const [posterSrc, onPosterError] = useResizeProxyFallback(slide.posterUrl ?? undefined);
   return <section ref={sectionRef} className="relative isolate min-h-[520px] overflow-hidden border-b border-white/[.04] px-8 py-20">
     <div className="absolute inset-0 -z-10 overflow-hidden opacity-75">
-      {slide.posterUrl && (
+      {posterSrc && (
         <motion.img
-          src={slide.posterUrl}
+          src={posterSrc}
+          onError={onPosterError}
+          // The first thing on screen: ahead of the posters in the rows below it.
+          fetchPriority="high"
           alt=""
           style={{ scale: zoom }}
           className="h-full w-full object-cover object-[center_25%] blur-[2px]"

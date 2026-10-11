@@ -17,6 +17,7 @@ export interface HibikiNetPlugin {
   registerStream(options: { headers: Record<string, string> }): Promise<{ sid: string }>;
   unregisterStream(options: { sid: string }): Promise<void>;
   preconnect(options: { origins: string[] }): Promise<void>;
+  imageStats(): Promise<{ network: number; networkBytes: number; revalidated: number; cached: number; failed: number }>;
   bridgeResolve(options: { id: string; body: string }): Promise<void>;
 }
 

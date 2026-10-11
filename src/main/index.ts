@@ -20,6 +20,7 @@ import { repairMissingResolverDependencies } from "../core/api/extensions";
 import { registerDownloadHandlers } from "./ipc/downloads";
 import { registerProfileBannerHandlers } from "./ipc/profileBanner";
 import { installPlayerHeaderInjector, registerPlayerHeaderOrigin, registerPlayerHeaders, unregisterPlayerHeaders } from "./playerHeaders";
+import { installImageStats } from "./imageStats";
 import { resolveFinalStreamUrl } from "./playerStream";
 import { clearDiscordPresence, setDiscordRpcEnabled, setIdleDiscordPresence, shutdownDiscordRpc, updateDiscordPresence } from "./discordRpc";
 import { DEEP_LINK_SCHEME, findDeepLinkInArgv, parseWatchDeepLink } from "../core/deepLink";
@@ -332,6 +333,7 @@ app.whenReady().then(async () => {
   registerDownloadHandlers(runtime);
   registerProfileBannerHandlers();
   installPlayerHeaderInjector();
+  installImageStats();
   ipcMain.handle(IPC.playerRegisterHeaders, (_e, url: string, headers: Record<string, string> | null) =>
     registerPlayerHeaders(url, headers),
   );

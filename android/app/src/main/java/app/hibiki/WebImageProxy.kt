@@ -35,8 +35,9 @@ object WebImageProxy {
             val response = NetworkHelper.instance().imageClient.newCall(builder.build()).execute()
             val type = response.header("Content-Type")?.substringBefore(';')?.trim()?.takeIf { it.isNotEmpty() } ?: "image/jpeg"
             val reason = response.message.ifBlank { if (response.isSuccessful) "OK" else "Error" }
-            WebResourceResponse(type, null, response.code, reason, mapOf("Cache-Control" to "max-age=86400", "Access-Control-Allow-Origin" to "*"), response.body.byteStream())
+            WebResourceResponse(type, null, response.code, reason, mapOf("Cache-Control" to "max-age=86400", "Access-Control-Allow-Origin" to "*"), ImageStats.track(response))
         } catch (error: Exception) {
+            ImageStats.failure()
             null
         }
     }

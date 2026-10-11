@@ -1,4 +1,4 @@
-import type { ImgHTMLAttributes } from "react";
+import { PosterImage, type PosterImageProps } from "@/components/PosterImage";
 
 /**
  * Use Chromium's compositor for image scaling. A canvas copy per poster looks tempting, but it
@@ -6,9 +6,9 @@ import type { ImgHTMLAttributes } from "react";
  * every image has loaded. Chromium's native `auto` resampling is high quality and stays on the
  * browser's optimized image path.
  */
-export function SmoothImage({ className, decoding = "async", style, ...props }: ImgHTMLAttributes<HTMLImageElement>) {
+export function SmoothImage({ className, decoding = "async", style, ...props }: PosterImageProps) {
   return (
-    <img
+    <PosterImage
       {...props}
       decoding={decoding}
       className={`block object-cover ${className ?? ""}`}

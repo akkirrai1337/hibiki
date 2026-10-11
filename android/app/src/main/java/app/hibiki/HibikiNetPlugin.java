@@ -132,6 +132,14 @@ public class HibikiNetPlugin extends Plugin {
         }
     }
 
+    /** What the page's pictures cost this session - see ImageStats. */
+    @PluginMethod
+    public void imageStats(PluginCall call) {
+        JSObject result = new JSObject();
+        for (Map.Entry<String, Long> entry : ImageStats.INSTANCE.snapshot().entrySet()) result.put(entry.getKey(), entry.getValue());
+        call.resolve(result);
+    }
+
     @PluginMethod
     public void bridgeResolve(PluginCall call) {
         BridgeQueue.complete(call.getString("id"), call.getString("body", ""));

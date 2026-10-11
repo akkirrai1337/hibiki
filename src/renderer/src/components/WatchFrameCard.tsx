@@ -7,6 +7,7 @@ import { Check, Play, Trash2 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { animeTitle, SourceBadge, type AnimeCardSource } from "@/components/AnimeCard";
+import { PosterImage } from "@/components/PosterImage";
 import { usePopoverTheme } from "@/lib/usePopoverTheme";
 import { useKnownSourcesStore } from "@/stores/knownSourcesStore";
 import type { ContinueWatchingSlot } from "@/lib/continueWatching";
@@ -111,10 +112,10 @@ export function WatchFrameCard({ slot, sourceById, dateLabel, showWatchedBadge, 
                 <img src={progress.thumbnailDataUrl} alt="" className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]" />
               ) : anime?.posterUrl && nearScreen ? (
                 <>
-                  <img src={anime.posterUrl} alt="" aria-hidden="true" className="absolute inset-0 h-full w-full scale-110 object-cover opacity-[.35] blur-xl" />
+                  <PosterImage src={anime.posterUrl} alt="" aria-hidden="true" className="absolute inset-0 h-full w-full scale-110 object-cover opacity-[.35] blur-xl" />
                   <div className="absolute inset-0 bg-black/40" />
                   <div className="absolute inset-0 flex items-center justify-center p-3">
-                    <img src={anime.posterUrl} alt="" className="h-full max-w-full rounded-md object-contain shadow-xl" />
+                    <PosterImage src={anime.posterUrl} alt="" className="h-full max-w-full rounded-md object-contain shadow-xl" />
                   </div>
                 </>
               ) : (

@@ -49,7 +49,10 @@ class NetworkHelper(context: Context) {
      * a directory of their own, as OkHttp wants one cache per directory.
      */
     val imageClient: OkHttpClient by lazy {
-        nonCloudflareClient.newBuilder().cache(Cache(File(appContext.cacheDir, "image_cache"), 100L * 1024 * 1024)).build()
+        nonCloudflareClient.newBuilder()
+            .cache(Cache(File(appContext.cacheDir, "image_cache"), 100L * 1024 * 1024))
+            .addNetworkInterceptor(app.hibiki.ImageStats.keepPictures)
+            .build()
     }
 
     val client: OkHttpClient by lazy {

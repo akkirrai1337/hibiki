@@ -233,6 +233,19 @@ export async function installAndroidHibiki(): Promise<void> {
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "visible") runtime.warmWorkers();
   });
+  // What the pictures (posters, icons) cost so far this session, whenever that changed - every few
+  // minutes and on leaving the screen, so an exported log always carries a recent count.
+  let lastImageStats = "";
+  const logImageStats = () => void HibikiNet.imageStats().then((stats) => {
+    const line = `${stats.network} from network (${(stats.networkBytes / 1024 / 1024).toFixed(1)} MB), ${stats.cached} from cache, ${stats.revalidated} revalidated, ${stats.failed} failed`;
+    if (line === lastImageStats) return;
+    lastImageStats = line;
+    log("info", "images", `this session: ${line}`);
+  }).catch(() => undefined);
+  window.setInterval(logImageStats, IMAGE_STATS_INTERVAL_MS);
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "hidden") logImageStats();
+  });
   // AniList's sign-in comes back as hibiki://anilist-auth: to a running app as an event, or as the
   // link the app was (re)started with when Android had ended it while the browser was in front.
   void HibikiApp.addListener("deepLink", (event) => void handleTrackingRedirect(event.url));
@@ -279,3 +292,4 @@ export async function installAndroidHibiki(): Promise<void> {
 }
 
 const SYNC_INTERVAL_MS = 3 * 60 * 1000;
+const IMAGE_STATS_INTERVAL_MS = 2 * 60 * 1000;

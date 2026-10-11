@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Radio, Star } from "lucide-react";
 import type { HeroSlide } from "@/components/Hero";
+import { PosterImage } from "@/components/PosterImage";
 import { cn } from "@/lib/cn";
 
 const INTERVAL_MS = 7000;
@@ -131,7 +132,7 @@ export function MobileHero({ slides, label, sourceName }: { slides: HeroSlide[];
           // plain page colour cut off hard against a background theme. Per slide, not on the track:
           // a mask clips to its box, and the track's other slides lie outside it.
           <div key={slide.key} className="relative h-full w-full shrink-0" aria-hidden={i !== index} style={HERO_SLIDE_MASK}>
-            {slide.posterUrl && (nearCurrent(i) || shownKeys.has(slide.key)) && <img src={slide.posterUrl} alt="" draggable={false} className="absolute inset-0 h-full w-full object-cover object-[center_18%]" />}
+            {slide.posterUrl && (nearCurrent(i) || shownKeys.has(slide.key)) && <PosterImage src={slide.posterUrl} alt="" draggable={false} fetchPriority={i === index ? "high" : "low"} className="absolute inset-0 h-full w-full object-cover object-[center_18%]" />}
           </div>
         ))}
       </div>

@@ -7,6 +7,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { Pencil, User, Check, ChevronRight, Film, ImageUp, Library, Clock, CheckCircle2, Gauge, Settings, Sparkles, Trash2, X } from "lucide-react";
 import { hibiki, profileBannerUrl } from "@/lib/hibiki";
 import { Modal } from "@/components/Modal";
+import { PosterImage } from "@/components/PosterImage";
 import { animeTitle } from "@/components/AnimeCard";
 import { ContinueWatchingRow } from "@/components/ContinueWatchingRow";
 import { useContinueWatching } from "@/lib/continueWatching";
@@ -868,7 +869,7 @@ function RecentRow({ entry, locale }: { entry: LibraryEntry; locale: string }) {
   return (
     <Link to="/anime/$sourceId/$animeId" params={{ sourceId: entry.sourceId, animeId: entry.animeId }} className="flex items-center gap-3 rounded-xl p-2 transition-colors hover:bg-text/[.05]">
       <div className="h-14 w-10 shrink-0 overflow-hidden rounded-lg bg-surface ring-1 ring-border">
-        {entry.anime.posterUrl && <img src={entry.anime.posterUrl} alt="" loading="lazy" className="h-full w-full object-cover" />}
+        {entry.anime.posterUrl && <PosterImage lazy src={entry.anime.posterUrl} alt="" className="h-full w-full object-cover" />}
       </div>
       <div className="min-w-0 flex-1">
         <p className="select-text truncate text-sm font-semibold text-text">{title}</p>

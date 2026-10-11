@@ -24,6 +24,8 @@ import { GroupDropdown } from "@/components/GroupDropdown";
 import { SelectDropdown } from "@/components/SelectDropdown";
 import { HorizontalScrollRow } from "@/components/HorizontalScrollRow";
 import { SmoothImage } from "@/components/SmoothImage";
+import { PosterImage } from "@/components/PosterImage";
+import { originalOfResizedImage } from "@/lib/imageProxy";
 import { cn } from "@/lib/cn";
 import { isMobile, useBackHandler } from "@/lib/mobile";
 import { BottomSheet, SheetOption } from "@/components/BottomSheet";
@@ -137,7 +139,7 @@ function TitleStrip({ items, sourceId, currentAnimeId, heading }: { items: Relat
         // under it, and not something that only shows on hover; the line below it says what kind of
         // title it is, when it came out and how it stands.
         const cover = <div className="relative aspect-[2/3] w-full overflow-hidden rounded-xl bg-surface ring-1 ring-border">
-          {item.posterUrl ? <SmoothImage src={item.posterUrl} alt={item.title} className={cn("h-full w-full transition-transform duration-500 ease-out", isCurrent ? "opacity-50 grayscale" : "group-hover:scale-[1.05] group-hover:will-change-transform")} /> : <div className="flex h-full items-center justify-center px-3 text-center text-xs text-muted">{t("common.noPoster")}</div>}
+          {item.posterUrl ? <SmoothImage lazy src={item.posterUrl} alt={item.title} className={cn("h-full w-full transition-transform duration-500 ease-out", isCurrent ? "opacity-50 grayscale" : "group-hover:scale-[1.05] group-hover:will-change-transform")} /> : <div className="flex h-full items-center justify-center px-3 text-center text-xs text-muted">{t("common.noPoster")}</div>}
           <div className="pointer-events-none absolute inset-x-0 bottom-0 h-3/5 bg-gradient-to-t from-black/90 via-black/55 to-transparent transition-opacity duration-300" />
           <div className="pointer-events-none absolute inset-x-0 bottom-0 p-3">
             <p className="line-clamp-3 text-[13px] font-semibold leading-snug text-white drop-shadow">{item.title}</p>
@@ -346,7 +348,7 @@ function AnimeDetailPage() {
             the source's while a skeleton stands in front of it would change the whole page's tint
             the moment the real one arrives. */}
         {anime?.posterUrl && <>
-          <img src={anime.posterUrl} alt="" className="h-full w-full scale-110 object-cover opacity-20 blur-2xl dark:opacity-40" />
+          <PosterImage src={anime.posterUrl} alt="" className="h-full w-full scale-110 object-cover opacity-20 blur-2xl dark:opacity-40" />
           {/* Reads --color-bg straight off the root element (see globals.css) rather than a
               hardcoded hex, same trick as ContinueWatchingRow's own PAGE_BG - so this scrim keeps
               matching the page's real background through the light/dark toggle instead of staying
@@ -505,9 +507,9 @@ function AnimeDetailPage() {
               <button onClick={() => setScreenshotPreview(url)} className="group block w-full overflow-hidden rounded-xl bg-surface ring-1 ring-border">
                 <div className="aspect-video w-full">
                   <SmoothImage
+                    lazy
                     src={url}
                     alt=""
-                    loading="lazy"
                     onError={() => setFailedScreenshots((prev) => new Set(prev).add(url))}
                     className="h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.035]"
                   />
@@ -880,7 +882,7 @@ function Overview({ anime, libraryCategory, onSetLibraryCategory, onRemoveFromLi
         disabled={!anime.posterUrl}
         className="block aspect-[2/3] w-[104px] shrink-0 overflow-hidden rounded-xl bg-surface shadow-[0_14px_36px_rgba(0,0,0,.55)] ring-1 ring-border"
       >
-        {anime.posterUrl ? <img src={anime.posterUrl} alt={title} className="h-full w-full object-cover" /> : <div className="flex h-full items-center justify-center px-2 text-center text-[11px] text-muted">{t("common.noPoster")}</div>}
+        {anime.posterUrl ? <PosterImage src={anime.posterUrl} alt={title} className="h-full w-full object-cover" /> : <div className="flex h-full items-center justify-center px-2 text-center text-[11px] text-muted">{t("common.noPoster")}</div>}
       </button>
       <div className="min-w-0 flex-1 pb-0.5">
         <h1 className="line-clamp-4 select-text text-[22px] font-bold leading-[1.12] tracking-[-.02em] text-text">{title}</h1>
@@ -928,7 +930,7 @@ function Overview({ anime, libraryCategory, onSetLibraryCategory, onRemoveFromLi
           disabled={!anime.posterUrl}
           className="group block aspect-[2/3] w-full overflow-hidden rounded-2xl bg-surface text-left shadow-[0_20px_50px_rgba(0,0,0,.5)] ring-1 ring-border transition-[transform,box-shadow] hover:scale-[1.015] hover:shadow-[0_24px_56px_rgba(0,0,0,.58)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-default disabled:hover:scale-100"
         >
-          {anime.posterUrl ? <img src={anime.posterUrl} alt={title} className="h-full w-full object-cover" /> : <div className="flex h-full items-center justify-center px-3 text-center text-xs text-muted">{t("common.noPoster")}</div>}
+          {anime.posterUrl ? <PosterImage src={anime.posterUrl} alt={title} className="h-full w-full object-cover" /> : <div className="flex h-full items-center justify-center px-3 text-center text-xs text-muted">{t("common.noPoster")}</div>}
         </button>
       </div>
       <div className="min-w-0 flex-1 pt-1">
@@ -1023,7 +1025,9 @@ function PosterPreview({ posterUrl, title, onClose }: { posterUrl: string; title
         // reaches the overlay and closes the preview.
         className="pointer-events-none relative flex h-full w-full items-center justify-center"
       >
-        <SmoothImage src={posterUrl} alt={title} className="pointer-events-auto max-h-full max-w-full rounded-xl object-contain shadow-2xl" />
+        {/* Full screen is what the original is for: a source that sends its posters resized for the
+            cards (lib/imageProxy.ts) gets them at full size here, opened on purpose. */}
+        <SmoothImage src={originalOfResizedImage(posterUrl) ?? posterUrl} alt={title} className="pointer-events-auto max-h-full max-w-full rounded-xl object-contain shadow-2xl" />
         <button
           type="button"
           onClick={onClose}
@@ -1313,7 +1317,7 @@ function MobileTitleChrome({ posterUrl, siteUrl }: { posterUrl?: string | null; 
         WebkitMaskImage: "linear-gradient(to bottom, #000 50%, transparent)",
       }}
     >
-      {posterUrl && <img src={posterUrl} alt="" className="h-full w-full object-cover object-[center_22%] opacity-75" />}
+      {posterUrl && <PosterImage src={posterUrl} alt="" className="h-full w-full object-cover object-[center_22%] opacity-75" />}
       {/* Dark only at the top, behind the status bar and the round buttons; below, a wash of the page's
           own colour, so the title over it reads in either theme. */}
       <div className="absolute inset-0" style={{ background: "linear-gradient(to bottom, rgb(0 0 0 / 0.45), rgb(var(--color-bg) / 0.3) 40%, rgb(var(--color-bg) / 0.65))" }} />
@@ -1407,7 +1411,7 @@ function RelatedList({ items, sourceId, currentAnimeId }: { items: RelatedAnimeT
             <>
               {isCurrent && <span className="absolute inset-y-2 left-0 w-[3px] rounded-r-full bg-accent" />}
               <div className="h-[72px] w-12 shrink-0 overflow-hidden rounded-md bg-surface ring-1 ring-border">
-                {item.posterUrl && <SmoothImage src={item.posterUrl} alt={item.title} className="h-full w-full object-cover" />}
+                {item.posterUrl && <SmoothImage lazy src={item.posterUrl} alt={item.title} className="h-full w-full object-cover" />}
               </div>
               <div className="min-w-0 flex-1">
                 <p className={cn("line-clamp-2 text-sm font-semibold leading-snug", isCurrent ? "text-text" : "text-text/90 group-hover:text-text")}>{item.title}</p>
