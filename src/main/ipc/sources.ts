@@ -20,7 +20,7 @@ export function registerSourceHandlers(runtime: ExtensionRuntime): void {
     (_e, sourceId: string, titleId: string, groupId: string, episodeId: string, preference?: PlayerLinkPreference) =>
       sources.playerLinks(sourceId, titleId, groupId, episodeId, preference),
   );
-  ipcMain.handle(IPC.sourceResolvePlayerLink, (_e, link: PlayerLink) => sources.resolvePlayerLink(link));
+  ipcMain.handle(IPC.sourceResolvePlayerLink, (_e, link: PlayerLink, options?: { dataSaver?: boolean }) => sources.resolvePlayerLink(link, options));
   ipcMain.handle(IPC.sourceFilterCatalog, (_e, sourceId: string) => sources.filterCatalog(sourceId));
   ipcMain.handle(IPC.sourceRecommendations, (_e, sourceId: string, sort?: string) => sources.recommendations(sourceId, sort));
 

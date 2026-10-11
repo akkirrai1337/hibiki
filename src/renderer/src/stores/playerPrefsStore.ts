@@ -29,6 +29,9 @@ function clampWatchedThreshold(percent: number): number {
   return Math.round(Math.min(WATCHED_THRESHOLD_MAX_PERCENT, Math.max(WATCHED_THRESHOLD_MIN_PERCENT, percent)));
 }
 
+/** Data saver: on by itself on a slow connection ("auto"), always, or never. */
+export type DataSaverMode = "auto" | "on" | "off";
+
 /** The phone's screen while watching: always landscape, or any way up (rotating with the phone). */
 export type PlayerOrientation = "landscape" | "any";
 
@@ -65,6 +68,10 @@ interface PlayerPrefsState {
   subtitleOffset: number;
   // Horizontal shift from centre, in pixels (negative = left) - dragged the same way.
   subtitleOffsetX: number;
+  // Whether the player starts episodes in a lighter quality - see lib/connectionQuality.ts for
+  // what "auto" reads.
+  dataSaver: DataSaverMode;
+  setDataSaver: (mode: DataSaverMode) => void;
   setAutoSkipSegments: (enabled: boolean) => void;
   setAutoPlayNextEpisode: (enabled: boolean) => void;
   setPlaybackSpeed: (speed: PlaybackSpeed) => void;
@@ -92,6 +99,8 @@ export const usePlayerPrefsStore = create<PlayerPrefsState>()(
       showRemainingTime: false,
       subtitleOffset: 72,
       subtitleOffsetX: 0,
+      dataSaver: "auto",
+      setDataSaver: (dataSaver) => set({ dataSaver }),
       setAutoSkipSegments: (autoSkipSegments) => set({ autoSkipSegments }),
       setAutoPlayNextEpisode: (autoPlayNextEpisode) => set({ autoPlayNextEpisode }),
       setPlaybackSpeed: (playbackSpeed) => set({ playbackSpeed }),

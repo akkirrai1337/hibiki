@@ -191,3 +191,30 @@ export function pickPlaybackFallback(
     })
     .sort((a, b) => b.score - a.score || a.index - b.index)[0]?.link;
 }
+
+/**
+ * The same stream in a freshly discovered link set. Its URLs carry new CDN tokens, so only the
+ * provider, dub, audio track and quality can say which of them replaces the expired one. An embed
+ * is returned as is: resolving it again is exactly what hands out the new tokens.
+ */
+export function pickRefreshedLink(links: PlayerLink[], previous: PlayerLink): PlayerLink | undefined {
+  const sameDub = linksForCurrentDub(links, previous);
+  const direct = sameDub.filter((link) => link.type !== "EMBED");
+  return direct.length > 0 ? pickResolvedLink(direct, previous) : sameDub[0];
+}
+
+/** The tallest picture data saver starts an episode in. */
+export const DATA_SAVER_MAX_HEIGHT = 480;
+
+/**
+ * The rendition data saver starts on instead of `chosen`: the best quality of the same stream at
+ * or under `maxHeight`, or its lowest when every one is taller. A stream offering a single
+ * rendition, or qualities without a resolution in them, stays as it is.
+ */
+export function pickDataSaverLink(links: PlayerLink[], chosen: PlayerLink, maxHeight = DATA_SAVER_MAX_HEIGHT): PlayerLink {
+  const renditions = linksForCurrentStream(links, chosen)
+    .filter((link) => link.type !== "EMBED" && Number.isFinite(qualityValue(link.quality ?? "")))
+    .sort((a, b) => qualityValue(b.quality ?? "") - qualityValue(a.quality ?? ""));
+  if (renditions.length < 2 || !Number.isFinite(qualityValue(chosen.quality ?? ""))) return chosen;
+  return renditions.find((link) => qualityValue(link.quality ?? "") <= maxHeight) ?? renditions[renditions.length - 1];
+}

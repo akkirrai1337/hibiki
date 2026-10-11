@@ -592,6 +592,9 @@ export interface CachedAnimeEntry {
 export interface PlayerLinkPreference {
   translation?: string | null;
   playerName?: string | null;
+  /** Data saver is on (renderer lib/connectionQuality.ts): resolvers may trade extras for fewer
+   * requests - Kodik skips its per-episode player page (and the skip timecodes on it). */
+  dataSaver?: boolean;
 }
 
 /** An episode-group list read from the on-disk cache, with when it was last refreshed. */

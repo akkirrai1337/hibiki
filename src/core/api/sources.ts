@@ -52,7 +52,7 @@ export function createSourcesApi(runtime: ExtensionRuntime): SourcesApi {
       }
     },
     playerLinks: (sourceId, titleId, groupId, episodeId, preference) => runtime.getPlayerLinks(sourceId, titleId, groupId, episodeId, preference),
-    resolvePlayerLink: (link) => runtime.resolvePlayerLink(link),
+    resolvePlayerLink: (link, options) => runtime.resolvePlayerLink(link, options),
     filterCatalog: (sourceId) => runtime.getFilterCatalog(sourceId),
     recommendations: (sourceId, sort) => recommendationsForSource(runtime, sourceId, sort),
 

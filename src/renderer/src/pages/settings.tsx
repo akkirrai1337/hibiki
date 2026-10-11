@@ -1,7 +1,7 @@
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { LogIn, LogOut, MemoryStick, ArrowDownToLine, ArrowUpDown, Ban, Check, CheckCircle2, ChevronDown, ChevronRight, DatabaseBackup, FileText, FolderOpen, Home, Info, Languages, MessageCircle, MonitorPlay, Moon, Palette, Radio, RefreshCw, RotateCcw, ScrollText, SlidersHorizontal, Sparkles, Sun, Timer, TriangleAlert } from "lucide-react";
+import { Gauge, LogIn, LogOut, MemoryStick, ArrowDownToLine, ArrowUpDown, Ban, Check, CheckCircle2, ChevronDown, ChevronRight, DatabaseBackup, FileText, FolderOpen, Home, Info, Languages, MessageCircle, MonitorPlay, Moon, Palette, Radio, RefreshCw, RotateCcw, ScrollText, SlidersHorizontal, Sparkles, Sun, Timer, TriangleAlert } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { isMobile, useBackHandler } from "@/lib/mobile";
 import { motion } from "motion/react";
@@ -10,7 +10,8 @@ import { MobilePageHeader } from "@/components/MobilePageHeader";
 import { BottomSheet, SheetOption } from "@/components/BottomSheet";
 import { Switch } from "@/components/Switch";
 import { SUPPORTED_LOCALES, setLocale } from "@/lib/i18n";
-import { SKIP_TIMER_MAX_SECONDS, SKIP_TIMER_MIN_SECONDS, WATCHED_THRESHOLD_MAX_PERCENT, WATCHED_THRESHOLD_MIN_PERCENT, usePlayerPrefsStore } from "@/stores/playerPrefsStore";
+import { SKIP_TIMER_MAX_SECONDS, SKIP_TIMER_MIN_SECONDS, WATCHED_THRESHOLD_MAX_PERCENT, WATCHED_THRESHOLD_MIN_PERCENT, usePlayerPrefsStore, type DataSaverMode } from "@/stores/playerPrefsStore";
+import { useSlowConnection } from "@/lib/connectionQuality";
 import { useUiStore } from "@/stores/uiStore";
 import { ACCENT_PRESETS, BACKGROUND_THEME_PRESETS, CUSTOM_BACKGROUND_THEME_ID, customBackgroundGradientCss, DEFAULT_ACCENT, DEFAULT_MOBILE_ACCENT, DEFAULT_MOBILE_ACCENT_LIGHT } from "@/lib/theme";
 import { sortLabel } from "@/lib/catalogSort";
@@ -757,6 +758,40 @@ function HomeSortSection() {
   );
 }
 
+const DATA_SAVER_MODES: DataSaverMode[] = ["auto", "on", "off"];
+
+/** Data saver's three modes, and in "auto" what it is deciding right now. */
+function DataSaverRow() {
+  const { t } = useTranslation();
+  const mode = usePlayerPrefsStore((s) => s.dataSaver);
+  const setMode = usePlayerPrefsStore((s) => s.setDataSaver);
+  const slow = useSlowConnection();
+  const label = { auto: t("settings.player.dataSaverAuto"), on: t("settings.player.dataSaverOn"), off: t("settings.player.dataSaverOff") };
+  return (
+    <SettingsRow icon={<Gauge className="h-[18px] w-[18px]" strokeWidth={2} />}>
+      <p className="text-sm font-semibold text-text">{t("settings.player.dataSaver")}</p>
+      <p className="mt-0.5 text-xs leading-relaxed text-muted">{t("settings.player.dataSaverHint")}</p>
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        {DATA_SAVER_MODES.map((option) => (
+          <button
+            key={option}
+            onClick={() => setMode(option)}
+            className={cn(
+              "rounded-lg px-3 py-1.5 text-sm font-medium transition-colors",
+              mode === option ? "bg-accent text-accent-fg" : "bg-text/[.05] text-muted hover:bg-text/[.08] hover:text-text",
+            )}
+          >
+            {label[option]}
+          </button>
+        ))}
+      </div>
+      {mode === "auto" && (
+        <p className="mt-2 text-xs text-muted">{t(slow ? "settings.player.dataSaverNowOn" : "settings.player.dataSaverNowOff")}</p>
+      )}
+    </SettingsRow>
+  );
+}
+
 export function SettingsPage() {
   const { t, i18n } = useTranslation();
   const autoSkipDelaySeconds = usePlayerPrefsStore((s) => s.autoSkipDelaySeconds);
@@ -991,6 +1026,7 @@ export function SettingsPage() {
             onChange={setWatchedThresholdPercent}
           />
         </SettingsRow>
+        <DataSaverRow />
       </SettingsSection>
       )}
 

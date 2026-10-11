@@ -32,6 +32,9 @@ import type { Episode, PlayerLink, VideoSegment } from "@shared/types";
 import { audioTrackOptions, pickLinkForAudioTrack, pickLinkForDimension, pickLinkForQuality, playerOptions, qualityOptions, translationOptions } from "@/lib/playerLinks";
 import { playbackUrl } from "@/lib/playbackUrl";
 import { proxiedHlsLoader, streamRequestUrl, usesStreamProxy } from "@/lib/streamProxy";
+import { createLoadActivity, type LoadActivity } from "@/lib/loadActivity";
+import { DATA_SAVER_MAX_HEIGHT } from "@/lib/playerLinks";
+import { isDataSaverActive, recordThroughput } from "@/lib/connectionQuality";
 import { separateAudioMaster, syntheticManifestLoader } from "@/lib/hlsSeparateAudio";
 import { fillMissingCodecs } from "@/lib/dashCodecs";
 import { isGenericDubTitle } from "@/lib/dubTitle";
@@ -798,16 +801,34 @@ export function VideoPlayer({ link, availableLinks, offlinePlayback, dubOptions,
   const [playbackError, setPlaybackError] = useState<string | null>(null);
   const [playbackRetryKey, setPlaybackRetryKey] = useState(0);
   const retryPositionMsRef = useRef<number | null>(null);
+  // Read by the source-setup effect, which must not re-run (and reload the stream) when the saved
+  // position it started from changes underneath it.
+  const startPositionMsRef = useRef(startPositionMs);
+  startPositionMsRef.current = startPositionMs;
   // The current link and the failure fallback, for the startup timeout below (which is set up
   // before either exists in this function, and fires long after the render that armed it).
   const timeoutLinkRef = useRef<PlayerLink | null>(null);
   timeoutLinkRef.current = link ?? null;
   const timeoutFallbackRef = useRef<((failedLink: PlayerLink, reason: string) => boolean) | null>(null);
+  // Bytes the current stream has received, for telling a slow stream from a dead one below.
+  const loadActivityRef = useRef<LoadActivity | null>(null);
   const armPlaybackTimeout = useCallback((stage: "startup" | "buffering") => {
     if (playbackTimeoutRef.current !== null) clearTimeout(playbackTimeoutRef.current);
+    const activity = loadActivityRef.current;
+    const bytesAtArm = activity?.bytes() ?? 0;
     playbackTimeoutRef.current = window.setTimeout(() => {
       playbackTimeoutRef.current = null;
       const video = videoRef.current;
+      // Seen on mobile data: a stream still downloading, only slowly, was switched away from as if
+      // it had hung - and the next quality/player then started from nothing on the same slow link.
+      // Anything at all arriving in the last window means the stream is alive; keep waiting. Only
+      // a window with not a single byte counts as the stream having given nothing.
+      if (activity && activity === loadActivityRef.current && activity.bytes() > bytesAtArm) {
+        const received = Math.round((activity.bytes() - bytesAtArm) / 1024);
+        playbackTraceRef.current?.write(`still loading slowly (${received} KB in the last ${PLAYBACK_LOAD_TIMEOUT_MS / 1000}s); waiting instead of a ${stage} timeout`);
+        armPlaybackTimeout(stage);
+        return;
+      }
       // Network startup can outlive the timeout even after the browser has enough data to play.
       // Don't leave a stale fatal overlay on top of media that's already healthy.
       if (stage === "startup" && video && (!video.paused || video.readyState >= HTMLMediaElement.HAVE_FUTURE_DATA)) {
@@ -1098,6 +1119,8 @@ export function VideoPlayer({ link, availableLinks, offlinePlayback, dubOptions,
     // old stream may still have left `buffering` false, so reset it explicitly before loading the
     // replacement to provide immediate feedback and suppress controls tied to the previous media.
     setBuffering(true);
+    const loadActivity = createLoadActivity();
+    loadActivityRef.current = loadActivity;
     armPlaybackTimeout("startup");
 
     // Referer/User-Agent can't be set from renderer JS (forbidden headers on XHR/fetch, and a
@@ -1151,12 +1174,24 @@ export function VideoPlayer({ link, availableLinks, offlinePlayback, dubOptions,
         // read ahead up to 10 minutes when the network allows, so a long session's buffered media
         // grew the renderer's memory for as long as the episode played. Thirty seconds behind the
         // playhead is plenty for a seek back; sixty ahead keeps playback smooth on a slow source.
+        // Where playback is about to jump to - the same order onLoadedMetadata seeks in. Without
+        // it hls.js always fetched segment 1 first and only then the one the seek needed: seen
+        // live, 871 KB downloaded and thrown away before resuming at 0:40, on every resume, retry
+        // and fallback - on mobile data that one wasted segment was seconds of the startup.
+        const pendingSwitch = pendingSourceSwitchRef.current;
+        const startAt = pendingSwitch && pendingSwitch.fromUrl !== link.url
+          ? pendingSwitch.position
+          : retryPositionMsRef.current !== null
+            ? retryPositionMsRef.current / 1000
+            : (startPositionMsRef.current ?? 0) / 1000;
+        if (startAt > 0) trace(`starting hls.js at ${startAt.toFixed(1)}s`);
         hls = new HlsEngine({
+          startPosition: startAt > 0 ? startAt : -1,
           backBufferLength: 30,
           maxBufferLength: 40,
           maxMaxBufferLength: 60,
           maxBufferSize: 60 * 1000 * 1000,
-          ...(usesStreamProxy() || audioUrl ? { loader: hlsLoader(HlsEngine.DefaultConfig.loader) } : {}),
+          loader: loadActivity.hlsLoader(usesStreamProxy() || audioUrl ? hlsLoader(HlsEngine.DefaultConfig.loader) : HlsEngine.DefaultConfig.loader),
         });
         let manifestLoaded = false;
         let firstFragmentLoaded = false;
@@ -1191,6 +1226,10 @@ export function VideoPlayer({ link, availableLinks, offlinePlayback, dubOptions,
           }
         });
         hls.on(HlsEngine.Events.FRAG_LOADED, (_event, data) => {
+          // Every segment is a measurement of the real speed to this CDN - what data saver's "auto"
+          // decides the next episode's quality from (lib/connectionQuality.ts).
+          const loading = data.frag.stats?.loading;
+          if (loading) recordThroughput(data.frag.stats.loaded, loading.end - loading.first);
           if (firstFragmentLoaded) return;
           firstFragmentLoaded = true;
           if (fragmentTimer !== null) window.clearTimeout(fragmentTimer);
@@ -1251,8 +1290,23 @@ export function VideoPlayer({ link, availableLinks, offlinePlayback, dubOptions,
         const MAX_MEDIA_RETRIES = 3;
         let emptyFragment = { sn: "", count: 0 };
         const MAX_EMPTY_FRAGMENT_REPEATS = 4;
+        // The startup watchdogs only describe a stream still on its way. Left running past a give-up,
+        // they logged "still waiting for HLS manifest response" for a stream already failed with 403.
+        const giveUp = () => {
+          for (const timer of [manifestTimer, fragmentTimer, bufferedTimer]) if (timer !== null) window.clearTimeout(timer);
+          hls?.destroy();
+        };
         hls.on(HlsEngine.Events.MANIFEST_PARSED, (_event, data) => {
           networkRetries = 0;
+          // A master playlist with several renditions picks its own; data saver keeps that pick at
+          // or under the same height a source's separate quality links are held to.
+          if (hls && data.levels.length > 1 && isDataSaverActive()) {
+            let cap = -1;
+            data.levels.forEach((level, index) => { if (level.height > 0 && level.height <= DATA_SAVER_MAX_HEIGHT) cap = index; });
+            // Every rendition taller: the lowest of them, as with separate quality links.
+            hls.autoLevelCapping = Math.max(cap, 0);
+            trace(`data saver: renditions capped at ${data.levels[Math.max(cap, 0)].height}p`);
+          }
           trace(`manifest parsed; levels=${data.levels.length}; selectedLevel=${hls?.currentLevel ?? "auto"}`);
         });
         // A successful buffer append is the real signal that recovery actually worked - resetting
@@ -1281,7 +1335,7 @@ export function VideoPlayer({ link, availableLinks, offlinePlayback, dubOptions,
               const reason = `fragment ${sn} has no media`;
               log.warn("player", `${reason} after ${emptyFragment.count} tries; giving up on this stream`);
               if (!reportPlaybackFailure(link, reason)) setPlaybackError(reason);
-              hls?.destroy();
+              giveUp();
               return;
             }
           }
@@ -1299,9 +1353,9 @@ export function VideoPlayer({ link, availableLinks, offlinePlayback, dubOptions,
               networkRetries += 1;
               if (answered || networkRetries > MAX_NETWORK_RETRIES) {
                 const reason = data.details || "playback failed";
-                if (answered) log.info("player", `manifest answered http ${status}, not retrying`);
+                if (answered) log.info("player", `${isManifestFailure ? "manifest" : "stream"} answered http ${status}, not retrying`);
                 if (!reportPlaybackFailure(link, reason)) setPlaybackError(reason);
-                hls?.destroy();
+                giveUp();
                 break;
               }
               // startLoad() resumes fragment loading, but does not reliably recreate the loader
@@ -1338,14 +1392,14 @@ export function VideoPlayer({ link, availableLinks, offlinePlayback, dubOptions,
               mediaRetries += 1;
               if (mediaRetries > MAX_MEDIA_RETRIES) {
                 setPlaybackError(data.details || "playback failed");
-                hls?.destroy();
+                giveUp();
                 break;
               }
               hls?.recoverMediaError();
               break;
             default:
               setPlaybackError(data.details || "playback failed");
-              hls?.destroy();
+              giveUp();
           }
         });
         hls.loadSource(streamUrl);
@@ -1563,6 +1617,9 @@ export function VideoPlayer({ link, availableLinks, offlinePlayback, dubOptions,
       if (autoPlayNextEpisode) onNextEpisode?.();
     };
     const onProgressEvent = () => {
+      // A plain <video src> (MP4) and dash.js have no loader to count bytes in; the element's own
+      // progress events are what says their download is still moving.
+      loadActivityRef.current?.mark();
       if (video.buffered.length > 0) {
         const bufferedEnd = video.buffered.end(video.buffered.length - 1);
         setBuffered(bufferedEnd);

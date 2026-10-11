@@ -2,12 +2,14 @@ import { describe, expect, it } from "vitest";
 import type { PlayerLink } from "@shared/types";
 import {
   audioTrackOptions,
+  pickDataSaverLink,
   pickDefaultLink,
   pickLinkForAudioTrack,
   pickLinkForDimension,
   pickLinkForQuality,
   pickPlaybackFallback,
   pickPreferredLink,
+  pickRefreshedLink,
   pickResolvedLink,
   qualityOptions,
 } from "./playerLinks";
@@ -172,5 +174,42 @@ describe("audio tracks", () => {
   it("keeps the track through an embed resolving again", () => {
     const requested = link({ url: "embed", type: "EMBED", playerName: "Alloha", quality: "720p", audioTrack: "AniLibriaTV 1" });
     expect(pickResolvedLink([first1080, first720, second1080, second720], requested)).toBe(second720);
+  });
+});
+
+describe("pickRefreshedLink", () => {
+  it("finds the same provider, dub and quality under its new URL", () => {
+    const fresh = episode.map((item) => ({ ...item, url: `${item.url}?token=new` }));
+    expect(pickRefreshedLink(fresh, kodik480)?.url).toBe("kodik/480?token=new");
+  });
+
+  it("hands back the embed when the stream only exists behind one", () => {
+    const embed = link({ url: "alloha/embed", type: "EMBED", playerName: "Alloha", translation: "AniLibria" });
+    expect(pickRefreshedLink([kodik720, embed], allohaOther)).toBe(embed);
+  });
+
+  it("returns nothing when the dub is gone", () => {
+    expect(pickRefreshedLink([kodik720], allohaOther)).toBeUndefined();
+  });
+});
+
+describe("pickDataSaverLink", () => {
+  const kodik360 = link({ url: "kodik/360", playerName: "Kodik", translation: "Дублированная", quality: "360p" });
+
+  it("drops to the best quality at or under 480p of the same stream", () => {
+    expect(pickDataSaverLink([kodik720, kodik360, kodik480, alloha360], kodik720)).toBe(kodik480);
+    expect(pickDataSaverLink(episode, alloha1440)).toBe(alloha360);
+  });
+
+  it("takes the lowest when every rendition is taller", () => {
+    const hd = link({ url: "a/1080", playerName: "A", quality: "1080p" });
+    const sd = link({ url: "a/720", playerName: "A", quality: "720p" });
+    expect(pickDataSaverLink([hd, sd], hd)).toBe(sd);
+  });
+
+  it("leaves a stream with a single or unnamed rendition alone", () => {
+    const auto = link({ url: "b/auto", playerName: "B", quality: "auto" });
+    expect(pickDataSaverLink([auto, link({ url: "b/480", playerName: "B", quality: "480p" })], auto)).toBe(auto);
+    expect(pickDataSaverLink([allohaOther], allohaOther)).toBe(allohaOther);
   });
 });

@@ -78,7 +78,7 @@ export interface HibikiApi {
     cachedPlaybackGroups(sourceId: string, titleId: string): Promise<CachedPlaybackGroupsEntry | null>;
     playbackGroups(sourceId: string, titleId: string): Promise<PlaybackGroup[]>;
     playerLinks(sourceId: string, titleId: string, groupId: string, episodeId: string, preference?: PlayerLinkPreference): Promise<PlayerLink[]>;
-    resolvePlayerLink(link: PlayerLink): Promise<PlayerLink[]>;
+    resolvePlayerLink(link: PlayerLink, options?: { dataSaver?: boolean }): Promise<PlayerLink[]>;
     filterCatalog(sourceId: string): Promise<SearchFilterCatalog>;
     /** What to watch next on this source, from what was watched on it. `sort` is the order its genre
      * searches use - the home screen's own. */

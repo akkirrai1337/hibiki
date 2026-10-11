@@ -38,8 +38,8 @@ describe("resolveEmbedLinks", () => {
     const result = await runtime.resolveEmbedLinks([embed("slow.test"), embed("fast.test")]);
 
     expect(result[0].url).toBe("https://cdn/fast.m3u8");
-    // The second attempt starts after the stagger (1.2s) at the latest, or right away on a failure -
-    // never after the slow one has run to completion *and* been given its retry.
+    // The second attempt starts right away on a failure - never after the failing one has also
+    // been given its retry.
     expect(Date.now() - started).toBeLessThan(1_600);
     // The link that was resolved is replaced by its streams; the other one is kept as a fallback.
     expect(result.map((l) => l.type)).toEqual(["DIRECT_HLS", "EMBED"]);
@@ -56,7 +56,22 @@ describe("resolveEmbedLinks", () => {
     const result = await runtime.resolveEmbedLinks([embed("a.test"), embed("b.test")]);
 
     expect(result[0].url).toBe("https://cdn/a.m3u8");
-    expect(calls).toEqual(["a"]); // b was never started: a answered inside the stagger window
+    expect(calls).toEqual(["a"]); // b was never started: a answered
+  });
+
+  it("never starts a second resolver beside a slow one that is still working", async () => {
+    const calls: string[] = [];
+    const runtime = runtimeWith([{ id: "a" }, { id: "b" }], async (resolver) => {
+      calls.push(resolver.id);
+      // Longer than the 1.2s stagger the resolvers used to race at.
+      await wait(resolver.id === "a" ? 1_400 : 10);
+      return [stream(resolver.id)];
+    });
+
+    const result = await runtime.resolveEmbedLinks([embed("a.test"), embed("b.test")]);
+
+    expect(result[0].url).toBe("https://cdn/a.m3u8");
+    expect(calls).toEqual(["a"]);
   });
 
   it("falls back to the untouched link list when every resolver fails", async () => {

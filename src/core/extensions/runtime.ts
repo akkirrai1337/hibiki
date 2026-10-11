@@ -32,8 +32,6 @@ import { chronologicalGroups } from "./episodeOrder";
 const WORKER_TIMEOUT_MS = 30_000;
 const FILTER_TYPES = ["select", "multi", "tristate", "text", "range"];
 const RESOLVE_TOTAL_TIMEOUT_MS = 45_000;
-// How long a resolver attempt may run alone before the next candidate is started beside it.
-const RESOLVE_STAGGER_MS = 1_200;
 
 function playerUrlLabel(raw: string): string {
   try {
@@ -327,9 +325,14 @@ export class ExtensionRuntime {
     );
   };
 
-  /** Starts worker bundle parsing ahead of the renderer's first source queries. */
+  /** Starts worker bundle parsing ahead of the renderer's first source queries - and, once the
+   * manifests are read, the scripts of every installed source and resolver. */
   warmWorkers(): void {
-    getPlatform().extensionHost.warm();
+    const { files } = getPlatform();
+    getPlatform().extensionHost.warm([
+      ...[...this.extensions.keys()].map((id) => files.join(this.extensionsDir, `${id}.js`)),
+      ...[...this.resolvers.keys()].map((id) => files.join(this.resolversDir, `${id}.js`)),
+    ]);
   }
 
   private run<T>(
@@ -602,13 +605,13 @@ export class ExtensionRuntime {
       // A source-provided direct link needs no resolver at all. Let the renderer adopt the saved
       // choice from the returned list instead of resolving an unrelated EMBED first.
       if (preferredIndex >= 0 && links[preferredIndex].type !== "EMBED") return links;
-      return this.withoutUnplayableEmbeds(await this.resolveEmbedLinks(links, preferredIndex));
+      return this.withoutUnplayableEmbeds(await this.resolveEmbedLinks(links, preferredIndex, preference?.dataSaver === true));
     });
   }
 
-  async resolvePlayerLink(link: PlayerLink): Promise<PlayerLink[]> {
+  async resolvePlayerLink(link: PlayerLink, options?: { dataSaver?: boolean }): Promise<PlayerLink[]> {
     if (isRetiredPlayerLink(link)) return [];
-    return this.withoutUnplayableEmbeds(await this.resolveEmbedLinks([link]));
+    return this.withoutUnplayableEmbeds(await this.resolveEmbedLinks([link], -1, options?.dataSaver === true));
   }
 
   // The app plays only in its own player: a third-party page is never shown in an iframe. An EMBED
@@ -702,15 +705,10 @@ export class ExtensionRuntime {
   // doesn't load" - a *mirror* failing is not the same as a *provider* failing, and one retry on a
   // *different* mirror costs nothing on the normal path.
   //
-  // Attempts used to run strictly one after another, so a slow or dead provider at the head of the
-  // list (a browser-runtime resolver that fails after ~2.5s, twice, for its two mirrors) was paid
-  // for in full before the next provider was even tried. They now overlap: the first starts at
-  // once, and each next one starts as soon as the previous fails - or after RESOLVE_STAGGER_MS of
-  // it still being in flight, whichever comes first. The stagger keeps the source's preferred
-  // provider ahead in a healthy race (it gets a head start rather than a handicap), and keeps a
-  // fast plain-HTTP fallback from waiting behind a slow one. Browser-runtime resolvers open a real
-  // hidden window, so only one of them runs at a time.
-  private async resolveEmbedLinks(links: PlayerLink[], preferredIndex = -1): Promise<PlayerLink[]> {
+  // Attempts run one after another: the next starts only when the previous has failed (see the
+  // loop below for why they no longer overlap). A failure that comes quickly moves on quickly; a
+  // provider failing repeatedly drops behind the healthy ones (recentFailures) on later episodes.
+  private async resolveEmbedLinks(links: PlayerLink[], preferredIndex = -1, dataSaver = false): Promise<PlayerLink[]> {
     const MAX_ATTEMPTS = 5;
     const MAX_ATTEMPTS_PER_RESOLVER = 2;
     const startedAt = Date.now();
@@ -752,78 +750,43 @@ export class ExtensionRuntime {
 
     const total = plan.length;
     let launched = 0;
-    let active = 0;
-    let browserActive = 0;
-    let settled = false;
-    let stagger: NodeJS.Timeout | undefined;
 
-    return new Promise<PlayerLink[]>((resolveAll) => {
-      const finish = (result: PlayerLink[], winner?: { resolverId: string; resolved: PlayerLink[] }) => {
-        if (settled) return;
-        settled = true;
-        clearTimeout(stagger);
-        if (winner) {
-          logger.info("resolve", `${winner.resolverId} resolved ${winner.resolved.length} stream(s) [${winner.resolved.map((r) => r.quality ?? "?").join(", ")}] (${Date.now() - startedAt}ms total, ${launched}/${total} attempts started)`);
-        } else {
-          logger.warn("resolve", `no resolver produced a playable stream after ${launched} attempt(s) in ${Date.now() - startedAt}ms - falling back to the raw embed list`);
+    // Strictly one at a time, in the planned order: the next candidate starts only once the one
+    // before it has failed. Starting a second resolver beside a slow first one bought speed with
+    // traffic - on mobile data Alloha's hidden browser (a whole player page, its scripts and its
+    // playlist) downloaded for a link nobody picked, splitting the connection with the stream that
+    // was about to play. Every other player is resolved when the user switches to it, or when the
+    // player falls back after a failure.
+    for (const candidate of plan) {
+      if (Date.now() >= deadline) break;
+      launched += 1;
+      try {
+        const resolved = await this.attemptResolve(candidate.resolver, candidate.link, launched, total, deadline, dataSaver);
+        if (resolved.length > 0) {
+          this.noteResolverResult(candidate.resolver.id, true);
+          logger.info("resolve", `${candidate.resolver.id} resolved ${resolved.length} stream(s) [${resolved.map((r) => r.quality ?? "?").join(", ")}] (${Date.now() - startedAt}ms total, ${launched}/${total} attempts started)`);
+          return [...resolved, ...links.slice(0, candidate.index), ...links.slice(candidate.index + 1)];
         }
-        resolveAll(result);
-      };
-
-      const launchNext = () => {
-        clearTimeout(stagger);
-        if (settled) return;
-        if (plan.length === 0 || Date.now() >= deadline) {
-          if (active === 0) finish(links);
-          return;
-        }
-        // The first candidate that is allowed to run now: a browser resolver has to wait for the
-        // one before it, but must not hold up a plain-HTTP candidate queued behind it.
-        const pick = plan.findIndex((c) => c.resolver.runtime !== "BROWSER" || browserActive === 0);
-        if (pick < 0) return; // Only browser candidates are left and one is running: its end relaunches.
-        const [candidate] = plan.splice(pick, 1);
-        launched += 1;
-        active += 1;
-        const isBrowser = candidate.resolver.runtime === "BROWSER";
-        if (isBrowser) browserActive += 1;
-        if (plan.length > 0) stagger = setTimeout(launchNext, RESOLVE_STAGGER_MS);
-
-        void this.attemptResolve(candidate.resolver, candidate.link, launched, total, deadline)
-          .then((resolved) => {
-            if (resolved.length > 0) {
-              this.noteResolverResult(candidate.resolver.id, true);
-              finish([...resolved, ...links.slice(0, candidate.index), ...links.slice(candidate.index + 1)], {
-                resolverId: candidate.resolver.id,
-                resolved,
-              });
-              return;
-            }
-            this.noteResolverResult(candidate.resolver.id, false);
-            logger.warn("resolve", `${candidate.resolver.id} returned nothing playable`);
-          })
-          .catch((error: unknown) => {
-            this.noteResolverResult(candidate.resolver.id, false);
-            logger.warn("resolve", `${candidate.resolver.id} failed on ${candidate.link.url}: ${error instanceof Error ? error.message : String(error)}`);
-          })
-          .finally(() => {
-            active -= 1;
-            if (isBrowser) browserActive -= 1;
-            launchNext();
-          });
-      };
-
-      launchNext();
-    });
+        this.noteResolverResult(candidate.resolver.id, false);
+        logger.warn("resolve", `${candidate.resolver.id} returned nothing playable`);
+      } catch (error) {
+        this.noteResolverResult(candidate.resolver.id, false);
+        logger.warn("resolve", `${candidate.resolver.id} failed on ${candidate.link.url}: ${error instanceof Error ? error.message : String(error)}`);
+      }
+    }
+    logger.warn("resolve", `no resolver produced a playable stream after ${launched} attempt(s) in ${Date.now() - startedAt}ms - falling back to the raw embed list`);
+    return links;
   }
 
   /** One resolver run for one link, with the resolver's stream vocabulary mapped onto this app's
    * PlayerLink. Resolves to [] when the resolver found nothing playable. */
-  private async attemptResolve(resolver: ResolverManifest, link: PlayerLink, attemptNo: number, of: number, deadline: number): Promise<PlayerLink[]> {
+  private async attemptResolve(resolver: ResolverManifest, link: PlayerLink, attemptNo: number, of: number, deadline: number, dataSaver = false): Promise<PlayerLink[]> {
     logger.info("resolve", `attempt ${attemptNo}/${of} via ${resolver.id} (${resolver.runtime ?? "NODE"}) for ${link.playerName ?? "?"}/${link.translation ?? "?"} ${playerUrlLabel(link.url)}`);
     const raw =
       resolver.runtime === "BROWSER"
         ? await this.runBrowserResolver(resolver.id, link, deadline)
-        : await this.run<Array<PlayerLink & { type: string }>>("resolve", resolver.id, [JSON.stringify(link)], {
+        // `dataSaver` rides along on the link a resolver reads; one that knows no lighter way ignores it.
+        : await this.run<Array<PlayerLink & { type: string }>>("resolve", resolver.id, [JSON.stringify(dataSaver ? { ...link, dataSaver: true } : link)], {
             extensionsDir: this.resolversDir,
             timeoutMs: Math.max(1, Math.min(WORKER_TIMEOUT_MS, deadline - Date.now())),
           });

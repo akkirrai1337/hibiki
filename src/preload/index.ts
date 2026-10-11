@@ -63,8 +63,8 @@ const api: HibikiApi = {
       ipcRenderer.invoke(IPC.sourcePlaybackGroups, sourceId, titleId),
     playerLinks: (sourceId: string, titleId: string, groupId: string, episodeId: string, preference?: PlayerLinkPreference): Promise<PlayerLink[]> =>
       ipcRenderer.invoke(IPC.sourcePlayerLinks, sourceId, titleId, groupId, episodeId, preference),
-    resolvePlayerLink: (link: PlayerLink): Promise<PlayerLink[]> =>
-      ipcRenderer.invoke(IPC.sourceResolvePlayerLink, link),
+    resolvePlayerLink: (link: PlayerLink, options?: { dataSaver?: boolean }): Promise<PlayerLink[]> =>
+      ipcRenderer.invoke(IPC.sourceResolvePlayerLink, link, options),
     filterCatalog: (sourceId: string): Promise<SearchFilterCatalog> =>
       ipcRenderer.invoke(IPC.sourceFilterCatalog, sourceId),
     recommendations: (sourceId: string, sort?: string): Promise<SourceRecommendations> =>

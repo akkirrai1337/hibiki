@@ -643,7 +643,14 @@
       "skipButtonTimeout": "Час показу кнопки «Пропустити»",
       "skipButtonTimeoutHint": "Скільки кнопка «Пропустити» видна на екрані",
       "watchedThreshold": "Поріг автоперегляду",
-      "watchedThresholdHint": "Частка серії для позначки «переглянуто»"
+      "watchedThresholdHint": "Частка серії для позначки «переглянуто»",
+      "dataSaver": "Економія трафіку",
+      "dataSaverHint": "Серії починаються в 480p або нижче. У режимі «Авто» вмикається сама за повільного з’єднання.",
+      "dataSaverAuto": "Авто",
+      "dataSaverOn": "Увімк",
+      "dataSaverOff": "Вимк",
+      "dataSaverNowOn": "З’єднання повільне: зараз увімкнена",
+      "dataSaverNowOff": "З’єднання добре: зараз вимкнена"
     },
     "discord": {
       "title": "Discord",
