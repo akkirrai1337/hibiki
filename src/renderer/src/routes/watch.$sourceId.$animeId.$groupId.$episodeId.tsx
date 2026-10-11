@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { isMobile } from "@/lib/mobile";
 import { createFileRoute, useNavigate, useRouter } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -891,7 +892,13 @@ function WatchPage() {
   return (
     <div className="relative h-full w-full bg-black">
       {!videoPlayerMounted && (
-        <div className="absolute inset-x-0 top-0 z-10 flex items-center gap-4 bg-gradient-to-b from-black/80 to-transparent px-6 pb-10 pt-5">
+        // Laid out exactly like VideoPlayer's own top bar (same padding, the phone's cutout insets
+        // included), which takes its place once a link arrives - otherwise the back button and the
+        // title visibly jumped sideways and up at that moment.
+        <div
+          className="absolute inset-x-0 top-0 z-10 flex items-center gap-4 bg-gradient-to-b from-black/80 to-transparent px-6 pb-10 pt-5 mobile:pt-3"
+          style={isMobile ? { paddingLeft: "max(1.25rem, var(--safe-left))", paddingRight: "max(1.25rem, var(--safe-right))" } : undefined}
+        >
           <button onClick={goBack} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/10 text-white transition-colors hover:bg-white/20">
             <ArrowLeft className="h-[18px] w-[18px]" strokeWidth={2} />
           </button>
