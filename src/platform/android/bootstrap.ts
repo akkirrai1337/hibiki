@@ -227,6 +227,11 @@ export async function installAndroidHibiki(): Promise<void> {
     HibikiApp.keepAwake({ value: false }),
   ]).catch((error) => log("warn", "app", `screen state not reset: ${error instanceof Error ? error.message : String(error)}`));
   runtime.warmWorkers();
+  // Android may stop a backgrounded WebView's workers; coming back tops the pool up again before
+  // the first source call after the pause needs one.
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") runtime.warmWorkers();
+  });
   // AniList's sign-in comes back as hibiki://anilist-auth: to a running app as an event, or as the
   // link the app was (re)started with when Android had ended it while the browser was in front.
   void HibikiApp.addListener("deepLink", (event) => void handleTrackingRedirect(event.url));

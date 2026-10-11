@@ -10,6 +10,10 @@ import { HibikiNet, namedError } from "./native";
 const MAX_RUNNING = 4;
 const MAX_IDLE = 4;
 const IDLE_TTL_MS = 2 * 60_000;
+// Kept however long the app sits idle: a call after a pause (the next episode, twenty minutes into
+// this one) used to start a cold worker, which the first call of a session showed costs ~200ms.
+// Only the pool beyond these is reclaimed after IDLE_TTL_MS.
+const WARM_WORKERS = 2;
 
 function spawn(): Worker {
   return new Worker(new URL("./extensionWorker.ts", import.meta.url), { type: "module" });
@@ -24,8 +28,10 @@ export class AndroidExtensionHost implements ExtensionHostPort {
 
   constructor(private readonly files: FilesPort) {}
 
-  warm(): void {
-    for (let i = this.idle.length; i < 2; i++) this.release(spawn());
+  warm(scriptPaths: string[] = []): void {
+    for (let i = this.idle.length; i < WARM_WORKERS; i++) this.release(spawn());
+    // Read now, while nothing waits on them, instead of on the first call that needs each.
+    for (const path of scriptPaths) void this.script(path).catch(() => undefined);
   }
 
   dispose(): void {
@@ -88,6 +94,7 @@ export class AndroidExtensionHost implements ExtensionHostPort {
       return;
     }
     const timer = setTimeout(() => {
+      if (this.idle.length <= WARM_WORKERS) return;
       const index = this.idle.findIndex((entry) => entry.worker === worker);
       if (index >= 0) this.idle.splice(index, 1);
       worker.terminate();

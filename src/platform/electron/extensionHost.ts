@@ -41,14 +41,14 @@ export class ElectronExtensionHost implements ExtensionHostPort {
 
   // An idle worker holds a whole V8 isolate - about 13 MB each - and used to sit in the pool until
   // the app quit. Browsing keeps the pool busy, so this only ever reclaims the memory of a pool
-  // nobody has asked anything of for a while; the next call pays one ~200 ms spawn instead.
+  // nobody has asked anything of for a while - and only above WARM_WORKERS, which stay.
   private static readonly IDLE_WORKER_TTL_MS = 2 * 60_000;
   private readonly idleTimers = new Map<Worker, NodeJS.Timeout>();
 
   /** Starts the expensive worker bundle parsing before the renderer's first source queries arrive.
    * Only workers that have loaded the whole module and posted `ready` enter the idle pool; calls
    * arriving earlier still take the normal fresh-worker path rather than waiting behind warm-up. */
-  warm(): void {
+  warm(_scriptPaths?: string[]): void {
     const missing = ElectronExtensionHost.WARM_WORKERS - this.idleWorkers.length - this.warmingWorkers.size;
     for (let i = 0; i < missing; i++) {
       const worker = new Worker(workerPath());
@@ -192,6 +192,9 @@ export class ElectronExtensionHost implements ExtensionHostPort {
     this.idleWorkers.push(worker);
     const timer = setTimeout(() => {
       this.idleTimers.delete(worker);
+      // The warm pool itself stays (see WARM_WORKERS): the next episode, started after twenty idle
+      // minutes, should not pay a cold ~200 ms spawn. Only the threads beyond it are reclaimed.
+      if (this.idleWorkers.length <= ElectronExtensionHost.WARM_WORKERS) return;
       const index = this.idleWorkers.indexOf(worker);
       if (index < 0) return;
       this.idleWorkers.splice(index, 1);

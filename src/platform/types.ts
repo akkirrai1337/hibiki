@@ -318,7 +318,9 @@ export interface ExtensionWorkerResult {
  */
 export interface ExtensionHostPort {
   run(call: ExtensionWorkerCall, bridge: BridgeHandler, options: { timeoutMs: number; signal?: AbortSignal }): Promise<ExtensionWorkerResult>;
-  /** Starts workers ahead of the first call. */
-  warm(): void;
+  /** Starts workers ahead of the first call; `scriptPaths`, when given, are the scripts the coming
+   * calls will run, which a host that reads them slowly (Android: through the Capacitor bridge)
+   * loads ahead too. */
+  warm(scriptPaths?: string[]): void;
   dispose(): void;
 }
