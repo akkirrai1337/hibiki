@@ -40,6 +40,16 @@ window.addEventListener("auxclick", (e) => { if (e.button === 1) e.preventDefaul
 // or a title pays for that chunk before anything can render. Preloading on intent - hovering the
 // link - means the chunk is usually already in memory by the time the click lands, which is most of
 // what makes a navigation feel instant rather than staged.
+// The route lives in the page's address, so a page that loads again while the player is open -
+// Android reloading a backgrounded WebView, a reload on the desktop - came back straight into the
+// player, which then fetched links and started playing an episode nobody had just picked. Starting
+// up, the player is never where the app opens: its title's page is, one tap away from the same
+// episode.
+const startupWatchRoute = window.location.hash.match(/^#\/watch\/([^/?#]+)\/([^/?#]+)\//);
+if (startupWatchRoute) {
+  window.history.replaceState(window.history.state, "", `#/anime/${startupWatchRoute[1]}/${startupWatchRoute[2]}`);
+}
+
 const router = createRouter({ routeTree, scrollRestoration: true, history: createHashHistory(), defaultPreload: "intent" });
 
 declare module "@tanstack/react-router" {
