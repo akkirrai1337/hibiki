@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { warmPlaybackOrigins } from "@/lib/preconnect";
 import { createPortal } from "react-dom";
 import { createFileRoute, Link, useNavigate, useRouter } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -163,6 +164,8 @@ function AnimeDetailPage() {
   const navigate = useNavigate();
   const { sourceId, animeId } = Route.useParams();
   const { group: requestedGroupId } = Route.useSearch();
+  // An episode is likely next: connect to where this source's playback went last time.
+  useEffect(() => { warmPlaybackOrigins(sourceId); }, [sourceId]);
   // A gradient "app background" theme (see lib/theme.ts) and this page's own blurred-poster
   // backdrop below both want to own the same real estate - showing both at once just looks like
   // clutter, one fighting the other for attention instead of either reading clearly. Once a theme

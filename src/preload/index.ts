@@ -210,6 +210,9 @@ const api: HibikiApi = {
       ipcRenderer.invoke(IPC.playerRegisterHeaders, url, headers ?? null),
     registerHeaderOrigin: (sessionId: string, url: string): Promise<boolean> =>
       ipcRenderer.invoke(IPC.playerRegisterHeaderOrigin, sessionId, url),
+    preconnect: (origins: string[]): void => {
+      void ipcRenderer.invoke(IPC.playerPreconnect, origins);
+    },
     unregisterHeaders: (sessionId: string): Promise<void> =>
       ipcRenderer.invoke(IPC.playerUnregisterHeaders, sessionId),
     // Where a stream URL actually lands after its CDN's redirects - see main/playerStream.ts.

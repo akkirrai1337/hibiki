@@ -108,6 +108,30 @@ public class HibikiNetPlugin extends Plugin {
         call.resolve();
     }
 
+    /**
+     * Opens a connection to each origin ahead of playback: a HEAD for "/", its answer ignored. What
+     * it is for is the DNS lookup and TCP/TLS handshake, which stay in the shared client's pool
+     * (every OkHttp here is Http.client or built from it) for the stream proxy's and extensions'
+     * first requests to reuse. A few kilobytes; nothing of the content.
+     */
+    @PluginMethod
+    public void preconnect(PluginCall call) {
+        JSArray origins = call.getArray("origins", new JSArray());
+        call.resolve();
+        for (int i = 0; i < origins.length(); i++) {
+            String origin = origins.optString(i, "");
+            if (!origin.startsWith("http://") && !origin.startsWith("https://")) continue;
+            Http.io.execute(() -> {
+                Request request = new Request.Builder().url(origin + "/").head().header("User-Agent", Http.DEFAULT_USER_AGENT).build();
+                try (Response ignored = Http.client.newCall(request).execute()) {
+                    // Only the connection was wanted.
+                } catch (Exception ignored) {
+                    // Nothing to warm then; the real request will connect as it always did.
+                }
+            });
+        }
+    }
+
     @PluginMethod
     public void bridgeResolve(PluginCall call) {
         BridgeQueue.complete(call.getString("id"), call.getString("body", ""));

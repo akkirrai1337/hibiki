@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { rememberPlaybackOrigins, warmPlaybackOrigins } from "@/lib/preconnect";
 import { isMobile } from "@/lib/mobile";
 import { createFileRoute, useNavigate, useRouter } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -188,6 +189,11 @@ function WatchPage() {
     if (!canShareDiscordPresence) hibiki.discord.clearPresence();
   }, [canShareDiscordPresence]);
   useEffect(() => {
+    // Connections to last time's stream and player hosts open while this episode's links are
+    // still being found, rather than after (lib/preconnect.ts).
+    warmPlaybackOrigins(sourceId);
+    // Nearly every stream is HLS: its engine loads while the links are still being found.
+    void import("hls.js");
     log.info("player", `episode opened: ${sourceId}/${animeId} group=${groupId} episode=${episodeId}`);
     return () => log.info("player", `episode left: ${sourceId}/${animeId} episode=${episodeId}`);
   }, [sourceId, animeId, groupId, episodeId]);
@@ -278,6 +284,12 @@ function WatchPage() {
     staleTime: Infinity,
     refetchOnWindowFocus: false,
   });
+
+  // A DASH stream's engine is big (~0.3 s to load the first time, phone log): fetched as soon as the
+  // link list shows one, while the pick is still being settled.
+  useEffect(() => {
+    if (linksQuery.data?.some((item) => item.type === "DIRECT_DASH")) void import("dashjs");
+  }, [linksQuery.data]);
 
   // A downloaded copy always wins over resolving a live link - there's no network dependency to
   // fail while offline, no ads/embed page, and no reason to re-download bandwidth you already
@@ -632,6 +644,8 @@ function WatchPage() {
     if (!link) return;
     const origin = downloadedQuery.data ? "downloaded copy" : manualLink ? "picked" : "default pick";
     log.info("player", `playing the ${origin}: ${link.type} ${link.translation ?? "?"}/${link.playerName ?? "?"} ${link.quality ?? "?"}, subtitles=${link.subtitles?.length ?? 0}`);
+    // Where this source's playback goes, for warming next time (lib/preconnect.ts).
+    if (!downloadedQuery.data) rememberPlaybackOrigins(sourceId, [link.url, link.headers?.Referer ?? link.headers?.referer]);
     // Only on a new link; where it came from is read at that moment.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [link]);

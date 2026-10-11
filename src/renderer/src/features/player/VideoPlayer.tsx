@@ -1137,6 +1137,10 @@ export function VideoPlayer({ link, availableLinks, offlinePlayback, dubOptions,
     // injects them at the session level for every request to this URL's origin (playlist +
     // segments alike), then start playback once that's in place.
     const setupStartedAt = performance.now();
+    // The engine's module loads beside the header and subtitle setup below, not after it; the
+    // awaits further down then find it already there (the watch page usually started it earlier).
+    if (isHls) void import("hls.js");
+    else if (isDash) void import("dashjs");
     hibiki.player.registerHeaders(streamUrl, link.headers).then(async (sessionId) => {
       trace(`header session ready in ${Math.round(performance.now() - setupStartedAt)}ms`);
       if (cancelled) {
@@ -1196,6 +1200,9 @@ export function VideoPlayer({ link, availableLinks, offlinePlayback, dubOptions,
         if (startAt > 0) trace(`starting hls.js at ${startAt.toFixed(1)}s`);
         hls = new HlsEngine({
           startPosition: startAt > 0 ? startAt : -1,
+          // The first segment downloads while the media source is still being set up, instead of
+          // only once it is ready.
+          startFragPrefetch: true,
           backBufferLength: 30,
           maxBufferLength: 40,
           maxMaxBufferLength: 60,

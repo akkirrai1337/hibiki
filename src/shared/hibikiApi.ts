@@ -168,6 +168,9 @@ export interface HibikiApi {
      * at the session level and URLs are loaded as they are. */
     streamUrl?(sessionId: string, url: string): string;
     captureFrame(rect: { x: number; y: number; width: number; height: number }): Promise<string | null>;
+    /** Opens connections (DNS, TCP, TLS - no content) to these origins ahead of playback, kept in
+     * the network client's pool for its idle lifetime. Fire and forget. */
+    preconnect(origins: string[]): void;
   };
   discord: {
     setEnabled(enabled: boolean): Promise<void>;

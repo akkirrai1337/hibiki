@@ -339,6 +339,13 @@ app.whenReady().then(async () => {
     registerPlayerHeaderOrigin(sessionId, url),
   );
   ipcMain.handle(IPC.playerUnregisterHeaders, (_e, sessionId: string) => unregisterPlayerHeaders(sessionId));
+  // Chromium's own socket preconnect, in the session the player's requests go out through.
+  ipcMain.handle(IPC.playerPreconnect, (event, origins: unknown) => {
+    if (!Array.isArray(origins)) return;
+    for (const origin of origins) {
+      if (typeof origin === "string" && /^https?:\/\//i.test(origin)) event.sender.session.preconnect({ url: origin, numSockets: 1 });
+    }
+  });
   ipcMain.handle(IPC.playerResolveStreamUrl, (_e, url: string, headers: Record<string, string> | null) =>
     resolveFinalStreamUrl(url, headers),
   );

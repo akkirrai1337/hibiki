@@ -88,6 +88,7 @@ export const IPC = {
 
   playerRegisterHeaders: "player:registerHeaders",
   playerRegisterHeaderOrigin: "player:registerHeaderOrigin",
+  playerPreconnect: "player:preconnect",
   playerUnregisterHeaders: "player:unregisterHeaders",
   playerResolveStreamUrl: "player:resolveStreamUrl",
   playerCaptureFrame: "player:captureFrame",

@@ -22,7 +22,7 @@ import { createAndroidPlatform } from "./index";
 import type { Platform } from "../types";
 import { previousSessionLog, startAndroidLogFile } from "./logFile";
 import { Capacitor, SystemBars, SystemBarsStyle } from "@capacitor/core";
-import { HibikiApp, HibikiSync } from "./native";
+import { HibikiApp, HibikiNet, HibikiSync } from "./native";
 
 declare const __APP_VERSION__: string;
 
@@ -119,6 +119,7 @@ export async function installAndroidHibiki(): Promise<void> {
       resolveStreamUrl: (url, headers) => platform.player.resolveFinalUrl(url, headers),
       captureFrame: async () => captureVideoFrame(),
       streamUrl: (sessionId, url) => platform.player.playableUrl(sessionId, url),
+      preconnect: (origins) => void HibikiNet.preconnect({ origins }).catch(() => undefined),
     },
     // Desktop-only surfaces: present so the renderer's calls are harmless, hidden from the UI by
     // platform.capabilities as the mobile layout lands.
