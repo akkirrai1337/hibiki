@@ -1,17 +1,37 @@
-## hibiki 3.0.0
-
-**One app on phone and computer**
-- hibiki is now built as one app for Android and Windows, with the same sources, the same library and the same player. The Android app is rebuilt on it: it updates the old one in place and carries over its library and watch progress on first start.
-- Your devices keep each other up to date over the local network: library, progress and ratings follow you from the computer to the phone and back, with the titles' names and posters. If the other device lacks a source the data needs, hibiki offers to install it. Removing a device ends the pairing on both sides.
-
-**Sources**
-- Sources now come from repositories instead of being built in. hibiki-sources and the Aniyomi repository are there from the start, more can be added by a link to the repository on GitHub, and adding one asks you to confirm that you trust it.
-- A source that stops at a Cloudflare check no longer just fails: the error offers to pass the check in a separate window and tries again.
+## hibiki 3.1.0
 
 **Player**
-- When an episode comes with several audio tracks (Alloha), you can choose one in the player settings.
-- A stream that does not start or breaks mid-way hands over to the next link by itself.
-- Subtitles can be moved anywhere on the screen and keep clear of the controls, and the screen orientation is chosen in the player's own menu.
+- Episodes start faster: connections to the source's video servers are opened while the episode's links are still being found, the player's engine loads in the meantime, and the first piece of video downloads while the player is still getting ready.
+- A link that has expired (after a long pause, or picked by hand later) is fetched again by itself, and the episode resumes where it was instead of failing.
+- When a stream's access token runs out mid-episode (Alloha's last only a few minutes), the player renews it in the background and keeps playing without a stop.
+- On slow mobile data the player no longer gives up on a stream that is loading slowly and jumps to another player or quality: it switches only when a stream really fails or sends nothing at all.
+- Data saver (Settings > Player: auto, on or off): on a slow connection episodes start in 480p or lower. In auto it turns on by itself when the connection is slow.
+- Players are tried one at a time: another one starts only when the first fails or you switch to it, so no traffic goes to players you are not watching.
+- Waiting times are longer for poor connections: a slow source or player gets time to answer instead of the episode failing to open.
+- Subtitles can be dragged on the phone again: the drag no longer stops when a line ends or when the finger rests on the subtitle for a moment.
+- The app no longer opens straight into the player after Android reloads it in the background: it opens the title's page instead.
+- The top bar of the loading screen no longer jumps when the video appears.
 
-**Interface**
-- The phone layout is redone: home with a swipeable hero and lists made for a thumb, a catalog in a grid, a compact title page and bottom sheets for filters and choices.
+**Posters and traffic**
+- Posters download only as they come near the screen, on every screen and in every row, not all at once when a page opens.
+- Sources whose sites send very heavy posters get them several times smaller, and the full-size poster still opens full screen.
+- Posters stay on the phone for at least a week, so screens you have seen open without downloading them again.
+- On a slow connection or with data saver on, home keeps the same "Popular now" selection as last time, so its posters are already on the phone.
+
+**Sources**
+- Sources have their own tab on the phone, with a badge when updates are waiting. Search opens from an icon at the top of home and the catalog.
+- The sources screen shows what is installed, and each repository opens its own list with search and a language filter.
+- An update that needs a newer version of hibiki is not installed, and the list says so. The installed version keeps working.
+- A repository that is already in the list cannot be added a second time.
+- Extensions answer faster after a pause: hibiki keeps them ready instead of starting them anew.
+
+**Aniyomi sources (Android)**
+- Sources that send video and audio separately (Re:ANIME and others) play with sound, offer a choice of audio track, and download with it too.
+- Episode lists come in the right order, so "up next" is the next episode.
+- Similar titles are shown on the title page.
+- An episode opened straight from "Continue watching" gets its proper number.
+- Some DASH streams that did not start before now play, and the Cloudflare check finishes even when its page never fully loads.
+
+**Fixes**
+- Posters from sites that protect their pictures no longer disappear on Android.
+- Subtitles in SRT and ASS, or served under a wrong type, now show instead of staying blank.
