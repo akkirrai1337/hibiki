@@ -136,7 +136,7 @@ export interface HibikiApkPlugin {
   latest(options: { sourceId: string; limit: number }): Promise<{ items: unknown[] }>;
   getById(options: { sourceId: string; id: string }): Promise<unknown>;
   playbackGroups(options: { sourceId: string; titleId: string }): Promise<{ items: unknown[] }>;
-  playerLinks(options: { sourceId: string; episodeId: string }): Promise<{ items: unknown[] }>;
+  playerLinks(options: { sourceId: string; titleId?: string; episodeId: string }): Promise<{ items: unknown[] }>;
   filterCatalog(options: { sourceId: string }): Promise<unknown>;
   readSettings(options: { sourceId: string }): Promise<Record<string, string>>;
   writeSetting(options: { sourceId: string; key: string; value: string | null }): Promise<void>;

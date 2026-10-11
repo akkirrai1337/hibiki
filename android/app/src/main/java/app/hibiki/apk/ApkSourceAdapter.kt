@@ -130,13 +130,55 @@ class ApkSourceAdapter(
             url = titleId
             title = titleId
         }
-        return guarded("details") {
-            val details = source.getAnimeDetails(anime)
-            fetchTypes[titleId] = details.fetch_type
-            // Some extensions rewrite the URL while loading details; the title keeps the id it was asked
-            // for - the catalogue, the library and downloads all know it by that one.
-            toTitle(details, fallbackId = titleId).put("id", titleId)
+        return coroutineScope {
+            // Beside the details, not after them: the title's page should not wait on its extras.
+            val similar = async { similarTitles(titleId) }
+            val title = guarded("details") {
+                val details = source.getAnimeDetails(anime)
+                fetchTypes[titleId] = details.fetch_type
+                // Some extensions rewrite the URL while loading details; the title keeps the id it was asked
+                // for - the catalogue, the library and downloads all know it by that one.
+                toTitle(details, fallbackId = titleId).put("id", titleId)
+            }
+            title.put("similarAnime", similar.await())
         }
+    }
+
+    /**
+     * Titles the extension lists beside this one (extensions-lib v16 fetchRelatedAnimeList). As in
+     * Komikku/Aniyomi, by default that is the title's own page read with the extension's catalogue
+     * parser - sites mostly show "you may also like" cards in the catalogue's own markup there. An
+     * extension that can't (no such cards, a JSON API) answers with nothing or an error, and the
+     * page simply has no such section. Never more than RELATED_TIMEOUT_MS of the page's time.
+     */
+    private suspend fun similarTitles(titleId: String): JSONArray {
+        if (!source.supportsRelatedAnimes || source.disableRelatedAnimes) return JSONArray()
+        val anime = SAnime.create().apply {
+            url = titleId
+            title = titleId
+        }
+        val related = try {
+            withTimeoutOrNull(RELATED_TIMEOUT_MS) { source.fetchRelatedAnimeList(anime) }.orEmpty()
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (error: Throwable) {
+            Log.d(TAG, "${source.name}: no related titles (${error.message})")
+            emptyList()
+        }
+        val seen = mutableSetOf(titleId)
+        val out = JSONArray()
+        for (item in related) {
+            val url = runCatching { item.url }.getOrNull()?.takeIf(String::isNotBlank) ?: continue
+            val name = runCatching { item.title }.getOrNull()?.takeIf(String::isNotBlank) ?: continue
+            if (!seen.add(url)) continue
+            out.put(JSONObject().apply {
+                put("id", url)
+                put("title", name)
+                put("posterUrl", item.thumbnail_url?.takeIf(String::isNotBlank) ?: JSONObject.NULL)
+            })
+            if (out.length() >= MAX_RELATED) break
+        }
+        return out
     }
 
     suspend fun playbackGroups(titleId: String): JSONArray {
@@ -165,7 +207,20 @@ class ApkSourceAdapter(
         return JSONArray().put(JSONObject().put("id", "episodes").put("title", source.name).put("episodes", episodes))
     }
 
-    suspend fun playerLinks(episodeId: String): JSONArray {
+    suspend fun playerLinks(titleId: String?, episodeId: String): JSONArray {
+        // The episode list is what tells an episode's number and name, and it is only read when the
+        // title's page or the player's episode picker asks for it. Opened straight from "continue
+        // watching" after a restart, neither has - and the extension used to be handed "Episode 0",
+        // which a source building its request from the number answers with the wrong episode or none.
+        if (!episodeMeta.containsKey(episodeId) && !titleId.isNullOrBlank()) {
+            try {
+                playbackGroups(titleId)
+            } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                throw cancelled
+            } catch (_: Exception) {
+                // No list, no number: the links are still asked for by the episode's own id.
+            }
+        }
         val (episodeNumber, episodeTitle) = episodeMeta[episodeId] ?: (0.0 to null)
         val episode = SEpisode.create().apply {
             url = episodeId
@@ -416,6 +471,9 @@ class ApkSourceAdapter(
         private const val OPERATION_TIMEOUT_MS = 90_000L
         private const val RESOLVE_PARALLELISM = 4
         private const val SNIFF_TIMEOUT_MS = 8_000L
+        // Related titles are an extra on the title's page; they never hold it up for longer than this.
+        private const val RELATED_TIMEOUT_MS = 10_000L
+        private const val MAX_RELATED = 24
         private val MEDIA_EXTENSIONS = listOf(".mp4", ".m4v", ".mkv", ".webm", ".mov", ".avi", ".ts", ".flv")
         private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 

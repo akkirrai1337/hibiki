@@ -118,8 +118,9 @@ export async function createAndroidPlatform(version: string): Promise<{ platform
           case "latest": return (await HibikiApk.latest({ sourceId, limit: Number(args[0] ?? 24) })).items;
           case "getById": return HibikiApk.getById({ sourceId, id: String(args[0]) });
           case "getPlaybackGroups": return (await HibikiApk.playbackGroups({ sourceId, titleId: String(args[0]) })).items;
-          // (titleId, groupId, episodeId): an Aniyomi episode is found by its own id alone.
-          case "getPlayerLinks": return (await HibikiApk.playerLinks({ sourceId, episodeId: String(args[2]) })).items;
+          // (titleId, groupId, episodeId): an Aniyomi episode is found by its own id; the title is
+          // for reading its number and name when the episode list hasn't been loaded this run.
+          case "getPlayerLinks": return (await HibikiApk.playerLinks({ sourceId, titleId: String(args[0]), episodeId: String(args[2]) })).items;
           case "getSettings": return HibikiApk.filterCatalog({ sourceId });
           // The source's own settings rows (SourceInfo.settings), read and written in the extension's preferences.
           case "readSettings": return HibikiApk.readSettings({ sourceId });

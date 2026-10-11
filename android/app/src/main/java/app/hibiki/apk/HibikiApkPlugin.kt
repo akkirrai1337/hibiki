@@ -194,7 +194,7 @@ class HibikiApkPlugin : Plugin() {
 
     @PluginMethod
     fun playerLinks(call: PluginCall) = run(call) {
-        items(adapter(call).playerLinks(call.getString("episodeId") ?: throw IllegalArgumentException("episodeId is required")))
+        items(adapter(call).playerLinks(call.getString("titleId"), call.getString("episodeId") ?: throw IllegalArgumentException("episodeId is required")))
     }
 
     @PluginMethod
