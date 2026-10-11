@@ -16,7 +16,7 @@
 import { logger } from "../core/logger";
 
 const MAX_REDIRECT_HOPS = 5;
-const RESOLVE_TIMEOUT_MS = 8000;
+const RESOLVE_TIMEOUT_MS = 15_000;
 const RESOLVE_CACHE_TTL_MS = 30_000;
 
 type CachedResolution = { url: string; expiresAt: number };

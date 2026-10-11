@@ -36,7 +36,7 @@ describe("performNetFetch", () => {
     });
     expect(requests[0].method).toBe("GET");
     expect(requests[0].redirect).toBe("follow");
-    expect(requests[0].timeoutMs).toBe(12_000);
+    expect(requests[0].timeoutMs).toBe(25_000);
   });
 
   it("joins headers into one string each, set-cookie included", async () => {

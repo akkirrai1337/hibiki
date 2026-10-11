@@ -40,10 +40,12 @@ export interface NetFetchResult {
 }
 
 /** A request that hasn't produced *any* response by now is treated as dead. Chosen to sit
- * comfortably under runtime.ts's 30s per-call worker timeout, so a single slow request surfaces as
+ * comfortably under runtime.ts's 60s per-call worker timeout, so a single slow request surfaces as
  * "this URL timed out" (retryable, and logged as such) rather than killing the whole extension
- * call with no indication of which request was to blame. */
-const REQUEST_TIMEOUT_MS = 12_000;
+ * call with no indication of which request was to blame. 25s rather than the 12s it was: on poor
+ * mobile data a source's page or API simply answering slowly is the common case, and giving up on
+ * it only meant the episode never opened. */
+const REQUEST_TIMEOUT_MS = 25_000;
 /** One retry, and only for transport-level failures (connect reset/timeout) - never for an HTTP
  * status, which is the server's real answer. Kodik's edge nodes drop connections intermittently;
  * a single immediate retry turns most of those into a normal load instead of a failed episode. */

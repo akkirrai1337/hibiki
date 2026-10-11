@@ -38,9 +38,12 @@ export class HostApiError extends Error {
   }
 }
 
-const WORKER_TIMEOUT_MS = 30_000;
+// Generous for poor mobile data: an extension call is a few requests in a row (see netFetch.ts's
+// per-request limit), and running out here throws away everything they had already fetched.
+const WORKER_TIMEOUT_MS = 60_000;
 const FILTER_TYPES = ["select", "multi", "tristate", "text", "range"];
-const RESOLVE_TOTAL_TIMEOUT_MS = 45_000;
+// Room for one slow resolver attempt on bad data (a hidden browser gets up to 45s) and a fallback.
+const RESOLVE_TOTAL_TIMEOUT_MS = 90_000;
 
 function playerUrlLabel(raw: string): string {
   try {

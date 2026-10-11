@@ -80,8 +80,9 @@ const PAGE_TTL_MS = 5 * 60_000;
 const SETTLE_MIN_MS = 250;
 const SETTLE_MAX_MS = 4_000;
 const SETTLE_POLL_MS = 150;
-const FETCH_TIMEOUT_MS = 12_000;
-const FETCH_TOTAL_TIMEOUT_MS = 25_000;
+// Sized for poor mobile data, like netFetch.ts's per-request limit.
+const FETCH_TIMEOUT_MS = 25_000;
+const FETCH_TOTAL_TIMEOUT_MS = 45_000;
 const RATE_LIMIT_RETRY_DELAYS_MS = [1000, 2500, 5000];
 const RETRYABLE_STATUSES = new Set([429, 444]);
 

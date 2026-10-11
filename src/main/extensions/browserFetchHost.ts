@@ -17,9 +17,10 @@ const CHALLENGE_POLL_MS = 150;
 // Even an unchallenged page gets this much: a site that sets its session cookie from its own JS
 // has not necessarily done so by the time readyState reaches "complete".
 const CHALLENGE_SETTLE_MIN_MS = 250;
-const NAVIGATION_TIMEOUT_MS = 15_000;
-const FETCH_TIMEOUT_MS = 12_000;
-const FETCH_TOTAL_TIMEOUT_MS = 25_000;
+// Sized for poor mobile data, like netFetch.ts's per-request limit.
+const NAVIGATION_TIMEOUT_MS = 25_000;
+const FETCH_TIMEOUT_MS = 25_000;
+const FETCH_TOTAL_TIMEOUT_MS = 45_000;
 
 // One search/title/episode-list screen makes several independent search()/getById()/
 // playbackGroups() calls back-to-back, and each used to spin up its own fresh hidden window and

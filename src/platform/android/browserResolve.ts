@@ -12,10 +12,12 @@ import { HibikiResolver } from "./native";
 
 const FIRST_PROBE_DELAY_MS = 100;
 const PROBE_DELAY_MS = 500;
-const MAX_PROBES = 30;
-const TIMEOUT_MS = 25_000;
-const NAVIGATION_TIMEOUT_MS = 10_000;
-const VALIDATION_TIMEOUT_MS = 5_000;
+// A player page on poor mobile data loads its scripts slowly before it asks for the stream; the
+// limits are sized for that, not for a fast connection (where every resolve ends long before).
+const MAX_PROBES = 90;
+const TIMEOUT_MS = 45_000;
+const NAVIGATION_TIMEOUT_MS = 20_000;
+const VALIDATION_TIMEOUT_MS = 10_000;
 const SETTLE_MS = 600;
 const MAX_VALIDATION_CONCURRENCY = 3;
 
