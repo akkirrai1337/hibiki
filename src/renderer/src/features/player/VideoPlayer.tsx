@@ -757,6 +757,10 @@ export function VideoPlayer({ link, availableLinks, offlinePlayback, dubOptions,
   // Where the box is drawn right now - above the controls bar while that is up (see subtitleBottom
   // below) - which is where a drag has to start from, or the box would jump on the first move.
   const subtitleBottomRef = useRef(subtitleOffset);
+  // The line held when the drag began. A line ends every few seconds, often with a gap before the
+  // next one: the box used to unmount right under the finger and the drag died with it. While a
+  // drag lasts the box stays, showing the current line or, between lines, the one taken hold of.
+  const draggedLinesRef = useRef<string[]>([]);
   const onSubtitleDragStart = (e: React.PointerEvent) => {
     e.stopPropagation();
     // No text selection, no click-through to the picture underneath; the touch side of the same
@@ -766,6 +770,7 @@ export function VideoPlayer({ link, availableLinks, offlinePlayback, dubOptions,
     const startOffset = subtitleBottomRef.current;
     subtitleDragRef.current = { pointerId: e.pointerId, startX: e.clientX, startY: e.clientY, startOffset, startOffsetX: subtitleOffsetX };
     setDraggingSubtitle({ y: startOffset, x: subtitleOffsetX });
+    draggedLinesRef.current = activeSubtitleLines;
   };
   const onSubtitleDragMove = (e: React.PointerEvent) => {
     const drag = subtitleDragRef.current;
@@ -2610,7 +2615,7 @@ export function VideoPlayer({ link, availableLinks, offlinePlayback, dubOptions,
           it sits under the controls bar and every other piece of player UI, which come later in the
           DOM. `bottom` and the horizontal shift are player preferences (see playerPrefsStore), dragged live via the pointer handlers on the
           box itself and only committed to the store on release. */}
-      {activeSubtitleLines.length > 0 && (
+      {(activeSubtitleLines.length > 0 || draggingSubtitle) && (
         <div
           data-subtitles
           // Above the bars (z-[6]) so the box can always be taken hold of; it stays clear of their
@@ -2623,6 +2628,10 @@ export function VideoPlayer({ link, availableLinks, offlinePlayback, dubOptions,
             onPointerMove={onSubtitleDragMove}
             onPointerUp={onSubtitleDragEnd}
             onPointerCancel={onSubtitleDragEnd}
+            onLostPointerCapture={onSubtitleDragEnd}
+            // A finger held still is a long press to Android, which opens a context menu and cancels
+            // the pointer - the drag stopped before the finger had moved at all.
+            onContextMenu={(e) => e.preventDefault()}
             onClick={(e) => e.stopPropagation()}
             title={t("watch.subtitles.dragHint")}
             style={{ transform: `translateX(${draggingSubtitle?.x ?? subtitleOffsetX}px)` }}
@@ -2631,7 +2640,7 @@ export function VideoPlayer({ link, availableLinks, offlinePlayback, dubOptions,
               draggingSubtitle && "ring-1 ring-white/40",
             )}
           >
-            {activeSubtitleLines.join("\n")}
+            {(activeSubtitleLines.length > 0 ? activeSubtitleLines : draggedLinesRef.current).join("\n")}
           </div>
         </div>
       )}
