@@ -388,6 +388,8 @@ export interface MarketplaceExtension {
   resolverDependencies: string[];
   isNsfw: boolean;
   type: string; // "source" | "player-resolver"
+  /** The extension API this version needs (shared/hostApi.ts); absent = not checked. */
+  hostApi?: number;
   /** For a JS source its manifest; for an APK source (Android) the APK file itself. */
   manifestUrl: string;
   /** Set for an APK source (an Aniyomi extension, Android only): the package it comes in. One

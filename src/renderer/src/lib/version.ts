@@ -1,3 +1,5 @@
+import { supportsHostApi } from "@shared/hostApi";
+
 /** Basic-semver (x.y.z) comparison; a non-matching string never triggers an update prompt. */
 export function isExtensionVersionNewer(remoteVersion: string, installedVersion: string): boolean {
   // Guarded rather than trusted, despite the types. These strings come from manifest JSON on disk
@@ -23,6 +25,7 @@ export interface UpdatableExtension {
   version: string;
   type?: string;
   resolverDependencies?: string[];
+  hostApi?: number;
 }
 
 /**
@@ -44,11 +47,12 @@ export function isExtensionUpdateAvailable(
 ): boolean {
   const installed = installedVersions.get(extension.id);
   if (installed === undefined) return false;
-  if (isExtensionVersionNewer(extension.version, installed)) return true;
+  // A version this app can't run is no update at all; the installed one keeps working.
+  if (isExtensionVersionNewer(extension.version, installed) && supportsHostApi(extension)) return true;
 
   return (extension.resolverDependencies ?? []).some((resolverId) => {
     const available = allExtensions.find((e) => e.id === resolverId && e.type === "player-resolver");
-    if (available === undefined) return false;
+    if (available === undefined || !supportsHostApi(available)) return false;
     const installedResolver = installedResolverVersions[resolverId];
     // Re-running the source install repairs an interrupted best-effort dependency download.
     // Hiding this state used to leave the source permanently stuck on iframe playback.

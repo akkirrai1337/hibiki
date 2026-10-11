@@ -32,7 +32,8 @@ import { useUiStore } from "@/stores/uiStore";
 import { Switch } from "@/components/Switch";
 import { cn } from "@/lib/cn";
 import { SourceSettingsDialog } from "@/components/SourceSettingsDialog";
-import { isExtensionUpdateAvailable } from "@/lib/version";
+import { isExtensionUpdateAvailable, isExtensionVersionNewer } from "@/lib/version";
+import { supportsHostApi } from "@shared/hostApi";
 import { TabButton } from "@/components/TabButton";
 import { Modal } from "@/components/Modal";
 import { BottomSheet, SheetOption } from "@/components/BottomSheet";
@@ -799,6 +800,9 @@ function ExtensionCard({
   // `extension.version` and `installedVersion` are equal and comparing them here would have this
   // card read "up to date" while sitting under the "updates available" header.
   const upToDate = installedVersion !== null && !updateAvailable;
+  // Published, but only for a newer app: installing it would be refused (core/extensions/runtime).
+  const needsNewerApp = !supportsHostApi(extension);
+  const blockedUpdate = installedVersion !== null && !updateAvailable && needsNewerApp && isExtensionVersionNewer(extension.version, installedVersion);
   // ...which is also why the arrow only shows when the two versions actually differ. A resolver
   // update would otherwise render as "1.0.2 → 1.0.2".
   const versionLabel = installedVersion && !upToDate && installedVersion !== extension.version
@@ -888,7 +892,8 @@ function ExtensionCard({
         {installedVersion === null ? (
           <button
             onClick={onInstall}
-            disabled={installing}
+            disabled={installing || needsNewerApp}
+            title={needsNewerApp ? t("sources.needsNewerApp") : undefined}
             className="shrink-0 rounded-lg bg-text px-2.5 py-1.5 text-xs font-bold text-bg transition-opacity hover:opacity-90 disabled:opacity-50"
           >
             {t("sources.install")}
@@ -937,6 +942,11 @@ function ExtensionCard({
           </div>
         )}
       </div>
+      {(blockedUpdate || (installedVersion === null && needsNewerApp)) && (
+        <p className="pl-[46px] text-xs text-muted">
+          {blockedUpdate ? t("sources.updateNeedsNewerApp", { version: extension.version }) : t("sources.needsNewerApp")}
+        </p>
+      )}
       {errorMessage && <p className="select-text pl-[46px] text-xs text-rose-400">{errorMessage}</p>}
     </motion.div>
   );

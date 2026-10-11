@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { HOST_API } from "@shared/hostApi";
 import { isExtensionUpdateAvailable, isExtensionVersionNewer, type UpdatableExtension } from "./version";
 
 describe("isExtensionVersionNewer", () => {
@@ -32,6 +33,20 @@ describe("isExtensionUpdateAvailable", () => {
     resolverDependencies: ["kodik", "sibnet"],
   };
   const all = [SOURCE, KODIK];
+
+  it("does not offer a version that needs a newer app", () => {
+    const installed = new Map([["yummy-anime", "1.1.0"]]);
+    const needsNewer = { ...SOURCE, hostApi: HOST_API + 1 };
+    expect(isExtensionUpdateAvailable(needsNewer, installed, { kodik: "1.0.3" }, [needsNewer, KODIK])).toBe(false);
+    const declared = { ...SOURCE, hostApi: HOST_API };
+    expect(isExtensionUpdateAvailable(declared, installed, { kodik: "1.0.3" }, [declared, KODIK])).toBe(true);
+  });
+
+  it("does not count a resolver update that needs a newer app", () => {
+    const installed = new Map([["yummy-anime", "1.2.0"]]);
+    const newKodik = { ...KODIK, version: "1.0.4", hostApi: HOST_API + 1 };
+    expect(isExtensionUpdateAvailable(SOURCE, installed, { kodik: "1.0.3" }, [SOURCE, newKodik])).toBe(false);
+  });
 
   it("reports an update when the source itself is newer", () => {
     const installed = new Map([["yummy-anime", "1.1.0"]]);

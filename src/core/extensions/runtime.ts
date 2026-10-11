@@ -4,6 +4,7 @@
 // UI thread - extension scripts call a *synchronous* fetch() (matching the Rhino runtime they were
 // written for), which blocks whichever thread runs it. The script's host calls (fetch, challenge,
 // browserFetch) come back to `bridge` below.
+import { HOST_API, requiredHostApi, supportsHostApi } from "@shared/hostApi";
 import type {
   AnimeTitle,
   PlaybackGroup,
@@ -28,6 +29,14 @@ import { logger } from "../logger";
 import { ExtensionStorage } from "./extensionStorage";
 import { withTitleFacts } from "./titleFacts";
 import { chronologicalGroups } from "./episodeOrder";
+
+/** An extension asks for more than this build provides (see shared/hostApi.ts). */
+export class HostApiError extends Error {
+  constructor(readonly extensionId: string, readonly required: number) {
+    super(`"${extensionId}" needs a newer app (extension API ${required}, this app has ${HOST_API})`);
+    this.name = "HostApiError";
+  }
+}
 
 const WORKER_TIMEOUT_MS = 30_000;
 const FILTER_TYPES = ["select", "multi", "tristate", "text", "range"];
@@ -876,13 +885,15 @@ export class ExtensionRuntime {
    * Mirrors the Android app's ScriptExtensionRepository.install origin guard.
    */
   async install(id: string, manifestJson: string, jsPayload: string, originUrl: string): Promise<void> {
-    let manifest: { id?: string };
+    let manifest: { id?: string; hostApi?: unknown };
     try {
       manifest = JSON.parse(manifestJson);
     } catch {
       throw new Error(`Manifest for "${id}" is not valid JSON`);
     }
     if (manifest.id !== id) throw new Error(`Manifest id "${manifest.id}" doesn't match "${id}"`);
+    // Checked before anything is written: the installed version stays as it was.
+    if (!supportsHostApi(manifest)) throw new HostApiError(id, requiredHostApi(manifest)!);
 
     const existingOrigin = this.originOf(id);
     if (existingOrigin && existingOrigin !== originUrl) {
@@ -905,13 +916,15 @@ export class ExtensionRuntime {
       logger.info("resolvers", `skipping retired resolver ${id}`);
       return;
     }
-    let manifest: { id?: string };
+    let manifest: { id?: string; hostApi?: unknown };
     try {
       manifest = JSON.parse(manifestJson);
     } catch {
       throw new Error(`Resolver manifest for "${id}" is not valid JSON`);
     }
     if (manifest.id !== id) throw new Error(`Resolver manifest id "${manifest.id}" doesn't match "${id}"`);
+    // The resolver already installed keeps working; the new one waits for an app that can run it.
+    if (!supportsHostApi(manifest)) throw new HostApiError(id, requiredHostApi(manifest)!);
 
     const { files } = getPlatform();
     await files.mkdir(this.resolversDir);

@@ -367,6 +367,8 @@
     "refresh": "Refresh",
     "manage": "Manage",
     "update": "Update",
+    "needsNewerApp": "Needs a newer version of the app",
+    "updateNeedsNewerApp": "Version {{version}} needs a newer version of the app",
     "uninstall": "Uninstall",
     "noResults": "No sources match your search",
     "install": "Install",
