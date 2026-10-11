@@ -70,6 +70,8 @@ export interface HibikiResolverPlugin {
   setResolverScript(options: { key: string; resolverScript: string }): Promise<void>;
   navigate(options: { key: string; url: string; headers?: Record<string, string>; documentOnly?: boolean }): Promise<void>;
   setDocumentOnly(options: { key: string; value: boolean }): Promise<void>;
+  /** Hosts (and their subdomains) whose subresource requests the page answers empty. */
+  setBlockedHosts(options: { key: string; hosts: string[] }): Promise<void>;
   evalTop(options: { key: string; js: string }): Promise<{ value: string; url?: string }>;
   frames(options: { key: string }): Promise<{ frames: Array<{ id: number; url: string; origin: string; main: boolean }> }>;
   frameCall(options: { key: string; frameId: number; id: string; payload: string }): Promise<{ raw: string }>;

@@ -101,6 +101,18 @@ const PLACEHOLDER_URL_PATTERN = /cdn\.plyr\.io\/static\/blank\.mp4/i;
 //
 // The handler also decides whether a request is allowed to go out at all, which is what makes the
 // referring-page load below cheap - see loadRefererDocument.
+/** Whether `url`'s host is one of `blockHosts` or a subdomain of one (see BrowserResolverPayload). */
+export function isBlockedHost(url: string, blockHosts: readonly string[]): boolean {
+  if (blockHosts.length === 0) return false;
+  let host: string;
+  try {
+    host = new URL(url).hostname.toLowerCase();
+  } catch {
+    return false;
+  }
+  return blockHosts.some((blocked) => host === blocked || host.endsWith(`.${blocked}`));
+}
+
 type RequestHandler = (details: Electron.OnBeforeRequestListenerDetails) => { cancel: boolean };
 type SentHeadersHandler = (details: Electron.OnSendHeadersListenerDetails) => void;
 
@@ -444,6 +456,7 @@ export async function performBrowserResolve(
   script: string,
   timeoutMs = TIMEOUT_MS,
   parentUrl?: string | null,
+  blockHosts: string[] = [],
 ): Promise<ResolvedStream[]> {
   // Covers navigation, iframe setup, probing and validation. Previously the clock started only
   // after all navigation had completed, allowing a dead embed page to hang well beyond 25s.
@@ -483,7 +496,7 @@ export async function performBrowserResolve(
       if (MEDIA_URL_PATTERN.test(details.url) && !PLACEHOLDER_URL_PATTERN.test(details.url)) {
         networkCaptures.push({ url: details.url, kind: "network", quality: currentQuality });
       }
-      return { cancel: documentOnly && details.resourceType !== "mainFrame" };
+      return { cancel: (documentOnly && details.resourceType !== "mainFrame") || isBlockedHost(details.url, blockHosts) };
     },
     (details) => {
       if (MEDIA_URL_PATTERN.test(details.url) && !PLACEHOLDER_URL_PATTERN.test(details.url)) {

@@ -33,6 +33,7 @@ import { audioTrackOptions, pickLinkForAudioTrack, pickLinkForDimension, pickLin
 import { playbackUrl } from "@/lib/playbackUrl";
 import { proxiedHlsLoader, streamRequestUrl, usesStreamProxy } from "@/lib/streamProxy";
 import { createLoadActivity, type LoadActivity } from "@/lib/loadActivity";
+import { createStreamRebase } from "@/lib/streamRebase";
 import { DATA_SAVER_MAX_HEIGHT } from "@/lib/playerLinks";
 import { isDataSaverActive, recordThroughput } from "@/lib/connectionQuality";
 import { separateAudioMaster, syntheticManifestLoader } from "@/lib/hlsSeparateAudio";
@@ -85,6 +86,9 @@ interface VideoPlayerProps {
   unplayable?: boolean;
   onSelectLink?: (link: PlayerLink) => void;
   onPlaybackFailure?: (link: PlayerLink, reason: string) => boolean;
+  /** A freshly issued link to the same stream as `link` (same player, dub, quality), for renewing an
+   * expired CDN token mid-play - or null when there is none worth trying. */
+  onRefreshStream?: (link: PlayerLink) => Promise<PlayerLink | null>;
   startPositionMs?: number;
   onProgress?: (positionMs: number, durationMs: number) => void;
   onPlayStateChange?: (playing: boolean) => void;
@@ -114,6 +118,8 @@ interface VideoPlayerProps {
 
 const CONTROLS_HIDE_DELAY_MS = 3000;
 const PLAYBACK_LOAD_TIMEOUT_MS = 15_000;
+// What a CDN answers a request whose signed URL has expired.
+const TOKEN_EXPIRED_STATUSES = new Set([401, 403, 410]);
 let playbackTraceSequence = 0;
 
 function playbackUrlLabel(raw: string): string {
@@ -544,7 +550,7 @@ function pipLabels(t: (key: string) => string) {
   };
 }
 
-export function VideoPlayer({ link, availableLinks, offlinePlayback, dubOptions, selectedDubId, onSelectDub, sourceSwitching, unplayable, onSelectLink, onPlaybackFailure, startPositionMs, onProgress, onPlayStateChange, onCaptureThumbnail, title, episodeLabel, onBack, onPrevEpisode, onNextEpisode, onOpenEpisodes, episodesLoading, episodes, currentEpisodeId, onSelectEpisode, streakToast, playerSwitchToast }: VideoPlayerProps) {
+export function VideoPlayer({ link, availableLinks, offlinePlayback, dubOptions, selectedDubId, onSelectDub, sourceSwitching, unplayable, onSelectLink, onPlaybackFailure, onRefreshStream, startPositionMs, onProgress, onPlayStateChange, onCaptureThumbnail, title, episodeLabel, onBack, onPrevEpisode, onNextEpisode, onOpenEpisodes, episodesLoading, episodes, currentEpisodeId, onSelectEpisode, streakToast, playerSwitchToast }: VideoPlayerProps) {
   const { t } = useTranslation();
   // Held in a ref, deliberately not read as a prop from inside the effects below. Both the source
   // setup and the media-element wiring would otherwise have to list it as a dependency, and the
@@ -553,6 +559,8 @@ export function VideoPlayer({ link, availableLinks, offlinePlayback, dubOptions,
   // reasoning the comments on `link`, onProgress and onNextEpisode already spell out.
   const playbackFailureRef = useRef(onPlaybackFailure);
   playbackFailureRef.current = onPlaybackFailure;
+  const refreshStreamRef = useRef(onRefreshStream);
+  refreshStreamRef.current = onRefreshStream;
   // Which of the three load paths below ends up owning the <video> element's source - read by the
   // element's own "error" handler, which must stay silent while a library is driving playback and
   // reporting its own (richer) errors.
@@ -1120,6 +1128,7 @@ export function VideoPlayer({ link, availableLinks, offlinePlayback, dubOptions,
     // replacement to provide immediate feedback and suppress controls tied to the previous media.
     setBuffering(true);
     const loadActivity = createLoadActivity();
+    const rebase = createStreamRebase();
     loadActivityRef.current = loadActivity;
     armPlaybackTimeout("startup");
 
@@ -1191,7 +1200,9 @@ export function VideoPlayer({ link, availableLinks, offlinePlayback, dubOptions,
           maxBufferLength: 40,
           maxMaxBufferLength: 60,
           maxBufferSize: 60 * 1000 * 1000,
-          loader: loadActivity.hlsLoader(usesStreamProxy() || audioUrl ? hlsLoader(HlsEngine.DefaultConfig.loader) : HlsEngine.DefaultConfig.loader),
+          // Outermost: a renewed token's directory has to be in place before the request is counted
+          // or sent through the proxy.
+          loader: rebase.hlsLoader(loadActivity.hlsLoader(usesStreamProxy() || audioUrl ? hlsLoader(HlsEngine.DefaultConfig.loader) : HlsEngine.DefaultConfig.loader)),
         });
         let manifestLoaded = false;
         let firstFragmentLoaded = false;
@@ -1230,6 +1241,8 @@ export function VideoPlayer({ link, availableLinks, offlinePlayback, dubOptions,
           // decides the next episode's quality from (lib/connectionQuality.ts).
           const loading = data.frag.stats?.loading;
           if (loading) recordThroughput(data.frag.stats.loaded, loading.end - loading.first);
+          // A segment arrived: whatever token renewal came before it worked.
+          tokenRenewals = 0;
           if (firstFragmentLoaded) return;
           firstFragmentLoaded = true;
           if (fragmentTimer !== null) window.clearTimeout(fragmentTimer);
@@ -1289,6 +1302,11 @@ export function VideoPlayer({ link, availableLinks, offlinePlayback, dubOptions,
         let mediaRetries = 0;
         const MAX_MEDIA_RETRIES = 3;
         let emptyFragment = { sn: "", count: 0 };
+        // Token renewals since the last segment that loaded - one at a time: a renewed link that is
+        // refused straight away is not a token problem, and goes to the usual fallback.
+        let tokenRenewals = 0;
+        let renewal: Promise<void> | null = null;
+        let stalledDuringRenewal = false;
         const MAX_EMPTY_FRAGMENT_REPEATS = 4;
         // The startup watchdogs only describe a stream still on its way. Left running past a give-up,
         // they logged "still waiting for HLS manifest response" for a stream already failed with 403.
@@ -1338,6 +1356,55 @@ export function VideoPlayer({ link, availableLinks, offlinePlayback, dubOptions,
               giveUp();
               return;
             }
+          }
+          // Mid-play, a segment the CDN now refuses is a token that has run out (seen live: Alloha's,
+          // six minutes in). Renewed beside the playback instead of tearing the stream down: the buffer
+          // keeps playing while a fresh link is fetched, and the requests move over to it. Started on
+          // the first refusal, fatal or not - hls.js retries a 403 segment on its own for half a
+          // minute first (Kodik, live), and those retries then already go to the renewed link.
+          const refusedStatus = data.response?.code;
+          const tokenRefused = data.type === HlsEngine.ErrorTypes.NETWORK_ERROR &&
+            data.details !== HlsEngine.ErrorDetails.MANIFEST_LOAD_ERROR &&
+            typeof refusedStatus === "number" && TOKEN_EXPIRED_STATUSES.has(refusedStatus) &&
+            firstFragmentLoaded && !audioUrl && refreshStreamRef.current !== undefined;
+          if (tokenRefused && renewal === null && tokenRenewals < 1) {
+            tokenRenewals += 1;
+            stalledDuringRenewal = data.fatal;
+            trace(`stream answered http ${refusedStatus} mid-play; renewing its link while the buffer plays`);
+            const renewStartedAt = performance.now();
+            const reason = data.details || "playback failed";
+            const fail = () => {
+              if (cancelled || !hls) return;
+              if (!reportPlaybackFailure(link, reason)) setPlaybackError(reason);
+              giveUp();
+            };
+            renewal = refreshStreamRef.current!(link).then(async (fresh) => {
+              if (cancelled || !hls) return;
+              if (!fresh || fresh.type !== "DIRECT_HLS" || fresh.audioUrl) {
+                trace("no fresh link to continue on; switching the way a failure does");
+                fail();
+                return;
+              }
+              const freshUrl = playbackUrl(fresh.url);
+              // Desktop injects headers per origin, and a renewed link may come from another edge host.
+              if (headerSessionId && /^https?:/i.test(freshUrl)) await hibiki.player.registerHeaderOrigin(headerSessionId, freshUrl).catch(() => undefined);
+              if (cancelled || !hls) return;
+              rebase.rebase(streamUrl, freshUrl);
+              trace(`continuing on a renewed link after ${Math.round(performance.now() - renewStartedAt)}ms: ${playbackUrlLabel(freshUrl)}`);
+              // hls.js stops loading after a fatal error; a non-fatal one it is still retrying itself.
+              if (stalledDuringRenewal) hls.startLoad();
+            }, (error: unknown) => {
+              trace(`renewing the link failed: ${error instanceof Error ? error.message : String(error)}`);
+              fail();
+            }).finally(() => {
+              renewal = null;
+            });
+            return;
+          }
+          // Gave up while the renewal is still on its way: it restarts loading once it lands.
+          if (tokenRefused && renewal !== null) {
+            if (data.fatal) stalledDuringRenewal = true;
+            return;
           }
           if (!data.fatal) return;
           switch (data.type) {

@@ -387,6 +387,29 @@ function WatchPage() {
   // never playing again. The list itself has to be asked for again, then the same stream found
   // in it under its new URL.
   const linksRefreshingRef = useRef(false);
+  // The same stream under a freshly issued URL, for the player to move a playing stream onto
+  // without restarting it (VideoPlayer's token renewal). Nothing here switches what plays: the
+  // link list in the cache stays as it was, since replacing it would hand the player a new `link`
+  // and reload exactly the stream this is keeping alive.
+  const refreshStream = useCallback(async (stale: PlayerLink): Promise<PlayerLink | null> => {
+    // A link handed out moments ago that is already refused is broken, not expired; the usual
+    // fallback deals with that better than asking for the same thing again.
+    if (!isExpiredLink(stale)) return null;
+    const startedAt = performance.now();
+    log.info("player", `renewing ${stale.playerName ?? "?"}/${stale.quality ?? "?"} in place`);
+    const fresh = await discoverLinks();
+    const candidate = pickRefreshedLink(fresh, stale);
+    if (!candidate) return null;
+    let renewed: PlayerLink | undefined = candidate;
+    if (candidate.type === "EMBED") {
+      const resolved = await hibiki.sources.resolvePlayerLink(candidate, { dataSaver: isDataSaverActive() });
+      renewed = pickResolvedLink(resolved.filter((item) => item.type !== "EMBED"), stale);
+    }
+    if (!renewed || renewed.type !== stale.type) return null;
+    linkIssuedAtRef.current.set(renewed.url, Date.now());
+    log.info("player", `renewed ${stale.playerName ?? "?"}/${stale.quality ?? "?"} in ${Math.round(performance.now() - startedAt)}ms`);
+    return renewed;
+  }, [discoverLinks, isExpiredLink]);
   const refreshAndSelect = useCallback(async (target: PlayerLink) => {
     const requestId = ++selectionRequestRef.current;
     linksRefreshingRef.current = true;
@@ -931,6 +954,7 @@ function WatchPage() {
           unplayable={!link && !preferencePending && !sourceSwitching && !!linksQuery.data && linksQuery.data.length > 0 || resolveFailed}
           onSelectLink={selectLinkManually}
           onPlaybackFailure={handlePlaybackFailure}
+          onRefreshStream={refreshStream}
           startPositionMs={progressQuery.data?.positionMs}
           onProgress={onProgress}
           onPlayStateChange={onPlayStateChange}

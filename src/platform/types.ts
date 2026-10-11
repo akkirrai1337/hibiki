@@ -182,7 +182,7 @@ export interface BrowserPort {
   /** Runs a request from inside a loaded `pageUrl`, with that page's cookies and origin. */
   browserFetch(pageUrl: string, targetUrl: string, options?: { method?: string; headers?: Record<string, string>; body?: string }): Promise<BrowserFetchResult>;
   /** Runs a BROWSER resolver's script inside the embed page and reports the streams it found. */
-  resolve(link: PlayerLink, script: string, timeoutMs?: number, parentUrl?: string | null): Promise<ResolvedStream[]>;
+  resolve(link: PlayerLink, script: string, timeoutMs?: number, parentUrl?: string | null, blockHosts?: string[]): Promise<ResolvedStream[]>;
   /** Shows `url` to the person until its anti-bot check is passed, and resolves with the session it
    * earned - or null when the window was closed first. */
   solveChallenge(url: string): Promise<ChallengeSession | null>;

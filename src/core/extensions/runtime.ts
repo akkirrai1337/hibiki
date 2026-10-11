@@ -130,6 +130,10 @@ interface BrowserResolverPayload {
   script: string;
   /** Optional page to host the embed frame under, supplied by the resolver when required. */
   parentUrl?: string;
+  /** Hosts the embed's page may not reach (its ads, trackers): requests to them, or any of their
+   * subdomains, are answered empty in the hidden browser. The resolver's own list, since only it
+   * knows what its player can do without. */
+  blockHosts?: string[];
 }
 
 const BROWSER_RESOLVER_PAYLOAD_PREFIX = "hibiki-browser-resolver:v1:";
@@ -142,6 +146,9 @@ function parseBrowserResolverPayload(value: string): BrowserResolverPayload {
     return {
       script: parsed.script,
       ...(typeof parsed.parentUrl === "string" ? { parentUrl: parsed.parentUrl } : {}),
+      ...(Array.isArray(parsed.blockHosts)
+        ? { blockHosts: parsed.blockHosts.filter((host): host is string => typeof host === "string" && host.length > 0).map((host) => host.toLowerCase()) }
+        : {}),
     };
   } catch (error) {
     throw new Error(`Invalid browser resolver payload: ${String(error)}`);
@@ -694,10 +701,10 @@ export class ExtensionRuntime {
       extensionsDir: this.resolversDir,
       timeoutMs: Math.max(1, Math.min(WORKER_TIMEOUT_MS, deadline - Date.now())),
     });
-    const { script, parentUrl } = parseBrowserResolverPayload(result);
+    const { script, parentUrl, blockHosts } = parseBrowserResolverPayload(result);
     logger.info("resolve", `${resolverId} extractor script ready in ${Date.now() - resolveStartedAt}ms (${script.length} chars); starting hidden-browser resolve`);
     const browserStartedAt = Date.now();
-    const streams = await getPlatform().browser.resolve(link, script, Math.max(1, deadline - Date.now()), parentUrl);
+    const streams = await getPlatform().browser.resolve(link, script, Math.max(1, deadline - Date.now()), parentUrl, blockHosts);
     logger.info("resolve", `${resolverId} hidden-browser resolve finished in ${Date.now() - browserStartedAt}ms: ${streams.length} stream(s)`);
     return streams as unknown as Array<PlayerLink & { type: string }>;
   }

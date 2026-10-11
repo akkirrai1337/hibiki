@@ -306,7 +306,7 @@ export function disposeResolverPages(): void {
   }
 }
 
-export async function performBrowserResolve(link: PlayerLink, script: string, timeoutMs = TIMEOUT_MS, parentUrl?: string | null): Promise<ResolvedStream[]> {
+export async function performBrowserResolve(link: PlayerLink, script: string, timeoutMs = TIMEOUT_MS, parentUrl?: string | null, blockHosts: string[] = []): Promise<ResolvedStream[]> {
   const deadline = Date.now() + Math.min(TIMEOUT_MS, timeoutMs);
   const resolveStartedAt = Date.now();
   let refererUrl: string | null = link.headers?.Referer ?? link.headers?.referer ?? null;
@@ -320,6 +320,8 @@ export async function performBrowserResolve(link: PlayerLink, script: string, ti
   }
 
   const { page, hasReferer } = await acquirePage(refererUrl, script);
+  // Set on every resolve, empty included: a pooled page keeps whatever the last resolver asked for.
+  await HibikiResolver.setBlockedHosts({ key: page.key, hosts: blockHosts });
   logger.info("resolve", `browser pipeline started for ${link.playerName ?? "?"}: target=${resolverUrlLabel(link.url)}, window=${hasReferer ? "pooled with referer" : "navigation required"}`);
   // The referring page this page may be pooled under afterwards: set only once the embed is actually
   // running as a child frame of it.

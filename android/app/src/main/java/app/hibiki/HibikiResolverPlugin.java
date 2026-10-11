@@ -24,8 +24,10 @@ import java.io.ByteArrayInputStream;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
@@ -75,6 +77,8 @@ public class HibikiResolverPlugin extends Plugin {
         final List<JSObject> captures = Collections.synchronizedList(new ArrayList<>());
         final Map<String, PluginCall> pending = new HashMap<>();
         volatile boolean documentOnly;
+        /** The resolver's blockHosts (its player's ads and trackers), replaced on every resolve. */
+        volatile Set<String> blockedHosts = Collections.emptySet();
         int nextFrameId = 1;
     }
 
@@ -117,7 +121,7 @@ public class HibikiResolverPlugin extends Plugin {
                             capture.put("headers", headers);
                             page.captures.add(capture);
                         }
-                        if (page.documentOnly && !request.isForMainFrame()) {
+                        if ((page.documentOnly && !request.isForMainFrame()) || (!request.isForMainFrame() && isBlocked(request.getUrl(), page.blockedHosts))) {
                             return new WebResourceResponse("text/plain", "utf-8", 204, "No Content", new HashMap<>(), new ByteArrayInputStream(new byte[0]));
                         }
                         return null;
@@ -206,6 +210,36 @@ public class HibikiResolverPlugin extends Plugin {
             page.view.loadUrl(url, headers);
             call.resolve();
         });
+    }
+
+    @PluginMethod
+    public void setBlockedHosts(PluginCall call) {
+        Page page = pages.get(call.getString("key"));
+        if (page != null) {
+            Set<String> hosts = new HashSet<>();
+            try {
+                JSArray list = call.getArray("hosts", new JSArray());
+                for (int i = 0; i < list.length(); i++) {
+                    String host = list.optString(i, "").trim().toLowerCase(Locale.ROOT);
+                    if (!host.isEmpty()) hosts.add(host);
+                }
+            } catch (Exception ignored) {
+                // A malformed list blocks nothing rather than failing the resolve.
+            }
+            page.blockedHosts = Collections.unmodifiableSet(hosts);
+        }
+        call.resolve();
+    }
+
+    private static boolean isBlocked(Uri url, Set<String> blockedHosts) {
+        if (blockedHosts.isEmpty()) return false;
+        String host = url.getHost();
+        if (host == null) return false;
+        host = host.toLowerCase(Locale.ROOT);
+        for (String blocked : blockedHosts) {
+            if (host.equals(blocked) || host.endsWith("." + blocked)) return true;
+        }
+        return false;
     }
 
     @PluginMethod
