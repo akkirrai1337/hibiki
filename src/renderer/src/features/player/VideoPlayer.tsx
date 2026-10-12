@@ -1855,11 +1855,18 @@ export function VideoPlayer({ link, availableLinks, offlinePlayback, dubOptions,
   // setting only decides what happens once the countdown reaches zero (jump automatically vs. just
   // let the button quietly disappear), so a title with segment data but auto-skip turned off still
   // gets a clickable "Пропустить" button instead of nothing at all.
+  // A new segment starts the countdown from the top; pausing (or the stream stalling) only holds it,
+  // so it carries on from where it was - it counts seconds of the episode, not of the clock. It used
+  // to run on while paused, and an auto-skip jumped a paused video past the opening.
+  const activeSegmentKey = activeSegment ? segmentKey(activeSegment) : null;
   useEffect(() => {
-    if (!activeSegment) return;
+    if (activeSegmentKey && dismissedSegmentKey !== activeSegmentKey) setSkipCountdown(skipCountdownSeconds);
+  }, [activeSegmentKey, dismissedSegmentKey, skipCountdownSeconds]);
+  const skipCountdownRunning = playing && !buffering;
+  useEffect(() => {
+    if (!activeSegment || !skipCountdownRunning) return;
     const key = segmentKey(activeSegment);
     if (dismissedSegmentKey === key) return;
-    setSkipCountdown(skipCountdownSeconds);
     const interval = setInterval(() => {
       setSkipCountdown((seconds) => {
         if (seconds > 1) return seconds - 1;
@@ -1873,7 +1880,7 @@ export function VideoPlayer({ link, availableLinks, offlinePlayback, dubOptions,
       });
     }, 1000);
     return () => clearInterval(interval);
-  }, [activeSegment, dismissedSegmentKey, autoSkipSegments, skipCountdownSeconds]);
+  }, [activeSegment, dismissedSegmentKey, autoSkipSegments, skipCountdownRunning]);
 
   const skipSegmentNow = useCallback(() => {
     if (!activeSegment) return;
