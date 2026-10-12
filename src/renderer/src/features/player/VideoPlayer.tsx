@@ -33,6 +33,7 @@ import {
 import type { Episode, PlayerLink, VideoSegment } from "@shared/types";
 import { audioTrackOptions, pickLinkForAudioTrack, pickLinkForDimension, pickLinkForQuality, playerOptions, qualityOptions, translationOptions } from "@/lib/playerLinks";
 import { playbackUrl } from "@/lib/playbackUrl";
+import { FILL_VIEW, FIT_VIEW, pinchView, viewTransform, type ZoomView } from "@/lib/pinchZoom";
 import { proxiedHlsLoader, streamRequestUrl, usesStreamProxy } from "@/lib/streamProxy";
 import { createLoadActivity, type LoadActivity } from "@/lib/loadActivity";
 import { createStreamRebase } from "@/lib/streamRebase";
@@ -2094,34 +2095,61 @@ export function VideoPlayer({ link, availableLinks, offlinePlayback, dubOptions,
   // A press that turned into a hold has to swallow the click the browser fires on release,
   // otherwise letting go would also pause the video through the container's own onClick.
   const pointerHoldRef = useRef<{ timer: ReturnType<typeof setTimeout> | null; active: boolean }>({ timer: null, active: false });
-  // --- the phone's pinch: fingers apart fill the screen with the picture (cropped at the edges),
-  // together fit it back inside with bars, as in YouTube. Decided once per pinch, past a clear
-  // change in the fingers' distance, with a chip saying which it became.
+  // --- the phone's pinch (lib/pinchZoom): fingers a little apart fill the screen with the picture
+  // (cropped at the edges), well apart zoom in under the fingers, together go back - as in YouTube,
+  // and a little past it. Filled or not is kept between episodes; a zoom is for the moment, so it
+  // ends with the episode. Followed directly on the <video>'s style while the fingers move, not
+  // through React state - this component is far too big to re-render on every touchmove.
   const videoFill = usePlayerPrefsStore((s) => s.videoFill);
   const setVideoFill = usePlayerPrefsStore((s) => s.setVideoFill);
-  const pinchRef = useRef<{ startDistance: number; decided: boolean } | null>(null);
-  const [zoomNotice, setZoomNotice] = useState<{ fill: boolean; id: number } | null>(null);
+  const zoomViewRef = useRef<ZoomView>(videoFill ? FILL_VIEW : FIT_VIEW);
+  const pinchRef = useRef<{ startDistance: number; startMid: { x: number; y: number }; base: ZoomView } | null>(null);
+  const [zoomNotice, setZoomNotice] = useState<{ kind: "fill" | "fit" | "zoom"; scale: number; id: number } | null>(null);
   useEffect(() => {
     if (!zoomNotice) return;
     const timer = setTimeout(() => setZoomNotice(null), 1200);
     return () => clearTimeout(timer);
   }, [zoomNotice]);
+  const showZoomView = useCallback((view: ZoomView) => {
+    zoomViewRef.current = view;
+    const video = videoRef.current;
+    if (video) video.style.transform = viewTransform(view);
+  }, []);
+  // A new episode, or the screen turning: back to plain fill (or fit), no zoom left over.
+  useEffect(() => {
+    showZoomView(usePlayerPrefsStore.getState().videoFill ? FILL_VIEW : FIT_VIEW);
+    const onResize = () => { if (zoomViewRef.current.scale > 1) showZoomView(FILL_VIEW); };
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, [link?.url, showZoomView]);
   const touchDistance = (touches: React.TouchList) => Math.hypot(touches[0].clientX - touches[1].clientX, touches[0].clientY - touches[1].clientY);
+  // The point between the two fingers, from the player's centre.
+  const touchMid = (touches: React.TouchList) => {
+    const box = containerRef.current?.getBoundingClientRect();
+    const cx = box ? box.left + box.width / 2 : 0;
+    const cy = box ? box.top + box.height / 2 : 0;
+    return { x: (touches[0].clientX + touches[1].clientX) / 2 - cx, y: (touches[0].clientY + touches[1].clientY) / 2 - cy };
+  };
   const onPinchStart = (e: React.TouchEvent) => {
     if (e.touches.length !== 2) return;
-    pinchRef.current = { startDistance: touchDistance(e.touches), decided: false };
+    pinchRef.current = { startDistance: touchDistance(e.touches), startMid: touchMid(e.touches), base: zoomViewRef.current };
     // The first finger's press would otherwise go on to a hold-to-2x.
     endPointerHold();
   };
   const onPinchMove = (e: React.TouchEvent) => {
     const pinch = pinchRef.current;
-    if (!pinch || pinch.decided || e.touches.length !== 2 || pinch.startDistance <= 0) return;
-    const ratio = touchDistance(e.touches) / pinch.startDistance;
-    if (ratio < 1.2 && ratio > 0.83) return;
-    pinch.decided = true;
-    const fill = ratio > 1;
-    setVideoFill(fill);
-    setZoomNotice({ fill, id: Date.now() });
+    const box = containerRef.current;
+    if (!pinch || !box || e.touches.length !== 2 || pinch.startDistance <= 0) return;
+    const previous = zoomViewRef.current;
+    const view = pinchView(pinch.base, touchDistance(e.touches) / pinch.startDistance, pinch.startMid, touchMid(e.touches), box.clientWidth, box.clientHeight);
+    showZoomView(view);
+    if (view.fill !== previous.fill) setVideoFill(view.fill);
+    const kind = !view.fill ? "fit" : view.scale > 1 ? "zoom" : "fill";
+    const previousKind = !previous.fill ? "fit" : previous.scale > 1 ? "zoom" : "fill";
+    // The chip says what it became, and while zooming how far - a tenth at a time, not every move.
+    if (kind !== previousKind || (kind === "zoom" && Math.round(view.scale * 10) !== Math.round(previous.scale * 10))) {
+      setZoomNotice((notice) => ({ kind, scale: view.scale, id: notice && kind === "zoom" && notice.kind === "zoom" ? notice.id : Date.now() }));
+    }
   };
   const onPinchEnd = (e: React.TouchEvent) => {
     if (e.touches.length < 2) pinchRef.current = null;
@@ -2708,8 +2736,8 @@ export function VideoPlayer({ link, availableLinks, offlinePlayback, dubOptions,
             className="pointer-events-none absolute inset-x-0 top-7 z-10 flex justify-center"
           >
             <div className="flex items-center gap-2 rounded-2xl bg-black/70 px-3 py-[7px] text-base font-medium text-white">
-              {zoomNotice.fill ? <Expand className="h-[18px] w-[18px]" strokeWidth={2} /> : <Shrink className="h-[18px] w-[18px]" strokeWidth={2} />}
-              {t(zoomNotice.fill ? "watch.player.zoomFill" : "watch.player.zoomFit")}
+              {zoomNotice.kind === "fit" ? <Shrink className="h-[18px] w-[18px]" strokeWidth={2} /> : <Expand className="h-[18px] w-[18px]" strokeWidth={2} />}
+              {zoomNotice.kind === "zoom" ? `${zoomNotice.scale.toFixed(1)}×` : t(zoomNotice.kind === "fill" ? "watch.player.zoomFill" : "watch.player.zoomFit")}
             </div>
           </motion.div>
         )}
