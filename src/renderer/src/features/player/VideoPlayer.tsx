@@ -35,6 +35,7 @@ import { audioTrackOptions, pickLinkForAudioTrack, pickLinkForDimension, pickLin
 import { playbackUrl } from "@/lib/playbackUrl";
 import { FILL_VIEW, FIT_VIEW, pinchView, viewTransform, type ZoomView } from "@/lib/pinchZoom";
 import { barsCropScale, readBars, type Bars } from "@/lib/letterbox";
+import { audioTrackLabel, matchAudioTrack } from "@/lib/hlsAudio";
 import { proxiedHlsLoader, streamRequestUrl, usesStreamProxy } from "@/lib/streamProxy";
 import { createLoadActivity, type LoadActivity } from "@/lib/loadActivity";
 import { createStreamRebase } from "@/lib/streamRebase";
@@ -1024,6 +1025,12 @@ export function VideoPlayer({ link, availableLinks, offlinePlayback, dubOptions,
   const playerValues = playerOptions(links);
   const qualityValues = link ? qualityOptions(links, link) : [];
   const audioTrackValues = link ? audioTrackOptions(links, link) : [];
+  // Audio tracks inside the HLS stream itself (lib/hlsAudio) - offered in the same menu when the
+  // links don't already split the sound into streams of their own.
+  const [hlsAudio, setHlsAudio] = useState<{ labels: string[]; selected: number } | null>(null);
+  const hlsInstanceRef = useRef<Hls | null>(null);
+  useEffect(() => setHlsAudio(null), [link?.url]);
+  const hlsAudioInMenu = audioTrackValues.length <= 1 && hlsAudio !== null ? hlsAudio : null;
   const beginSourceSwitch = useCallback((target?: PlayerLink): boolean => {
     if (target && link && target.type === link.type && target.url === link.url) return false;
 
@@ -1342,6 +1349,20 @@ export function VideoPlayer({ link, availableLinks, offlinePlayback, dubOptions,
             trace(`data saver: renditions capped at ${data.levels[Math.max(cap, 0)].height}p`);
           }
           trace(`manifest parsed; levels=${data.levels.length}; selectedLevel=${hls?.currentLevel ?? "auto"}`);
+          hlsInstanceRef.current = hls;
+          // Several dubs in one stream: play the one this link is for, not the playlist's default.
+          const audioTracks = hls?.audioTracks ?? [];
+          if (hls && audioTracks.length > 1) {
+            const wanted = matchAudioTrack(audioTracks, link.audioTrack ?? link.translation);
+            if (wanted >= 0 && wanted !== hls.audioTrack) {
+              hls.audioTrack = wanted;
+              trace(`audio track: ${audioTracks[wanted].name || audioTracks[wanted].lang} (for ${link.audioTrack ?? link.translation})`);
+            }
+            setHlsAudio({ labels: audioTracks.map(audioTrackLabel), selected: wanted >= 0 ? wanted : Math.max(0, hls.audioTrack) });
+          }
+        });
+        hls.on(HlsEngine.Events.AUDIO_TRACK_SWITCHED, (_event, data) => {
+          setHlsAudio((current) => (current ? { ...current, selected: data.id } : current));
         });
         // A successful buffer append is the real signal that recovery actually worked - resetting
         // only on MANIFEST_PARSED (which fires once, near the very start) would let one recovered
@@ -2537,9 +2558,12 @@ export function VideoPlayer({ link, availableLinks, offlinePlayback, dubOptions,
     selectedQuality={shownQuality}
     onSelectQuality={selectQuality}
     qualityLocked={!!offlinePlayback}
-    audioTrackOptions={offlinePlayback ? [] : audioTrackValues}
-    selectedAudioTrack={shownAudioTrack}
-    onSelectAudioTrack={selectAudioTrack}
+    audioTrackOptions={offlinePlayback ? [] : hlsAudioInMenu ? hlsAudioInMenu.labels : audioTrackValues}
+    selectedAudioTrack={hlsAudioInMenu ? hlsAudioInMenu.labels[hlsAudioInMenu.selected] : shownAudioTrack}
+    onSelectAudioTrack={hlsAudioInMenu ? (label) => {
+      const index = hlsAudioInMenu.labels.indexOf(label);
+      if (index >= 0 && hlsInstanceRef.current) hlsInstanceRef.current.audioTrack = index;
+    } : selectAudioTrack}
     subtitleOptions={subtitleOptions}
     selectedSubtitleId={selectedSubtitleId}
     onSelectSubtitle={setSelectedSubtitleId}
