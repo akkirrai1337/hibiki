@@ -297,9 +297,6 @@ function PairFlow({ onDone }: { onDone: () => void }) {
       <div>
         <p className="text-[13px] leading-relaxed text-muted">{t("deviceSync.findHint")}</p>
         <div className="mt-3 space-y-1.5">
-          {found.isFetching && list.length === 0 && (
-            <p className="flex items-center gap-2 py-2 text-sm text-muted"><Loader2 className="h-4 w-4 animate-spin" strokeWidth={2} />{t("deviceSync.searching")}</p>
-          )}
           {list.map((candidate) => (
             <button
               key={candidate.deviceId}
@@ -315,7 +312,7 @@ function PairFlow({ onDone }: { onDone: () => void }) {
             </button>
           ))}
           {!found.isFetching && list.length === 0 && (
-            <p className="py-2 text-sm leading-relaxed text-muted">{found.isError ? t("deviceSync.error.generic") : t("deviceSync.notFound")}</p>
+            <p className="py-2 text-sm leading-relaxed text-muted">{found.isError ? t("deviceSync.error.generic") : t("deviceSync.notFoundHint")}</p>
           )}
         </div>
         <button
@@ -324,8 +321,11 @@ function PairFlow({ onDone }: { onDone: () => void }) {
           disabled={found.isFetching}
           className="mt-3 flex h-10 w-full items-center justify-center gap-2 rounded-full text-sm font-semibold text-muted active:bg-text/[.06] disabled:opacity-60"
         >
-          <RefreshCw className={cn("h-4 w-4", found.isFetching && "animate-spin")} strokeWidth={2} />
-          {t("deviceSync.searchAgain")}
+          {/* The search says how it is going in its own button: looking, nothing found, or (with a
+              list above) just the way to look again. */}
+          {found.isFetching
+            ? <><Loader2 className="h-4 w-4 animate-spin" strokeWidth={2} />{t("deviceSync.searching")}</>
+            : <><RefreshCw className="h-4 w-4" strokeWidth={2} />{list.length === 0 && !found.isError ? `${t("deviceSync.notFound")} · ${t("deviceSync.searchAgain")}` : t("deviceSync.searchAgain")}</>}
         </button>
       </div>
     );
