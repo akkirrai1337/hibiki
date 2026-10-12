@@ -208,6 +208,8 @@
       "audioOnly": "Audio only",
       "pictureInPicture": "Picture in picture",
       "skip": "Skip",
+      "zoomFill": "Zoomed to fill",
+      "zoomFit": "Original",
       "watch": "Watch"
     },
     "settings": {

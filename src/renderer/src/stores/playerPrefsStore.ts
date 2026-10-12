@@ -71,6 +71,11 @@ interface PlayerPrefsState {
   // Whether the player starts episodes in a lighter quality - see lib/connectionQuality.ts for
   // what "auto" reads.
   dataSaver: DataSaverMode;
+  // Phone: the picture fills the screen, cropped at the edges, instead of fitting inside it with
+  // black bars - a pinch out or in on the video, as in YouTube. Kept: a 20:9 phone wants it every
+  // episode, not just the one where it was pinched.
+  videoFill: boolean;
+  setVideoFill: (fill: boolean) => void;
   setDataSaver: (mode: DataSaverMode) => void;
   setAutoSkipSegments: (enabled: boolean) => void;
   setAutoPlayNextEpisode: (enabled: boolean) => void;
@@ -100,6 +105,8 @@ export const usePlayerPrefsStore = create<PlayerPrefsState>()(
       subtitleOffset: 72,
       subtitleOffsetX: 0,
       dataSaver: "auto",
+      videoFill: false,
+      setVideoFill: (videoFill) => set({ videoFill }),
       setDataSaver: (dataSaver) => set({ dataSaver }),
       setAutoSkipSegments: (autoSkipSegments) => set({ autoSkipSegments }),
       setAutoPlayNextEpisode: (autoPlayNextEpisode) => set({ autoPlayNextEpisode }),

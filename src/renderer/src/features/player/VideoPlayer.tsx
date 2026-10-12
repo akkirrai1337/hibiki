@@ -11,7 +11,9 @@ import {
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
+  Expand,
   FastForward,
+  Shrink,
   ListVideo,
   Loader2,
   Maximize,
@@ -2092,6 +2094,39 @@ export function VideoPlayer({ link, availableLinks, offlinePlayback, dubOptions,
   // A press that turned into a hold has to swallow the click the browser fires on release,
   // otherwise letting go would also pause the video through the container's own onClick.
   const pointerHoldRef = useRef<{ timer: ReturnType<typeof setTimeout> | null; active: boolean }>({ timer: null, active: false });
+  // --- the phone's pinch: fingers apart fill the screen with the picture (cropped at the edges),
+  // together fit it back inside with bars, as in YouTube. Decided once per pinch, past a clear
+  // change in the fingers' distance, with a chip saying which it became.
+  const videoFill = usePlayerPrefsStore((s) => s.videoFill);
+  const setVideoFill = usePlayerPrefsStore((s) => s.setVideoFill);
+  const pinchRef = useRef<{ startDistance: number; decided: boolean } | null>(null);
+  const [zoomNotice, setZoomNotice] = useState<{ fill: boolean; id: number } | null>(null);
+  useEffect(() => {
+    if (!zoomNotice) return;
+    const timer = setTimeout(() => setZoomNotice(null), 1200);
+    return () => clearTimeout(timer);
+  }, [zoomNotice]);
+  const touchDistance = (touches: React.TouchList) => Math.hypot(touches[0].clientX - touches[1].clientX, touches[0].clientY - touches[1].clientY);
+  const onPinchStart = (e: React.TouchEvent) => {
+    if (e.touches.length !== 2) return;
+    pinchRef.current = { startDistance: touchDistance(e.touches), decided: false };
+    // The first finger's press would otherwise go on to a hold-to-2x.
+    endPointerHold();
+  };
+  const onPinchMove = (e: React.TouchEvent) => {
+    const pinch = pinchRef.current;
+    if (!pinch || pinch.decided || e.touches.length !== 2 || pinch.startDistance <= 0) return;
+    const ratio = touchDistance(e.touches) / pinch.startDistance;
+    if (ratio < 1.2 && ratio > 0.83) return;
+    pinch.decided = true;
+    const fill = ratio > 1;
+    setVideoFill(fill);
+    setZoomNotice({ fill, id: Date.now() });
+  };
+  const onPinchEnd = (e: React.TouchEvent) => {
+    if (e.touches.length < 2) pinchRef.current = null;
+  };
+
   const endPointerHold = useCallback(() => {
     const hold = pointerHoldRef.current;
     if (hold.timer) { clearTimeout(hold.timer); hold.timer = null; }
@@ -2590,13 +2625,17 @@ export function VideoPlayer({ link, availableLinks, offlinePlayback, dubOptions,
       // which would otherwise strand playback at 2x with the chip still showing.
       onPointerLeave={endPointerHold}
       onPointerCancel={endPointerHold}
+      onTouchStart={isMobile ? onPinchStart : undefined}
+      onTouchMove={isMobile ? onPinchMove : undefined}
+      onTouchEnd={isMobile ? onPinchEnd : undefined}
+      onTouchCancel={isMobile ? onPinchEnd : undefined}
       onClick={(e) => {
         if (pointerHoldWasActiveRef.current) { pointerHoldWasActiveRef.current = false; return; }
         if (isMobile) onMobileTap(e);
         else togglePlay();
       }}
     >
-      <video ref={videoRef} crossOrigin="anonymous" autoPlay className="h-full w-full object-contain">
+      <video ref={videoRef} crossOrigin="anonymous" autoPlay className={cn("h-full w-full", isMobile && videoFill ? "object-cover" : "object-contain")}>
         {/* Order matches subtitleOptions exactly - the mode-sync effect above matches this element's
             resulting TextTrack back to its option purely by DOM/textTracks index. */}
         {subtitleOptions.map((option) => (
@@ -2657,6 +2696,24 @@ export function VideoPlayer({ link, availableLinks, offlinePlayback, dubOptions,
           out on its own) whether or not the controls happen to be visible right now. */}
       <StreakToast streak={streakToast} />
       <PlayerSwitchToast toast={playerSwitchToast} />
+
+      <AnimatePresence>
+        {zoomNotice && (
+          <motion.div
+            key={zoomNotice.id}
+            initial={{ opacity: 0, scale: 0.92 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.96 }}
+            transition={{ duration: 0.15, ease: "easeOut" }}
+            className="pointer-events-none absolute inset-x-0 top-7 z-10 flex justify-center"
+          >
+            <div className="flex items-center gap-2 rounded-2xl bg-black/70 px-3 py-[7px] text-base font-medium text-white">
+              {zoomNotice.fill ? <Expand className="h-[18px] w-[18px]" strokeWidth={2} /> : <Shrink className="h-[18px] w-[18px]" strokeWidth={2} />}
+              {t(zoomNotice.fill ? "watch.player.zoomFill" : "watch.player.zoomFit")}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Mirrors the Android app's hold-to-fast-forward chip exactly: top-center, a dark rounded
           pill with "2×" then a fast-forward icon, fade+scale in/out. */}
