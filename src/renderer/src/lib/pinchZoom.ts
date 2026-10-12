@@ -3,7 +3,8 @@
 // together go back - out of the zoom, then to the whole picture with bars.
 //
 // Positions are in pixels from the player's centre; `x`/`y` is how far the zoomed picture is moved,
-// `scale` how much larger than the filled screen it is (1 = not zoomed).
+// `scale` how much larger than the filled screen it is (1 = not zoomed). `crop` is what filling
+// takes on top of object-fit: cover to push bars baked into the video off the screen (lib/letterbox).
 
 export interface ZoomView {
   fill: boolean;
@@ -31,10 +32,11 @@ interface Point {
 }
 
 /** Keeps a zoomed picture covering the screen: it can be moved only as far as it overhangs. */
-export function clampView(view: ZoomView, width: number, height: number): ZoomView {
+export function clampView(view: ZoomView, width: number, height: number, crop = 1): ZoomView {
   if (!view.fill || view.scale <= 1) return { ...view, scale: 1, x: 0, y: 0 };
-  const maxX = ((view.scale - 1) * width) / 2;
-  const maxY = ((view.scale - 1) * height) / 2;
+  // The bars' crop overhangs too, but that part is bar: it stays off screen.
+  const maxX = ((view.scale - 1) * crop * width) / 2;
+  const maxY = ((view.scale - 1) * crop * height) / 2;
   return { ...view, x: Math.min(maxX, Math.max(-maxX, view.x)), y: Math.min(maxY, Math.max(-maxY, view.y)) };
 }
 
@@ -42,7 +44,7 @@ export function clampView(view: ZoomView, width: number, height: number): ZoomVi
  * The view while two fingers are down: `base` is what was on screen when they touched, `ratio` how
  * far apart they are now against then, `startMid`/`mid` the point between them then and now.
  */
-export function pinchView(base: ZoomView, ratio: number, startMid: Point, mid: Point, width: number, height: number): ZoomView {
+export function pinchView(base: ZoomView, ratio: number, startMid: Point, mid: Point, width: number, height: number, crop = 1): ZoomView {
   const baseScale = base.fill ? base.scale : 1;
   let scale: number;
   if (!base.fill) {
@@ -64,10 +66,13 @@ export function pinchView(base: ZoomView, ratio: number, startMid: Point, mid: P
   const baseY = base.fill ? base.y : 0;
   const x = mid.x - (scale * (startMid.x - baseX)) / baseScale;
   const y = mid.y - (scale * (startMid.y - baseY)) / baseScale;
-  return clampView({ fill: true, scale, x, y }, width, height);
+  return clampView({ fill: true, scale, x, y }, width, height, crop);
 }
 
 /** The video element's transform for a view. */
-export function viewTransform(view: ZoomView): string {
-  return view.fill && view.scale > 1 ? `translate(${view.x}px, ${view.y}px) scale(${view.scale})` : "";
+export function viewTransform(view: ZoomView, crop = 1): string {
+  if (!view.fill) return "";
+  const scale = view.scale * crop;
+  if (view.scale > 1) return `translate(${view.x}px, ${view.y}px) scale(${scale})`;
+  return scale > 1 ? `scale(${scale})` : "";
 }

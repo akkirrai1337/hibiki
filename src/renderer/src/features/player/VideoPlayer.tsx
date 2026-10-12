@@ -34,6 +34,7 @@ import type { Episode, PlayerLink, VideoSegment } from "@shared/types";
 import { audioTrackOptions, pickLinkForAudioTrack, pickLinkForDimension, pickLinkForQuality, playerOptions, qualityOptions, translationOptions } from "@/lib/playerLinks";
 import { playbackUrl } from "@/lib/playbackUrl";
 import { FILL_VIEW, FIT_VIEW, pinchView, viewTransform, type ZoomView } from "@/lib/pinchZoom";
+import { barsCropScale, readBars, type Bars } from "@/lib/letterbox";
 import { proxiedHlsLoader, streamRequestUrl, usesStreamProxy } from "@/lib/streamProxy";
 import { createLoadActivity, type LoadActivity } from "@/lib/loadActivity";
 import { createStreamRebase } from "@/lib/streamRebase";
@@ -2110,11 +2111,35 @@ export function VideoPlayer({ link, availableLinks, offlinePlayback, dubOptions,
     const timer = setTimeout(() => setZoomNotice(null), 1200);
     return () => clearTimeout(timer);
   }, [zoomNotice]);
+  // Bars baked into the video (lib/letterbox), as a scale on top of the fill - read from frames while
+  // filled, until two readings a few seconds apart agree.
+  const barsCropRef = useRef(1);
   const showZoomView = useCallback((view: ZoomView) => {
     zoomViewRef.current = view;
     const video = videoRef.current;
-    if (video) video.style.transform = viewTransform(view);
+    if (video) video.style.transform = viewTransform(view, barsCropRef.current);
   }, []);
+  useEffect(() => {
+    barsCropRef.current = 1;
+    showZoomView(zoomViewRef.current);
+    if (!isMobile || !videoFill) return;
+    let previous: Bars | null = null;
+    const read = () => {
+      const video = videoRef.current;
+      const box = containerRef.current;
+      if (!video || !box || video.paused) return false;
+      const bars = readBars(video);
+      if (!bars) return false;
+      const agreed = previous && Math.abs(previous.x - bars.x) < 0.006 && Math.abs(previous.y - bars.y) < 0.006;
+      previous = bars;
+      if (!agreed) return false;
+      barsCropRef.current = barsCropScale(bars, video.videoWidth, video.videoHeight, box.clientWidth, box.clientHeight);
+      showZoomView(zoomViewRef.current);
+      return true;
+    };
+    const interval = window.setInterval(() => { if (read()) window.clearInterval(interval); }, 2500);
+    return () => window.clearInterval(interval);
+  }, [link?.url, videoFill, showZoomView]);
   // A new episode, or the screen turning: back to plain fill (or fit), no zoom left over.
   useEffect(() => {
     showZoomView(usePlayerPrefsStore.getState().videoFill ? FILL_VIEW : FIT_VIEW);
@@ -2141,7 +2166,7 @@ export function VideoPlayer({ link, availableLinks, offlinePlayback, dubOptions,
     const box = containerRef.current;
     if (!pinch || !box || e.touches.length !== 2 || pinch.startDistance <= 0) return;
     const previous = zoomViewRef.current;
-    const view = pinchView(pinch.base, touchDistance(e.touches) / pinch.startDistance, pinch.startMid, touchMid(e.touches), box.clientWidth, box.clientHeight);
+    const view = pinchView(pinch.base, touchDistance(e.touches) / pinch.startDistance, pinch.startMid, touchMid(e.touches), box.clientWidth, box.clientHeight, barsCropRef.current);
     showZoomView(view);
     if (view.fill !== previous.fill) setVideoFill(view.fill);
     const kind = !view.fill ? "fit" : view.scale > 1 ? "zoom" : "fill";
