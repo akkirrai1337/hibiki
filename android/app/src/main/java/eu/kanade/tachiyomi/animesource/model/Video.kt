@@ -1,6 +1,7 @@
 package eu.kanade.tachiyomi.animesource.model
 
 import android.net.Uri
+import kotlinx.serialization.json.JsonObject
 import okhttp3.Headers
 
 data class Track(val url: String, val lang: String)
@@ -40,6 +41,28 @@ data class Video(
 ) {
     /** Original v14 fields, still consumed by older extensions and Hibiki's adapter. */
     private var legacyUrl: String? = null
+
+    /** extensions-lib 17 adds a trailing JsonObject of extension-side extras; Hibiki ignores it. */
+    constructor(
+        videoUrl: String = "",
+        videoTitle: String = "",
+        resolution: Int? = null,
+        bitrate: Int? = null,
+        headers: Headers? = null,
+        preferred: Boolean = false,
+        subtitleTracks: List<Track> = emptyList(),
+        audioTracks: List<Track> = emptyList(),
+        timestamps: List<TimeStamp> = emptyList(),
+        mpvArgs: List<Pair<String, String>> = emptyList(),
+        ffmpegStreamArgs: List<Pair<String, String>> = emptyList(),
+        ffmpegVideoArgs: List<Pair<String, String>> = emptyList(),
+        internalData: String = "",
+        initialized: Boolean = false,
+        extras: JsonObject?,
+    ) : this(
+        videoUrl, videoTitle, resolution, bitrate, headers, preferred, subtitleTracks, audioTracks,
+        timestamps, mpvArgs, ffmpegStreamArgs, ffmpegVideoArgs, internalData, initialized,
+    )
 
     val url: String
         get() = legacyUrl ?: videoUrl

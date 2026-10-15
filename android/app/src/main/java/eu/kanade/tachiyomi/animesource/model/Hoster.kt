@@ -1,5 +1,7 @@
 package eu.kanade.tachiyomi.animesource.model
 
+import kotlinx.serialization.json.JsonObject
+
 /** A video host for an episode (extensions-lib 16). Its videos are either listed or loaded on demand. */
 open class Hoster(
     val hosterUrl: String = "",
@@ -8,6 +10,17 @@ open class Hoster(
     val internalData: String = "",
     val lazy: Boolean = false,
 ) {
+    /** extensions-lib 17 adds a trailing JsonObject of extension-side extras; Hibiki ignores it. */
+    @Suppress("UNUSED_PARAMETER")
+    constructor(
+        hosterUrl: String = "",
+        hosterName: String = "",
+        videoList: List<Video>? = null,
+        internalData: String = "",
+        lazy: Boolean = false,
+        extras: JsonObject?,
+    ) : this(hosterUrl, hosterName, videoList, internalData, lazy)
+
     @Volatile
     var status: State = State.IDLE
 

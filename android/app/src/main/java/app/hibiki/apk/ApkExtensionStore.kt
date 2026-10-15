@@ -43,8 +43,8 @@ object ApkExtensionStore {
     private const val TRUST_PREFS = "hibiki-apk-trust"
     private val PACKAGE_NAME_PATTERN = Regex("[A-Za-z][A-Za-z0-9_]*(\\.[A-Za-z][A-Za-z0-9_]*)+")
 
-    /** extensions-lib v14 through v16 (hosters, seasons and related titles arrived in 16). */
-    val SUPPORTED_API_VERSIONS = 14..16
+    /** extensions-lib v14 through v17 (hosters, seasons and related titles arrived in 16; 17 adds JsonObject extras to Video and Hoster). */
+    val SUPPORTED_API_VERSIONS = 14..17
 
     @Suppress("DEPRECATION")
     private val packageFlags: Int
