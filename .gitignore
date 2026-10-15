@@ -33,3 +33,5 @@ Thumbs.db
 .codex*
 
 docs/*.md
+# Downloads and scratch files (APKs, sources to compare, etc.)
+.tmp/
