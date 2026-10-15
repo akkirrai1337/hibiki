@@ -5,6 +5,7 @@ import eu.kanade.tachiyomi.animesource.AnimeCatalogueSource
 import eu.kanade.tachiyomi.animesource.model.ChapterType
 import eu.kanade.tachiyomi.animesource.model.FetchType
 import eu.kanade.tachiyomi.animesource.model.Hoster
+import eu.kanade.tachiyomi.animesource.model.HttpServer
 import eu.kanade.tachiyomi.animesource.model.SAnime
 import eu.kanade.tachiyomi.animesource.model.SEpisode
 import eu.kanade.tachiyomi.animesource.model.TimeStamp
@@ -134,7 +135,7 @@ class ApkSourceAdapter(
             // Beside the details, not after them: the title's page should not wait on its extras.
             val similar = async { similarTitles(titleId) }
             val title = guarded("details") {
-                val details = source.getAnimeDetails(anime)
+                val details = details(anime)
                 fetchTypes[titleId] = details.fetch_type
                 // Some extensions rewrite the URL while loading details; the title keeps the id it was asked
                 // for - the catalogue, the library and downloads all know it by that one.
@@ -145,20 +146,24 @@ class ApkSourceAdapter(
     }
 
     /**
-     * Titles the extension lists beside this one (extensions-lib v16 fetchRelatedAnimeList). As in
-     * Komikku/Aniyomi, by default that is the title's own page read with the extension's catalogue
-     * parser - sites mostly show "you may also like" cards in the catalogue's own markup there. An
-     * extension that can't (no such cards, a JSON API) answers with nothing or an error, and the
-     * page simply has no such section. Never more than RELATED_TIMEOUT_MS of the page's time.
+     * Titles the extension lists beside this one. An extensions-lib 17 source that groups them itself
+     * (supportsRelatedAnime) is asked first; otherwise Komikku's v16 fetchRelatedAnimeList, which by
+     * default is the title's own page read with the extension's catalogue parser - sites mostly show
+     * "you may also like" cards in the catalogue's own markup there. An extension that can't (no such
+     * cards, a JSON API) answers with nothing or an error, and the page simply has no such section.
+     * Never more than RELATED_TIMEOUT_MS of the page's time.
      */
     private suspend fun similarTitles(titleId: String): JSONArray {
-        if (!source.supportsRelatedAnimes || source.disableRelatedAnimes) return JSONArray()
+        val grouped = source.supportsRelatedAnime
+        if (!grouped && (!source.supportsRelatedAnimes || source.disableRelatedAnimes)) return JSONArray()
         val anime = SAnime.create().apply {
             url = titleId
             title = titleId
         }
         val related = try {
-            withTimeoutOrNull(RELATED_TIMEOUT_MS) { source.fetchRelatedAnimeList(anime) }.orEmpty()
+            withTimeoutOrNull(RELATED_TIMEOUT_MS) {
+                if (grouped) source.getRelatedAnimeList(anime).flatMap { it.animes } else source.fetchRelatedAnimeList(anime)
+            }.orEmpty()
         } catch (cancelled: CancellationException) {
             throw cancelled
         } catch (error: Throwable) {
@@ -181,19 +186,27 @@ class ApkSourceAdapter(
         return out
     }
 
+    // extensions-lib 17 entry points, as Aniyomi calls them. A source built against an older lib
+    // answers through the defaults, which fall back to getAnimeDetails / getEpisodeList.
+    private suspend fun details(anime: SAnime): SAnime =
+        source.getAnimeEpisodeUpdate(anime, emptyList(), fetchDetails = true, fetchEpisodes = false).anime
+
+    private suspend fun episodeList(anime: SAnime): List<SEpisode> =
+        source.getAnimeEpisodeUpdate(anime, emptyList(), fetchDetails = false, fetchEpisodes = true).episodes
+
     suspend fun playbackGroups(titleId: String): JSONArray {
         val anime = SAnime.create().apply {
             url = titleId
             title = titleId
         }
         // The details tell whether the title lists seasons or episodes directly.
-        val fetchType = fetchTypes[titleId] ?: guarded("details") { source.getAnimeDetails(anime) }.fetch_type.also { fetchTypes[titleId] = it }
+        val fetchType = fetchTypes[titleId] ?: guarded("details") { details(anime) }.fetch_type.also { fetchTypes[titleId] = it }
         if (fetchType == FetchType.Seasons) {
-            val seasons = guarded("season list") { source.getSeasonList(anime) }
+            val seasons = guarded("season list") { source.getAnimeSeasonUpdate(anime, emptyList(), fetchDetails = false, fetchSeasons = true).seasons }
             val groups = coroutineScope {
                 seasons.mapIndexed { index, season ->
                     async {
-                        val episodes = toEpisodes(guarded("episode list") { source.getEpisodeList(season) })
+                        val episodes = toEpisodes(guarded("episode list") { episodeList(season) })
                         if (episodes.length() == 0) return@async null
                         val title = runCatching { season.title }.getOrNull()?.takeIf(String::isNotBlank) ?: "Season ${index + 1}"
                         JSONObject().put("id", "season-${index + 1}").put("title", title).put("episodes", episodes)
@@ -202,7 +215,7 @@ class ApkSourceAdapter(
             }
             return JSONArray(groups)
         }
-        val episodes = toEpisodes(guarded("episode list") { source.getEpisodeList(anime) })
+        val episodes = toEpisodes(guarded("episode list") { episodeList(anime) })
         if (episodes.length() == 0) return JSONArray()
         return JSONArray().put(JSONObject().put("id", "episodes").put("title", source.name).put("episodes", episodes))
     }
@@ -393,7 +406,11 @@ class ApkSourceAdapter(
                 batch.map { hosted ->
                     val video = hosted.video
                     async {
-                        if (http == null || (video.videoUrl.isNotBlank() && video.internalData.isBlank())) {
+                        // Lazy: no URL yet, or data (v16 internalData, v17 memo) the source still has to finish
+                        // it from. A video the source marked initialized is final.
+                        val lazy = video.videoUrl.isBlank() ||
+                            (!video.initialized && (video.internalData.isNotBlank() || video.memo.isNotEmpty()))
+                        if (http == null || !lazy) {
                             hosted
                         } else {
                             try {
@@ -421,22 +438,31 @@ class ApkSourceAdapter(
             }.filterNotNull()
         }
         if (resolved.isEmpty()) firstError?.let { throw it }
-        return resolved
+        return resolved.map { hosted ->
+            if (http == null || !hosted.video.usesHttpServer()) return@map hosted
+            val port = httpServerPort(http) ?: return@map null
+            hosted.copy(video = hosted.video.copyHttpServer(port))
+        }.filterNotNull()
     }
 
-    private fun Video.withStreamUrl(streamUrl: String) = Video(
-        videoUrl = streamUrl,
-        videoTitle = videoTitle,
-        resolution = resolution,
-        bitrate = bitrate,
-        headers = headers,
-        preferred = preferred,
-        subtitleTracks = subtitleTracks,
-        audioTracks = audioTracks,
-        timestamps = timestamps,
-        internalData = internalData,
-        initialized = true,
-    )
+    private fun Video.withStreamUrl(streamUrl: String) = copy(videoUrl = streamUrl, initialized = true, memo = memo)
+
+    /**
+     * extensions-lib 17: videos at HttpServer.PLACEHOLDER_URL are served by the source's own local
+     * server. One per source, started on first need and kept for the app's life, as Aniyomi keeps it
+     * for the player's; null when the source has none or it would not start.
+     */
+    private fun httpServerPort(http: AnimeHttpSource): Int? = synchronized(this) {
+        val server = httpServer?.takeIf { it.isRunning() }
+            ?: runCatching { http.createHttpServer()?.also { it.start() } }
+                .onFailure { Log.w(TAG, "${source.name}: http server failed: ${it.message}") }
+                .getOrNull()
+                ?.takeIf { it.isRunning() }
+                ?.also { httpServer = it }
+        server?.listeningPort
+    }
+
+    private var httpServer: HttpServer? = null
 
     private suspend fun <T> guarded(operation: String, block: suspend () -> T): T {
         val work = scope.async { block() }

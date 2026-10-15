@@ -21,10 +21,14 @@ data class TimeStamp(
     val type: ChapterType = ChapterType.Other,
 )
 
-/** API v16 video model with the deprecated v14 constructor/accessors retained for old APKs. */
+/**
+ * Video model of extensions-lib v17, as in Aniyomi's source-api: v17 added [memo], and the v16
+ * constructor and copy stay as hidden overloads so v16 APKs still link. The v14 constructors and
+ * accessors are kept for older APKs.
+ */
 @Suppress("unused_parameter")
 data class Video(
-    val videoUrl: String = "",
+    var videoUrl: String = "",
     val videoTitle: String = "",
     val resolution: Int? = null,
     val bitrate: Int? = null,
@@ -38,14 +42,19 @@ data class Video(
     val ffmpegVideoArgs: List<Pair<String, String>> = emptyList(),
     val internalData: String = "",
     val initialized: Boolean = false,
+    val memo: JsonObject = JsonObject(emptyMap()),
 ) {
     /** Original v14 fields, still consumed by older extensions and Hibiki's adapter. */
     private var legacyUrl: String? = null
 
-    /** extensions-lib 17: extension-side data the source can read back later. */
-    var memo: JsonObject = JsonObject(emptyMap())
-        private set
+    val url: String
+        get() = legacyUrl ?: videoUrl
 
+    val quality: String
+        get() = videoTitle
+
+    /** extensions-lib 16 constructor. */
+    @Deprecated("Used only for compatibility with ext lib 16", level = DeprecationLevel.HIDDEN)
     constructor(
         videoUrl: String = "",
         videoTitle: String = "",
@@ -61,19 +70,34 @@ data class Video(
         ffmpegVideoArgs: List<Pair<String, String>> = emptyList(),
         internalData: String = "",
         initialized: Boolean = false,
-        memo: JsonObject?,
     ) : this(
         videoUrl, videoTitle, resolution, bitrate, headers, preferred, subtitleTracks, audioTracks,
-        timestamps, mpvArgs, ffmpegStreamArgs, ffmpegVideoArgs, internalData, initialized,
-    ) {
-        if (memo != null) this.memo = memo
-    }
+        timestamps, mpvArgs, ffmpegStreamArgs, ffmpegVideoArgs, internalData, initialized, JsonObject(emptyMap()),
+    )
 
-    val url: String
-        get() = legacyUrl ?: videoUrl
-
-    val quality: String
-        get() = videoTitle
+    /** extensions-lib 16 copy. */
+    @Deprecated("Used only for compatibility with ext lib 16", level = DeprecationLevel.HIDDEN)
+    fun copy(
+        videoUrl: String = this.videoUrl,
+        videoTitle: String = this.videoTitle,
+        resolution: Int? = this.resolution,
+        bitrate: Int? = this.bitrate,
+        headers: Headers? = this.headers,
+        preferred: Boolean = this.preferred,
+        subtitleTracks: List<Track> = this.subtitleTracks,
+        audioTracks: List<Track> = this.audioTracks,
+        timestamps: List<TimeStamp> = this.timestamps,
+        mpvArgs: List<Pair<String, String>> = this.mpvArgs,
+        ffmpegStreamArgs: List<Pair<String, String>> = this.ffmpegStreamArgs,
+        ffmpegVideoArgs: List<Pair<String, String>> = this.ffmpegVideoArgs,
+        internalData: String = this.internalData,
+        initialized: Boolean = this.initialized,
+    ): Video = copy(
+        videoUrl = videoUrl, videoTitle = videoTitle, resolution = resolution, bitrate = bitrate,
+        headers = headers, preferred = preferred, subtitleTracks = subtitleTracks, audioTracks = audioTracks,
+        timestamps = timestamps, mpvArgs = mpvArgs, ffmpegStreamArgs = ffmpegStreamArgs,
+        ffmpegVideoArgs = ffmpegVideoArgs, internalData = internalData, initialized = initialized, memo = memo,
+    )
 
     @Deprecated(
         message = "Use the new Video constructor",
@@ -120,4 +144,25 @@ data class Video(
         subtitleTracks: List<Track> = this.subtitleTracks,
         audioTracks: List<Track> = this.audioTracks,
     ): Video = Video(url, quality, videoUrl, headers, subtitleTracks, audioTracks)
+
+    /** v17: the stream or one of its tracks points at the source's own [HttpServer]. */
+    fun usesHttpServer(): Boolean =
+        localUrl.containsMatchIn(videoUrl) ||
+            audioTracks.any { localUrl.containsMatchIn(it.url) } ||
+            subtitleTracks.any { localUrl.containsMatchIn(it.url) }
+
+    /** v17: the same video with [HttpServer.PLACEHOLDER_URL] pointed at the server's real port. */
+    fun copyHttpServer(port: Int): Video {
+        val host = "http://localhost:$port"
+        return copy(
+            videoUrl = localUrl.replace(videoUrl, host),
+            subtitleTracks = subtitleTracks.map { it.copy(url = localUrl.replace(it.url, host)) },
+            audioTracks = audioTracks.map { it.copy(url = localUrl.replace(it.url, host)) },
+            memo = memo,
+        )
+    }
+
+    private companion object {
+        val localUrl = Regex("""http://localhost:1(?!\d)""")
+    }
 }

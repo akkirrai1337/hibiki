@@ -3,6 +3,7 @@
 package eu.kanade.tachiyomi.animesource.model
 
 import eu.kanade.tachiyomi.source.model.UpdateStrategy
+import kotlinx.serialization.json.JsonObject
 import java.io.Serializable
 
 interface SAnime : Serializable {
@@ -34,6 +35,9 @@ interface SAnime : Serializable {
 
     var season_number: Double
     // <-- AY
+
+    // extensions-lib 17: source-side data the source reads back later.
+    var memo: JsonObject
 
     var initialized: Boolean
 
@@ -71,6 +75,7 @@ interface SAnime : Serializable {
         it.fetch_type = fetch_type
         it.season_number = season_number
         // <-- AY
+        it.memo = memo
         it.initialized = initialized
     }
 
@@ -106,6 +111,7 @@ interface SAnime : Serializable {
         it.season_number = season_number
         it.update_strategy = update_strategy
         // ANK <--
+        it.memo = memo
         it.initialized = initialized
     }
     // SY <--
@@ -118,6 +124,7 @@ interface SAnime : Serializable {
         const val PUBLISHING_FINISHED = 4
         const val CANCELLED = 5
         const val ON_HIATUS = 6
+        const val UPCOMING = 7
 
         fun create(): SAnime {
             return SAnimeImpl()

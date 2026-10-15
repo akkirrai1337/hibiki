@@ -1,12 +1,16 @@
 package eu.kanade.tachiyomi.animesource.online
 
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import eu.kanade.tachiyomi.animesource.AnimeCatalogueSource
 import eu.kanade.tachiyomi.animesource.model.AnimeFilterList
 import eu.kanade.tachiyomi.animesource.model.AnimesPage
 import eu.kanade.tachiyomi.animesource.model.Hoster
 import eu.kanade.tachiyomi.animesource.model.Hoster.Companion.toHosterList
+import eu.kanade.tachiyomi.animesource.model.HttpServer
 import eu.kanade.tachiyomi.animesource.model.SAnime
 import eu.kanade.tachiyomi.animesource.model.SEpisode
+import eu.kanade.tachiyomi.animesource.model.ThumbnailInfo
 import eu.kanade.tachiyomi.animesource.model.Video
 import eu.kanade.tachiyomi.network.GET
 import eu.kanade.tachiyomi.network.NetworkHelper
@@ -21,11 +25,14 @@ import rx.Observable
 import java.net.URI
 import java.security.MessageDigest
 
-/** API v14 HTTP source base. Its network surface is intentionally limited to the v14 contract. */
+/** HTTP source base of extensions-lib v14-v17 (v17 additions as in Aniyomi's source-api). */
 abstract class AnimeHttpSource : AnimeCatalogueSource {
     protected val network: NetworkHelper by lazy { NetworkHelper.instance() }
 
     abstract val baseUrl: String
+
+    /** v17: the page the app opens as the source's home; the base URL unless the source says otherwise. */
+    open fun getHomeUrl(): String = baseUrl
     open val versionId: Int = 1
     override val id: Long by lazy { generateId(name, lang, versionId) }
     open val headers: Headers by lazy { headersBuilder().build() }
@@ -51,8 +58,8 @@ abstract class AnimeHttpSource : AnimeCatalogueSource {
         .asObservableSuccess()
         .map { response -> response.use(::popularAnimeParse) }
 
-    protected abstract fun popularAnimeRequest(page: Int): Request
-    protected abstract fun popularAnimeParse(response: Response): AnimesPage
+    protected open fun popularAnimeRequest(page: Int): Request = throw UnsupportedOperationException()
+    protected open fun popularAnimeParse(response: Response): AnimesPage = throw UnsupportedOperationException()
 
     @Deprecated("Use the non-RxJava API instead", ReplaceWith("getSearchAnime"))
     override fun fetchSearchAnime(page: Int, query: String, filters: AnimeFilterList): Observable<AnimesPage> =
@@ -64,8 +71,8 @@ abstract class AnimeHttpSource : AnimeCatalogueSource {
             }
         }.map { response -> response.use(::searchAnimeParse) }
 
-    protected abstract fun searchAnimeRequest(page: Int, query: String, filters: AnimeFilterList): Request
-    protected abstract fun searchAnimeParse(response: Response): AnimesPage
+    protected open fun searchAnimeRequest(page: Int, query: String, filters: AnimeFilterList): Request = throw UnsupportedOperationException()
+    protected open fun searchAnimeParse(response: Response): AnimesPage = throw UnsupportedOperationException()
 
     @Deprecated("Use the non-RxJava API instead", ReplaceWith("getLatestUpdates"))
     override fun fetchLatestUpdates(page: Int): Observable<AnimesPage> = client
@@ -73,8 +80,8 @@ abstract class AnimeHttpSource : AnimeCatalogueSource {
         .asObservableSuccess()
         .map { response -> response.use(::latestUpdatesParse) }
 
-    protected abstract fun latestUpdatesRequest(page: Int): Request
-    protected abstract fun latestUpdatesParse(response: Response): AnimesPage
+    protected open fun latestUpdatesRequest(page: Int): Request = throw UnsupportedOperationException()
+    protected open fun latestUpdatesParse(response: Response): AnimesPage = throw UnsupportedOperationException()
 
     @Suppress("DEPRECATION")
     override suspend fun getAnimeDetails(anime: SAnime): SAnime = fetchAnimeDetails(anime).awaitSingle()
@@ -86,7 +93,7 @@ abstract class AnimeHttpSource : AnimeCatalogueSource {
         .map { response -> response.use { animeDetailsParse(it).apply { initialized = true } } }
 
     open fun animeDetailsRequest(anime: SAnime): Request = GET(baseUrl + anime.url, headers)
-    protected abstract fun animeDetailsParse(response: Response): SAnime
+    protected open fun animeDetailsParse(response: Response): SAnime = throw UnsupportedOperationException()
 
     @Suppress("DEPRECATION")
     override suspend fun getEpisodeList(anime: SAnime): List<SEpisode> = fetchEpisodeList(anime).awaitSingle()
@@ -98,7 +105,8 @@ abstract class AnimeHttpSource : AnimeCatalogueSource {
         .map { response -> response.use(::episodeListParse) }
 
     protected open fun episodeListRequest(anime: SAnime): Request = GET(baseUrl + anime.url, headers)
-    protected abstract fun episodeListParse(response: Response): List<SEpisode>
+    protected open fun episodeListParse(response: Response): List<SEpisode> = throw UnsupportedOperationException()
+    protected open fun episodeVideoParse(response: Response): SEpisode = throw UnsupportedOperationException()
 
     // ---- Seasons (v16) ----
 
@@ -136,6 +144,16 @@ abstract class AnimeHttpSource : AnimeCatalogueSource {
 
     /** Finishes a video that was listed lazily (empty URL or [Video.internalData]); null drops it. */
     open suspend fun resolveVideo(video: Video): Video? = video
+
+    /** v17: a local server for videos that point at [HttpServer.PLACEHOLDER_URL]; started by the host. */
+    open fun createHttpServer(): HttpServer? = null
+
+    /** v17: seek-bar preview tiles. Hibiki does not ask for them yet. */
+    open suspend fun getVideoThumbnails(video: Video): ThumbnailInfo? = null
+
+    /** v17: one image of [ThumbnailInfo.imageTileUrls]. */
+    open suspend fun getImageTile(url: String): Bitmap? =
+        client.newCall(GET(url, headers)).awaitSuccess().body.byteStream().use(BitmapFactory::decodeStream)
 
     /** Extension hook to order hosters, called by the host after [getHosterList]. */
     open fun List<Hoster>.sortHosters(): List<Hoster> = this
