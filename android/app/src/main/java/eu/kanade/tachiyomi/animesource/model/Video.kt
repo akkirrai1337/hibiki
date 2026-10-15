@@ -42,7 +42,10 @@ data class Video(
     /** Original v14 fields, still consumed by older extensions and Hibiki's adapter. */
     private var legacyUrl: String? = null
 
-    /** extensions-lib 17 adds a trailing JsonObject of extension-side extras; Hibiki ignores it. */
+    /** extensions-lib 17: extension-side data the source can read back later. */
+    var memo: JsonObject = JsonObject(emptyMap())
+        private set
+
     constructor(
         videoUrl: String = "",
         videoTitle: String = "",
@@ -58,11 +61,13 @@ data class Video(
         ffmpegVideoArgs: List<Pair<String, String>> = emptyList(),
         internalData: String = "",
         initialized: Boolean = false,
-        extras: JsonObject?,
+        memo: JsonObject?,
     ) : this(
         videoUrl, videoTitle, resolution, bitrate, headers, preferred, subtitleTracks, audioTracks,
         timestamps, mpvArgs, ffmpegStreamArgs, ffmpegVideoArgs, internalData, initialized,
-    )
+    ) {
+        if (memo != null) this.memo = memo
+    }
 
     val url: String
         get() = legacyUrl ?: videoUrl
