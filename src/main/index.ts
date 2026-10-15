@@ -3,7 +3,7 @@ import fs from "node:fs/promises";
 import { createReadStream } from "node:fs";
 import { Readable } from "node:stream";
 import { fileURLToPath } from "node:url";
-import { app, BrowserWindow, ipcMain, Menu, protocol, shell } from "electron";
+import { app, BrowserWindow, ipcMain, Menu, protocol, session, shell } from "electron";
 import { IPC } from "@shared/ipc";
 import { ExtensionRuntime } from "../core/extensions/runtime";
 import { destroyAllPooledWindows } from "./extensions/browserFetchHost";
@@ -20,7 +20,10 @@ import { repairMissingResolverDependencies } from "../core/api/extensions";
 import { registerDownloadHandlers } from "./ipc/downloads";
 import { registerProfileBannerHandlers } from "./ipc/profileBanner";
 import { installPlayerHeaderInjector, registerPlayerHeaderOrigin, registerPlayerHeaders, unregisterPlayerHeaders } from "./playerHeaders";
-import { installImageStats } from "./imageStats";
+import { imageBytesThisSession, installImageStats } from "./imageStats";
+import { applyNetworkConfig, clearCloudflareCookies } from "./network";
+import { dataBytesThisSession, setNetworkConfig } from "../core/networkConfig";
+import { forgetAllClearances } from "../core/extensions/cloudflare";
 import { resolveFinalStreamUrl } from "./playerStream";
 import { clearDiscordPresence, setDiscordRpcEnabled, setIdleDiscordPresence, shutdownDiscordRpc, updateDiscordPresence } from "./discordRpc";
 import { DEEP_LINK_SCHEME, findDeepLinkInArgv, parseWatchDeepLink } from "../core/deepLink";
@@ -33,7 +36,7 @@ import { exportLog, openLogFolder } from "./logExport";
 import { isHardwareAccelerationEnabled, setHardwareAccelerationEnabled } from "./hardwareAcceleration";
 import { collectMemorySnapshot, formatMemorySnapshot } from "./memoryDiagnostics";
 import { checkForUpdate, downloadUpdate, installUpdate } from "./appUpdates";
-import type { AppUpdate, DiscordPresence, UpdateDownloadProgress } from "@shared/types";
+import type { AppUpdate, DiscordPresence, NetworkConfig, TrafficSnapshot, UpdateDownloadProgress } from "@shared/types";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -420,6 +423,28 @@ app.whenReady().then(async () => {
   });
 
   ipcMain.handle(IPC.appGetVersion, () => app.getVersion());
+  ipcMain.handle(IPC.networkConfigure, async (_e, config: NetworkConfig) => {
+    setNetworkConfig(config);
+    await applyNetworkConfig(config);
+  });
+  ipcMain.handle(IPC.networkResetCloudflare, async () => {
+    forgetAllClearances();
+    await clearCloudflareCookies();
+  });
+  ipcMain.handle(IPC.networkTraffic, (): TrafficSnapshot => ({ data: dataBytesThisSession(), images: imageBytesThisSession() }));
+  ipcMain.handle(IPC.appHttpCacheSize, () => session.defaultSession.getCacheSize());
+  ipcMain.handle(IPC.appClearHttpCache, () => session.defaultSession.clearCache());
+  // Chromium names the GPU only in its "complete" info, as ANGLE's renderer string
+  // ("ANGLE (NVIDIA, NVIDIA GeForce RTX 3070 Direct3D11 ...)").
+  ipcMain.handle(IPC.appGpu, async () => {
+    try {
+      const info = (await app.getGPUInfo("complete")) as { auxAttributes?: { glRenderer?: string } };
+      const name = info.auxAttributes?.glRenderer ?? "";
+      return { name, nvidiaRtx: /NVIDIA/i.test(name) && /\bRTX\b/i.test(name) };
+    } catch {
+      return { name: "", nvidiaRtx: false };
+    }
+  });
   ipcMain.handle(IPC.updatesCheck, () => checkForUpdate());
   // One handler for both halves on purpose: an installer that has been downloaded but not launched
   // is just a large file in temp, and leaving that state reachable from the renderer invites it.

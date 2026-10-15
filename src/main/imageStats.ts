@@ -8,9 +8,15 @@ const INTERVAL_MS = 2 * 60 * 1000;
 
 // onCompleted only: a session keeps one listener per webRequest event, and onErrorOccurred is
 // playerHeaders.ts's - pictures that never got an answer are not counted.
+let networkBytes = 0;
+
+/** Bytes of pictures downloaded (not served from cache) since the app started. */
+export function imageBytesThisSession(): number {
+  return networkBytes;
+}
+
 export function installImageStats(): void {
   let network = 0;
-  let networkBytes = 0;
   let cached = 0;
   let failed = 0;
   session.defaultSession.webRequest.onCompleted({ urls: ["http://*/*", "https://*/*"] }, (details) => {

@@ -10,6 +10,8 @@ import { installMissingSources } from "../../core/api/sourceAutoInstall";
 import { importLegacyData } from "../../core/legacyImport";
 import { handleTrackingRedirect } from "../../core/api/tracking";
 import { ExtensionRuntime } from "../../core/extensions/runtime";
+import { forgetAllClearances } from "../../core/extensions/cloudflare";
+import { dataBytesThisSession, setNetworkConfig } from "../../core/networkConfig";
 import { log, recentEntries, renderLog } from "../../core/logger";
 import { installPlatform } from "../../core/platform";
 import { checkForUpdate, cleanUpdateLeftovers, downloadUpdate, installUpdate } from "../../core/updates";
@@ -187,6 +189,13 @@ export async function installAndroidHibiki(): Promise<void> {
       getHardwareAcceleration: async () => true,
       setHardwareAcceleration: async () => {},
       onDeepLinkWatch: nothing,
+    },
+    // Proxy and DNS-over-HTTPS are desktop-only (the WebView has no API for either): only the parts
+    // core applies itself take effect here.
+    network: {
+      configure: async (config) => setNetworkConfig(config),
+      resetCloudflare: async () => forgetAllClearances(),
+      traffic: async () => ({ data: dataBytesThisSession(), images: null }),
     },
     logs: {
       // No save dialog on the phone: the share sheet is where the file goes (a messenger, Files...).

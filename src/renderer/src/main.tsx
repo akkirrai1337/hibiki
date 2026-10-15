@@ -5,6 +5,7 @@ import { MotionConfig } from "motion/react";
 import { RouterProvider, createHashHistory, createRouter } from "@tanstack/react-router";
 import { routeTree } from "./routeTree.gen";
 import "./lib/i18n";
+import { startNetworkSync } from "./lib/networkSync";
 import "./styles/globals.css";
 
 const queryClient = new QueryClient({
@@ -18,6 +19,9 @@ const queryClient = new QueryClient({
   // reason. Nothing here benefits from "revalidate on focus" the way a live web dashboard would.
   defaultOptions: { queries: { staleTime: 60_000, retry: 1, refetchOnWindowFocus: false } },
 });
+
+// Settings > Network to the host, and the traffic counter running from the first request.
+startNetworkSync();
 
 // Middle-clicking any link (the hero's "Open" button, anime cards, ...) is Chromium's native
 // "open in a new tab" gesture - main/index.ts forwards new-window requests to the real OS browser

@@ -12,6 +12,7 @@ import {
   recordDownloadedEpisode,
 } from "../offlineCache";
 import { logger } from "../logger";
+import { getNetworkConfig, onNetworkConfigChange } from "../networkConfig";
 import { getPlatform } from "../platform";
 
 // Same ordering as the watch page's own selectPlayerLink (see the route file) - a direct,
@@ -348,7 +349,7 @@ async function downloadedSize(state: { outFile: string; parts: DownloadedParts }
 // everything a user selects at once keeps a "download all 10" from saturating bandwidth/disk I/O
 // (and hammering the source with that many simultaneous getPlayerLinks + segment requests) the
 // same way one download at a time never did.
-const MAX_CONCURRENT_DOWNLOADS = 2;
+// How many is Settings > Network's "Parallel downloads" (core/networkConfig.ts), 2 by default.
 
 // A queued job is either a fresh download (still needs its link resolved - that happens lazily,
 // right when it's actually dequeued, not up front for the whole batch at once) or a paused one
@@ -454,7 +455,7 @@ export function createDownloadsApi(runtime: ExtensionRuntime): Omit<HibikiApi["d
   }
 
   function pumpQueue(): void {
-    while (activeCount < MAX_CONCURRENT_DOWNLOADS && jobQueue.length > 0) {
+    while (activeCount < getNetworkConfig().maxDownloads && jobQueue.length > 0) {
       const job = jobQueue.shift()!;
       activeCount++;
       const settle = () => {
@@ -474,6 +475,8 @@ export function createDownloadsApi(runtime: ExtensionRuntime): Omit<HibikiApi["d
       }
     }
   }
+  // A higher limit starts queued downloads right away instead of at the next finished one.
+  onNetworkConfigChange(() => pumpQueue());
 
   return {
     // Resolves as soon as the job is queued - a download can run for a while (potentially hundreds

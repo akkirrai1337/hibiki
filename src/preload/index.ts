@@ -3,6 +3,8 @@ import { IPC } from "@shared/ipc";
 import type { HibikiApi, LogEntry } from "@shared/hibikiApi";
 import type {
   AnimeTitle,
+  NetworkConfig,
+  TrafficSnapshot,
   AppUpdate,
   CachedAnimeEntry,
   CachedPlaybackGroupsEntry,
@@ -267,6 +269,9 @@ const api: HibikiApi = {
   platform: process.platform,
   app: {
     getVersion: (): Promise<string> => ipcRenderer.invoke(IPC.appGetVersion),
+    httpCacheSize: (): Promise<number> => ipcRenderer.invoke(IPC.appHttpCacheSize),
+    clearHttpCache: (): Promise<void> => ipcRenderer.invoke(IPC.appClearHttpCache),
+    gpu: (): Promise<{ name: string; nvidiaRtx: boolean }> => ipcRenderer.invoke(IPC.appGpu),
     relaunch: (): void => { ipcRenderer.send(IPC.appRelaunch); },
     getHardwareAcceleration: (): Promise<boolean> => ipcRenderer.invoke(IPC.appGetHardwareAcceleration),
     setHardwareAcceleration: (enabled: boolean): Promise<void> => ipcRenderer.invoke(IPC.appSetHardwareAcceleration, enabled),
@@ -280,6 +285,11 @@ const api: HibikiApi = {
   },
   // Diagnostics: the renderer both writes into the shared log (its own playback/resolve failures,
   // which main never sees) and reads it back for the Settings preview / "Export log".
+  network: {
+    configure: (config: NetworkConfig): Promise<void> => ipcRenderer.invoke(IPC.networkConfigure, config),
+    resetCloudflare: (): Promise<void> => ipcRenderer.invoke(IPC.networkResetCloudflare),
+    traffic: (): Promise<TrafficSnapshot> => ipcRenderer.invoke(IPC.networkTraffic),
+  },
   logs: {
     export: (): Promise<string | null> => ipcRenderer.invoke(IPC.logsExport),
     recent: (limit?: number): Promise<LogEntry[]> =>

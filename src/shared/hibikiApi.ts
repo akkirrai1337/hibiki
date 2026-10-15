@@ -2,6 +2,8 @@
 // Electron preload (src/preload/index.ts) is checked against it, and so another platform can
 // implement the same surface without going through Electron IPC.
 import type {
+  NetworkConfig,
+  TrafficSnapshot,
   AnimeTitle,
   AppUpdate,
   CachedAnimeEntry,
@@ -251,11 +253,24 @@ export interface HibikiApi {
   };
   app: {
     getVersion(): Promise<string>;
+    /** Bytes in the web view's HTTP cache (posters, scripts). Desktop only. */
+    httpCacheSize?(): Promise<number>;
+    /** Empties the web view's HTTP cache. Desktop only. */
+    clearHttpCache?(): Promise<void>;
+    /** The graphics card's name, and whether it is an NVIDIA RTX one (RTX Video Super Resolution). Desktop only. */
+    gpu?(): Promise<{ name: string; nvidiaRtx: boolean }>;
     relaunch(): void;
     getHardwareAcceleration(): Promise<boolean>;
     /** Takes effect on the next start. */
     setHardwareAcceleration(enabled: boolean): Promise<void>;
     onDeepLinkWatch(callback: (target: DeepLinkWatchTarget) => void): () => void;
+  };
+  network: {
+    /** Settings > Network, handed over at start and on every change. */
+    configure(config: NetworkConfig): Promise<void>;
+    /** Forgets every Cloudflare clearance, so sources pass the check anew. */
+    resetCloudflare(): Promise<void>;
+    traffic(): Promise<TrafficSnapshot>;
   };
   logs: {
     /** Resolves the written path, or null if the save dialog was cancelled (Android: handed to the share sheet, always null). */

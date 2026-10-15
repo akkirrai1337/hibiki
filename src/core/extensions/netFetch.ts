@@ -21,6 +21,7 @@
 // async stack instead, where undici's global pool keeps connections alive across requests and an
 // AbortSignal gives every request a real deadline.
 import { logger } from "../logger";
+import { countDataBytes, getNetworkConfig } from "../networkConfig";
 import { getPlatform } from "../platform";
 import { forgetClearance, isCloudflareChallenge, withClearance } from "./cloudflare";
 
@@ -44,8 +45,8 @@ export interface NetFetchResult {
  * "this URL timed out" (retryable, and logged as such) rather than killing the whole extension
  * call with no indication of which request was to blame. 25s rather than the 12s it was: on poor
  * mobile data a source's page or API simply answering slowly is the common case, and giving up on
- * it only meant the episode never opened. */
-const REQUEST_TIMEOUT_MS = 25_000;
+ * it only meant the episode never opened. Settings > Network can move it between 15s and 45s
+ * (core/networkConfig.ts). */
 /** One retry, and only for transport-level failures (connect reset/timeout) - never for an HTTP
  * status, which is the server's real answer. Kodik's edge nodes drop connections intermittently;
  * a single immediate retry turns most of those into a normal load instead of a failed episode. */
@@ -139,7 +140,7 @@ async function performOnce(url: string, options: NetFetchOptions, headers: Recor
     headers,
     body: options.body,
     redirect: "follow",
-    timeoutMs: REQUEST_TIMEOUT_MS,
+    timeoutMs: getNetworkConfig().requestTimeoutMs,
   });
   // One string per header, as extensions have always seen them. node-fetch (what sync-fetch used)
   // exposed multiple Set-Cookie headers joined by ", "; the transport keeps them apart, and
@@ -158,6 +159,7 @@ async function fetchUncached(url: string, options: NetFetchOptions, headers: Rec
     const startedAt = Date.now();
     try {
       const result = await performOnce(url, options, headers);
+      countDataBytes(result.body.length);
       logger.debug("net", `${method} ${url} -> ${result.status} in ${Date.now() - startedAt}ms (${result.body.length}b)${attempt > 1 ? ` [attempt ${attempt}]` : ""}`);
       return result;
     } catch (error) {

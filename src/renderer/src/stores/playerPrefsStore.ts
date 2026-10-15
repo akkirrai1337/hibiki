@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import type { UpscaleMode } from "@/features/player/upscaler";
 
 // Mirrors the player-related fields of Android's AppPreferencesState. Lives in its own store
 // (rather than uiStore) since most of these are set from the in-player quick settings menu, not
@@ -71,6 +72,9 @@ interface PlayerPrefsState {
   // Whether the player starts episodes in a lighter quality - see lib/connectionQuality.ts for
   // what "auto" reads.
   dataSaver: DataSaverMode;
+  /** Anime4K on the GPU for pictures under 1080p (features/player/upscaler.ts). */
+  upscale: UpscaleMode;
+  setUpscale: (mode: UpscaleMode) => void;
   // Phone: the picture fills the screen, cropped at the edges, instead of fitting inside it with
   // black bars - a pinch out or in on the video, as in YouTube. Kept: a 20:9 phone wants it every
   // episode, not just the one where it was pinched.
@@ -105,6 +109,8 @@ export const usePlayerPrefsStore = create<PlayerPrefsState>()(
       subtitleOffset: 72,
       subtitleOffsetX: 0,
       dataSaver: "auto",
+      upscale: "off",
+      setUpscale: (upscale) => set({ upscale }),
       videoFill: false,
       setVideoFill: (videoFill) => set({ videoFill }),
       setDataSaver: (dataSaver) => set({ dataSaver }),

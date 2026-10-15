@@ -121,6 +121,12 @@ export const IPC = {
   logsOpenFolder: "logs:openFolder",
   diagnosticsMemory: "diagnostics:memory",
   appGetVersion: "app:getVersion",
+  networkConfigure: "network:configure",
+  networkResetCloudflare: "network:resetCloudflare",
+  networkTraffic: "network:traffic",
+  appHttpCacheSize: "app:httpCacheSize",
+  appClearHttpCache: "app:clearHttpCache",
+  appGpu: "app:gpu",
   // Pushed main -> renderer once the "Watch" button on a friend's Discord Rich Presence card opens
   // a "hibiki://watch/..." link (see main/deepLink.ts) and this window is ready to act on it.
   appDeepLinkWatch: "app:deepLinkWatch",

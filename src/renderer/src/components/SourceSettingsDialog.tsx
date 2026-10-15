@@ -20,6 +20,7 @@ import { Switch } from "@/components/Switch";
 import { cn } from "@/lib/cn";
 import { planSize, planSync, type SyncDirection } from "@/lib/librarySync";
 import type { SourceInfo, SourceSetting } from "@shared/types";
+import { forgetPersisted } from "@/lib/persistedQuery";
 
 /**
  * One settings screen for every source.
@@ -136,7 +137,11 @@ function ValueRow({ sourceId, row }: { sourceId: string; row: SourceSetting }) {
 
   const save = useMutation({
     mutationFn: (next: string | null) => hibiki.sources.settings.write(sourceId, row.key, next),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["sourceSettings", sourceId] }),
+    onSuccess: () => {
+      // A changed setting (mirror, language, ...) can change what the source answers.
+      forgetPersisted(sourceId);
+      return queryClient.invalidateQueries({ queryKey: ["sourceSettings", sourceId] });
+    },
   });
 
   if (row.type === "TOGGLE" || row.type === "ACTIVITY_SYNC") {
@@ -360,7 +365,11 @@ function LibrarySyncRow({ sourceId, row }: { sourceId: string; row: SourceSettin
 
   const save = useMutation({
     mutationFn: (next: boolean) => hibiki.sources.settings.write(sourceId, row.key, String(next)),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["sourceSettings", sourceId] }),
+    onSuccess: () => {
+      // A changed setting (mirror, language, ...) can change what the source answers.
+      forgetPersisted(sourceId);
+      return queryClient.invalidateQueries({ queryKey: ["sourceSettings", sourceId] });
+    },
   });
 
   // Both sides, fetched only once the switch is actually being turned on - listLibrary is a real

@@ -39,8 +39,7 @@ import { audioTrackLabel, matchAudioTrack } from "@/lib/hlsAudio";
 import { proxiedHlsLoader, streamRequestUrl, usesStreamProxy } from "@/lib/streamProxy";
 import { createLoadActivity, type LoadActivity } from "@/lib/loadActivity";
 import { createStreamRebase } from "@/lib/streamRebase";
-import { DATA_SAVER_MAX_HEIGHT } from "@/lib/playerLinks";
-import { isDataSaverActive, recordThroughput } from "@/lib/connectionQuality";
+import { autoQualityCap, isCellular, recordThroughput } from "@/lib/connectionQuality";
 import { separateAudioMaster, syntheticManifestLoader } from "@/lib/hlsSeparateAudio";
 import { fillMissingCodecs } from "@/lib/dashCodecs";
 import { isGenericDubTitle } from "@/lib/dubTitle";
@@ -51,6 +50,11 @@ import { log } from "@/lib/log";
 import { PLAYBACK_SPEEDS, usePlayerPrefsStore, type PlayerOrientation } from "@/stores/playerPrefsStore";
 import { StreakBadge } from "@/components/StreakBadge";
 import { isMobile, useBackHandler } from "@/lib/mobile";
+import { BUFFER_SECONDS, useNetworkPrefsStore } from "@/stores/networkPrefsStore";
+import { countVideoBytes } from "@/lib/trafficStats";
+import { bufferedEnd, setLoadHold, skipHoldPoint, skipMarginSeconds } from "./loadGate";
+import { codecFamily, preferredEfficientCodecs, redundantAvcLevels } from "@/lib/efficientCodecs";
+import { isWebGpuAvailable, startUpscaler, type UpscaleMode } from "./upscaler";
 
 // One entry in the subtitle picker, and what actually backs a rendered <track> - `url` is always
 // already a playable WebVTT source (a source's own .vtt passed through as-is, or an SRT/ASS
@@ -448,7 +452,7 @@ function PlayerSettingsMenu({
   onAddSubtitleFile: () => void;
   t: (key: string, options?: Record<string, unknown>) => string;
 }) {
-  const [page, setPage] = useState<"main" | "speed" | "dub" | "translation" | "player" | "quality" | "audio" | "subtitles" | "orientation">("main");
+  const [page, setPage] = useState<"main" | "speed" | "dub" | "translation" | "player" | "quality" | "audio" | "subtitles" | "orientation" | "upscale">("main");
   const selectedDub = dubOptions.find((d) => d.id === selectedDubId);
   // The phone's screen while watching - chosen here, where it is felt, and applied at once (the root
   // layout locks the screen from this same preference while the player is open).
@@ -458,6 +462,28 @@ function PlayerSettingsMenu({
     landscape: t("watch.settings.orientationLandscape"),
     any: t("watch.settings.orientationAny"),
   };
+  // Anime4K (upscaler.ts) - offered only where WebGPU exists.
+  const upscale = usePlayerPrefsStore((s) => s.upscale);
+  const setUpscale = usePlayerPrefsStore((s) => s.setUpscale);
+  const upscaleLabels: Record<UpscaleMode, string> = {
+    off: t("watch.settings.upscaleOff"),
+    light: t("watch.settings.upscaleLight"),
+    strong: t("watch.settings.upscaleStrong"),
+  };
+
+  if (page === "upscale") {
+    return <ListPage
+      title={t("watch.settings.upscale")}
+      options={Object.values(upscaleLabels)}
+      selected={upscaleLabels[upscale]}
+      onSelect={(label) => {
+        const picked = (Object.keys(upscaleLabels) as UpscaleMode[]).find((key) => upscaleLabels[key] === label);
+        if (picked) setUpscale(picked);
+        setPage("main");
+      }}
+      onBack={() => setPage("main")}
+    />;
+  }
 
   if (page === "speed") {
     return <ListPage
@@ -538,6 +564,7 @@ function PlayerSettingsMenu({
       onClick={() => setPage("subtitles")}
     />
     {isMobile && <MenuRow label={t("watch.settings.orientation")} value={orientationLabels[playerOrientation]} onClick={() => setPage("orientation")} />}
+    {isWebGpuAvailable() && <MenuRow label={t("watch.settings.upscale")} value={upscaleLabels[upscale]} onClick={() => setPage("upscale")} />}
     <div className="my-1 border-t border-white/[.08]" />
     <ToggleRow label={t("watch.settings.autoSkipSegments")} checked={autoSkipSegments} onChange={onToggleAutoSkip} />
     <ToggleRow label={t("watch.settings.autoPlayNextEpisode")} checked={autoPlayNextEpisode} onChange={onToggleAutoPlay} />
@@ -1202,7 +1229,7 @@ export function VideoPlayer({ link, availableLinks, offlinePlayback, dubOptions,
         // hls.js's defaults keep every segment it has ever played (backBufferLength is Infinity) and
         // read ahead up to 10 minutes when the network allows, so a long session's buffered media
         // grew the renderer's memory for as long as the episode played. Thirty seconds behind the
-        // playhead is plenty for a seek back; sixty ahead keeps playback smooth on a slow source.
+        // playhead is plenty for a seek back; how far ahead is the "Buffer" setting (Settings > Network).
         // Where playback is about to jump to - the same order onLoadedMetadata seeks in. Without
         // it hls.js always fetched segment 1 first and only then the one the seek needed: seen
         // live, 871 KB downloaded and thrown away before resuming at 0:40, on every resume, retry
@@ -1220,8 +1247,9 @@ export function VideoPlayer({ link, availableLinks, offlinePlayback, dubOptions,
           // only once it is ready.
           startFragPrefetch: true,
           backBufferLength: 30,
-          maxBufferLength: 40,
-          maxMaxBufferLength: 60,
+          // Read ahead as far as Settings > Network allows (40s by default).
+          maxBufferLength: BUFFER_SECONDS[useNetworkPrefsStore.getState().bufferMode],
+          maxMaxBufferLength: Math.round(BUFFER_SECONDS[useNetworkPrefsStore.getState().bufferMode] * 1.5),
           maxBufferSize: 60 * 1000 * 1000,
           // Outermost: a renewed token's directory has to be in place before the request is counted
           // or sent through the proxy.
@@ -1264,6 +1292,7 @@ export function VideoPlayer({ link, availableLinks, offlinePlayback, dubOptions,
           // decides the next episode's quality from (lib/connectionQuality.ts).
           const loading = data.frag.stats?.loading;
           if (loading) recordThroughput(data.frag.stats.loaded, loading.end - loading.first);
+          countVideoBytes(data.frag.stats.loaded);
           // A segment arrived: whatever token renewal came before it worked.
           tokenRenewals = 0;
           if (firstFragmentLoaded) return;
@@ -1339,14 +1368,30 @@ export function VideoPlayer({ link, availableLinks, offlinePlayback, dubOptions,
         };
         hls.on(HlsEngine.Events.MANIFEST_PARSED, (_event, data) => {
           networkRetries = 0;
-          // A master playlist with several renditions picks its own; data saver keeps that pick at
+          // A master playlist with several renditions picks its own; auto quality keeps that pick at
           // or under the same height a source's separate quality links are held to.
-          if (hls && data.levels.length > 1 && isDataSaverActive()) {
+          const heightCap = autoQualityCap();
+          const applyHeightCap = () => {
+            const levels = hls?.levels ?? [];
+            if (!hls || levels.length < 2 || heightCap === null) return;
             let cap = -1;
-            data.levels.forEach((level, index) => { if (level.height > 0 && level.height <= DATA_SAVER_MAX_HEIGHT) cap = index; });
+            levels.forEach((level, index) => { if (level.height > 0 && level.height <= heightCap) cap = index; });
             // Every rendition taller: the lowest of them, as with separate quality links.
             hls.autoLevelCapping = Math.max(cap, 0);
-            trace(`data saver: renditions capped at ${data.levels[Math.max(cap, 0)].height}p`);
+            trace(`auto quality: renditions capped at ${levels[Math.max(cap, 0)].height}p (limit ${heightCap}p)`);
+          };
+          applyHeightCap();
+          // HEVC/AV1 next to H.264 at the same height: keep the lighter codec (lib/efficientCodecs.ts).
+          if (data.levels.some((level) => codecFamily(level.videoCodec) !== "avc")) {
+            const parsedFor = hls;
+            void preferredEfficientCodecs(data.levels).then((preferred) => {
+              if (!parsedFor || hls !== parsedFor) return;
+              const drop = redundantAvcLevels(parsedFor.levels, preferred);
+              if (drop.length === 0 || drop.length >= parsedFor.levels.length) return;
+              for (const index of drop) parsedFor.removeLevel(index);
+              trace(`codecs: dropped ${drop.length} H.264 rendition(s) covered by ${[...preferred].join("/")}`);
+              applyHeightCap();
+            });
           }
           trace(`manifest parsed; levels=${data.levels.length}; selectedLevel=${hls?.currentLevel ?? "auto"}`);
           hlsInstanceRef.current = hls;
@@ -1717,8 +1762,10 @@ export function VideoPlayer({ link, availableLinks, offlinePlayback, dubOptions,
     };
     const onEnded = () => {
       observe("ended");
-      if (autoPlayNextEpisode && onNextEpisode) log.info("player", "episode ended; playing the next one");
-      if (autoPlayNextEpisode) onNextEpisode?.();
+      // On mobile data with "autoplay only on Wi-Fi" on, the episode just ends: the next one is a tap away.
+      const autoPlay = autoPlayNextEpisode && !(useNetworkPrefsStore.getState().wifiOnlyAutoplay && isCellular());
+      if (autoPlay && onNextEpisode) log.info("player", "episode ended; playing the next one");
+      if (autoPlay) onNextEpisode?.();
     };
     const onProgressEvent = () => {
       // A plain <video src> (MP4) and dash.js have no loader to count bytes in; the element's own
@@ -1918,6 +1965,79 @@ export function VideoPlayer({ link, availableLinks, offlinePlayback, dubOptions,
     if (!activeSegment) return;
     setDismissedSegmentKey(segmentKey(activeSegment));
   }, [activeSegment]);
+
+  // Anime4K over the video (upscaler.ts): started per stream and per mode, and gone the moment
+  // either changes. The canvas shows only while frames are actually being drawn on it.
+  const upscaleMode = usePlayerPrefsStore((s) => s.upscale);
+  const upscaleCanvasRef = useRef<HTMLCanvasElement>(null);
+  const [upscaleActive, setUpscaleActive] = useState(false);
+  useEffect(() => {
+    const video = videoRef.current;
+    const canvas = upscaleCanvasRef.current;
+    if (!video || !canvas || !link?.url || upscaleMode === "off" || !isWebGpuAvailable()) return;
+    let handle: { stop(): void } | null = null;
+    let cancelled = false;
+    const note = (message: string) => log.info("player", message);
+    void startUpscaler(video, canvas, upscaleMode, (active) => { if (!cancelled) setUpscaleActive(active); }, note).then(
+      (started) => { if (cancelled) started.stop(); else handle = started; },
+      (error) => note(`upscaler: not started (${error instanceof Error ? error.message : String(error)})`),
+    );
+    return () => {
+      cancelled = true;
+      handle?.stop();
+      setUpscaleActive(false);
+    };
+  }, [link?.url, upscaleMode]);
+
+  // The link object is rebuilt on unrelated re-renders (see the [link?.url] effect above); its
+  // segments are read through a ref so the effect below runs per stream, not per render.
+  const linkSegmentsRef = useRef(link?.segments);
+  linkSegmentsRef.current = link?.segments;
+  // Traffic: with auto-skip on, hls.js stops a few seconds into an opening/ending instead of
+  // downloading all of it only to jump over it, and starts again once the jump happens - or right
+  // away when "Watch" is pressed (the segment is then dismissed, so nothing holds it). A paused
+  // episode stops loading after a couple of minutes too. HLS only: that is where the bytes are and
+  // where loading can be paused; a DASH or file stream plays as before. See loadGate.ts.
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video || !link?.url) return;
+    const PAUSE_HOLD_MS = 2 * 60 * 1000;
+    const margin = skipMarginSeconds(autoSkipDelaySeconds);
+    let pausedAt: number | null = video.paused ? Date.now() : null;
+    const note = (message: string) => log.info("player", message);
+    const evaluate = () => {
+      const hls = hlsInstanceRef.current;
+      if (!hls) return;
+      const now = video.currentTime;
+      const holdAt = autoSkipSegments
+        ? skipHoldPoint(linkSegmentsRef.current, now, margin, (segment) => segmentKey(segment) === dismissedSegmentKey)
+        : null;
+      // Held only once the buffer has actually reached the stop point - before that, loading runs.
+      setLoadHold(hls, "skip", holdAt !== null && now < holdAt && bufferedEnd(video) >= holdAt, now, note);
+      setLoadHold(hls, "pause", pausedAt !== null && Date.now() - pausedAt >= PAUSE_HOLD_MS, now, note);
+    };
+    const onPause = () => { pausedAt = Date.now(); };
+    const onPlay = () => { pausedAt = null; evaluate(); };
+    const events = ["timeupdate", "progress", "seeking", "seeked"] as const;
+    for (const name of events) video.addEventListener(name, evaluate);
+    video.addEventListener("pause", onPause);
+    video.addEventListener("play", onPlay);
+    const timer = window.setInterval(evaluate, 15_000);
+    evaluate();
+    return () => {
+      for (const name of events) video.removeEventListener(name, evaluate);
+      video.removeEventListener("pause", onPause);
+      video.removeEventListener("play", onPlay);
+      window.clearInterval(timer);
+      // Whatever held loading here no longer applies (another segment state, auto-skip turned off,
+      // another stream): the next run decides afresh, starting from loading.
+      const hls = hlsInstanceRef.current;
+      if (hls) {
+        setLoadHold(hls, "skip", false, video.currentTime, note);
+        setLoadHold(hls, "pause", false, video.currentTime, note);
+      }
+    };
+  }, [link?.url, autoSkipSegments, autoSkipDelaySeconds, dismissedSegmentKey]);
 
   // Closing on outside click (not just re-toggling the gear) matches every other dropdown in the
   // app; keeping controls from auto-hiding while it's open avoids the menu floating over faded-out
@@ -2719,6 +2839,11 @@ export function VideoPlayer({ link, availableLinks, offlinePlayback, dubOptions,
           <track key={option.id} kind="subtitles" src={option.url} srcLang={option.language} label={option.label} />
         ))}
       </video>
+      <canvas
+        ref={upscaleCanvasRef}
+        aria-hidden="true"
+        className={cn("pointer-events-none absolute inset-0 h-full w-full", isMobile && videoFill ? "object-cover" : "object-contain", !upscaleActive && "invisible")}
+      />
       <input
         ref={subtitleFileInputRef}
         type="file"

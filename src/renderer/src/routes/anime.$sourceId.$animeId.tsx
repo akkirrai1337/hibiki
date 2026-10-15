@@ -33,6 +33,8 @@ import { ASSIGNABLE_LIBRARY_CATEGORIES, LIBRARY_CATEGORY_ICONS, LIBRARY_CATEGORY
 import { STATUS_ID_ALIASES } from "@/lib/searchFilters";
 import { episodeFavoriteKey, useEpisodeFavoritesStore } from "@/stores/episodeFavoritesStore";
 import { useUiStore } from "@/stores/uiStore";
+import { useNetworkPrefsStore } from "@/stores/networkPrefsStore";
+import { isCellular } from "@/lib/connectionQuality";
 import type { AnimeTitle, DownloadProgress, Episode, LibraryCategory, PlaybackGroup, PlayerLink, RelatedAnimeTitle, SourceInfo, WatchProgress } from "@shared/types";
 
 // How long a terminal download state (done/error/unsupported) stays shown on the chip before it
@@ -1173,6 +1175,10 @@ function DownloadDialog({
   const unsupported = linksQuery.isSuccess && downloadableLinks.length === 0;
   const episodeLabel = episode.title || t("detail.episodeFallback", { number: episode.number });
 
+  // "Downloads only on Wi-Fi" (Settings > Network): on mobile data the download still starts, but
+  // only once the user has seen the warning and pressed the button that says so.
+  const onMobileData = useNetworkPrefsStore((s) => s.wifiOnlyDownloads) && isCellular();
+
   const onConfirm = () => {
     hibiki.downloads.start({
       sourceId, animeId, groupId, episodeId: episode.id, episodeNumber: episode.number,
@@ -1219,6 +1225,10 @@ function DownloadDialog({
         )}
       </div>
 
+      {onMobileData && (
+        <p className="mt-4 rounded-lg bg-text/[.05] px-3 py-2 text-xs leading-relaxed text-muted">{t("detail.downloadDialog.mobileData")}</p>
+      )}
+
       <div className="mt-5 flex justify-end gap-2">
         <button onClick={onClose} className="rounded-lg px-3.5 py-2 text-sm font-semibold text-muted transition-colors hover:bg-text/[.06]">{t("common.cancel")}</button>
         <button
@@ -1226,7 +1236,7 @@ function DownloadDialog({
           disabled={!linksQuery.isSuccess || unsupported}
           className="rounded-lg bg-text px-3.5 py-2 text-sm font-bold text-bg transition-opacity hover:opacity-90 disabled:opacity-50"
         >
-          {t("detail.episodeMenu.download")}
+          {t(onMobileData ? "detail.downloadDialog.downloadAnyway" : "detail.episodeMenu.download")}
         </button>
       </div>
     </Modal>

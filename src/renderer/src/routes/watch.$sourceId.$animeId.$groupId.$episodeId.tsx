@@ -8,7 +8,7 @@ import { ArrowLeft, Loader2, TriangleAlert } from "lucide-react";
 import type { DownloadedEpisodeFile, PlaybackGroup, PlayerLink } from "@shared/types";
 import { pickDataSaverLink, pickDefaultLink, pickPlaybackFallback, pickPreferredLink, pickRefreshedLink, pickResolvedLink } from "@/lib/playerLinks";
 import { usePlaybackGroups } from "@/lib/playbackGroups";
-import { describeConnection, isDataSaverActive } from "@/lib/connectionQuality";
+import { autoQualityCap, describeConnection, isDataSaverActive } from "@/lib/connectionQuality";
 import { isGenericDubTitle } from "@/lib/dubTitle";
 import { hibiki, downloadFileUrl } from "@/lib/hibiki";
 import { log } from "@/lib/log";
@@ -35,13 +35,14 @@ const PLAYER_SWITCH_TOAST_HOLD_MS = 4500;
 // under that; a link that fails sooner than this is broken, not expired, and goes to the fallback.
 const LINK_TOKEN_TTL_MS = 3 * 60 * 1000;
 
-// Where an automatic pick starts when data saver applies (lib/connectionQuality.ts). Read at the
-// moment of picking, never subscribed to: the verdict changing mid-episode must not reload the
-// stream that is playing. Picks of a named quality never come through here.
+// Where an automatic pick starts: at the height the connection's speed allows (lib/connectionQuality.ts).
+// Read at the moment of picking, never subscribed to: the verdict changing mid-episode must not
+// reload the stream that is playing. Picks of a named quality never come through here.
 function withDataSaver(links: PlayerLink[], picked: PlayerLink): PlayerLink {
-  if (!isDataSaverActive()) return picked;
-  const lighter = pickDataSaverLink(links, picked);
-  if (lighter !== picked) log.info("player", `data saver: starting at ${lighter.quality ?? "?"} instead of ${picked.quality ?? "?"} (${describeConnection()})`);
+  const cap = autoQualityCap();
+  if (cap === null) return picked;
+  const lighter = pickDataSaverLink(links, picked, cap);
+  if (lighter !== picked) log.info("player", `auto quality: starting at ${lighter.quality ?? "?"} instead of ${picked.quality ?? "?"}, up to ${cap}p (${describeConnection()})`);
   return lighter;
 }
 

@@ -17,6 +17,7 @@ import { activeFilterCount, toSearchRequestFilters, type SearchFilters } from "@
 import { isMobile } from "@/lib/mobile";
 import { MobileSearchButton } from "@/components/MobileSearchButton";
 import type { AnimeTitle } from "@shared/types";
+import { useFilterCatalog } from "@/lib/persistedQuery";
 
 // What "browse" can be sorted by is the source's business: it declares its own orders in
 // getSettings().sortOptions and gets the chosen id back as `sort` - the menu is exactly that list.
@@ -42,11 +43,7 @@ export function CatalogBrowsePage() {
   const setRequestedMode = (next: string) => navigate({ to: "/catalog", search: { sort: next }, replace: true });
 
   // Same key as the filter panel's query, so the source is asked once for both.
-  const settings = useQuery({
-    queryKey: ["filterCatalog", source?.id],
-    enabled: !!source,
-    queryFn: () => hibiki.sources.filterCatalog(source!.id),
-  });
+  const settings = useFilterCatalog(source?.id);
   const modes = useMemo(
     () => (settings.data?.sortOptions ?? []).map((option) => ({ value: option.id, label: sortLabel(option, t) })),
     [settings.data, t],
@@ -76,8 +73,12 @@ export function CatalogBrowsePage() {
   const browse = useInfiniteQuery({
     queryKey: browseKey,
     // Wait for the source's orders: asking before them would browse by an order nobody chose.
-    enabled: !!source && settings.isFetched,
+    enabled: !!source && (settings.isFetched || settings.data !== undefined),
     initialPageParam: 0,
+    // Coming back from a title must not re-download every page already scrolled through - a stale
+    // infinite query refetches all of them. Pull-to-refresh still asks the source again.
+    staleTime: 10 * 60 * 1000,
+    gcTime: 15 * 60 * 1000,
     queryFn: ({ pageParam }) =>
       hibiki.sources.search(source!.id, { offset: pageParam, limit: PAGE_SIZE, sort, ...toSearchRequestFilters(filters) }),
     getNextPageParam: (lastPage, allPages) => (

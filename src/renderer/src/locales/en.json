@@ -104,7 +104,9 @@
       "quality": "Quality",
       "loadingQualities": "Loading options…",
       "qualityUnknown": "Quality unknown, but this episode can be downloaded",
-      "subtitles": "Subtitles: {{list}} — saved with the episode"
+      "subtitles": "Subtitles: {{list}} — saved with the episode",
+      "mobileData": "You're on mobile data, and downloads are set to Wi-Fi only.",
+      "downloadAnyway": "Download anyway"
     },
     "relatedTitles": "Related titles",
     "relatedCurrentTitle": "You're currently here",
@@ -224,7 +226,11 @@
       "subtitles": "Subtitles",
       "orientation": "Screen",
       "orientationLandscape": "Landscape only",
-      "orientationAny": "Follow the phone"
+      "orientationAny": "Follow the phone",
+      "upscale": "Picture enhancement",
+      "upscaleOff": "Off",
+      "upscaleLight": "Light",
+      "upscaleStrong": "Strong"
     },
     "subtitles": {
       "off": "Off",
@@ -647,12 +653,16 @@
       "watchedThreshold": "Auto-watched threshold",
       "watchedThresholdHint": "Episode share to mark as watched",
       "dataSaver": "Data saver",
-      "dataSaverHint": "Starts episodes at 480p or lower. Auto turns it on when the connection is slow.",
+      "dataSaverHint": "Picks the starting quality. Auto follows the connection's speed: fast - 1080p and up, medium - 720p, slow - 480p, very slow - 360p. On holds to 480p.",
       "dataSaverAuto": "Auto",
       "dataSaverOn": "On",
       "dataSaverOff": "Off",
-      "dataSaverNowOn": "Slow connection: on right now",
-      "dataSaverNowOff": "Connection is fine: off right now"
+      "dataSaverNowFull": "Right now: no limit",
+      "dataSaverNowCap": "Right now: up to {{height}}p",
+      "upscale": "Picture enhancement (Anime4K)",
+      "upscaleHint": "Sharpens and upscales episodes below 1080p on the graphics card, so a lighter stream looks close to 1080p. Light suits most devices; Strong needs a good GPU. Uses more battery on phones.",
+      "upscaleUnavailable": "Needs WebGPU, which this device doesn't offer.",
+      "rtxHint": "Your NVIDIA RTX card has its own upscaler: turn on RTX Video Enhancement → Super Resolution in the NVIDIA app or Control Panel. It works on the plain video, so keep Picture enhancement off to use it."
     },
     "discord": {
       "title": "Discord",
@@ -710,7 +720,64 @@
       "saveMemoryRestart": "Restart now"
     },
     "autoUpdate": "Auto-update",
-    "autoUpdateHint": "Check for updates on launch and install them automatically. The app will close and start the installer."
+    "autoUpdateHint": "Check for updates on launch and install them automatically. The app will close and start the installer.",
+    "network": {
+      "title": "Network",
+      "homeRefresh": "Home refresh",
+      "homeRefreshHint": "How often Home asks the source for new rows. Until then it shows the ones saved last time, without using traffic. Pull down to refresh any time. On mobile data or a slow connection, saved rows are kept for up to a week.",
+      "homeRefreshModes": {
+        "launch": "Every launch",
+        "day": "Once a day",
+        "3days": "Every 3 days",
+        "manual": "Only manually"
+      },
+      "buffer": "Buffer",
+      "bufferHint": "How far ahead the player downloads. Less saves traffic if you often stop mid-episode; more helps on an unstable connection.",
+      "bufferModes": {
+        "low": "Light · {{seconds}}s",
+        "normal": "Normal · {{seconds}}s",
+        "high": "Large · {{seconds}}s"
+      },
+      "wifiOnlyDownloads": "Downloads only on Wi-Fi",
+      "wifiOnlyDownloadsHint": "On mobile data, warn before an episode download starts.",
+      "wifiOnlyAutoplay": "Autoplay only on Wi-Fi",
+      "wifiOnlyAutoplayHint": "On mobile data, the next episode doesn't start by itself.",
+      "cache": "Cache",
+      "cacheHint": "Saved home rows, filter lists and posters. Clearing frees space; they will be downloaded again.",
+      "cacheHintMobile": "Saved home rows and filter lists. Clearing frees space; they will be downloaded again.",
+      "cacheSize": "Taking {{size}}",
+      "cacheClear": "Clear",
+      "maxDownloads": "Parallel downloads",
+      "maxDownloadsHint": "How many episodes download at once. The rest wait in the queue.",
+      "timeout": "Source request timeout",
+      "timeoutHint": "How long to wait for a source before giving up. Longer helps on slow mobile data.",
+      "seconds": "{{seconds}} s",
+      "doh": "DNS-over-HTTPS",
+      "dohHint": "Encrypted DNS. Helps when a provider blocks the sites sources live on.",
+      "dohProviders": {
+        "off": "Off",
+        "cloudflare": "Cloudflare",
+        "google": "Google",
+        "adguard": "AdGuard"
+      },
+      "proxy": "Proxy",
+      "proxyHint": "For example http://127.0.0.1:8080. Leave empty for a direct connection. SOCKS works for the player and pictures only; source requests then go direct.",
+      "proxyInvalid": "Expected http://host:port, https://, or socks5://",
+      "cloudflareReset": "Reset Cloudflare",
+      "cloudflareResetHint": "Forget passed Cloudflare checks. Use it if a source keeps asking for the check or fails after it.",
+      "cloudflareResetDone": "Done: sources will ask for the check again.",
+      "cloudflareResetButton": "Reset",
+      "trafficHint": "Video counts HLS streams; downloaded episodes are not included.",
+      "trafficVideo": "Video",
+      "trafficData": "Source data",
+      "trafficImages": "Pictures",
+      "trafficReset": "Reset",
+      "trafficTitle": "Traffic",
+      "trafficTotal": "{{total}} in {{days}} days",
+      "trafficDays_one": "{{count}} day",
+      "trafficDays_other": "{{count}} days",
+      "trafficDayTotal": "Total"
+    }
   },
   "update": {
     "button": "Update",

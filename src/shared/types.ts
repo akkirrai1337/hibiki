@@ -112,6 +112,27 @@ export interface PlayerLink {
   subtitles?: SubtitleTrack[];
 }
 
+/** DNS-over-HTTPS provider for the desktop app's requests; "off" uses the system's DNS. */
+export type DohProvider = "off" | "cloudflare" | "google" | "adguard";
+
+/** Settings > Network as the host and core apply them. */
+export interface NetworkConfig {
+  /** Episode downloads running at once, 1-4. */
+  maxDownloads: number;
+  /** How long one source request may take before it counts as failed. */
+  requestTimeoutMs: number;
+  /** Desktop only: "http://host:port" (or https://, socks5://); empty for a direct connection. */
+  proxy: string;
+  /** Desktop only. */
+  doh: DohProvider;
+}
+
+/** Bytes downloaded since the app started, by what they were for; null where the host can't tell. */
+export interface TrafficSnapshot {
+  data: number;
+  images: number | null;
+}
+
 export interface DownloadRequest {
   sourceId: string;
   animeId: string;

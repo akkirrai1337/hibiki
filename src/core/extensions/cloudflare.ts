@@ -75,6 +75,13 @@ export function rememberClearance(url: string, session: ChallengeSession): void 
   logger.info("cloudflare", `clearance stored for ${host} (${Object.keys(session.cookies).join(", ")})`);
 }
 
+/** Settings > Network's "Reset Cloudflare": every site asks for its check again. */
+export function forgetAllClearances(): void {
+  const count = clearances.size;
+  clearances.clear();
+  logger.info("cloudflare", `all clearances dropped (${count})`);
+}
+
 /** Called when a request carrying a clearance was challenged again: the clearance has expired. */
 export function forgetClearance(url: string): void {
   const host = hostOf(url);

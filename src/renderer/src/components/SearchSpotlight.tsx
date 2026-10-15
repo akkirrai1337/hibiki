@@ -18,6 +18,7 @@ import { useSearchHistoryStore } from "@/stores/searchHistoryStore";
 import { useSearchFiltersStore } from "@/stores/searchFiltersStore";
 import { isMobile, useBackHandler } from "@/lib/mobile";
 import type { AnimeTitle } from "@shared/types";
+import { useFilterCatalog } from "@/lib/persistedQuery";
 
 const MIN_QUERY_LENGTH = 3;
 const RESULT_LIMIT = 8;
@@ -75,11 +76,7 @@ function SpotlightPanel() {
   const setFilters = useSearchFiltersStore((s) => s.setFilters);
   const sources = useQuery({ queryKey: ["sources"], queryFn: () => hibiki.sources.list() });
   const source = sources.data?.find((s) => s.id === activeSourceId) ?? sources.data?.[0];
-  const filterCatalog = useQuery({
-    queryKey: ["filterCatalog", source?.id],
-    enabled: !!source,
-    queryFn: () => hibiki.sources.filterCatalog(source!.id),
-  });
+  const filterCatalog = useFilterCatalog(source?.id);
 
   const [value, setValue] = useState(() => useSpotlightStore.getState().initialValue);
   const [settled, setSettled] = useState(() => useSpotlightStore.getState().initialValue.trim());

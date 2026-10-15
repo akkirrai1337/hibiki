@@ -14,6 +14,7 @@ import { useSearchFiltersStore } from "@/stores/searchFiltersStore";
 import { useSearchHistoryStore } from "@/stores/searchHistoryStore";
 import { activeFilterCount, toSearchRequestFilters } from "@/lib/searchFilters";
 import { isMobile, mobileSearchMemory } from "@/lib/mobile";
+import { useFilterCatalog } from "@/lib/persistedQuery";
 
 const PAGE_SIZE = 30;
 const MIN_QUERY_LENGTH = 3;
@@ -39,6 +40,10 @@ function useSearchResults(query: string) {
     queryKey: resultsKey,
     enabled: !!source && (longEnough || hasFilters),
     initialPageParam: 0,
+    // Coming back from a title must not re-download every page already scrolled through - a stale
+    // infinite query refetches all of them. Pull-to-refresh still asks the source again.
+    staleTime: 10 * 60 * 1000,
+    gcTime: 15 * 60 * 1000,
     queryFn: ({ pageParam, signal }) =>
       searchSource(source!.id, { query: longEnough ? query : undefined, offset: pageParam, limit: PAGE_SIZE, ...toSearchRequestFilters(filters) }, signal),
     getNextPageParam: (lastPage, allPages) => (lastPage.length < PAGE_SIZE ? undefined : allPages.reduce((offset, page) => offset + page.length, 0)),
@@ -121,7 +126,7 @@ function MobileSearchPage() {
 
   const filters = useSearchFiltersStore((s) => s.filters);
   const setFilters = useSearchFiltersStore((s) => s.setFilters);
-  const filterCatalog = useQuery({ queryKey: ["filterCatalog", source?.id], enabled: !!source, queryFn: () => hibiki.sources.filterCatalog(source!.id) });
+  const filterCatalog = useFilterCatalog(source?.id);
   const filterDefs = filterCatalog.data?.filters ?? [];
   const count = pickedCount(filterDefs, filters);
   const [filtersOpen, setFiltersOpen] = useState(false);

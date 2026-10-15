@@ -1,10 +1,9 @@
 import { useNavigate } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
-import { hibiki } from "@/lib/hibiki";
 import { genreFilterFor } from "@/lib/genreLink";
 import { cn } from "@/lib/cn";
 import { useUiStore } from "@/stores/uiStore";
 import { useCatalogIntentStore } from "@/stores/catalogIntentStore";
+import { useFilterCatalog } from "@/lib/persistedQuery";
 
 /** A genre chip that opens the catalog pre-filtered by it, wherever the source's own catalog
  * filters actually have a matching genre option - otherwise it's just a label, since there'd be
@@ -15,7 +14,7 @@ export function GenreChip({ genre, sourceId, className }: { genre: string; sourc
   const setActiveSourceId = useUiStore((s) => s.setActiveSourceId);
   const requestCatalog = useCatalogIntentStore((s) => s.request);
   // The same key the catalog and the filter panel read, so this costs no extra request.
-  const catalog = useQuery({ queryKey: ["filterCatalog", sourceId], queryFn: () => hibiki.sources.filterCatalog(sourceId) });
+  const catalog = useFilterCatalog(sourceId);
   const target = genreFilterFor(catalog.data, genre);
   if (!target) return <span className={className}>{genre}</span>;
   return (

@@ -28,6 +28,9 @@
   --color-surface: 255 255 255;
   --color-border: 228 228 231;
   --color-text: 24 24 27;
+  --series-1: #2a78d6;
+  --series-2: #eb6834;
+  --series-3: #1baf7a;
   --color-muted: 113 113 122;
   --color-accent: 236 72 153;
   /* Text/icon color for anything sitting on a solid --color-accent fill (buttons, active tabs,
@@ -66,6 +69,9 @@
 
 .dark {
   --color-bg: 12 12 15;
+  --series-1: #3987e5;
+  --series-2: #d95926;
+  --series-3: #199e70;
   --color-surface: 20 20 24;
   --color-border: 39 39 45;
   --color-text: 244 244 245;

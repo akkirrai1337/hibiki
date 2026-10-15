@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Gauge, LogIn, LogOut, MemoryStick, ArrowDownToLine, ArrowUpDown, Ban, Check, CheckCircle2, ChevronDown, ChevronRight, DatabaseBackup, FileText, FolderOpen, Home, Info, Languages, MessageCircle, MonitorPlay, Moon, Palette, Radio, RefreshCw, RotateCcw, ScrollText, SlidersHorizontal, Sparkles, Sun, Timer, TriangleAlert } from "lucide-react";
+import { Gauge, HardDrive, BarChart3, Download, Globe, ShieldCheck, ShieldOff, Smartphone, Wifi, LogIn, LogOut, MemoryStick, ArrowDownToLine, ArrowUpDown, Ban, Check, CheckCircle2, ChevronDown, ChevronRight, DatabaseBackup, FileText, FolderOpen, Home, Info, Languages, MessageCircle, MonitorPlay, Moon, Palette, Radio, RefreshCw, RotateCcw, ScrollText, SlidersHorizontal, Sparkles, Sun, Timer, TriangleAlert } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { isMobile, useBackHandler } from "@/lib/mobile";
 import { motion } from "motion/react";
@@ -10,7 +10,8 @@ import { BottomSheet, SheetOption } from "@/components/BottomSheet";
 import { Switch } from "@/components/Switch";
 import { SUPPORTED_LOCALES, setLocale } from "@/lib/i18n";
 import { SKIP_TIMER_MAX_SECONDS, SKIP_TIMER_MIN_SECONDS, WATCHED_THRESHOLD_MAX_PERCENT, WATCHED_THRESHOLD_MIN_PERCENT, usePlayerPrefsStore, type DataSaverMode } from "@/stores/playerPrefsStore";
-import { useSlowConnection } from "@/lib/connectionQuality";
+import { useAutoQualityCap } from "@/lib/connectionQuality";
+import { isWebGpuAvailable, type UpscaleMode } from "@/features/player/upscaler";
 import { useUiStore } from "@/stores/uiStore";
 import { ACCENT_PRESETS, BACKGROUND_THEME_PRESETS, CUSTOM_BACKGROUND_THEME_ID, customBackgroundGradientCss, DEFAULT_ACCENT, DEFAULT_MOBILE_ACCENT, DEFAULT_MOBILE_ACCENT_LIGHT } from "@/lib/theme";
 import { sortLabel } from "@/lib/catalogSort";
@@ -22,6 +23,11 @@ import { DeviceSyncSection } from "@/components/DeviceSync";
 import { TRACKING_KEY, useTrackerAccount } from "@/lib/tracking";
 import type { TrackerImportProgress, TrackerImportReport } from "@shared/types";
 import type { MemorySnapshot } from "@shared/types";
+import { forgetAllPersisted, persistedSize, useFilterCatalog } from "@/lib/persistedQuery";
+import { BUFFER_SECONDS, useNetworkPrefsStore, type BufferMode, type HomeRefreshMode } from "@/stores/networkPrefsStore";
+import { resetTrafficStats, useTrafficHistory } from "@/lib/trafficStats";
+import { TrafficChart, formatBytes } from "@/components/TrafficChart";
+import type { DohProvider } from "@shared/types";
 
 
 // One category's worth of rows, spaced apart - no heading of its own: the category rail's own
@@ -728,11 +734,7 @@ function HomeSortSection() {
   const activeSourceId = useUiStore((s) => s.activeSourceId);
   const source = sourcesQuery.data?.find((s) => s.id === activeSourceId) ?? sourcesQuery.data?.[0];
   // The same key the home page and the filter panel read, so this costs no extra request.
-  const catalogQuery = useQuery({
-    queryKey: ["filterCatalog", source?.id],
-    enabled: !!source,
-    queryFn: () => hibiki.sources.filterCatalog(source!.id),
-  });
+  const catalogQuery = useFilterCatalog(source?.id);
   const homeSortBySource = useUiStore((s) => s.homeSortBySource);
   const setHomeSort = useUiStore((s) => s.setHomeSort);
   if (!source) return null;
@@ -757,12 +759,282 @@ function HomeSortSection() {
 
 const DATA_SAVER_MODES: DataSaverMode[] = ["auto", "on", "off"];
 
+/** A row of mutually exclusive choices, the active one filled - the same look as data saver's. */
+function ChoiceButtons<T extends string>({ value, options, onChange }: { value: T; options: Array<{ id: T; label: string }>; onChange: (id: T) => void }) {
+  return (
+    <div className="mt-3 flex flex-wrap items-center gap-2">
+      {options.map((option) => (
+        <button
+          key={option.id}
+          onClick={() => onChange(option.id)}
+          className={cn(
+            "rounded-lg px-3 py-1.5 text-sm font-medium transition-colors",
+            value === option.id ? "bg-accent text-accent-fg" : "bg-text/[.05] text-muted hover:bg-text/[.08] hover:text-text",
+          )}
+        >
+          {option.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+const HOME_REFRESH_MODES: HomeRefreshMode[] = ["launch", "day", "3days", "manual"];
+const BUFFER_MODES: BufferMode[] = ["low", "normal", "high"];
+
+
+/** What is kept to avoid downloading it again: home rows and filter lists saved by the app, plus
+ * (desktop) the web view's own HTTP cache, where posters live. */
+function CacheRow() {
+  const { t } = useTranslation();
+  const queryClient = useQueryClient();
+  const size = useQuery({
+    queryKey: ["cacheSize"],
+    queryFn: async () => persistedSize() + ((await hibiki.app.httpCacheSize?.()) ?? 0),
+    staleTime: 0,
+    gcTime: 0,
+  });
+  const clear = useMutation({
+    mutationFn: async () => {
+      forgetAllPersisted();
+      await hibiki.app.clearHttpCache?.();
+    },
+    onSuccess: () => {
+      // The rows on screen came from what was just thrown away: drop them too, so Home loads afresh.
+      for (const key of ["hero", "popular-pool", "latest", "filterCatalog", "catalog", "searchResults"]) queryClient.removeQueries({ queryKey: [key] });
+      void size.refetch();
+    },
+  });
+  return (
+    <SettingsRow icon={<HardDrive className="h-[18px] w-[18px]" strokeWidth={2} />}>
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-text">{t("settings.network.cache")}</p>
+          <p className="mt-0.5 text-xs leading-relaxed text-muted">
+            {t(hibiki.app.clearHttpCache ? "settings.network.cacheHint" : "settings.network.cacheHintMobile")}
+          </p>
+          <p className="mt-1 text-xs text-muted">{size.data === undefined ? "…" : t("settings.network.cacheSize", { size: formatBytes(size.data) })}</p>
+        </div>
+        <button
+          onClick={() => clear.mutate()}
+          disabled={clear.isPending}
+          className="shrink-0 rounded-lg bg-text/[.05] px-3 py-1.5 text-sm font-medium text-text transition-colors hover:bg-text/[.08] disabled:opacity-50"
+        >
+          {t("settings.network.cacheClear")}
+        </button>
+      </div>
+    </SettingsRow>
+  );
+}
+
+const MAX_DOWNLOAD_OPTIONS = [1, 2, 3, 4];
+const TIMEOUT_OPTIONS = [15, 25, 45];
+const DOH_OPTIONS: DohProvider[] = ["off", "cloudflare", "google", "adguard"];
+
+function TrafficRow() {
+  const { t } = useTranslation();
+  const history = useTrafficHistory();
+  const [range, setRange] = useState<7 | 30>(30);
+  return (
+    <SettingsRow icon={<BarChart3 className="h-[18px] w-[18px]" strokeWidth={2} />}>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-text">{t("settings.network.trafficTitle")}</p>
+          <p className="mt-0.5 text-xs leading-relaxed text-muted">{t("settings.network.trafficHint")}</p>
+        </div>
+        <button
+          onClick={resetTrafficStats}
+          className="shrink-0 rounded-lg bg-text/[.05] px-3 py-1.5 text-sm font-medium text-text transition-colors hover:bg-text/[.08]"
+        >
+          {t("settings.network.trafficReset")}
+        </button>
+      </div>
+      <div className="mt-4">
+        <TrafficChart history={history} range={range} onRangeChange={setRange} />
+      </div>
+    </SettingsRow>
+  );
+}
+
+function CloudflareResetRow() {
+  const { t } = useTranslation();
+  const reset = useMutation({ mutationFn: () => hibiki.network.resetCloudflare() });
+  return (
+    <SettingsRow icon={<ShieldOff className="h-[18px] w-[18px]" strokeWidth={2} />}>
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-text">{t("settings.network.cloudflareReset")}</p>
+          <p className="mt-0.5 text-xs leading-relaxed text-muted">{t(reset.isSuccess ? "settings.network.cloudflareResetDone" : "settings.network.cloudflareResetHint")}</p>
+        </div>
+        <button
+          onClick={() => reset.mutate()}
+          disabled={reset.isPending}
+          className="shrink-0 rounded-lg bg-text/[.05] px-3 py-1.5 text-sm font-medium text-text transition-colors hover:bg-text/[.08] disabled:opacity-50"
+        >
+          {t("settings.network.cloudflareResetButton")}
+        </button>
+      </div>
+    </SettingsRow>
+  );
+}
+
+/** Desktop only: a proxy for both Chromium and the sources' requests, applied when the field is left. */
+function ProxyRow() {
+  const { t } = useTranslation();
+  const proxy = useNetworkPrefsStore((s) => s.proxy);
+  const setProxy = useNetworkPrefsStore((s) => s.setProxy);
+  const [draft, setDraft] = useState(proxy);
+  useEffect(() => setDraft(proxy), [proxy]);
+  const valid = draft.trim() === "" || /^(https?|socks5?):\/\/[^\s/]+:\d+\/?$/i.test(draft.trim());
+  const commit = () => { if (valid) setProxy(draft); };
+  return (
+    <SettingsRow icon={<Globe className="h-[18px] w-[18px]" strokeWidth={2} />}>
+      <p className="text-sm font-semibold text-text">{t("settings.network.proxy")}</p>
+      <p className="mt-0.5 text-xs leading-relaxed text-muted">{t("settings.network.proxyHint")}</p>
+      <input
+        value={draft}
+        onChange={(event) => setDraft(event.target.value)}
+        onBlur={commit}
+        onKeyDown={(event) => { if (event.key === "Enter") commit(); }}
+        placeholder="http://127.0.0.1:8080"
+        spellCheck={false}
+        className={cn(
+          "mt-3 w-full rounded-lg border bg-text/[.03] px-3 py-2 text-sm text-text outline-none placeholder:text-muted/60 focus:border-accent",
+          valid ? "border-text/10" : "border-red-500/60",
+        )}
+      />
+      {!valid && <p className="mt-1.5 text-xs text-red-400">{t("settings.network.proxyInvalid")}</p>}
+    </SettingsRow>
+  );
+}
+
+const UPSCALE_MODES: UpscaleMode[] = ["off", "light", "strong"];
+
+/** Anime4K (features/player/upscaler.ts), and on an RTX card a pointer to NVIDIA's own upscaler. */
+function UpscaleRow() {
+  const { t } = useTranslation();
+  const upscale = usePlayerPrefsStore((s) => s.upscale);
+  const setUpscale = usePlayerPrefsStore((s) => s.setUpscale);
+  const gpu = useQuery({ queryKey: ["gpu"], queryFn: () => hibiki.app.gpu?.() ?? Promise.resolve(null), staleTime: Infinity });
+  const available = isWebGpuAvailable();
+  return (
+    <SettingsRow icon={<Sparkles className="h-[18px] w-[18px]" strokeWidth={2} />}>
+      <p className="text-sm font-semibold text-text">{t("settings.player.upscale")}</p>
+      <p className="mt-0.5 text-xs leading-relaxed text-muted">{t(available ? "settings.player.upscaleHint" : "settings.player.upscaleUnavailable")}</p>
+      {available && (
+        <ChoiceButtons
+          value={upscale}
+          onChange={setUpscale}
+          options={UPSCALE_MODES.map((id) => ({ id, label: t(`watch.settings.upscale${id[0].toUpperCase()}${id.slice(1)}`) }))}
+        />
+      )}
+      {gpu.data?.nvidiaRtx && <p className="mt-2 text-xs leading-relaxed text-muted">{t("settings.player.rtxHint")}</p>}
+    </SettingsRow>
+  );
+}
+
+function NetworkSection() {
+  const { t } = useTranslation();
+  const homeRefresh = useNetworkPrefsStore((s) => s.homeRefresh);
+  const setHomeRefresh = useNetworkPrefsStore((s) => s.setHomeRefresh);
+  const bufferMode = useNetworkPrefsStore((s) => s.bufferMode);
+  const setBufferMode = useNetworkPrefsStore((s) => s.setBufferMode);
+  const wifiOnlyDownloads = useNetworkPrefsStore((s) => s.wifiOnlyDownloads);
+  const setWifiOnlyDownloads = useNetworkPrefsStore((s) => s.setWifiOnlyDownloads);
+  const wifiOnlyAutoplay = useNetworkPrefsStore((s) => s.wifiOnlyAutoplay);
+  const setWifiOnlyAutoplay = useNetworkPrefsStore((s) => s.setWifiOnlyAutoplay);
+  const maxDownloads = useNetworkPrefsStore((s) => s.maxDownloads);
+  const setMaxDownloads = useNetworkPrefsStore((s) => s.setMaxDownloads);
+  const requestTimeoutSeconds = useNetworkPrefsStore((s) => s.requestTimeoutSeconds);
+  const setRequestTimeoutSeconds = useNetworkPrefsStore((s) => s.setRequestTimeoutSeconds);
+  const doh = useNetworkPrefsStore((s) => s.doh);
+  const setDoh = useNetworkPrefsStore((s) => s.setDoh);
+  return (
+    <SettingsSection>
+      <DataSaverRow />
+      <SettingsRow icon={<Home className="h-[18px] w-[18px]" strokeWidth={2} />}>
+        <p className="text-sm font-semibold text-text">{t("settings.network.homeRefresh")}</p>
+        <p className="mt-0.5 text-xs leading-relaxed text-muted">{t("settings.network.homeRefreshHint")}</p>
+        <ChoiceButtons
+          value={homeRefresh}
+          onChange={setHomeRefresh}
+          options={HOME_REFRESH_MODES.map((id) => ({ id, label: t(`settings.network.homeRefreshModes.${id}`) }))}
+        />
+      </SettingsRow>
+      <SettingsRow icon={<Timer className="h-[18px] w-[18px]" strokeWidth={2} />}>
+        <p className="text-sm font-semibold text-text">{t("settings.network.buffer")}</p>
+        <p className="mt-0.5 text-xs leading-relaxed text-muted">{t("settings.network.bufferHint")}</p>
+        <ChoiceButtons
+          value={bufferMode}
+          onChange={setBufferMode}
+          options={BUFFER_MODES.map((id) => ({ id, label: t(`settings.network.bufferModes.${id}`, { seconds: BUFFER_SECONDS[id] }) }))}
+        />
+      </SettingsRow>
+      {/* Only the phone can tell mobile data from Wi-Fi. */}
+      {isMobile && (
+        <SettingsGroup>
+          <SettingsToggleRow
+            icon={<Smartphone className="h-[18px] w-[18px]" strokeWidth={2} />}
+            title={t("settings.network.wifiOnlyDownloads")}
+            hint={t("settings.network.wifiOnlyDownloadsHint")}
+            checked={wifiOnlyDownloads}
+            onChange={setWifiOnlyDownloads}
+          />
+          <SettingsToggleRow
+            icon={<Smartphone className="h-[18px] w-[18px]" strokeWidth={2} />}
+            title={t("settings.network.wifiOnlyAutoplay")}
+            hint={t("settings.network.wifiOnlyAutoplayHint")}
+            checked={wifiOnlyAutoplay}
+            onChange={setWifiOnlyAutoplay}
+          />
+        </SettingsGroup>
+      )}
+      <SettingsRow icon={<Download className="h-[18px] w-[18px]" strokeWidth={2} />}>
+        <p className="text-sm font-semibold text-text">{t("settings.network.maxDownloads")}</p>
+        <p className="mt-0.5 text-xs leading-relaxed text-muted">{t("settings.network.maxDownloadsHint")}</p>
+        <ChoiceButtons
+          value={String(maxDownloads)}
+          onChange={(id) => setMaxDownloads(Number(id))}
+          options={MAX_DOWNLOAD_OPTIONS.map((count) => ({ id: String(count), label: String(count) }))}
+        />
+      </SettingsRow>
+      <SettingsRow icon={<Timer className="h-[18px] w-[18px]" strokeWidth={2} />}>
+        <p className="text-sm font-semibold text-text">{t("settings.network.timeout")}</p>
+        <p className="mt-0.5 text-xs leading-relaxed text-muted">{t("settings.network.timeoutHint")}</p>
+        <ChoiceButtons
+          value={String(requestTimeoutSeconds)}
+          onChange={(id) => setRequestTimeoutSeconds(Number(id))}
+          options={TIMEOUT_OPTIONS.map((seconds) => ({ id: String(seconds), label: t("settings.network.seconds", { seconds }) }))}
+        />
+      </SettingsRow>
+      {/* The WebView offers no way to set either; the desktop applies both to Chromium and Node. */}
+      {!isMobile && (
+        <>
+          <SettingsRow icon={<ShieldCheck className="h-[18px] w-[18px]" strokeWidth={2} />}>
+            <p className="text-sm font-semibold text-text">{t("settings.network.doh")}</p>
+            <p className="mt-0.5 text-xs leading-relaxed text-muted">{t("settings.network.dohHint")}</p>
+            <ChoiceButtons
+              value={doh}
+              onChange={setDoh}
+              options={DOH_OPTIONS.map((id) => ({ id, label: t(`settings.network.dohProviders.${id}`) }))}
+            />
+          </SettingsRow>
+          <ProxyRow />
+        </>
+      )}
+      <CloudflareResetRow />
+      <TrafficRow />
+      <CacheRow />
+    </SettingsSection>
+  );
+}
+
 /** Data saver's three modes, and in "auto" what it is deciding right now. */
 function DataSaverRow() {
   const { t } = useTranslation();
   const mode = usePlayerPrefsStore((s) => s.dataSaver);
   const setMode = usePlayerPrefsStore((s) => s.setDataSaver);
-  const slow = useSlowConnection();
+  const cap = useAutoQualityCap();
   const label = { auto: t("settings.player.dataSaverAuto"), on: t("settings.player.dataSaverOn"), off: t("settings.player.dataSaverOff") };
   return (
     <SettingsRow icon={<Gauge className="h-[18px] w-[18px]" strokeWidth={2} />}>
@@ -783,7 +1055,7 @@ function DataSaverRow() {
         ))}
       </div>
       {mode === "auto" && (
-        <p className="mt-2 text-xs text-muted">{t(slow ? "settings.player.dataSaverNowOn" : "settings.player.dataSaverNowOff")}</p>
+        <p className="mt-2 text-xs text-muted">{cap === null ? t("settings.player.dataSaverNowFull") : t("settings.player.dataSaverNowCap", { height: cap })}</p>
       )}
     </SettingsRow>
   );
@@ -823,6 +1095,7 @@ export function SettingsPage() {
     { id: "appearance" as const, label: t("settings.appearance.title"), icon: Palette },
     { id: "general" as const, label: t("settings.general"), icon: SlidersHorizontal },
     { id: "player" as const, label: t("settings.player.title"), icon: MonitorPlay },
+    { id: "network" as const, label: t("settings.network.title"), icon: Wifi },
     { id: "tracking" as const, label: t("tracking.settings.title"), icon: RefreshCw },
     ...(hasSource ? [{ id: "home" as const, label: t("settings.home.title"), icon: Home }] : []),
     // Backups write and read a file through the desktop's save/open dialogs; the phone has none yet.
@@ -1020,10 +1293,11 @@ export function SettingsPage() {
             onChange={setWatchedThresholdPercent}
           />
         </SettingsRow>
-        <DataSaverRow />
+        <UpscaleRow />
       </SettingsSection>
       )}
 
+      {activeCategory === "network" && <NetworkSection />}
       {activeCategory === "tracking" && <div className="space-y-4"><DeviceSyncSection /><TrackingSection /></div>}
       {activeCategory === "home" && <HomeSortSection />}
       {activeCategory === "data" && <BackupSection />}
@@ -1069,8 +1343,8 @@ function MobileLanguagePicker() {
 
 /** Phone: the settings sections as one card of rows, like a system settings screen. */
 function MobileSettingsList({ categories, onOpen }: {
-  categories: Array<{ id: "appearance" | "general" | "player" | "tracking" | "home" | "data" | "diagnostics"; label: string; icon: typeof Sun }>;
-  onOpen: (id: "appearance" | "general" | "player" | "tracking" | "home" | "data" | "diagnostics") => void;
+  categories: Array<{ id: "appearance" | "general" | "player" | "network" | "tracking" | "home" | "data" | "diagnostics"; label: string; icon: typeof Sun }>;
+  onOpen: (id: "appearance" | "general" | "player" | "network" | "tracking" | "home" | "data" | "diagnostics") => void;
 }) {
   return (
     <motion.div initial={{ opacity: 0.6 }} animate={{ opacity: 1 }} transition={{ duration: 0.16 }} className="px-4 pb-6 pt-1">

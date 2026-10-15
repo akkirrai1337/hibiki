@@ -17,8 +17,10 @@ import { cn } from "@/lib/cn";
 import { useContinueWatching } from "@/lib/continueWatching";
 import { useUiStore } from "@/stores/uiStore";
 import { pickRelevanceSort } from "@/lib/catalogSort";
-import { isDataSaverActive } from "@/lib/connectionQuality";
+import { isCellular, isDataSaverActive } from "@/lib/connectionQuality";
+import { useNetworkPrefsStore, type HomeRefreshMode } from "@/stores/networkPrefsStore";
 import type { AnimeTitle } from "@shared/types";
+import { readPersisted, useFilterCatalog, usePersistedQueryOptions, writePersisted } from "@/lib/persistedQuery";
 
 const RECOMMENDED_COUNT = 20;
 const POOL_WINDOW = 24;
@@ -30,6 +32,30 @@ const HERO_SLIDE_COUNT = 5;
 // A genre row only earns its place if enough of the pool actually shares a genre - otherwise
 // it'd just be a near-duplicate of "you might like" with 2-3 items.
 const MIN_GENRE_MATCHES = 4;
+
+const HOUR_MS = 60 * 60 * 1000;
+/** How long the home rows saved on disk stand in for the source without asking it again, per the
+ * "Home refresh" setting (Settings > Network). The popular ranking barely moves in a few days;
+ * "Latest releases" exists to show what came out today, so it never waits longer than half a day
+ * unless the user chose manual refresh. Pull-to-refresh always gets a fresh home. */
+const HOME_FRESH_MS: Record<HomeRefreshMode, { popular: number; latest: number }> = {
+  launch: { popular: 10 * 60 * 1000, latest: 10 * 60 * 1000 },
+  day: { popular: 24 * HOUR_MS, latest: 12 * HOUR_MS },
+  "3days": { popular: 72 * HOUR_MS, latest: 12 * HOUR_MS },
+  manual: { popular: Infinity, latest: Infinity },
+};
+/** On mobile data or a slow connection saved rows are kept at least this long. */
+const SAVER_FRESH_MS = 7 * 24 * HOUR_MS;
+
+function homeFreshFor(row: "popular" | "latest", mode: HomeRefreshMode): number {
+  const normal = HOME_FRESH_MS[mode][row];
+  return isCellular() || isDataSaverActive() ? Math.max(normal, SAVER_FRESH_MS) : normal;
+}
+
+interface SavedPool {
+  offset: number;
+  titles: AnimeTitle[];
+}
 
 const POOL_OFFSET_KEY = "hibiki-home-pool-offset";
 
@@ -73,11 +99,7 @@ export function CatalogPage() {
   const activeSourceId = useUiStore((s) => s.activeSourceId);
   const source = sources.data?.find((s) => s.id === activeSourceId) ?? sources.data?.[0];
   // The source's own best-known order, once we know what it offers (undefined = its default listing).
-  const settings = useQuery({
-    queryKey: ["filterCatalog", source?.id],
-    enabled: !!source,
-    queryFn: () => hibiki.sources.filterCatalog(source!.id),
-  });
+  const settings = useFilterCatalog(source?.id);
   // A user-picked override (Settings > Home) wins whenever the current source still actually offers
   // that sort id - a source can change its own sort ids between versions, and silently falling back
   // to the auto-guess is safer than sending a now-nonexistent id to the source.
@@ -86,34 +108,53 @@ export function CatalogPage() {
   const sortMode = (homeSortOverride && sortOptions.some((o) => o.id === homeSortOverride))
     ? homeSortOverride
     : pickRelevanceSort(sortOptions);
-  const settingsReady = settings.isFetched;
+  // A saved catalog counts: it is what the source answered last time, and waiting for a refetch
+  // would put the old network round trip back in front of every row.
+  const homeRefresh = useNetworkPrefsStore((st) => st.homeRefresh);
+  const settingsReady = settings.isFetched || settings.data !== undefined;
+  const heroPersisted = usePersistedQueryOptions("hero", source?.id, sortMode ?? "", () => hibiki.sources.search(source!.id, { limit: HERO_SLIDE_COUNT, sort: sortMode }));
   const hero = useQuery({
     queryKey: ["hero", source?.id, sortMode ?? ""],
     enabled: !!source && settingsReady,
-    queryFn: () => hibiki.sources.search(source!.id, { limit: HERO_SLIDE_COUNT, sort: sortMode }),
+    staleTime: homeFreshFor("popular", homeRefresh),
+    ...heroPersisted,
   });
   // Compute the source's window in the same render that enables the query. Keeping this in state
   // and replacing it from an effect after `source` arrived let React Query start one request with
   // the old offset and then immediately start a second with the new one.
-  const poolOffset = useMemo(() => poolOffsetFor(source?.id), [source?.id]);
+  // A pool saved on disk a few minutes ago keeps its window: a new random offset would only throw
+  // away a row that is already here and download another.
+  const savedPool = useMemo(() => readPersisted<SavedPool>("pool", source?.id, sortMode ?? ""), [source?.id, sortMode]);
+  const poolOffset = useMemo(
+    () => (savedPool && Date.now() - savedPool.savedAt < homeFreshFor("popular", homeRefresh) ? savedPool.data.offset : poolOffsetFor(source?.id)),
+    // Picked once per source, as before - not again when the sort arrives.
+    [source?.id],
+  );
+  const poolSeed = savedPool?.data.offset === poolOffset ? savedPool : undefined;
   const pool = useQuery({
     queryKey: ["popular-pool", source?.id, poolOffset, sortMode ?? ""],
     enabled: !!source && settingsReady,
+    staleTime: homeFreshFor("popular", homeRefresh),
+    initialData: poolSeed?.data.titles,
+    initialDataUpdatedAt: poolSeed?.savedAt,
     queryFn: async () => {
-      const window = await hibiki.sources.search(source!.id, { offset: poolOffset, limit: POOL_WINDOW, sort: sortMode });
+      let window = await hibiki.sources.search(source!.id, { offset: poolOffset, limit: POOL_WINDOW, sort: sortMode });
       // A short catalog can have fewer titles than our random offset - fall back to the start
       // of the ranking rather than showing an empty section.
-      if (window.length > 0 || poolOffset === 0) return window;
-      return hibiki.sources.search(source!.id, { offset: 0, limit: POOL_WINDOW, sort: sortMode });
+      if (window.length === 0 && poolOffset !== 0) window = await hibiki.sources.search(source!.id, { offset: 0, limit: POOL_WINDOW, sort: sortMode });
+      writePersisted<SavedPool>("pool", source!.id, sortMode ?? "", { offset: poolOffset, titles: window });
+      return window;
     },
   });
   // What just came out on the source, as the Android app's home had it - for the sources that keep
   // such a list (LATEST_RELEASES). A failure only hides the row: the popular row speaks for the source.
   const hasLatest = source?.capabilities.includes("LATEST_RELEASES") ?? false;
+  const latestPersisted = usePersistedQueryOptions("latest", source?.id, "", () => hibiki.sources.latest(source!.id, RECOMMENDED_COUNT));
   const latest = useQuery({
     queryKey: ["latest", source?.id],
     enabled: !!source && hasLatest,
-    queryFn: () => hibiki.sources.latest(source!.id, RECOMMENDED_COUNT),
+    staleTime: homeFreshFor("latest", homeRefresh),
+    ...latestPersisted,
   });
   // What was watched on this source, turned into what to watch next on it (core/recommendations).
   // Only asked once there is history; the backend reuses its answer until the history changes.
