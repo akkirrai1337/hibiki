@@ -33,6 +33,8 @@
         transition: opacity 0.25s ease-out;
       }
       #splash.hidden { opacity: 0; pointer-events: none; }
+      /* Android shows this same dot as its native launch splash (MainActivity) until #root fills. */
+      html.mobile #splash { display: none; }
       #splash-dot {
         width: 14px;
         height: 14px;

@@ -247,6 +247,13 @@ public class HibikiAppPlugin extends Plugin {
         notifyListeners("deepLink", event, true);
     }
 
+    /** The page has drawn its first screen: MainActivity lets the launch splash go. */
+    @PluginMethod
+    public void hideSplash(PluginCall call) {
+        if (getActivity() instanceof MainActivity) ((MainActivity) getActivity()).hideSplash();
+        call.resolve();
+    }
+
     /** The link the app was started with, once: a later call answers null. */
     @PluginMethod
     public void takeLaunchUrl(PluginCall call) {

@@ -13,13 +13,18 @@
         <item name="windowActionBar">false</item>
         <item name="windowNoTitle">true</item>
         <item name="android:background">@null</item>
+        <!-- Behind the WebView until the page draws: the app's dark, not DayNight's grey. -->
+        <item name="android:windowBackground">@color/splash_background</item>
     </style>
 
 
+    <!-- The launch splash: the page's pulsing pink dot (splash_dot) on the app's dark, held by
+         MainActivity until the page has drawn, so nothing grey shows in between and the page's own
+         #splash is never needed on Android. -->
     <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
-        <item name="android:background">@drawable/splash</item>
-        <!-- Android 12+ draws the launcher icon on this: the app's own dark, not a white flash
-             before the page's dark splash. -->
         <item name="windowSplashScreenBackground">@color/splash_background</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/splash_dot</item>
+        <item name="windowSplashScreenAnimationDuration">1000</item>
+        <item name="postSplashScreenTheme">@style/AppTheme.NoActionBar</item>
     </style>
 </resources>

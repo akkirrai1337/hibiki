@@ -102,6 +102,8 @@ export interface HibikiAppPlugin {
   addListener(event: "pipAction", listener: (event: { action: string }) => void): Promise<PluginListenerHandle>;
   /** A hibiki:// link opened while the app runs (AniList's sign-in redirect). */
   addListener(event: "deepLink", listener: (event: { url: string }) => void): Promise<PluginListenerHandle>;
+  /** The page has drawn its first screen: the launch splash (MainActivity) can go. */
+  hideSplash(): Promise<void>;
   /** The hibiki:// link the app was started with, once. */
   takeLaunchUrl(): Promise<{ url: string | null }>;
   /** Starts, updates or (inactive) stops the foreground service that keeps downloads running in the background. */

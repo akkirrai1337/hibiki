@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The launch splash's icon: the same pink dot pulsing as #splash in index.html (14dp, scale
+     0.85-1.15, opacity 0.5-1, 1.1s ease-in-out), on the 288dp canvas Android 12+ gives a splash icon
+     without a background. MainActivity keeps it up until the page has drawn. -->
+<animated-vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt">
+    <aapt:attr name="android:drawable">
+        <vector
+            android:width="288dp"
+            android:height="288dp"
+            android:viewportWidth="288"
+            android:viewportHeight="288">
+            <group
+                android:name="dot"
+                android:pivotX="144"
+                android:pivotY="144"
+                android:scaleX="0.85"
+                android:scaleY="0.85">
+                <path
+                    android:name="fill"
+                    android:fillAlpha="0.5"
+                    android:fillColor="#F472B6"
+                    android:pathData="M144,137a7,7 0,1 1,0 14a7,7 0,1 1,0 -14z" />
+            </group>
+        </vector>
+    </aapt:attr>
+    <target android:name="dot">
+        <aapt:attr name="android:animation">
+            <set>
+                <objectAnimator
+                    android:duration="550"
+                    android:interpolator="@android:interpolator/accelerate_decelerate"
+                    android:propertyName="scaleX"
+                    android:repeatCount="infinite"
+                    android:repeatMode="reverse"
+                    android:valueFrom="0.85"
+                    android:valueTo="1.15" />
+                <objectAnimator
+                    android:duration="550"
+                    android:interpolator="@android:interpolator/accelerate_decelerate"
+                    android:propertyName="scaleY"
+                    android:repeatCount="infinite"
+                    android:repeatMode="reverse"
+                    android:valueFrom="0.85"
+                    android:valueTo="1.15" />
+            </set>
+        </aapt:attr>
+    </target>
+    <target android:name="fill">
+        <aapt:attr name="android:animation">
+            <objectAnimator
+                android:duration="550"
+                android:interpolator="@android:interpolator/accelerate_decelerate"
+                android:propertyName="fillAlpha"
+                android:repeatCount="infinite"
+                android:repeatMode="reverse"
+                android:valueFrom="0.5"
+                android:valueTo="1" />
+        </aapt:attr>
+    </target>
+</animated-vector>
