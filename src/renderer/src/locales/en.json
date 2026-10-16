@@ -212,7 +212,11 @@
       "skip": "Skip",
       "zoomFill": "Zoomed to fill",
       "zoomFit": "Original",
-      "watch": "Watch"
+      "watch": "Watch",
+      "upscaleStarting": "Turning on picture enhancement…",
+      "upscaleSteppedLight": "Too heavy for this device: enhancement switched to Light",
+      "upscaleSteppedOff": "Too heavy for this device: enhancement turned off",
+      "upscaleFailed": "Picture enhancement didn't start on this device"
     },
     "settings": {
       "speed": "Speed",

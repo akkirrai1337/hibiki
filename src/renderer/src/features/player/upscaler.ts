@@ -1,154 +1,160 @@
 // Anime4K on the GPU: the player's frames go through WebGPU compute shaders made for anime line
 // art (sharper lines, fewer compression artifacts) and are drawn, upscaled, on a canvas over the
 // <video>. The point is traffic: a 720p stream looks close to 1080p, so the lighter stream is
-// enough. anime4k-webgpu supplies the shader pipelines; the frame loop is ours, because the
-// package's own render() can neither be stopped nor follow a quality switch.
+// enough.
 //
-// Only a picture under 1080p is processed - above that there is nothing worth the GPU time - and
-// anything that goes wrong (no WebGPU, a lost device) ends in the plain <video>, never in a black
-// screen.
-/// <reference types="@webgpu/types" />
+// All the GPU work runs in upscaleWorker.ts on an OffscreenCanvas: done on the UI thread, loading
+// the library and compiling its shaders froze the player for seconds on a phone. This side only
+// hands the worker one frame at a time - the next only once the last is drawn, so a GPU that can't
+// keep up drops frames rather than falling behind - and reports how it is going.
+//
+// Only a picture under 1080p is processed, and anything that goes wrong (no WebGPU, a lost
+// device) ends in the plain <video>, never in a black screen.
+import type { FromWorker, ToWorker } from "./upscaleWorker";
 
 export type UpscaleMode = "off" | "light" | "strong";
 
-/** Processed only below this height. */
-const MAX_SOURCE_HEIGHT = 1079;
+export type UpscalerState =
+  /** Loading the library and setting up the GPU; the plain video plays meanwhile. */
+  | "starting"
+  /** Enhanced frames are on screen. */
+  | "active"
+  /** Nothing to do (1080p and up): the plain video shows. */
+  | "idle";
 
 export function isWebGpuAvailable(): boolean {
-  return typeof navigator !== "undefined" && "gpu" in navigator && !!navigator.gpu;
+  return (
+    typeof navigator !== "undefined" && "gpu" in navigator && !!navigator.gpu &&
+    typeof Worker !== "undefined" && typeof OffscreenCanvas !== "undefined" && typeof VideoFrame !== "undefined" &&
+    typeof HTMLCanvasElement !== "undefined" && "transferControlToOffscreen" in HTMLCanvasElement.prototype
+  );
 }
 
-// A triangle that covers the canvas, sampling the pipeline's output texture.
-const BLIT_WGSL = /* wgsl */ `
-struct Out { @builtin(position) pos: vec4f, @location(0) uv: vec2f };
-@vertex fn vert_main(@builtin(vertex_index) i: u32) -> Out {
-  var p = array<vec2f, 3>(vec2f(-1.0, -1.0), vec2f(3.0, -1.0), vec2f(-1.0, 3.0));
-  var o: Out;
-  o.pos = vec4f(p[i], 0.0, 1.0);
-  o.uv = vec2f((p[i].x + 1.0) * 0.5, (1.0 - p[i].y) * 0.5);
-  return o;
+export interface UpscalerCallbacks {
+  onState: (state: UpscalerState) => void;
+  /** The device can't keep up with this mode: frames are being dropped. */
+  onTooSlow: () => void;
+  /** Gave up; the plain video shows. */
+  onError: (message: string) => void;
+  log: (message: string) => void;
 }
-@group(0) @binding(0) var samp: sampler;
-@group(0) @binding(1) var tex: texture_2d<f32>;
-@fragment fn frag_main(@location(0) uv: vec2f) -> @location(0) vec4f {
-  return vec4f(textureSample(tex, samp, uv).rgb, 1.0);
-}`;
 
 export interface UpscalerHandle {
   stop(): void;
 }
 
-/**
- * Starts drawing `video` through Anime4K onto `canvas`. `onActive(true)` once frames are being
- * drawn (the caller then shows the canvas), `onActive(false)` whenever the plain video should show
- * instead (a source at 1080p or more, an error). Resolves once the GPU is set up; rejects when
- * WebGPU is missing.
- */
-export async function startUpscaler(
-  video: HTMLVideoElement,
-  canvas: HTMLCanvasElement,
-  mode: Exclude<UpscaleMode, "off">,
-  onActive: (active: boolean) => void,
-  log: (message: string) => void,
-): Promise<UpscalerHandle> {
-  if (!isWebGpuAvailable()) throw new Error("WebGPU is not available");
-  const anime4k = await import("anime4k-webgpu");
-  const adapter = await navigator.gpu.requestAdapter({ powerPreference: "high-performance" });
-  if (!adapter) throw new Error("no WebGPU adapter");
-  const device = await adapter.requestDevice();
-  const context = canvas.getContext("webgpu");
-  if (!context) throw new Error("no WebGPU canvas context");
-  const format = navigator.gpu.getPreferredCanvasFormat();
-  context.configure({ device, format, alphaMode: "opaque" });
+/** Over this share of frames dropped across a few seconds of playback counts as "too slow". */
+const MAX_DROP_SHARE = 0.4;
+const SLOW_WINDOW_FRAMES = 90;
 
-  const sampler = device.createSampler({ magFilter: "linear", minFilter: "linear" });
-  const shader = device.createShaderModule({ code: BLIT_WGSL });
-  const blit = device.createRenderPipeline({
-    layout: "auto",
-    vertex: { module: shader, entryPoint: "vert_main" },
-    fragment: { module: shader, entryPoint: "frag_main", targets: [{ format }] },
-    primitive: { topology: "triangle-list" },
-  });
+/**
+ * Starts drawing `video` through Anime4K on a canvas it creates inside `host` (an element laid out
+ * over the video). Returns at once; progress arrives through the callbacks.
+ */
+export function startUpscaler(video: HTMLVideoElement, host: HTMLElement, mode: Exclude<UpscaleMode, "off">, callbacks: UpscalerCallbacks): UpscalerHandle {
+  const canvas = document.createElement("canvas");
+  canvas.setAttribute("aria-hidden", "true");
+  canvas.className = "pointer-events-none absolute inset-0 h-full w-full invisible";
+  canvas.style.objectFit = "inherit";
+  host.appendChild(canvas);
+
+  const worker = new Worker(new URL("./upscaleWorker.ts", import.meta.url), { type: "module" });
+  const send = (message: ToWorker, transfer: Transferable[] = []) => worker.postMessage(message, transfer);
+  const offscreen = canvas.transferControlToOffscreen();
+  send({ type: "init", canvas: offscreen, mode }, [offscreen]);
 
   let stopped = false;
+  let ready = false;
+  let busy = false;
+  let state: UpscalerState = "starting";
   let frameHandle = 0;
-  let built: { width: number; height: number; input: GPUTexture; pipelines: Array<{ pass(e: GPUCommandEncoder): void }>; bindGroup: GPUBindGroup } | null = null;
-  let active = false;
-  const setActive = (next: boolean) => {
-    if (next !== active) { active = next; onActive(next); }
+  let presented = 0;
+  let dropped = 0;
+  let warnedSlow = false;
+  callbacks.onState("starting");
+
+  const setState = (next: UpscalerState) => {
+    if (next === state) return;
+    state = next;
+    canvas.classList.toggle("invisible", next !== "active");
+    callbacks.onState(next);
   };
 
-  const build = (width: number, height: number) => {
-    built?.input.destroy();
-    const input = device.createTexture({
-      size: [width, height, 1],
-      format: "rgba16float",
-      usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST | GPUTextureUsage.RENDER_ATTACHMENT,
-    });
-    // Light: one medium CNN doubling pass. Strong: Anime4K's preset A (restore, then upscale).
-    const pipeline = mode === "light"
-      ? new anime4k.CNNx2M({ device, inputTexture: input })
-      : new anime4k.ModeA({ device, inputTexture: input, nativeDimensions: { width, height }, targetDimensions: { width: width * 2, height: height * 2 } });
-    const output = pipeline.getOutputTexture();
-    canvas.width = output.width;
-    canvas.height = output.height;
-    const bindGroup = device.createBindGroup({
-      layout: blit.getBindGroupLayout(0),
-      entries: [{ binding: 0, resource: sampler }, { binding: 1, resource: output.createView() }],
-    });
-    built = { width, height, input, pipelines: [pipeline], bindGroup };
-    log(`upscaler: ${mode} ${width}x${height} -> ${output.width}x${output.height}`);
-  };
-
-  const frame = () => {
-    if (stopped) return;
+  const sendFrame = () => {
+    if (stopped || !ready || busy || video.readyState < video.HAVE_CURRENT_DATA) return;
+    let frame: VideoFrame;
     try {
-      const width = video.videoWidth;
-      const height = video.videoHeight;
-      if (width > 0 && height > 0 && height <= MAX_SOURCE_HEIGHT) {
-        if (!built || built.width !== width || built.height !== height) build(width, height);
-        device.queue.copyExternalImageToTexture({ source: video }, { texture: built!.input }, [width, height]);
-        const encoder = device.createCommandEncoder();
-        for (const pipeline of built!.pipelines) pipeline.pass(encoder);
-        const pass = encoder.beginRenderPass({
-          colorAttachments: [{ view: context.getCurrentTexture().createView(), clearValue: { r: 0, g: 0, b: 0, a: 1 }, loadOp: "clear", storeOp: "store" }],
-        });
-        pass.setPipeline(blit);
-        pass.setBindGroup(0, built!.bindGroup);
-        pass.draw(3);
-        pass.end();
-        device.queue.submit([encoder.finish()]);
-        // The player zooms/crops the video with a transform (mobile fill, letterbox crop): follow it.
-        canvas.style.transform = video.style.transform;
-        setActive(true);
-      } else {
-        setActive(false);
-      }
-    } catch (error) {
-      log(`upscaler: frame failed, showing the plain video (${error instanceof Error ? error.message : String(error)})`);
-      stop();
-      return;
+      frame = new VideoFrame(video);
+    } catch {
+      return; // No frame to take yet (seeking, a source switch).
     }
-    frameHandle = video.requestVideoFrameCallback(frame);
+    busy = true;
+    // The player zooms/crops the video with a transform (mobile fill, letterbox crop): follow it.
+    canvas.style.transform = video.style.transform;
+    send({ type: "frame", frame }, [frame]);
+  };
+
+  const onVideoFrame = () => {
+    if (stopped) return;
+    if (busy) dropped++;
+    else sendFrame();
+    presented++;
+    if (presented >= SLOW_WINDOW_FRAMES) {
+      if (state === "active" && !warnedSlow && dropped / presented > MAX_DROP_SHARE) {
+        warnedSlow = true;
+        callbacks.log(`upscaler: ${mode} drops ${Math.round((dropped / presented) * 100)}% of frames on this device`);
+        callbacks.onTooSlow();
+      }
+      presented = 0;
+      dropped = 0;
+    }
+    frameHandle = video.requestVideoFrameCallback(onVideoFrame);
   };
 
   const stop = () => {
     if (stopped) return;
     stopped = true;
     video.cancelVideoFrameCallback(frameHandle);
-    setActive(false);
-    built?.input.destroy();
-    try { context.unconfigure(); } catch { /* already gone */ }
-    device.destroy();
+    video.removeEventListener("seeked", sendFrame);
+    send({ type: "stop" });
+    // The worker closes itself after "stop"; terminate in case it is stuck in a GPU call.
+    window.setTimeout(() => worker.terminate(), 1000);
+    canvas.remove();
+    callbacks.onState("idle");
   };
 
-  void device.lost.then((info) => {
-    if (!stopped) log(`upscaler: GPU device lost (${info.message}), showing the plain video`);
+  worker.onmessage = (event: MessageEvent<FromWorker>) => {
+    if (stopped) return;
+    const message = event.data;
+    if (message.type === "ready") {
+      ready = true;
+      callbacks.log(`upscaler: ${mode} ready`);
+      // A paused video sends no frames: draw the one on screen now.
+      sendFrame();
+    } else if (message.type === "warmed") {
+      callbacks.log(`upscaler: ${message.pipelines} shader pipelines compiled in ${message.ms}ms`);
+    } else if (message.type === "built") {
+      callbacks.log(`upscaler: ${mode} ${message.width}x${message.height} -> ${message.outWidth}x${message.outHeight}`);
+    } else if (message.type === "drawn") {
+      busy = false;
+      setState("active");
+    } else if (message.type === "skipped") {
+      busy = false;
+      setState("idle");
+    } else if (message.type === "error") {
+      callbacks.log(`upscaler: ${message.message}; showing the plain video`);
+      callbacks.onError(message.message);
+      stop();
+    }
+  };
+  worker.onerror = (event) => {
+    callbacks.log(`upscaler: worker failed (${event.message}); showing the plain video`);
+    callbacks.onError(event.message);
     stop();
-  });
+  };
 
-  // A paused video sends no frames: draw the one on screen now (frame() then keeps itself going).
-  if (video.readyState >= video.HAVE_CURRENT_DATA) frame();
-  else frameHandle = video.requestVideoFrameCallback(frame);
+  frameHandle = video.requestVideoFrameCallback(onVideoFrame);
+  // A seek while paused shows a new frame without a frame callback of its own.
+  video.addEventListener("seeked", sendFrame);
   return { stop };
 }

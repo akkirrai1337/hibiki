@@ -54,7 +54,7 @@ import { BUFFER_SECONDS, useNetworkPrefsStore } from "@/stores/networkPrefsStore
 import { countVideoBytes } from "@/lib/trafficStats";
 import { bufferedEnd, setLoadHold, skipHoldPoint, skipMarginSeconds } from "./loadGate";
 import { codecFamily, preferredEfficientCodecs, redundantAvcLevels } from "@/lib/efficientCodecs";
-import { isWebGpuAvailable, startUpscaler, type UpscaleMode } from "./upscaler";
+import { isWebGpuAvailable, startUpscaler, type UpscaleMode, type UpscalerState } from "./upscaler";
 
 // One entry in the subtitle picker, and what actually backs a rendered <track> - `url` is always
 // already a playable WebVTT source (a source's own .vtt passed through as-is, or an SRT/ASS
@@ -1966,26 +1966,36 @@ export function VideoPlayer({ link, availableLinks, offlinePlayback, dubOptions,
     setDismissedSegmentKey(segmentKey(activeSegment));
   }, [activeSegment]);
 
-  // Anime4K over the video (upscaler.ts): started per stream and per mode, and gone the moment
-  // either changes. The canvas shows only while frames are actually being drawn on it.
+  // Anime4K over the video (upscaler.ts, its GPU work in a worker): started per stream and per
+  // mode, and gone the moment either changes. The plain video plays while it starts; a small badge
+  // says so. A device that can't keep up steps down on its own (strong -> light -> off) and says so.
   const upscaleMode = usePlayerPrefsStore((s) => s.upscale);
-  const upscaleCanvasRef = useRef<HTMLCanvasElement>(null);
-  const [upscaleActive, setUpscaleActive] = useState(false);
+  const setUpscaleMode = usePlayerPrefsStore((s) => s.setUpscale);
+  const upscaleHostRef = useRef<HTMLDivElement>(null);
+  const [upscaleState, setUpscaleState] = useState<UpscalerState>("idle");
+  const [upscaleNotice, setUpscaleNotice] = useState<string | null>(null);
+  useEffect(() => {
+    if (!upscaleNotice) return;
+    const timer = window.setTimeout(() => setUpscaleNotice(null), 4500);
+    return () => window.clearTimeout(timer);
+  }, [upscaleNotice]);
   useEffect(() => {
     const video = videoRef.current;
-    const canvas = upscaleCanvasRef.current;
-    if (!video || !canvas || !link?.url || upscaleMode === "off" || !isWebGpuAvailable()) return;
-    let handle: { stop(): void } | null = null;
-    let cancelled = false;
-    const note = (message: string) => log.info("player", message);
-    void startUpscaler(video, canvas, upscaleMode, (active) => { if (!cancelled) setUpscaleActive(active); }, note).then(
-      (started) => { if (cancelled) started.stop(); else handle = started; },
-      (error) => note(`upscaler: not started (${error instanceof Error ? error.message : String(error)})`),
-    );
+    const host = upscaleHostRef.current;
+    if (!video || !host || !link?.url || upscaleMode === "off" || !isWebGpuAvailable()) return;
+    const handle = startUpscaler(video, host, upscaleMode, {
+      onState: setUpscaleState,
+      onTooSlow: () => {
+        const next = upscaleMode === "strong" ? "light" : "off";
+        setUpscaleNotice(t(next === "light" ? "watch.player.upscaleSteppedLight" : "watch.player.upscaleSteppedOff"));
+        setUpscaleMode(next);
+      },
+      onError: () => setUpscaleNotice(t("watch.player.upscaleFailed")),
+      log: (message) => log.info("player", message),
+    });
     return () => {
-      cancelled = true;
-      handle?.stop();
-      setUpscaleActive(false);
+      handle.stop();
+      setUpscaleState("idle");
     };
   }, [link?.url, upscaleMode]);
 
@@ -2839,11 +2849,14 @@ export function VideoPlayer({ link, availableLinks, offlinePlayback, dubOptions,
           <track key={option.id} kind="subtitles" src={option.url} srcLang={option.language} label={option.label} />
         ))}
       </video>
-      <canvas
-        ref={upscaleCanvasRef}
-        aria-hidden="true"
-        className={cn("pointer-events-none absolute inset-0 h-full w-full", isMobile && videoFill ? "object-cover" : "object-contain", !upscaleActive && "invisible")}
-      />
+      {/* upscaler.ts puts its canvas in here; the canvas inherits object-fit from this box. */}
+      <div ref={upscaleHostRef} aria-hidden="true" className={cn("pointer-events-none absolute inset-0", isMobile && videoFill ? "object-cover" : "object-contain")} />
+      {(upscaleState === "starting" || upscaleNotice) && (
+        <div className="pointer-events-none absolute left-1/2 top-16 z-[7] flex -translate-x-1/2 items-center gap-2 rounded-full bg-black/70 px-3.5 py-1.5 text-xs font-medium text-white/90 shadow-lg backdrop-blur-sm">
+          {upscaleState === "starting" && !upscaleNotice && <Loader2 className="h-3.5 w-3.5 animate-spin" strokeWidth={2.25} />}
+          {upscaleNotice ?? t("watch.player.upscaleStarting")}
+        </div>
+      )}
       <input
         ref={subtitleFileInputRef}
         type="file"

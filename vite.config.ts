@@ -80,6 +80,9 @@ export default defineConfig({
       renderer: {},
     }),
   ],
+  // The Anime4K worker (features/player/upscaleWorker.ts) loads its library with a dynamic import,
+  // which only an ES-module worker can split out.
+  worker: { format: "es" },
   build: {
     outDir: path.join(root, "dist"),
     emptyOutDir: true,
