@@ -199,6 +199,11 @@ export async function installAndroidHibiki(): Promise<void> {
       traffic: async () => ({ data: dataBytesThisSession(), images: null }),
       sourceCacheSize: () => httpCacheSize(),
       clearSourceCache: () => clearHttpCache(),
+      onMeteredChange: (callback) => {
+        void HibikiApp.networkState().then((state) => callback(state.metered), () => undefined);
+        const handle = HibikiApp.addListener("networkChange", (event) => callback(event.metered));
+        return () => void handle.then((h) => h.remove());
+      },
     },
     logs: {
       // No save dialog on the phone: the share sheet is where the file goes (a messenger, Files...).

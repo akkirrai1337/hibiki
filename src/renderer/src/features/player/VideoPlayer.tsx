@@ -39,7 +39,7 @@ import { audioTrackLabel, matchAudioTrack } from "@/lib/hlsAudio";
 import { proxiedHlsLoader, streamRequestUrl, usesStreamProxy } from "@/lib/streamProxy";
 import { createLoadActivity, type LoadActivity } from "@/lib/loadActivity";
 import { createStreamRebase } from "@/lib/streamRebase";
-import { autoQualityCap, isCellular, recordThroughput } from "@/lib/connectionQuality";
+import { autoQualityCap, isCellular, playerBufferSeconds, recordThroughput, subscribeConnection } from "@/lib/connectionQuality";
 import { separateAudioMaster, syntheticManifestLoader } from "@/lib/hlsSeparateAudio";
 import { fillMissingCodecs } from "@/lib/dashCodecs";
 import { isGenericDubTitle } from "@/lib/dubTitle";
@@ -50,8 +50,9 @@ import { log } from "@/lib/log";
 import { PLAYBACK_SPEEDS, usePlayerPrefsStore, type PlayerOrientation } from "@/stores/playerPrefsStore";
 import { StreakBadge } from "@/components/StreakBadge";
 import { isMobile, useBackHandler } from "@/lib/mobile";
-import { BUFFER_SECONDS, useNetworkPrefsStore } from "@/stores/networkPrefsStore";
-import { countVideoBytes } from "@/lib/trafficStats";
+import { useNetworkPrefsStore } from "@/stores/networkPrefsStore";
+import { countVideoBytes, countVideoCacheHit } from "@/lib/trafficStats";
+import { videoCache } from "@/lib/videoCache";
 import { bufferedEnd, setLoadHold, skipHoldPoint, skipMarginSeconds } from "./loadGate";
 import { codecFamily, preferredEfficientCodecs, redundantAvcLevels } from "@/lib/efficientCodecs";
 import { isWebGpuAvailable, startUpscaler, type UpscaleMode, type UpscalerState } from "./upscaler";
@@ -1141,6 +1142,7 @@ export function VideoPlayer({ link, availableLinks, offlinePlayback, dubOptions,
     let manifestTimer: number | null = null;
     let fragmentTimer: number | null = null;
     let bufferedTimer: number | null = null;
+    let stopBufferWatch: (() => void) | null = null;
     const traceId = `p${(++playbackTraceSequence).toString(36)}`;
     const traceStartedAt = performance.now();
     const trace = (message: string, ...details: unknown[]) => {
@@ -1241,22 +1243,42 @@ export function VideoPlayer({ link, availableLinks, offlinePlayback, dubOptions,
             ? retryPositionMsRef.current / 1000
             : (startPositionMsRef.current ?? 0) / 1000;
         if (startAt > 0) trace(`starting hls.js at ${startAt.toFixed(1)}s`);
+        const bufferSeconds = playerBufferSeconds();
+        trace(`buffer ahead: ${bufferSeconds}s`);
+        // Segments served from the disk cache: neither traffic nor a measurement of the line's speed.
+        const cachedFragments = new WeakSet<object>();
         hls = new HlsEngine({
           startPosition: startAt > 0 ? startAt : -1,
           // The first segment downloads while the media source is still being set up, instead of
           // only once it is ready.
           startFragPrefetch: true,
           backBufferLength: 30,
-          // Read ahead as far as Settings > Network allows (40s by default).
-          maxBufferLength: BUFFER_SECONDS[useNetworkPrefsStore.getState().bufferMode],
-          maxMaxBufferLength: Math.round(BUFFER_SECONDS[useNetworkPrefsStore.getState().bufferMode] * 1.5),
+          // Read ahead as far as Settings > Network allows (40s by default, 15s on mobile data).
+          maxBufferLength: bufferSeconds,
+          maxMaxBufferLength: Math.round(bufferSeconds * 1.5),
           maxBufferSize: 60 * 1000 * 1000,
           // A rendition taller than the player shows is downloaded for nothing: in a small window
           // or picture-in-picture, hls.js stays at the one that fits (device pixels included).
           capLevelToPlayerSize: true,
           // Outermost: a renewed token's directory has to be in place before the request is counted
           // or sent through the proxy.
-          loader: rebase.hlsLoader(loadActivity.hlsLoader(usesStreamProxy() || audioUrl ? hlsLoader(HlsEngine.DefaultConfig.loader) : HlsEngine.DefaultConfig.loader)),
+          // Inside it, segments already on disk (lib/videoCache.ts) are answered without a request.
+          loader: rebase.hlsLoader(videoCache.hlsLoader(
+            loadActivity.hlsLoader(usesStreamProxy() || audioUrl ? hlsLoader(HlsEngine.DefaultConfig.loader) : HlsEngine.DefaultConfig.loader),
+            (context, bytes) => {
+              if ("frag" in context) cachedFragments.add(context.frag as object);
+              countVideoCacheHit(bytes, context.url);
+            },
+          )),
+        });
+        // Wi-Fi to mobile data mid-episode (or back): the read-ahead follows.
+        const playerHls = hls;
+        stopBufferWatch = subscribeConnection(() => {
+          const seconds = playerBufferSeconds();
+          if (playerHls.config.maxBufferLength === seconds) return;
+          playerHls.config.maxBufferLength = seconds;
+          playerHls.config.maxMaxBufferLength = Math.round(seconds * 1.5);
+          trace(`buffer ahead: ${seconds}s (network changed)`);
         });
         let manifestLoaded = false;
         let firstFragmentLoaded = false;
@@ -1293,9 +1315,10 @@ export function VideoPlayer({ link, availableLinks, offlinePlayback, dubOptions,
         hls.on(HlsEngine.Events.FRAG_LOADED, (_event, data) => {
           // Every segment is a measurement of the real speed to this CDN - what data saver's "auto"
           // decides the next episode's quality from (lib/connectionQuality.ts).
+          const fromDisk = cachedFragments.has(data.frag);
           const loading = data.frag.stats?.loading;
-          if (loading) recordThroughput(data.frag.stats.loaded, loading.end - loading.first);
-          countVideoBytes(data.frag.stats.loaded, data.frag.url);
+          if (loading && !fromDisk) recordThroughput(data.frag.stats.loaded, loading.end - loading.first);
+          if (!fromDisk) countVideoBytes(data.frag.stats.loaded, data.frag.url);
           // A segment arrived: whatever token renewal came before it worked.
           tokenRenewals = 0;
           if (firstFragmentLoaded) return;
@@ -1640,6 +1663,7 @@ export function VideoPlayer({ link, availableLinks, offlinePlayback, dubOptions,
       if (fragmentTimer !== null) window.clearTimeout(fragmentTimer);
       if (bufferedTimer !== null) window.clearTimeout(bufferedTimer);
       if (networkRetryTimer !== null) window.clearTimeout(networkRetryTimer);
+      stopBufferWatch?.();
       if (playbackTimeoutRef.current !== null) clearTimeout(playbackTimeoutRef.current);
       playbackTimeoutRef.current = null;
       if (playbackTraceRef.current?.id === traceId) playbackTraceRef.current = null;

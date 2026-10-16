@@ -102,6 +102,9 @@ export interface HibikiAppPlugin {
   addListener(event: "pipAction", listener: (event: { action: string }) => void): Promise<PluginListenerHandle>;
   /** A hibiki:// link opened while the app runs (AniList's sign-in redirect). */
   addListener(event: "deepLink", listener: (event: { url: string }) => void): Promise<PluginListenerHandle>;
+  /** Whether the network in use is metered (mobile data); "networkChange" reports changes. */
+  networkState(): Promise<{ metered: boolean }>;
+  addListener(event: "networkChange", listener: (event: { metered: boolean }) => void): Promise<PluginListenerHandle>;
   /** The page has drawn its first screen: the launch splash (MainActivity) can go. */
   hideSplash(): Promise<void>;
   /** The hibiki:// link the app was started with, once. */

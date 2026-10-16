@@ -11,6 +11,9 @@ import android.content.IntentFilter;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.Signature;
+import android.net.ConnectivityManager;
+import android.net.Network;
+import android.net.NetworkCapabilities;
 import android.graphics.drawable.Icon;
 import android.net.Uri;
 import android.os.Build;
@@ -219,6 +222,11 @@ public class HibikiAppPlugin extends Plugin {
     private JSObject pipLabels = new JSObject();
     private BroadcastReceiver pipReceiver;
 
+    /** Watches whether the current network is metered (mobile data, a metered hotspot): the page's
+     * navigator.connection says "unknown" in this WebView, so it learns it from here. */
+    private ConnectivityManager.NetworkCallback networkCallback;
+    private Boolean lastMetered;
+
     /** A hibiki:// link the app was started with, kept until the page asks for it (takeLaunchUrl). */
     private String launchUrl;
 
@@ -234,6 +242,46 @@ public class HibikiAppPlugin extends Plugin {
             }
         };
         ContextCompat.registerReceiver(getContext(), pipReceiver, new IntentFilter(PIP_ACTION), ContextCompat.RECEIVER_NOT_EXPORTED);
+        ConnectivityManager connectivity = getContext().getSystemService(ConnectivityManager.class);
+        if (connectivity != null) {
+            networkCallback = new ConnectivityManager.NetworkCallback() {
+                @Override
+                public void onCapabilitiesChanged(Network network, NetworkCapabilities capabilities) {
+                    reportMetered(!capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED));
+                }
+
+                @Override
+                public void onLost(Network network) {
+                    reportMetered(connectivity.isActiveNetworkMetered());
+                }
+            };
+            try {
+                connectivity.registerDefaultNetworkCallback(networkCallback);
+            } catch (RuntimeException e) {
+                networkCallback = null;
+            }
+        }
+    }
+
+    private synchronized void reportMetered(boolean metered) {
+        if (lastMetered != null && lastMetered == metered) return;
+        lastMetered = metered;
+        JSObject event = new JSObject();
+        event.put("metered", metered);
+        notifyListeners("networkChange", event);
+    }
+
+    /** Whether the network in use now is metered (mobile data, a hotspot marked as metered). */
+    @PluginMethod
+    public void networkState(PluginCall call) {
+        ConnectivityManager connectivity = getContext().getSystemService(ConnectivityManager.class);
+        try {
+            JSObject result = new JSObject();
+            result.put("metered", connectivity != null && connectivity.isActiveNetworkMetered());
+            call.resolve(result);
+        } catch (RuntimeException e) {
+            call.reject("network state unavailable: " + e.getMessage());
+        }
     }
 
     /** A hibiki:// link arriving while the app runs (singleTask: the same activity gets it). */
@@ -279,6 +327,14 @@ public class HibikiAppPlugin extends Plugin {
                 // Already gone with the context.
             }
             pipReceiver = null;
+        }
+        if (networkCallback != null) {
+            try {
+                getContext().getSystemService(ConnectivityManager.class).unregisterNetworkCallback(networkCallback);
+            } catch (RuntimeException ignored) {
+                // Never registered, or already gone.
+            }
+            networkCallback = null;
         }
     }
 

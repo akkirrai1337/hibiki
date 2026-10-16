@@ -739,7 +739,7 @@
         "manual": "Only manually"
       },
       "buffer": "Buffer",
-      "bufferHint": "How far ahead the player downloads. Less saves traffic if you often stop mid-episode; more helps on an unstable connection.",
+      "bufferHint": "How far ahead the player downloads. Less saves traffic if you often stop mid-episode; more helps on an unstable connection. On mobile data and with data saver on, Light and Normal shrink to 10 and 15 s.",
       "bufferModes": {
         "low": "Light · {{seconds}}s",
         "normal": "Normal · {{seconds}}s",
@@ -750,8 +750,8 @@
       "wifiOnlyAutoplay": "Autoplay only on Wi-Fi",
       "wifiOnlyAutoplayHint": "On mobile data, the next episode doesn't start by itself.",
       "cache": "Cache",
-      "cacheHint": "Saved home rows, filter lists, source pages and posters. Clearing frees space; they will be downloaded again.",
-      "cacheHintMobile": "Saved home rows, filter lists and source pages. Clearing frees space; they will be downloaded again.",
+      "cacheHint": "Saved home rows, filter lists, source pages, posters and recently watched video (up to 200 MB, for a day). Clearing frees space; they will be downloaded again.",
+      "cacheHintMobile": "Saved home rows, filter lists, source pages and recently watched video (up to 200 MB, for a day). Clearing frees space; they will be downloaded again.",
       "cacheSize": "Taking {{size}}",
       "cacheClear": "Clear",
       "maxDownloads": "Parallel downloads",

@@ -71,6 +71,13 @@ function addToday(change: Partial<TrafficDay>, imagesCounted = history.imagesCou
 
 const videoByHost = createHostTally("video", (line) => log.info("traffic", line));
 
+const videoCacheByHost = createHostTally("video from disk cache", (line) => log.info("traffic", line));
+
+/** A video segment the player took from its disk cache (lib/videoCache.ts) instead of downloading. */
+export function countVideoCacheHit(bytes: number, url: string): void {
+  if (bytes > 0) videoCacheByHost.add(url, bytes);
+}
+
 /** A video segment the player received, from `url`. */
 export function countVideoBytes(bytes: number, url: string): void {
   if (!(bytes > 0)) return;

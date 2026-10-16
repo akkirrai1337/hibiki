@@ -54,6 +54,8 @@
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Mobile data or Wi-Fi (HibikiApp.networkState): buffer, Wi-Fi-only downloads and autoplay. -->
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <!-- Device sync finds the computer through the Wi-Fi network's broadcast address. -->
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
     <!-- While waiting for another device, some phones drop broadcast packets unless asked not to. -->

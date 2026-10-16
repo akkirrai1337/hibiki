@@ -274,6 +274,8 @@ export interface HibikiApi {
     /** Bytes of source pages kept on disk for revalidation (core/extensions/httpCache.ts). */
     sourceCacheSize(): Promise<number>;
     clearSourceCache(): Promise<void>;
+    /** Phone only: whether the network is metered (mobile data), now and on every change. */
+    onMeteredChange?(callback: (metered: boolean) => void): () => void;
   };
   logs: {
     /** Resolves the written path, or null if the save dialog was cancelled (Android: handed to the share sheet, always null). */

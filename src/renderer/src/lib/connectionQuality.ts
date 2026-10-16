@@ -8,6 +8,8 @@
 // A network change (Wi-Fi -> mobile data) throws the measurement away: it described another network.
 import { useSyncExternalStore } from "react";
 import { usePlayerPrefsStore } from "@/stores/playerPrefsStore";
+import { BUFFER_SECONDS, LIGHT_BUFFER_SECONDS, useNetworkPrefsStore } from "@/stores/networkPrefsStore";
+import { hibiki } from "@/lib/hibiki";
 
 interface NetworkInformationLike extends EventTarget {
   type?: string;
@@ -34,6 +36,20 @@ connection?.addEventListener?.("change", () => {
   measured = null;
   notify();
 });
+
+// The phone's own word on mobile data: Android's WebView reports navigator.connection.type as
+// "unknown" whatever the network is. Null where the host has no such signal (desktop).
+let hostMetered: boolean | null = null;
+try {
+  hibiki?.network?.onMeteredChange?.((metered) => {
+    if (hostMetered === metered) return;
+    if (hostMetered !== null) measured = null;
+    hostMetered = metered;
+    notify();
+  });
+} catch {
+  // No host (tests): navigator.connection alone.
+}
 
 function freshMeasurement() {
   return measured && Date.now() - measured.at < MEASUREMENT_TTL_MS ? measured : null;
@@ -114,13 +130,24 @@ function subscribe(listener: () => void) {
   return () => { listeners.delete(listener); };
 }
 
+/** Called when the network changes or the auto quality verdict does. */
+export const subscribeConnection = subscribe;
+
+/** How far ahead the player downloads (Settings > Network > Buffer), shorter on mobile data or
+ * with data saver on (LIGHT_BUFFER_SECONDS). */
+export function playerBufferSeconds(): number {
+  const mode = useNetworkPrefsStore.getState().bufferMode;
+  return isCellular() || isDataSaverActive() ? LIGHT_BUFFER_SECONDS[mode] : BUFFER_SECONDS[mode];
+}
+
 /** The live quality cap, for showing it (Settings) - never for choosing what plays. */
 export function useAutoQualityCap(): number | null {
   return useSyncExternalStore(subscribe, autoQualityCap);
 }
 
-/** Mobile data (Android WebView reports it; desktop Chromium does not). Not a reason to lower video
- * quality on its own, but a reason not to re-download things the app already has. */
+/** Mobile data (on Android, from the system's metered flag; desktop Chromium has no such signal).
+ * Not a reason to lower video quality on its own, but a reason not to re-download things the app
+ * already has. */
 export function isCellular(): boolean {
-  return connection?.type === "cellular";
+  return hostMetered ?? connection?.type === "cellular";
 }

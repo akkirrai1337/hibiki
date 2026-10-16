@@ -8,6 +8,10 @@ export type HomeRefreshMode = "launch" | "day" | "3days" | "manual";
 export type BufferMode = "low" | "normal" | "high";
 
 export const BUFFER_SECONDS: Record<BufferMode, number> = { low: 20, normal: 40, high: 90 };
+/** On mobile data or with data saver on (connectionQuality.playerBufferSeconds): what isn't watched
+ * after an episode is left is downloaded for nothing, and that costs most there. "high" is a choice
+ * made for a shaky line, so it stays. */
+export const LIGHT_BUFFER_SECONDS: Record<BufferMode, number> = { low: 10, normal: 15, high: 90 };
 
 interface NetworkPrefsState {
   homeRefresh: HomeRefreshMode;

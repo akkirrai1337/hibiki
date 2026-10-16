@@ -25,6 +25,7 @@ import type { TrackerImportProgress, TrackerImportReport } from "@shared/types";
 import type { MemorySnapshot } from "@shared/types";
 import { forgetAllPersisted, persistedSize, useFilterCatalog } from "@/lib/persistedQuery";
 import { BUFFER_SECONDS, useNetworkPrefsStore, type BufferMode, type HomeRefreshMode } from "@/stores/networkPrefsStore";
+import { videoCache } from "@/lib/videoCache";
 import { resetTrafficStats, useTrafficHistory } from "@/lib/trafficStats";
 import { TrafficChart, formatBytes } from "@/components/TrafficChart";
 import type { DohProvider } from "@shared/types";
@@ -790,7 +791,11 @@ function CacheRow() {
   const queryClient = useQueryClient();
   const size = useQuery({
     queryKey: ["cacheSize"],
-    queryFn: async () => persistedSize() + ((await hibiki.app.httpCacheSize?.()) ?? 0) + ((await hibiki.network.sourceCacheSize().catch(() => 0)) ?? 0),
+    queryFn: async () =>
+      persistedSize() +
+      ((await hibiki.app.httpCacheSize?.()) ?? 0) +
+      ((await hibiki.network.sourceCacheSize().catch(() => 0)) ?? 0) +
+      (await videoCache.size()),
     staleTime: 0,
     gcTime: 0,
   });
@@ -799,6 +804,7 @@ function CacheRow() {
       forgetAllPersisted();
       await hibiki.app.clearHttpCache?.();
       await hibiki.network.clearSourceCache().catch(() => undefined);
+      await videoCache.clear();
     },
     onSuccess: () => {
       // The rows on screen came from what was just thrown away: drop them too, so Home loads afresh.
