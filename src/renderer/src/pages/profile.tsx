@@ -7,6 +7,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { Pencil, User, Check, ChevronRight, Film, ImageUp, Library, Clock, CheckCircle2, Gauge, Settings, Sparkles, Trash2, X } from "lucide-react";
 import { hibiki, profileBannerUrl } from "@/lib/hibiki";
 import { Modal } from "@/components/Modal";
+import { ImageCropper } from "@/components/ImageCropper";
 import { PosterImage } from "@/components/PosterImage";
 import { animeTitle } from "@/components/AnimeCard";
 import { ContinueWatchingRow } from "@/components/ContinueWatchingRow";
@@ -787,22 +788,35 @@ function ResampledAvatar({ src }: { src: string }) {
 function AvatarPicker({ avatarDataUrl, onChange }: { avatarDataUrl: string | null; onChange: (dataUrl: string | null) => void }) {
   const { t } = useTranslation();
   const inputRef = useRef<HTMLInputElement>(null);
+  // The picked picture waiting in ImageCropper to be framed; a GIF skips it, framing would stop it.
+  const [cropping, setCropping] = useState<string | null>(null);
   const onPick = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file) return;
+    // A data: URL, not a blob: one - the page's CSP lets images load only from the former.
     const reader = new FileReader();
-    reader.onload = () => onChange(typeof reader.result === "string" ? reader.result : null);
+    reader.onload = () => {
+      const dataUrl = typeof reader.result === "string" ? reader.result : null;
+      if (dataUrl && file.type !== "image/gif") setCropping(dataUrl);
+      else onChange(dataUrl);
+    };
     reader.readAsDataURL(file);
   };
+  const closeCropper = () => setCropping(null);
   return (
-    <button onClick={() => inputRef.current?.click()} aria-label={t("profile.editAvatar")} className="group relative h-20 w-20 shrink-0 overflow-hidden rounded-full bg-text/[.06] ring-2 ring-border">
-      {avatarDataUrl ? <ResampledAvatar src={avatarDataUrl} /> : <div className="flex h-full w-full items-center justify-center"><User className="h-8 w-8 text-muted" strokeWidth={1.5} /></div>}
-      <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 transition-opacity group-hover:opacity-100">
-        <Pencil className="h-5 w-5 text-text" strokeWidth={2} />
-      </div>
-      <input ref={inputRef} type="file" accept="image/*" onChange={onPick} className="hidden" />
-    </button>
+    <>
+      <AnimatePresence>
+        {cropping && <ImageCropper src={cropping} onCancel={closeCropper} onDone={(dataUrl) => { onChange(dataUrl); closeCropper(); }} />}
+      </AnimatePresence>
+      <button onClick={() => inputRef.current?.click()} aria-label={t("profile.editAvatar")} className="group relative h-20 w-20 shrink-0 overflow-hidden rounded-full bg-text/[.06] ring-2 ring-border">
+        {avatarDataUrl ? <ResampledAvatar src={avatarDataUrl} /> : <div className="flex h-full w-full items-center justify-center"><User className="h-8 w-8 text-muted" strokeWidth={1.5} /></div>}
+        <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 transition-opacity group-hover:opacity-100">
+          <Pencil className="h-5 w-5 text-text" strokeWidth={2} />
+        </div>
+        <input ref={inputRef} type="file" accept="image/*" onChange={onPick} className="hidden" />
+      </button>
+    </>
   );
 }
 

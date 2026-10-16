@@ -459,6 +459,9 @@
   },
   "profile": {
     "editAvatar": "Change avatar",
+    "cropTitle": "Edit image",
+    "cropZoom": "Zoom",
+    "cropRotate": "Rotate",
     "editBanner": "Change banner",
     "removeBanner": "Remove banner",
     "editName": "Change name",

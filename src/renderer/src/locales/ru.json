@@ -461,6 +461,9 @@
   },
   "profile": {
     "editAvatar": "Изменить аватар",
+    "cropTitle": "Редактировать изображение",
+    "cropZoom": "Масштаб",
+    "cropRotate": "Повернуть",
     "editBanner": "Изменить баннер",
     "removeBanner": "Убрать баннер",
     "editName": "Изменить имя",
