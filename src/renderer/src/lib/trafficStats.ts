@@ -5,6 +5,8 @@
 // that must survive clearing app data.
 import { useSyncExternalStore } from "react";
 import { hibiki } from "@/lib/hibiki";
+import { log } from "@/lib/log";
+import { createHostTally } from "@shared/trafficByHost";
 
 const STORAGE_KEY = "hibiki-traffic-days";
 const POLL_MS = 30_000;
@@ -67,9 +69,13 @@ function addToday(change: Partial<TrafficDay>, imagesCounted = history.imagesCou
   });
 }
 
-/** A video segment the player received. */
-export function countVideoBytes(bytes: number): void {
-  if (bytes > 0) addToday({ video: bytes });
+const videoByHost = createHostTally("video", (line) => log.info("traffic", line));
+
+/** A video segment the player received, from `url`. */
+export function countVideoBytes(bytes: number, url: string): void {
+  if (!(bytes > 0)) return;
+  addToday({ video: bytes });
+  videoByHost.add(url, bytes);
 }
 
 // The host counts from its own start; only what grew since the last read is added.

@@ -790,7 +790,7 @@ function CacheRow() {
   const queryClient = useQueryClient();
   const size = useQuery({
     queryKey: ["cacheSize"],
-    queryFn: async () => persistedSize() + ((await hibiki.app.httpCacheSize?.()) ?? 0),
+    queryFn: async () => persistedSize() + ((await hibiki.app.httpCacheSize?.()) ?? 0) + ((await hibiki.network.sourceCacheSize().catch(() => 0)) ?? 0),
     staleTime: 0,
     gcTime: 0,
   });
@@ -798,6 +798,7 @@ function CacheRow() {
     mutationFn: async () => {
       forgetAllPersisted();
       await hibiki.app.clearHttpCache?.();
+      await hibiki.network.clearSourceCache().catch(() => undefined);
     },
     onSuccess: () => {
       // The rows on screen came from what was just thrown away: drop them too, so Home loads afresh.

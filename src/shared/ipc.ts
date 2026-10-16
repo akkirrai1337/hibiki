@@ -124,6 +124,8 @@ export const IPC = {
   networkConfigure: "network:configure",
   networkResetCloudflare: "network:resetCloudflare",
   networkTraffic: "network:traffic",
+  networkSourceCacheSize: "network:sourceCacheSize",
+  networkClearSourceCache: "network:clearSourceCache",
   appHttpCacheSize: "app:httpCacheSize",
   appClearHttpCache: "app:clearHttpCache",
   appGpu: "app:gpu",

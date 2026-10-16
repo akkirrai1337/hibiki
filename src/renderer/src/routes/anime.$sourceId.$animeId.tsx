@@ -42,6 +42,10 @@ import type { AnimeTitle, DownloadProgress, Episode, LibraryCategory, PlaybackGr
 // linger as stale-looking state on a chip you've since moved on from.
 const DOWNLOAD_RESULT_DISPLAY_MS = 4000;
 
+/** How long a title page reuses what it fetched instead of asking the source again. */
+const TITLE_FRESH_MS = 6 * 60 * 60 * 1000;
+const EPISODES_FRESH_MS = 10 * 60 * 1000;
+
 export const Route = createFileRoute("/anime/$sourceId/$animeId")({
   // Kept in the URL (like /catalog's `sort`) rather than component state - so the chosen
   // dubbing/translation group survives leaving for an episode and coming back, instead of
@@ -198,6 +202,11 @@ function AnimeDetailPage() {
   const animeQuery = useQuery({
     queryKey: ["anime", sourceId, animeId],
     queryFn: () => hibiki.sources.getById(sourceId, animeId),
+    // A title's description, genres and related titles don't change from one visit to the next:
+    // coming back to it within the session costs no request. The episode list (below) is separate
+    // and goes stale much sooner, so new episodes still show up.
+    staleTime: TITLE_FRESH_MS,
+    gcTime: TITLE_FRESH_MS,
     placeholderData: () =>
       findListedTitle(
         queryClient.getQueryCache().getAll().map((entry) => entry.state.data),
@@ -210,7 +219,7 @@ function AnimeDetailPage() {
   // comments and its rating.
   const source = sourcesQuery.data?.find((candidate) => candidate.id === sourceId);
 
-  const groupsQuery = usePlaybackGroups(sourceId, animeId);
+  const groupsQuery = usePlaybackGroups(sourceId, animeId, EPISODES_FRESH_MS);
   const libraryQuery = useQuery({ queryKey: ["library"], queryFn: () => hibiki.library.list() });
   const progressQuery = useQuery({ queryKey: ["progress-all", sourceId, animeId], queryFn: () => hibiki.progress.listForAnime(sourceId, animeId) });
 

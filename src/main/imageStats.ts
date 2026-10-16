@@ -3,12 +3,14 @@
 // carries a recent count and says whether posters are what eats the traffic.
 import { session } from "electron";
 import { logger } from "../core/logger";
+import { createHostTally } from "@shared/trafficByHost";
 
 const INTERVAL_MS = 2 * 60 * 1000;
 
 // onCompleted only: a session keeps one listener per webRequest event, and onErrorOccurred is
 // playerHeaders.ts's - pictures that never got an answer are not counted.
 let networkBytes = 0;
+const imagesByHost = createHostTally("pictures", (line) => logger.info("traffic", line));
 
 /** Bytes of pictures downloaded (not served from cache) since the app started. */
 export function imageBytesThisSession(): number {
@@ -27,6 +29,7 @@ export function installImageStats(): void {
       network++;
       const length = Object.entries(details.responseHeaders ?? {}).find(([name]) => name.toLowerCase() === "content-length")?.[1]?.[0];
       networkBytes += Number(length) || 0;
+      imagesByHost.add(details.url, Number(length) || 0);
     }
   });
   let last = "";

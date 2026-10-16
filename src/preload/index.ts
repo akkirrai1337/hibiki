@@ -289,6 +289,8 @@ const api: HibikiApi = {
     configure: (config: NetworkConfig): Promise<void> => ipcRenderer.invoke(IPC.networkConfigure, config),
     resetCloudflare: (): Promise<void> => ipcRenderer.invoke(IPC.networkResetCloudflare),
     traffic: (): Promise<TrafficSnapshot> => ipcRenderer.invoke(IPC.networkTraffic),
+    sourceCacheSize: (): Promise<number> => ipcRenderer.invoke(IPC.networkSourceCacheSize),
+    clearSourceCache: (): Promise<void> => ipcRenderer.invoke(IPC.networkClearSourceCache),
   },
   logs: {
     export: (): Promise<string | null> => ipcRenderer.invoke(IPC.logsExport),

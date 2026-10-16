@@ -271,6 +271,9 @@ export interface HibikiApi {
     /** Forgets every Cloudflare clearance, so sources pass the check anew. */
     resetCloudflare(): Promise<void>;
     traffic(): Promise<TrafficSnapshot>;
+    /** Bytes of source pages kept on disk for revalidation (core/extensions/httpCache.ts). */
+    sourceCacheSize(): Promise<number>;
+    clearSourceCache(): Promise<void>;
   };
   logs: {
     /** Resolves the written path, or null if the save dialog was cancelled (Android: handed to the share sheet, always null). */

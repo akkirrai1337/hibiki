@@ -24,6 +24,8 @@ export function usePlaybackGroups(sourceId: string, animeId: string, staleTime?:
     queryKey: ["playbackGroups", sourceId, animeId],
     placeholderData: cached.data?.groups,
     staleTime,
+    // Kept at least as long as it is fresh, so leaving the page and coming back reuses it.
+    gcTime: Math.min(30 * 60 * 1000, Math.max(5 * 60 * 1000, staleTime ?? 0)),
     enabled,
     queryFn: () => hibiki.sources.playbackGroups(sourceId, animeId),
   });

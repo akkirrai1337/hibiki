@@ -21,7 +21,8 @@
 // async stack instead, where undici's global pool keeps connections alive across requests and an
 // AbortSignal gives every request a real deadline.
 import { logger } from "../logger";
-import { countDataBytes, getNetworkConfig } from "../networkConfig";
+import { countDataBytes, countSavedBytes, getNetworkConfig } from "../networkConfig";
+import { isFresh, readStored, refreshStored, storeResponse, withValidators, type StoredResponse } from "./httpCache";
 import { getPlatform } from "../platform";
 import { forgetClearance, isCloudflareChallenge, withClearance } from "./cloudflare";
 
@@ -159,7 +160,7 @@ async function fetchUncached(url: string, options: NetFetchOptions, headers: Rec
     const startedAt = Date.now();
     try {
       const result = await performOnce(url, options, headers);
-      countDataBytes(result.body.length);
+      countDataBytes(result.body.length, url);
       logger.debug("net", `${method} ${url} -> ${result.status} in ${Date.now() - startedAt}ms (${result.body.length}b)${attempt > 1 ? ` [attempt ${attempt}]` : ""}`);
       return result;
     } catch (error) {
@@ -172,6 +173,33 @@ async function fetchUncached(url: string, options: NetFetchOptions, headers: Rec
     }
   }
   throw lastError instanceof Error ? lastError : new Error(String(lastError));
+}
+
+function fromStored(stored: StoredResponse): NetFetchResult {
+  return { status: stored.status, ok: true, body: stored.body, headers: stored.headers };
+}
+
+/**
+ * A GET through the disk store (httpCache.ts): served from it while the server said it is fresh,
+ * otherwise asked conditionally when a copy with a validator is there - a 304 then hands back that
+ * copy instead of downloading it again - and a new answer worth keeping is kept.
+ */
+async function fetchRevalidating(url: string, options: NetFetchOptions, headers: Record<string, string>, key: string): Promise<NetFetchResult> {
+  const stored = await readStored(key);
+  if (stored && isFresh(stored)) {
+    logger.debug("net", `GET ${url} -> served from disk (fresh)`);
+    countSavedBytes(stored.body.length, url);
+    return fromStored(stored);
+  }
+  const result = await fetchUncached(url, options, stored ? withValidators(headers, stored) : headers);
+  if (stored && result.status === 304) {
+    logger.debug("net", `GET ${url} -> 304, ${stored.body.length}b reused from disk`);
+    countSavedBytes(stored.body.length, url);
+    void refreshStored(key, stored, result.headers, headers);
+    return fromStored(stored);
+  }
+  if (result.ok) void storeResponse(key, result, headers);
+  return result;
 }
 
 export async function performNetFetch(url: string, options: NetFetchOptions = {}): Promise<NetFetchResult> {
@@ -196,7 +224,7 @@ export async function performNetFetch(url: string, options: NetFetchOptions = {}
     }
   }
 
-  const request = fetchUncached(url, options, headers).then((result) => {
+  const request = (cacheable ? fetchRevalidating(url, options, headers, key) : fetchUncached(url, options, headers)).then((result) => {
     if (cleared && isCloudflareChallenge(result.status, result.headers, result.body)) forgetClearance(url);
     if (cacheable) writeCache(key, result);
     return result;

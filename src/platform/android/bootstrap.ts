@@ -11,6 +11,7 @@ import { importLegacyData } from "../../core/legacyImport";
 import { handleTrackingRedirect } from "../../core/api/tracking";
 import { ExtensionRuntime } from "../../core/extensions/runtime";
 import { forgetAllClearances } from "../../core/extensions/cloudflare";
+import { clearHttpCache, httpCacheSize } from "../../core/extensions/httpCache";
 import { dataBytesThisSession, setNetworkConfig } from "../../core/networkConfig";
 import { log, recentEntries, renderLog } from "../../core/logger";
 import { installPlatform } from "../../core/platform";
@@ -196,6 +197,8 @@ export async function installAndroidHibiki(): Promise<void> {
       configure: async (config) => setNetworkConfig(config),
       resetCloudflare: async () => forgetAllClearances(),
       traffic: async () => ({ data: dataBytesThisSession(), images: null }),
+      sourceCacheSize: () => httpCacheSize(),
+      clearSourceCache: () => clearHttpCache(),
     },
     logs: {
       // No save dialog on the phone: the share sheet is where the file goes (a messenger, Files...).

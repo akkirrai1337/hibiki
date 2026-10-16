@@ -4,6 +4,8 @@
 // defaults below are what the app has always done. Also counts the bytes core's own requests
 // bring in, for the traffic statistics.
 import type { NetworkConfig } from "@shared/types";
+import { createHostTally } from "@shared/trafficByHost";
+import { logger } from "./logger";
 
 export const DEFAULT_NETWORK_CONFIG: NetworkConfig = {
   maxDownloads: 2,
@@ -39,10 +41,20 @@ export function onNetworkConfigChange(listener: (config: NetworkConfig) => void)
 // --- traffic ------------------------------------------------------------------------------------
 
 let dataBytes = 0;
+const dataByHost = createHostTally("source data", (line) => logger.info("traffic", line));
 
 /** A response body core received from a source (catalog pages, episode lists, player pages). */
-export function countDataBytes(bytes: number): void {
-  if (bytes > 0) dataBytes += bytes;
+export function countDataBytes(bytes: number, url: string): void {
+  if (!(bytes > 0)) return;
+  dataBytes += bytes;
+  dataByHost.add(url, bytes);
+}
+
+const savedByHost = createHostTally("saved by the disk cache (304 / fresh)", (line) => logger.info("traffic", line));
+
+/** A response that didn't have to be downloaded again: answered 304, or still fresh on disk. */
+export function countSavedBytes(bytes: number, url: string): void {
+  savedByHost.add(url, bytes);
 }
 
 /** Bytes counted since the app started. */

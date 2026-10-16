@@ -24,6 +24,7 @@ import { imageBytesThisSession, installImageStats } from "./imageStats";
 import { applyNetworkConfig, clearCloudflareCookies } from "./network";
 import { dataBytesThisSession, setNetworkConfig } from "../core/networkConfig";
 import { forgetAllClearances } from "../core/extensions/cloudflare";
+import { clearHttpCache, httpCacheSize } from "../core/extensions/httpCache";
 import { resolveFinalStreamUrl } from "./playerStream";
 import { clearDiscordPresence, setDiscordRpcEnabled, setIdleDiscordPresence, shutdownDiscordRpc, updateDiscordPresence } from "./discordRpc";
 import { DEEP_LINK_SCHEME, findDeepLinkInArgv, parseWatchDeepLink } from "../core/deepLink";
@@ -432,6 +433,8 @@ app.whenReady().then(async () => {
     await clearCloudflareCookies();
   });
   ipcMain.handle(IPC.networkTraffic, (): TrafficSnapshot => ({ data: dataBytesThisSession(), images: imageBytesThisSession() }));
+  ipcMain.handle(IPC.networkSourceCacheSize, () => httpCacheSize());
+  ipcMain.handle(IPC.networkClearSourceCache, () => clearHttpCache());
   ipcMain.handle(IPC.appHttpCacheSize, () => session.defaultSession.getCacheSize());
   ipcMain.handle(IPC.appClearHttpCache, () => session.defaultSession.clearCache());
   // Chromium names the GPU only in its "complete" info, as ANGLE's renderer string

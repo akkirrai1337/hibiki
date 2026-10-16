@@ -1251,6 +1251,9 @@ export function VideoPlayer({ link, availableLinks, offlinePlayback, dubOptions,
           maxBufferLength: BUFFER_SECONDS[useNetworkPrefsStore.getState().bufferMode],
           maxMaxBufferLength: Math.round(BUFFER_SECONDS[useNetworkPrefsStore.getState().bufferMode] * 1.5),
           maxBufferSize: 60 * 1000 * 1000,
+          // A rendition taller than the player shows is downloaded for nothing: in a small window
+          // or picture-in-picture, hls.js stays at the one that fits (device pixels included).
+          capLevelToPlayerSize: true,
           // Outermost: a renewed token's directory has to be in place before the request is counted
           // or sent through the proxy.
           loader: rebase.hlsLoader(loadActivity.hlsLoader(usesStreamProxy() || audioUrl ? hlsLoader(HlsEngine.DefaultConfig.loader) : HlsEngine.DefaultConfig.loader)),
@@ -1292,7 +1295,7 @@ export function VideoPlayer({ link, availableLinks, offlinePlayback, dubOptions,
           // decides the next episode's quality from (lib/connectionQuality.ts).
           const loading = data.frag.stats?.loading;
           if (loading) recordThroughput(data.frag.stats.loaded, loading.end - loading.first);
-          countVideoBytes(data.frag.stats.loaded);
+          countVideoBytes(data.frag.stats.loaded, data.frag.url);
           // A segment arrived: whatever token renewal came before it worked.
           tokenRenewals = 0;
           if (firstFragmentLoaded) return;
@@ -2160,6 +2163,28 @@ export function VideoPlayer({ link, availableLinks, offlinePlayback, dubOptions,
   }, [menuOpenOnPhone, controlsVisible, playing, scheduleHide]);
   useBackHandler(settingsOpen || episodeListOpen, () => { setSettingsOpen(false); setEpisodeListOpen(false); });
 
+  // Desktop: a minimized or fully covered window keeps playing, so it is audio only in effect - the
+  // stream drops to its lightest rendition until the window is visible again. (The phone pauses
+  // when it leaves the app, see below, unless picture-in-picture or "audio only" is on.)
+  useEffect(() => {
+    if (isMobile) return;
+    let cappingBeforeHidden: number | null = null;
+    const onVisibility = () => {
+      const hls = hlsInstanceRef.current;
+      if (!hls || hls.levels.length < 2) return;
+      if (document.hidden && cappingBeforeHidden === null) {
+        cappingBeforeHidden = hls.autoLevelCapping;
+        hls.autoLevelCapping = 0;
+        log.info("player", "window hidden: lightest rendition until it is back");
+      } else if (!document.hidden && cappingBeforeHidden !== null) {
+        hls.autoLevelCapping = cappingBeforeHidden;
+        cappingBeforeHidden = null;
+      }
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => document.removeEventListener("visibilitychange", onVisibility);
+  }, [link?.url]);
+
   // --- the phone's picture in picture (as the Kotlin app has it) ---
   // The window shows only the picture (and subtitles); its buttons are previous / play-pause / next,
   // plus "audio only" (the window goes, the sound goes on). Leaving the app otherwise pauses, as
@@ -2197,7 +2222,21 @@ export function VideoPlayer({ link, availableLinks, offlinePlayback, dubOptions,
       }
     });
     let resumeOnReturn = false;
+    // Audio only: nobody sees the picture, so the stream drops to its lightest rendition until
+    // the app is back (streams with several renditions; see the desktop twin further down).
+    let cappingBeforeAudioOnly: number | null = null;
     const onVisibility = () => {
+      const hls = hlsInstanceRef.current;
+      if (hls && hls.levels.length > 1) {
+        if (document.hidden && audioOnlyRef.current && cappingBeforeAudioOnly === null) {
+          cappingBeforeAudioOnly = hls.autoLevelCapping;
+          hls.autoLevelCapping = 0;
+          log.info("player", "audio only: lightest rendition until the app is back");
+        } else if (!document.hidden && cappingBeforeAudioOnly !== null) {
+          hls.autoLevelCapping = cappingBeforeAudioOnly;
+          cappingBeforeAudioOnly = null;
+        }
+      }
       const video = videoRef.current;
       if (!video) return;
       if (document.hidden) {
