@@ -236,7 +236,14 @@
       "upscale": "Улучшение картинки",
       "upscaleOff": "Выкл",
       "upscaleLight": "Лёгкое",
-      "upscaleStrong": "Сильное"
+      "upscaleStrong": "Сильное",
+      "sleepTimer": "Таймер сна",
+      "sleepOff": "Выкл",
+      "sleepMinutes": "{{count}} мин",
+      "sleepHour": "1 ч",
+      "sleepEpisode": "В конце серии",
+      "sleepLeft": "Ещё {{count}} мин",
+      "stableVolume": "Ровная громкость"
     },
     "subtitles": {
       "off": "Выключены",

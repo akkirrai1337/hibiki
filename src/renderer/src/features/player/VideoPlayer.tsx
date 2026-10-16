@@ -54,6 +54,8 @@ import { useNetworkPrefsStore } from "@/stores/networkPrefsStore";
 import { countVideoBytes, countVideoCacheHit } from "@/lib/trafficStats";
 import { videoCache } from "@/lib/videoCache";
 import { bufferedEnd, setLoadHold, skipHoldPoint, skipMarginSeconds } from "./loadGate";
+import { minutesLeft, SLEEP_TIMER_CHOICES, sleepTimerTakesEpisodeEnd, useSleepTimerStore, type SleepTimerChoice } from "./sleepTimer";
+import { attachStableVolume } from "./stableVolume";
 import { codecFamily, preferredEfficientCodecs, redundantAvcLevels } from "@/lib/efficientCodecs";
 import { isWebGpuAvailable, startUpscaler, type UpscaleMode, type UpscalerState } from "./upscaler";
 
@@ -453,7 +455,17 @@ function PlayerSettingsMenu({
   onAddSubtitleFile: () => void;
   t: (key: string, options?: Record<string, unknown>) => string;
 }) {
-  const [page, setPage] = useState<"main" | "speed" | "dub" | "translation" | "player" | "quality" | "audio" | "subtitles" | "orientation" | "upscale">("main");
+  const [page, setPage] = useState<"main" | "speed" | "dub" | "translation" | "player" | "quality" | "audio" | "subtitles" | "orientation" | "upscale" | "sleep">("main");
+  const sleepChoice = useSleepTimerStore((s) => s.choice);
+  const sleepEndsAt = useSleepTimerStore((s) => s.endsAt);
+  const setSleepTimer = useSleepTimerStore((s) => s.set);
+  const sleepLabel = (choice: SleepTimerChoice) =>
+    choice === "off" ? t("watch.settings.sleepOff")
+      : choice === "episode" ? t("watch.settings.sleepEpisode")
+        : choice === 60 ? t("watch.settings.sleepHour")
+          : t("watch.settings.sleepMinutes", { count: choice });
+  const stableVolume = usePlayerPrefsStore((s) => s.stableVolume);
+  const setStableVolume = usePlayerPrefsStore((s) => s.setStableVolume);
   const selectedDub = dubOptions.find((d) => d.id === selectedDubId);
   // The phone's screen while watching - chosen here, where it is felt, and applied at once (the root
   // layout locks the screen from this same preference while the player is open).
@@ -480,6 +492,20 @@ function PlayerSettingsMenu({
       onSelect={(label) => {
         const picked = (Object.keys(upscaleLabels) as UpscaleMode[]).find((key) => upscaleLabels[key] === label);
         if (picked) setUpscale(picked);
+        setPage("main");
+      }}
+      onBack={() => setPage("main")}
+    />;
+  }
+
+  if (page === "sleep") {
+    return <ListPage
+      title={t("watch.settings.sleepTimer")}
+      options={SLEEP_TIMER_CHOICES.map(sleepLabel)}
+      selected={sleepLabel(sleepChoice)}
+      onSelect={(label) => {
+        const picked = SLEEP_TIMER_CHOICES.find((choice) => sleepLabel(choice) === label);
+        if (picked !== undefined) setSleepTimer(picked);
         setPage("main");
       }}
       onBack={() => setPage("main")}
@@ -560,6 +586,11 @@ function PlayerSettingsMenu({
     {audioTrackOptions.length > 1 && <MenuRow label={t("watch.settings.audioTrack")} value={selectedAudioTrack ?? "—"} onClick={() => setPage("audio")} />}
     <MenuRow label={t("watch.settings.speed")} value={`${playbackSpeed}×`} onClick={() => setPage("speed")} />
     <MenuRow
+      label={t("watch.settings.sleepTimer")}
+      value={sleepEndsAt !== null ? t("watch.settings.sleepLeft", { count: minutesLeft(sleepEndsAt, Date.now()) }) : sleepLabel(sleepChoice)}
+      onClick={() => setPage("sleep")}
+    />
+    <MenuRow
       label={t("watch.settings.subtitles")}
       value={subtitleOptions.find((o) => o.id === selectedSubtitleId)?.label ?? t("watch.subtitles.off")}
       onClick={() => setPage("subtitles")}
@@ -569,6 +600,7 @@ function PlayerSettingsMenu({
     <div className="my-1 border-t border-white/[.08]" />
     <ToggleRow label={t("watch.settings.autoSkipSegments")} checked={autoSkipSegments} onChange={onToggleAutoSkip} />
     <ToggleRow label={t("watch.settings.autoPlayNextEpisode")} checked={autoPlayNextEpisode} onChange={onToggleAutoPlay} />
+    <ToggleRow label={t("watch.settings.stableVolume")} checked={stableVolume} onChange={() => setStableVolume(!stableVolume)} />
   </div>;
 }
 
@@ -830,6 +862,32 @@ export function VideoPlayer({ link, availableLinks, offlinePlayback, dubOptions,
   const episodeListRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
+
+  // Stable volume (Settings in the player's menu): the element's sound through a compressor.
+  const stableVolume = usePlayerPrefsStore((s) => s.stableVolume);
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    return attachStableVolume(video, stableVolume);
+  }, [stableVolume]);
+
+  // Sleep timer: when the chosen minutes run out, playback pauses. One that ran out while no
+  // episode was playing just ends - it never stops the next episode the moment it starts.
+  const sleepEndsAt = useSleepTimerStore((s) => s.endsAt);
+  useEffect(() => {
+    if (sleepEndsAt === null) return;
+    const remaining = sleepEndsAt - Date.now();
+    if (remaining <= 0) {
+      useSleepTimerStore.getState().clear();
+      return;
+    }
+    const timer = window.setTimeout(() => {
+      videoRef.current?.pause();
+      log.info("player", "sleep timer: paused");
+      useSleepTimerStore.getState().clear();
+    }, remaining);
+    return () => window.clearTimeout(timer);
+  }, [sleepEndsAt]);
   const playbackStartedAtRef = useRef(0);
   const firstFrameLoggedRef = useRef(false);
   const playbackTraceRef = useRef<{ id: string; write: (message: string, ...details: unknown[]) => void; snapshot?: () => unknown } | null>(null);
@@ -1789,8 +1847,11 @@ export function VideoPlayer({ link, availableLinks, offlinePlayback, dubOptions,
     };
     const onEnded = () => {
       observe("ended");
+      // A sleep timer set to "end of episode" stops here.
+      const sleepStop = sleepTimerTakesEpisodeEnd();
+      if (sleepStop) log.info("player", "episode ended; sleep timer stops here");
       // On mobile data with "autoplay only on Wi-Fi" on, the episode just ends: the next one is a tap away.
-      const autoPlay = autoPlayNextEpisode && !(useNetworkPrefsStore.getState().wifiOnlyAutoplay && isCellular());
+      const autoPlay = !sleepStop && autoPlayNextEpisode && !(useNetworkPrefsStore.getState().wifiOnlyAutoplay && isCellular());
       if (autoPlay && onNextEpisode) log.info("player", "episode ended; playing the next one");
       if (autoPlay) onNextEpisode?.();
     };

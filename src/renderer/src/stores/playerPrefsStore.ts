@@ -80,6 +80,9 @@ interface PlayerPrefsState {
   // episode, not just the one where it was pinched.
   videoFill: boolean;
   setVideoFill: (fill: boolean) => void;
+  /** Sound through a compressor so loud and quiet scenes even out (features/player/stableVolume.ts). */
+  stableVolume: boolean;
+  setStableVolume: (enabled: boolean) => void;
   setDataSaver: (mode: DataSaverMode) => void;
   setAutoSkipSegments: (enabled: boolean) => void;
   setAutoPlayNextEpisode: (enabled: boolean) => void;
@@ -113,6 +116,8 @@ export const usePlayerPrefsStore = create<PlayerPrefsState>()(
       setUpscale: (upscale) => set({ upscale }),
       videoFill: false,
       setVideoFill: (videoFill) => set({ videoFill }),
+      stableVolume: false,
+      setStableVolume: (stableVolume) => set({ stableVolume }),
       setDataSaver: (dataSaver) => set({ dataSaver }),
       setAutoSkipSegments: (autoSkipSegments) => set({ autoSkipSegments }),
       setAutoPlayNextEpisode: (autoPlayNextEpisode) => set({ autoPlayNextEpisode }),

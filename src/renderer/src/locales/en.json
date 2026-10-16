@@ -234,7 +234,14 @@
       "upscale": "Picture enhancement",
       "upscaleOff": "Off",
       "upscaleLight": "Light",
-      "upscaleStrong": "Strong"
+      "upscaleStrong": "Strong",
+      "sleepTimer": "Sleep timer",
+      "sleepOff": "Off",
+      "sleepMinutes": "{{count}} min",
+      "sleepHour": "1 hour",
+      "sleepEpisode": "End of episode",
+      "sleepLeft": "{{count}} min left",
+      "stableVolume": "Stable volume"
     },
     "subtitles": {
       "off": "Off",

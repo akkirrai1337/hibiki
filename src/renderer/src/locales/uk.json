@@ -236,7 +236,14 @@
       "upscale": "Покращення картинки",
       "upscaleOff": "Вимк",
       "upscaleLight": "Легке",
-      "upscaleStrong": "Сильне"
+      "upscaleStrong": "Сильне",
+      "sleepTimer": "Таймер сну",
+      "sleepOff": "Вимк",
+      "sleepMinutes": "{{count}} хв",
+      "sleepHour": "1 год",
+      "sleepEpisode": "Наприкінці серії",
+      "sleepLeft": "Ще {{count}} хв",
+      "stableVolume": "Рівна гучність"
     },
     "subtitles": {
       "off": "Вимкнено",
