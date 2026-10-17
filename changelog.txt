@@ -1,6 +1,13 @@
 ## hibiki 3.2.1
 
-**Fixes**
-- Aniyomi sources (Anikoto and others): a title opened from a list keeps the poster its card had, instead of "No poster" on the title page.
+**Player**
+- Every row of the player's settings menu has an icon, so the list reads at a glance.
+- The row that picks portrait or landscape is called "Orientation" now (it was "Screen"), with a rotate-screen icon.
 - The next episode starts in the dub you picked, not back in sub: the sound you choose (sub or dub where a source lists them as qualities, or an audio track) is remembered per title, on another server too if the first has none. Data saver no longer swaps your dub for sub when it lowers the quality.
+
+**Settings**
+- Network: each setting (data saver, buffer, home refresh, parallel downloads, request timeout, DNS-over-HTTPS) is one line with its current value instead of a row of buttons. On the phone a tap opens the choices in a sheet with the explanation; on desktop they are a dropdown beside the name.
+
+**Aniyomi sources (Android)**
+- A title opened from a list keeps the poster its card had, instead of "No poster" on the title page (seen with Anikoto).
 - A score that an extension writes into the description ("★★★★★ 9.63") is shown as a rating next to the year, and the description starts with the story.
