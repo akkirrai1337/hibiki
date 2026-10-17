@@ -6,7 +6,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { ArrowLeft, Loader2, TriangleAlert } from "lucide-react";
 import type { DownloadedEpisodeFile, PlaybackGroup, PlayerLink } from "@shared/types";
-import { pickDataSaverLink, pickDefaultLink, pickPlaybackFallback, pickPreferredLink, pickRefreshedLink, pickResolvedLink } from "@/lib/playerLinks";
+import { pickDataSaverLink, pickDefaultLink, pickPlaybackFallback, pickPreferredLink, pickRefreshedLink, pickResolvedLink, qualityVariant } from "@/lib/playerLinks";
 import { usePlaybackGroups } from "@/lib/playbackGroups";
 import { autoQualityCap, describeConnection, isDataSaverActive } from "@/lib/connectionQuality";
 import { isGenericDubTitle } from "@/lib/dubTitle";
@@ -460,10 +460,26 @@ function WatchPage() {
   const rememberSelection = usePlayerSelectionStore((s) => s.remember);
   const selectLinkManually = useCallback((selected: PlayerLink) => {
     log.info("player", `picked by hand: ${selected.translation ?? "?"}/${selected.playerName ?? "?"} ${selected.quality ?? "?"}`);
-    rememberSelection(sourceId, animeId, groupId, { playerName: selected.playerName ?? null, translation: selected.translation ?? null });
+    // What a pick says about the sound goes with it: a source that lists sub and dub as qualities
+    // of one server ("HD-1 - Dub - 1080p") would otherwise start the next episode on its first one.
+    const previous = usePlayerSelectionStore.getState().get(sourceId, animeId, groupId);
+    rememberSelection(sourceId, animeId, groupId, {
+      playerName: selected.playerName ?? null,
+      translation: selected.translation ?? null,
+      variant: qualityVariant(selected.quality, selected.playerName),
+      // A stream with its own audio tracks keeps the one picked inside it (rememberAudioTrack).
+      audioTrack: selected.audioTrack ?? previous?.audioTrack ?? null,
+    });
     if (isExpiredLink(selected)) void refreshAndSelect(selected);
     else void selectLink(selected);
   }, [rememberSelection, selectLink, isExpiredLink, refreshAndSelect, sourceId, animeId, groupId]);
+
+  // An audio track picked inside an HLS stream (several dubs in one playlist): kept for the title's
+  // next episodes, which start on it when their stream has it.
+  const rememberAudioTrack = useCallback((audioTrack: string) => {
+    const previous = usePlayerSelectionStore.getState().get(sourceId, animeId, groupId);
+    rememberSelection(sourceId, animeId, groupId, { ...previous, audioTrack });
+  }, [rememberSelection, sourceId, animeId, groupId]);
 
   // A silent auto-recovery (see handlePlaybackFailure below) used to be indistinguishable, from the
   // outside, from the episode just randomly changing player/quality on its own mid-watch - this is
@@ -537,7 +553,7 @@ function WatchPage() {
     const remembered = usePlayerSelectionStore.getState().get(sourceId, animeId, groupId);
     const translation = remembered?.translation ?? progressQuery.data?.translation;
     const playerName = remembered?.playerName ?? progressQuery.data?.playerName;
-    const preferred = pickPreferredLink(linksQuery.data, { translation, playerName });
+    const preferred = pickPreferredLink(linksQuery.data, { translation, playerName, variant: remembered?.variant, audioTrack: remembered?.audioTrack });
     // Nothing saved at all, or no link matches it any more (source reshuffled its players, the dub
     // is gone) - release the gate and let the default pick play.
     if (!preferred) {
@@ -975,6 +991,8 @@ function WatchPage() {
           sourceSwitching={sourceSwitching || (!link && preferencePending)}
           unplayable={!link && !preferencePending && !sourceSwitching && !!linksQuery.data && linksQuery.data.length > 0 || resolveFailed}
           onSelectLink={selectLinkManually}
+          preferredAudioTrack={usePlayerSelectionStore.getState().get(sourceId, animeId, groupId)?.audioTrack ?? null}
+          onAudioTrackPicked={rememberAudioTrack}
           onPlaybackFailure={handlePlaybackFailure}
           onRefreshStream={refreshStream}
           startPositionMs={progressQuery.data?.positionMs}

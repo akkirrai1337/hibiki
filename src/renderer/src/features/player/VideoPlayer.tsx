@@ -107,6 +107,10 @@ interface VideoPlayerProps {
   // said out loud over the still-reachable chrome instead of a spinner that never ends.
   unplayable?: boolean;
   onSelectLink?: (link: PlayerLink) => void;
+  /** The audio track remembered for this title (an HLS stream's own), tried before the link's. */
+  preferredAudioTrack?: string | null;
+  /** An audio track picked inside an HLS stream, to remember for the next episodes. */
+  onAudioTrackPicked?: (label: string) => void;
   onPlaybackFailure?: (link: PlayerLink, reason: string) => boolean;
   /** A freshly issued link to the same stream as `link` (same player, dub, quality), for renewing an
    * expired CDN token mid-play - or null when there is none worth trying. */
@@ -635,7 +639,7 @@ function pipLabels(t: (key: string) => string) {
   };
 }
 
-export function VideoPlayer({ link, availableLinks, offlinePlayback, dubOptions, selectedDubId, onSelectDub, sourceSwitching, unplayable, onSelectLink, onPlaybackFailure, onRefreshStream, startPositionMs, onProgress, onPlayStateChange, onCaptureThumbnail, title, episodeLabel, onBack, onPrevEpisode, onNextEpisode, onOpenEpisodes, episodesLoading, episodes, currentEpisodeId, onSelectEpisode, streakToast, playerSwitchToast }: VideoPlayerProps) {
+export function VideoPlayer({ link, availableLinks, offlinePlayback, dubOptions, selectedDubId, onSelectDub, sourceSwitching, unplayable, onSelectLink, preferredAudioTrack, onAudioTrackPicked, onPlaybackFailure, onRefreshStream, startPositionMs, onProgress, onPlayStateChange, onCaptureThumbnail, title, episodeLabel, onBack, onPrevEpisode, onNextEpisode, onOpenEpisodes, episodesLoading, episodes, currentEpisodeId, onSelectEpisode, streakToast, playerSwitchToast }: VideoPlayerProps) {
   const { t } = useTranslation();
   // Held in a ref, deliberately not read as a prop from inside the effects below. Both the source
   // setup and the media-element wiring would otherwise have to list it as a dependency, and the
@@ -644,6 +648,9 @@ export function VideoPlayer({ link, availableLinks, offlinePlayback, dubOptions,
   // reasoning the comments on `link`, onProgress and onNextEpisode already spell out.
   const playbackFailureRef = useRef(onPlaybackFailure);
   playbackFailureRef.current = onPlaybackFailure;
+  // Same reasoning: read when the manifest is parsed, never a reason to rebuild the stream.
+  const preferredAudioTrackRef = useRef(preferredAudioTrack);
+  preferredAudioTrackRef.current = preferredAudioTrack;
   const refreshStreamRef = useRef(onRefreshStream);
   refreshStreamRef.current = onRefreshStream;
   // Which of the three load paths below ends up owning the <video> element's source - read by the
@@ -1502,7 +1509,9 @@ export function VideoPlayer({ link, availableLinks, offlinePlayback, dubOptions,
           // Several dubs in one stream: play the one this link is for, not the playlist's default.
           const audioTracks = hls?.audioTracks ?? [];
           if (hls && audioTracks.length > 1) {
-            const wanted = matchAudioTrack(audioTracks, link.audioTrack ?? link.translation);
+            // The track picked for this title before, when this stream has it; else the link's own.
+            const remembered = matchAudioTrack(audioTracks, preferredAudioTrackRef.current);
+            const wanted = remembered >= 0 ? remembered : matchAudioTrack(audioTracks, link.audioTrack ?? link.translation);
             if (wanted >= 0 && wanted !== hls.audioTrack) {
               hls.audioTrack = wanted;
               trace(`audio track: ${audioTracks[wanted].name || audioTracks[wanted].lang} (for ${link.audioTrack ?? link.translation})`);
@@ -2837,6 +2846,7 @@ export function VideoPlayer({ link, availableLinks, offlinePlayback, dubOptions,
     onSelectAudioTrack={hlsAudioInMenu ? (label) => {
       const index = hlsAudioInMenu.labels.indexOf(label);
       if (index >= 0 && hlsInstanceRef.current) hlsInstanceRef.current.audioTrack = index;
+      if (index >= 0) onAudioTrackPicked?.(label);
     } : selectAudioTrack}
     subtitleOptions={subtitleOptions}
     selectedSubtitleId={selectedSubtitleId}

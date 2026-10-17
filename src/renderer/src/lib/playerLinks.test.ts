@@ -12,6 +12,7 @@ import {
   pickRefreshedLink,
   pickResolvedLink,
   qualityOptions,
+  qualityVariant,
 } from "./playerLinks";
 
 function link(partial: Partial<PlayerLink> & { url: string }): PlayerLink {
@@ -211,5 +212,53 @@ describe("pickDataSaverLink", () => {
     const auto = link({ url: "b/auto", playerName: "B", quality: "auto" });
     expect(pickDataSaverLink([auto, link({ url: "b/480", playerName: "B", quality: "480p" })], auto)).toBe(auto);
     expect(pickDataSaverLink([allohaOther], allohaOther)).toBe(allohaOther);
+  });
+});
+
+// An Aniyomi source (Anikoto) lists sub and dub as qualities of one server: the sound is only in
+// the label. Issue 8: "watching in dub, the next episode goes back to sub".
+describe("sub and dub in the quality label", () => {
+  const sub1080 = link({ url: "a/sub/1080", playerName: "HD-1", quality: "HD-1 - Sub - 1080p" });
+  const sub720 = link({ url: "a/sub/720", playerName: "HD-1", quality: "HD-1 - Sub - 720p" });
+  const dub1080 = link({ url: "a/dub/1080", playerName: "HD-1", quality: "HD-1 - Dub - 1080p" });
+  const dub720 = link({ url: "a/dub/720", playerName: "HD-1", quality: "HD-1 - Dub - 720p" });
+  const otherDub = link({ url: "b/dub/1080", playerName: "VidCloud-1", quality: "VidCloud-1 - Dub - 1080p" });
+  // The source lists its preferred sound first - sub - so with nothing saved that is what plays.
+  const next = [sub1080, sub720, dub1080, dub720];
+
+  it("names what a label says besides its resolution", () => {
+    expect(qualityVariant("HD-1 - Dub - 1080p", "HD-1")).toBe("dub");
+    expect(qualityVariant("HD-1 - Dub - 720p", "HD-1")).toBe("dub");
+    expect(qualityVariant("HD-1 - Dub - 1080p")).toBe("hd-1 - dub");
+    expect(qualityVariant("1080p")).toBeNull();
+    expect(qualityVariant("1920x1080")).toBeNull();
+    expect(qualityVariant("Dub 480")).toBe("dub");
+    expect(qualityVariant(null)).toBeNull();
+    // A server name with regex characters in it is taken out as plain text.
+    expect(qualityVariant("Server (HD+) - Dub - 720p", "Server (HD+)")).toBe("dub");
+  });
+
+  it("starts the next episode on the dub that was picked", () => {
+    const picked = pickPreferredLink(next, { playerName: "HD-1", variant: qualityVariant(dub720.quality, "HD-1") });
+    expect(picked).toBe(dub1080);
+  });
+
+  it("without a saved variant the source's own order stays", () => {
+    expect(pickPreferredLink(next, { playerName: "HD-1" })).toBe(sub1080);
+  });
+
+  it("keeps the dub on another server when the first has none this episode", () => {
+    expect(pickPreferredLink([sub1080, otherDub], { playerName: "HD-1", variant: "dub" })).toBe(otherDub);
+  });
+
+  it("prefers the saved audio track", () => {
+    const en = link({ url: "t/en", playerName: "P", audioTrack: "English", quality: "1080p" });
+    const ja = link({ url: "t/ja", playerName: "P", audioTrack: "Japanese", quality: "1080p" });
+    expect(pickPreferredLink([ja, en], { playerName: "P", audioTrack: "English" })).toBe(en);
+  });
+
+  it("data saver lowers the picture without changing the sound", () => {
+    expect(pickDataSaverLink(next, dub1080, 720)).toBe(dub720);
+    expect(pickDataSaverLink([sub720, dub1080, dub720], dub1080, 480)).toBe(dub720);
   });
 });

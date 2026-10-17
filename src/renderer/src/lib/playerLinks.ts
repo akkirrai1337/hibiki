@@ -16,6 +16,29 @@ const RETIRED_PLAYER_NAMES = new Set(["cvh", "sibnet"]);
 export interface PlaybackPreference {
   translation?: string | null;
   playerName?: string | null;
+  /** What a quality label says besides the resolution (qualityVariant) - "Dub", "HD-1 - Sub". */
+  variant?: string | null;
+  /** The audio track name of the stream that was playing. */
+  audioTrack?: string | null;
+}
+
+const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+/**
+ * What a quality label says besides its resolution and the player's own name: Aniyomi sources put
+ * the server and the sub/dub into the label ("HD-1 - Dub - 1080p"), so the same dub in another
+ * episode, or on another server, has the same "Dub" left once the number and the server are taken
+ * out. Null for a label that is only a resolution ("1080p"), which says nothing about the sound.
+ */
+export function qualityVariant(quality: string | null | undefined, playerName?: string | null): string | null {
+  if (!quality) return null;
+  const withoutPlayer = playerName ? quality.split(new RegExp(escapeRegExp(playerName), "gi")).join(" ") : quality;
+  const rest = withoutPlayer
+    .replace(/\b\d{3,4}\s*x\s*\d{3,4}\b|\b\d{3,4}\s*[pi]?\b/gi, " ")
+    .replace(/\s+/g, " ")
+    .replace(/^[\s\-–·|,:()[\]]+|[\s\-–·|,:()[\]]+$/g, "")
+    .trim();
+  return rest ? rest.toLowerCase() : null;
 }
 
 /** The starting pick when there is nothing saved to honour: a direct stream. An embed is only ever
@@ -32,8 +55,8 @@ export function pickDefaultLink<T extends { type: string }>(links: T[] | undefin
  * all, which is the caller's cue to fall back to pickDefaultLink().
  */
 export function pickPreferredLink(links: PlayerLink[], preference: PlaybackPreference): PlayerLink | undefined {
-  const { translation, playerName } = preference;
-  if (!translation && !playerName) return undefined;
+  const { translation, playerName, variant, audioTrack } = preference;
+  if (!translation && !playerName && !variant && !audioTrack) return undefined;
   // CVH/Sibnet were removed because they ultimately hand Chromium their unstable iframe page.
   // A persisted choice for either must not degrade into a translation-only partial match: that
   // would make an old saved player silently dictate the next provider instead of using the
@@ -42,7 +65,13 @@ export function pickPreferredLink(links: PlayerLink[], preference: PlaybackPrefe
   return links
     .map((link) => ({
       link,
-      score: (link.translation === translation ? 1 : 0) + (link.playerName === playerName ? 1 : 0),
+      // The sound (sub or dub, an audio track) outweighs the server: a dub on another server is
+      // still the dub that was being watched, a sub on the same server is not.
+      score:
+        (translation && link.translation === translation ? 1 : 0) +
+        (playerName && link.playerName === playerName ? 1 : 0) +
+        (variant && qualityVariant(link.quality, link.playerName) === variant ? 3 : 0) +
+        (audioTrack && link.audioTrack === audioTrack ? 3 : 0),
     }))
     .filter((candidate) => candidate.score > 0)
     .sort((a, b) => b.score - a.score)[0]?.link;
@@ -212,7 +241,11 @@ export const DATA_SAVER_MAX_HEIGHT = 480;
  * rendition, or qualities without a resolution in them, stays as it is.
  */
 export function pickDataSaverLink(links: PlayerLink[], chosen: PlayerLink, maxHeight = DATA_SAVER_MAX_HEIGHT): PlayerLink {
+  // Another label than the chosen one's besides the number is another sound ("Dub" for "Sub"), not
+  // a lighter picture of the same thing.
+  const variant = qualityVariant(chosen.quality, chosen.playerName);
   const renditions = linksForCurrentStream(links, chosen)
+    .filter((link) => qualityVariant(link.quality, link.playerName) === variant)
     .filter((link) => link.type !== "EMBED" && Number.isFinite(qualityValue(link.quality ?? "")))
     .sort((a, b) => qualityValue(b.quality ?? "") - qualityValue(a.quality ?? ""));
   if (renditions.length < 2 || !Number.isFinite(qualityValue(chosen.quality ?? ""))) return chosen;

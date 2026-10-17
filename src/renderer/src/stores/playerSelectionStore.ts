@@ -14,6 +14,10 @@ const SELECTION_LIMIT = 300;
 export interface PlayerSelection {
   playerName?: string | null;
   translation?: string | null;
+  /** The quality label without its resolution (qualityVariant): where a source says sub or dub. */
+  variant?: string | null;
+  /** The audio track picked - a link's own, or one of an HLS stream's. */
+  audioTrack?: string | null;
 }
 
 function selectionKey(sourceId: string, animeId: string, groupId: string): string {
