@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Gauge, HardDrive, BarChart3, Download, Globe, ShieldCheck, ShieldOff, Smartphone, Wifi, LogIn, LogOut, MemoryStick, ArrowDownToLine, ArrowUpDown, Ban, Check, CheckCircle2, ChevronDown, ChevronRight, DatabaseBackup, FileText, FolderOpen, Home, Info, Languages, MessageCircle, MonitorPlay, Moon, Palette, Radio, RefreshCw, RotateCcw, ScrollText, SlidersHorizontal, Sparkles, Sun, Timer, TriangleAlert } from "lucide-react";
+import { FastForward, Gauge, HardDrive, BarChart3, Download, Globe, ShieldCheck, ShieldOff, Smartphone, Wifi, LogIn, LogOut, MemoryStick, ArrowDownToLine, ArrowUpDown, Ban, Check, CheckCircle2, ChevronDown, ChevronRight, DatabaseBackup, FileText, FolderOpen, Home, Info, Languages, MessageCircle, MonitorPlay, Moon, Palette, Radio, RefreshCw, RotateCcw, ScrollText, SlidersHorizontal, Sparkles, Sun, Timer, TriangleAlert } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { isMobile, useBackHandler } from "@/lib/mobile";
 import { motion } from "motion/react";
@@ -780,6 +780,76 @@ function ChoiceButtons<T extends string>({ value, options, onChange }: { value: 
   );
 }
 
+/** A card of ChoiceRows. No overflow clipping: a desktop dropdown opens past the card's edge. */
+function ChoiceGroup({ children }: { children: React.ReactNode }) {
+  return <div className="divide-y divide-border rounded-2xl border border-border bg-text/[.03]">{children}</div>;
+}
+
+/**
+ * A setting with a few exclusive choices, as one line: its name and what it is set to now. On the
+ * phone a tap opens the choices in a sheet, with the explanation above them; on desktop the choices
+ * are a dropdown beside the name, the explanation under it. Instead of a run of buttons under every
+ * setting, which stacked up into a wall on the phone.
+ */
+function ChoiceRow<T extends string>({ icon, title, hint, status, value, options, onChange }: {
+  icon: React.ReactNode;
+  title: string;
+  hint: string;
+  /** A short live remark (what "auto" is deciding right now), shown under the name. */
+  status?: string;
+  value: T;
+  options: Array<{ id: T; label: string }>;
+  onChange: (id: T) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const current = options.find((option) => option.id === value)?.label ?? "";
+  const tile = <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-text/[.06] text-muted">{icon}</span>;
+  if (!isMobile) {
+    return (
+      <div className="flex items-center gap-3 px-4 py-3">
+        {tile}
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-semibold text-text">{title}</p>
+          <p className="mt-0.5 text-xs leading-relaxed text-muted">{hint}</p>
+          {status && <p className="mt-1 text-xs text-muted">{status}</p>}
+        </div>
+        <SelectDropdown className="w-44 shrink-0" value={value} placeholder="" options={options} onChange={(id) => onChange(id as T)} />
+      </div>
+    );
+  }
+  return (
+    <>
+      <button type="button" onClick={() => setOpen(true)} className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors first:rounded-t-2xl last:rounded-b-2xl active:bg-text/[.05]">
+        {tile}
+        <span className="min-w-0 flex-1">
+          <span className="block text-sm font-semibold text-text">{title}</span>
+          {status && <span className="mt-0.5 block text-xs text-muted">{status}</span>}
+        </span>
+        <span className="flex shrink-0 items-center gap-1 text-sm text-muted">
+          {current}
+          <ChevronRight className="h-4 w-4 text-muted/70" strokeWidth={2.25} />
+        </span>
+      </button>
+      <BottomSheet open={open} onClose={() => setOpen(false)} title={title}>
+        <p className="px-5 pb-3 text-xs leading-relaxed text-muted">{hint}</p>
+        <div className="px-2 pb-2">
+          {options.map((option) => (
+            <SheetOption
+              key={option.id}
+              label={option.label}
+              selected={option.id === value}
+              onClick={() => {
+                onChange(option.id);
+                setOpen(false);
+              }}
+            />
+          ))}
+        </div>
+      </BottomSheet>
+    </>
+  );
+}
+
 const HOME_REFRESH_MODES: HomeRefreshMode[] = ["launch", "day", "3days", "manual"];
 const BUFFER_MODES: BufferMode[] = ["low", "normal", "high"];
 
@@ -958,25 +1028,52 @@ function NetworkSection() {
   const setDoh = useNetworkPrefsStore((s) => s.setDoh);
   return (
     <SettingsSection>
-      <DataSaverRow />
-      <SettingsRow icon={<Home className="h-[18px] w-[18px]" strokeWidth={2} />}>
-        <p className="text-sm font-semibold text-text">{t("settings.network.homeRefresh")}</p>
-        <p className="mt-0.5 text-xs leading-relaxed text-muted">{t("settings.network.homeRefreshHint")}</p>
-        <ChoiceButtons
-          value={homeRefresh}
-          onChange={setHomeRefresh}
-          options={HOME_REFRESH_MODES.map((id) => ({ id, label: t(`settings.network.homeRefreshModes.${id}`) }))}
-        />
-      </SettingsRow>
-      <SettingsRow icon={<Timer className="h-[18px] w-[18px]" strokeWidth={2} />}>
-        <p className="text-sm font-semibold text-text">{t("settings.network.buffer")}</p>
-        <p className="mt-0.5 text-xs leading-relaxed text-muted">{t("settings.network.bufferHint")}</p>
-        <ChoiceButtons
+      <ChoiceGroup>
+        <DataSaverRow />
+        <ChoiceRow
+          icon={<FastForward className="h-[18px] w-[18px]" strokeWidth={2} />}
+          title={t("settings.network.buffer")}
+          hint={t("settings.network.bufferHint")}
           value={bufferMode}
           onChange={setBufferMode}
           options={BUFFER_MODES.map((id) => ({ id, label: t(`settings.network.bufferModes.${id}`, { seconds: BUFFER_SECONDS[id] }) }))}
         />
-      </SettingsRow>
+        <ChoiceRow
+          icon={<Home className="h-[18px] w-[18px]" strokeWidth={2} />}
+          title={t("settings.network.homeRefresh")}
+          hint={t("settings.network.homeRefreshHint")}
+          value={homeRefresh}
+          onChange={setHomeRefresh}
+          options={HOME_REFRESH_MODES.map((id) => ({ id, label: t(`settings.network.homeRefreshModes.${id}`) }))}
+        />
+        <ChoiceRow
+          icon={<Download className="h-[18px] w-[18px]" strokeWidth={2} />}
+          title={t("settings.network.maxDownloads")}
+          hint={t("settings.network.maxDownloadsHint")}
+          value={String(maxDownloads)}
+          onChange={(id) => setMaxDownloads(Number(id))}
+          options={MAX_DOWNLOAD_OPTIONS.map((count) => ({ id: String(count), label: String(count) }))}
+        />
+        <ChoiceRow
+          icon={<Timer className="h-[18px] w-[18px]" strokeWidth={2} />}
+          title={t("settings.network.timeout")}
+          hint={t("settings.network.timeoutHint")}
+          value={String(requestTimeoutSeconds)}
+          onChange={(id) => setRequestTimeoutSeconds(Number(id))}
+          options={TIMEOUT_OPTIONS.map((seconds) => ({ id: String(seconds), label: t("settings.network.seconds", { seconds }) }))}
+        />
+        {/* The WebView offers no way to set it; the desktop applies it to Chromium and Node. */}
+        {!isMobile && (
+          <ChoiceRow
+            icon={<ShieldCheck className="h-[18px] w-[18px]" strokeWidth={2} />}
+            title={t("settings.network.doh")}
+            hint={t("settings.network.dohHint")}
+            value={doh}
+            onChange={setDoh}
+            options={DOH_OPTIONS.map((id) => ({ id, label: t(`settings.network.dohProviders.${id}`) }))}
+          />
+        )}
+      </ChoiceGroup>
       {/* Only the phone can tell mobile data from Wi-Fi. */}
       {isMobile && (
         <SettingsGroup>
@@ -996,39 +1093,7 @@ function NetworkSection() {
           />
         </SettingsGroup>
       )}
-      <SettingsRow icon={<Download className="h-[18px] w-[18px]" strokeWidth={2} />}>
-        <p className="text-sm font-semibold text-text">{t("settings.network.maxDownloads")}</p>
-        <p className="mt-0.5 text-xs leading-relaxed text-muted">{t("settings.network.maxDownloadsHint")}</p>
-        <ChoiceButtons
-          value={String(maxDownloads)}
-          onChange={(id) => setMaxDownloads(Number(id))}
-          options={MAX_DOWNLOAD_OPTIONS.map((count) => ({ id: String(count), label: String(count) }))}
-        />
-      </SettingsRow>
-      <SettingsRow icon={<Timer className="h-[18px] w-[18px]" strokeWidth={2} />}>
-        <p className="text-sm font-semibold text-text">{t("settings.network.timeout")}</p>
-        <p className="mt-0.5 text-xs leading-relaxed text-muted">{t("settings.network.timeoutHint")}</p>
-        <ChoiceButtons
-          value={String(requestTimeoutSeconds)}
-          onChange={(id) => setRequestTimeoutSeconds(Number(id))}
-          options={TIMEOUT_OPTIONS.map((seconds) => ({ id: String(seconds), label: t("settings.network.seconds", { seconds }) }))}
-        />
-      </SettingsRow>
-      {/* The WebView offers no way to set either; the desktop applies both to Chromium and Node. */}
-      {!isMobile && (
-        <>
-          <SettingsRow icon={<ShieldCheck className="h-[18px] w-[18px]" strokeWidth={2} />}>
-            <p className="text-sm font-semibold text-text">{t("settings.network.doh")}</p>
-            <p className="mt-0.5 text-xs leading-relaxed text-muted">{t("settings.network.dohHint")}</p>
-            <ChoiceButtons
-              value={doh}
-              onChange={setDoh}
-              options={DOH_OPTIONS.map((id) => ({ id, label: t(`settings.network.dohProviders.${id}`) }))}
-            />
-          </SettingsRow>
-          <ProxyRow />
-        </>
-      )}
+      {!isMobile && <ProxyRow />}
       <CloudflareResetRow />
       <TrafficRow />
       <CacheRow />
@@ -1044,27 +1109,15 @@ function DataSaverRow() {
   const cap = useAutoQualityCap();
   const label = { auto: t("settings.player.dataSaverAuto"), on: t("settings.player.dataSaverOn"), off: t("settings.player.dataSaverOff") };
   return (
-    <SettingsRow icon={<Gauge className="h-[18px] w-[18px]" strokeWidth={2} />}>
-      <p className="text-sm font-semibold text-text">{t("settings.player.dataSaver")}</p>
-      <p className="mt-0.5 text-xs leading-relaxed text-muted">{t("settings.player.dataSaverHint")}</p>
-      <div className="mt-3 flex flex-wrap items-center gap-2">
-        {DATA_SAVER_MODES.map((option) => (
-          <button
-            key={option}
-            onClick={() => setMode(option)}
-            className={cn(
-              "rounded-lg px-3 py-1.5 text-sm font-medium transition-colors",
-              mode === option ? "bg-accent text-accent-fg" : "bg-text/[.05] text-muted hover:bg-text/[.08] hover:text-text",
-            )}
-          >
-            {label[option]}
-          </button>
-        ))}
-      </div>
-      {mode === "auto" && (
-        <p className="mt-2 text-xs text-muted">{cap === null ? t("settings.player.dataSaverNowFull") : t("settings.player.dataSaverNowCap", { height: cap })}</p>
-      )}
-    </SettingsRow>
+    <ChoiceRow
+      icon={<Gauge className="h-[18px] w-[18px]" strokeWidth={2} />}
+      title={t("settings.player.dataSaver")}
+      hint={t("settings.player.dataSaverHint")}
+      status={mode === "auto" ? (cap === null ? t("settings.player.dataSaverNowFull") : t("settings.player.dataSaverNowCap", { height: cap })) : undefined}
+      value={mode}
+      onChange={setMode}
+      options={DATA_SAVER_MODES.map((id) => ({ id, label: label[id] }))}
+    />
   );
 }
 
