@@ -1,37 +1,29 @@
-## hibiki 3.1.0
+## hibiki 3.2.0
 
 **Player**
-- Episodes start faster: connections to the source's video servers are opened while the episode's links are still being found, the player's engine loads in the meantime, and the first piece of video downloads while the player is still getting ready.
-- A link that has expired (after a long pause, or picked by hand later) is fetched again by itself, and the episode resumes where it was instead of failing.
-- When a stream's access token runs out mid-episode (Alloha's last only a few minutes), the player renews it in the background and keeps playing without a stop.
-- On slow mobile data the player no longer gives up on a stream that is loading slowly and jumps to another player or quality: it switches only when a stream really fails or sends nothing at all.
-- Data saver (Settings > Player: auto, on or off): on a slow connection episodes start in 480p or lower. In auto it turns on by itself when the connection is slow.
-- Players are tried one at a time: another one starts only when the first fails or you switch to it, so no traffic goes to players you are not watching.
-- Waiting times are longer for poor connections: a slow source or player gets time to answer instead of the episode failing to open.
-- Subtitles can be dragged on the phone again: the drag no longer stops when a line ends or when the finger rests on the subtitle for a moment.
-- The app no longer opens straight into the player after Android reloads it in the background: it opens the title's page instead.
-- The top bar of the loading screen no longer jumps when the video appears.
+- Sleep timer in the player's menu: 15, 30, 45 minutes, an hour, or the end of the episode. When it runs out playback pauses; "end of episode" lets the episode finish without starting the next one.
+- Stable volume (same menu): loud scenes and quiet dialogue are evened out, so there is less reaching for the volume at night.
+- Picture enhancement (Anime4K) no longer freezes the player when it is turned on: it runs off the main thread, a badge says it is starting, and a device that cannot keep up steps down from strong to light to off by itself.
+- Optional Anime4K upscaling for pictures under 1080p, and a hint about RTX Video Super Resolution on NVIDIA RTX cards.
+- With auto-skip on, loading stops a few seconds into an opening or ending and resumes after the skip, so the part you skip is not downloaded.
 
-**Posters and traffic**
-- Posters download only as they come near the screen, on every screen and in every row, not all at once when a page opens.
-- Sources whose sites send very heavy posters get them several times smaller, and the full-size poster still opens full screen.
-- Posters stay on the phone for at least a week, so screens you have seen open without downloading them again.
-- On a slow connection or with data saver on, home keeps the same "Popular now" selection as last time, so its posters are already on the phone.
+**Less traffic**
+- New Settings > Network: data saver, home refresh, player buffer, Wi-Fi-only downloads and autoplay (phone), parallel downloads, source request timeout, DNS-over-HTTPS and proxy (desktop), Cloudflare reset, cache size, and a per-day traffic chart.
+- Data saver "auto" picks the starting quality from the measured speed of the connection (1080p, 720p, 480p or 360p).
+- Video you have already watched is kept on the device for a day (up to 200 MB): rewinding far back, reopening an episode or going back to a quality you used before no longer downloads it again. It is counted and cleared with the rest of the cache.
+- On mobile data or with data saver on, the player reads less ahead (10 or 15 seconds instead of 20 or 40) and follows a change of network in the middle of an episode.
+- The player never downloads a quality taller than the picture it shows, and while the picture is not seen (audio only on the phone, a hidden window on desktop) it drops to the lightest one.
+- HEVC and AV1 versions are preferred over H.264 of the same height when a source offers them.
+- Home rows and filter lists are saved on the device and reused instead of downloaded again; how often they refresh is up to you (every launch, daily, every 3 days, manually), and longer on mobile data. Search and catalog pages are not downloaded again when you come back from a title.
+- Source pages are asked about instead of downloaded again: a page that has not changed costs a few bytes. A title page reuses its details for 6 hours and its episode list for 10 minutes.
+- Android sources accept Brotli compression, as the Aniyomi ones already did.
 
-**Sources**
-- Sources have their own tab on the phone, with a badge when updates are waiting. Search opens from an icon at the top of home and the catalog.
-- The sources screen shows what is installed, and each repository opens its own list with search and a language filter.
-- An update that needs a newer version of hibiki is not installed, and the list says so. The installed version keeps working.
-- A repository that is already in the list cannot be added a second time.
-- Extensions answer faster after a pause: hibiki keeps them ready instead of starting them anew.
+**Android**
+- The app opens on a dark screen with the same pulsing pink dot as on the computer, instead of a grey one, and the dot stays until the first screen is ready.
+- Wi-Fi-only downloads, Wi-Fi-only autoplay and the longer storage of home on mobile data now actually work: the app could not tell mobile data from Wi-Fi before.
+
+**Profile**
+- A picked profile picture opens a full-screen editor first: move it, zoom with a pinch, the mouse wheel or the slider, turn it by a quarter, and pick the part inside the square frame. Animated GIFs skip it and keep moving.
 
 **Aniyomi sources (Android)**
-- Sources that send video and audio separately (Re:ANIME and others) play with sound, offer a choice of audio track, and download with it too.
-- Episode lists come in the right order, so "up next" is the next episode.
-- Similar titles are shown on the title page.
-- An episode opened straight from "Continue watching" gets its proper number.
-- Some DASH streams that did not start before now play, and the Cloudflare check finishes even when its page never fully loads.
-
-**Fixes**
-- Posters from sites that protect their pictures no longer disappear on Android.
-- Subtitles in SRT and ASS, or served under a wrong type, now show instead of staying blank.
+- Extensions built for the newest Aniyomi extensions library (versions 14 to 17) install and run, including those that keep extra data on their videos and hosters.
