@@ -201,7 +201,17 @@ function AnimeDetailPage() {
   // cache instead would leave the page permanently missing the very things it exists to show.
   const animeQuery = useQuery({
     queryKey: ["anime", sourceId, animeId],
-    queryFn: () => hibiki.sources.getById(sourceId, animeId),
+    queryFn: async () => {
+      const anime = await hibiki.sources.getById(sourceId, animeId);
+      if (anime.posterUrl) return anime;
+      // A source whose details come without a cover: the one its list showed.
+      const listed = findListedTitle(
+        queryClient.getQueryCache().getAll().map((entry) => entry.state.data),
+        sourceId,
+        animeId,
+      );
+      return listed?.posterUrl ? { ...anime, posterUrl: listed.posterUrl } : anime;
+    },
     // A title's description, genres and related titles don't change from one visit to the next:
     // coming back to it within the session costs no request. The episode list (below) is separate
     // and goes stale much sooner, so new episodes still show up.

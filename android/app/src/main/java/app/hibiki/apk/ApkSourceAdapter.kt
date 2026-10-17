@@ -57,6 +57,12 @@ class ApkSourceAdapter(
     private val paginationMutex = Mutex()
     private val fetchTypes = ConcurrentHashMap<String, FetchType>()
     private val typeCache = ConcurrentHashMap<String, String>()
+    /**
+     * The picture each listed title came with, by title id. A title's details often come back
+     * without one - an extension builds a fresh SAnime there and fills in the text only, as the
+     * catalogue pages carry the cover (Anikoto) - and Aniyomi keeps the listed cover over that.
+     */
+    private val listedThumbnails = ConcurrentHashMap<String, String>()
     /** Number and name of each episode listed so far: the page asks for links by episode id alone. */
     private val episodeMeta = ConcurrentHashMap<String, Pair<Double, String?>>()
 
@@ -130,6 +136,8 @@ class ApkSourceAdapter(
         val anime = SAnime.create().apply {
             url = titleId
             title = titleId
+            // What a listing gave, for extensions that start from it, as Aniyomi's own call does.
+            listedThumbnails[titleId]?.let { thumbnail_url = it }
         }
         return coroutineScope {
             // Beside the details, not after them: the title's page should not wait on its extras.
@@ -179,7 +187,7 @@ class ApkSourceAdapter(
             out.put(JSONObject().apply {
                 put("id", url)
                 put("title", name)
-                put("posterUrl", item.thumbnail_url?.takeIf(String::isNotBlank) ?: JSONObject.NULL)
+                put("posterUrl", ApkImageProxy.wrap(id, item.thumbnail_url?.takeIf(String::isNotBlank)) ?: JSONObject.NULL)
             })
             if (out.length() >= MAX_RELATED) break
         }
@@ -262,8 +270,12 @@ class ApkSourceAdapter(
             put("id", url)
             put("sourceId", id)
             put("originalName", title)
+            // A listing's cover is kept; details that come without one fall back to it.
+            val thumbnail = runCatching { anime.thumbnail_url }.getOrNull()?.takeIf(String::isNotBlank)
+            if (thumbnail != null && url.isNotBlank()) listedThumbnails[url] = thumbnail
+            val cover = thumbnail ?: listedThumbnails[url] ?: fallbackId?.let { listedThumbnails[it] }
             // Through the app, with the source's headers and cookies (see ApkImageProxy).
-            put("posterUrl", ApkImageProxy.wrap(id, anime.thumbnail_url) ?: JSONObject.NULL)
+            put("posterUrl", ApkImageProxy.wrap(id, cover) ?: JSONObject.NULL)
             put("pageUrl", pageUrl ?: JSONObject.NULL)
             put("status", when (anime.status) {
                 SAnime.ONGOING -> "ongoing"
