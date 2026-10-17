@@ -228,7 +228,7 @@
       "quality": "Quality",
       "audioTrack": "Audio track",
       "subtitles": "Subtitles",
-      "orientation": "Screen",
+      "orientation": "Orientation",
       "orientationLandscape": "Landscape only",
       "orientationAny": "Follow the phone",
       "upscale": "Picture enhancement",

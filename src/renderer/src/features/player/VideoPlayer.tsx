@@ -5,6 +5,8 @@ import type Hls from "hls.js";
 import type { MediaPlayerClass } from "dashjs";
 import {
   ArrowLeft,
+  AudioLines,
+  AudioWaveform,
   Captions,
   Check,
   ChevronLeft,
@@ -13,18 +15,26 @@ import {
   ChevronsRight,
   Expand,
   FastForward,
+  Gauge,
+  Languages,
   Shrink,
   ListVideo,
   Loader2,
   Maximize,
+  Mic,
   Minimize,
+  MonitorPlay,
+  Moon,
   Pause,
   PictureInPicture2,
   Play,
   Plus,
+  RotateCwSquare,
   Settings,
   SkipBack,
   SkipForward,
+  SlidersHorizontal,
+  Sparkles,
   TriangleAlert,
   Volume1,
   Volume2,
@@ -236,7 +246,12 @@ function formatTime(seconds: number): string {
   return `${m}:${ss}`;
 }
 
-function ToggleRow({ label, checked, onChange }: { label: string; checked: boolean; onChange: () => void }) {
+/** The icon in front of a menu row: one size and colour for every row, so the labels line up. */
+function RowIcon({ icon: Icon }: { icon: typeof Gauge }) {
+  return <Icon className="h-[18px] w-[18px] shrink-0 text-zinc-400" strokeWidth={2} />;
+}
+
+function ToggleRow({ icon, label, checked, onChange }: { icon: typeof Gauge; label: string; checked: boolean; onChange: () => void }) {
   // Same fix as Settings' own Switch (routes/settings.tsx) - a border on the track always (a
   // white or black custom accent color otherwise blends into this always-dark player UI just as
   // easily as it does the app's own light/dark surfaces), and bg-accent-fg (not a fixed bg-white)
@@ -244,7 +259,10 @@ function ToggleRow({ label, checked, onChange }: { label: string; checked: boole
   // --color-accent" token - a white accent's track gets a dark knob, everything else keeps the
   // classic white one it always had.
   return <button onClick={onChange} className="flex w-full items-center justify-between gap-3 rounded-lg px-2 py-2 text-left transition-colors hover:bg-white/[.06] mobile:px-2.5 mobile:py-3">
-    <span className="text-sm text-zinc-200 mobile:text-[15px]">{label}</span>
+    <span className="flex min-w-0 items-center gap-2.5">
+      <RowIcon icon={icon} />
+      <span className="text-sm text-zinc-200 mobile:text-[15px]">{label}</span>
+    </span>
     {/* Flow layout + padding, not an absolutely-positioned knob: hand-placed `top`/`translate-x`
         offsets have to be re-derived every time the track's size changes, and the previous pair
         left the knob a pixel low and flush against the right edge when on. Sized to the track's
@@ -260,15 +278,15 @@ function ToggleRow({ label, checked, onChange }: { label: string; checked: boole
 // used for the quality row during offline playback, where there's nothing to actually switch to
 // (see PlayerSettingsMenu's `qualityLocked`): shows what quality the file is without inviting a
 // tap into a picker for it.
-function MenuRow({ label, value, onClick }: { label: string; value: string; onClick?: () => void }) {
+function MenuRow({ icon, label, value, onClick }: { icon: typeof Gauge; label: string; value: string; onClick?: () => void }) {
   if (!onClick) {
-    return <div className="flex w-full items-center justify-between rounded-lg px-2.5 py-2 text-left text-sm mobile:py-3 mobile:text-[15px] text-zinc-500">
-      <span>{label}</span>
+    return <div className="flex w-full items-center justify-between gap-3 rounded-lg px-2.5 py-2 text-left text-sm mobile:py-3 mobile:text-[15px] text-zinc-500">
+      <span className="flex items-center gap-2.5"><RowIcon icon={icon} />{label}</span>
       <span className="max-w-[7rem] truncate text-xs mobile:max-w-[11rem] mobile:text-sm">{value}</span>
     </div>;
   }
-  return <button onClick={onClick} className="flex w-full items-center justify-between rounded-lg px-2.5 py-2 text-left text-sm mobile:py-3 mobile:text-[15px] text-zinc-200 transition-colors hover:bg-white/[.06]">
-    <span>{label}</span>
+  return <button onClick={onClick} className="flex w-full items-center justify-between gap-3 rounded-lg px-2.5 py-2 text-left text-sm mobile:py-3 mobile:text-[15px] text-zinc-200 transition-colors hover:bg-white/[.06]">
+    <span className="flex items-center gap-2.5"><RowIcon icon={icon} />{label}</span>
     <span className="flex items-center gap-1 text-zinc-200">
       <span className="max-w-[7rem] truncate text-xs mobile:max-w-[11rem] mobile:text-sm">{value}</span>
       <ChevronRight className="h-4 w-4 shrink-0 text-zinc-500" strokeWidth={2.5} />
@@ -577,30 +595,32 @@ function PlayerSettingsMenu({
   const hideDubRow = dubOptions.length <= 1 && isGenericDubTitle(dubOptions[0]?.title);
 
   return <div className="w-56 p-1.5 mobile:w-full mobile:p-2">
-    {!hideDubRow && <MenuRow label={t("watch.settings.dub")} value={selectedDub?.title ?? "—"} onClick={() => { onOpenDub(); setPage("dub"); }} />}
-    {translationOptions.length > 1 && <MenuRow label={t("watch.settings.translation")} value={selectedTranslation ?? "—"} onClick={() => setPage("translation")} />}
-    {playerOptions.length > 0 && <MenuRow label={t("watch.settings.player")} value={selectedPlayerName ?? "—"} onClick={playerOptions.length > 1 ? () => setPage("player") : undefined} />}
+    {!hideDubRow && <MenuRow icon={Mic} label={t("watch.settings.dub")} value={selectedDub?.title ?? "—"} onClick={() => { onOpenDub(); setPage("dub"); }} />}
+    {translationOptions.length > 1 && <MenuRow icon={Languages} label={t("watch.settings.translation")} value={selectedTranslation ?? "—"} onClick={() => setPage("translation")} />}
+    {playerOptions.length > 0 && <MenuRow icon={MonitorPlay} label={t("watch.settings.player")} value={selectedPlayerName ?? "—"} onClick={playerOptions.length > 1 ? () => setPage("player") : undefined} />}
     {qualityLocked
-      ? selectedQuality && <MenuRow label={t("watch.settings.quality")} value={selectedQuality} />
-      : qualityOptions.length > 1 && <MenuRow label={t("watch.settings.quality")} value={selectedQuality ?? "—"} onClick={() => setPage("quality")} />}
-    {audioTrackOptions.length > 1 && <MenuRow label={t("watch.settings.audioTrack")} value={selectedAudioTrack ?? "—"} onClick={() => setPage("audio")} />}
-    <MenuRow label={t("watch.settings.speed")} value={`${playbackSpeed}×`} onClick={() => setPage("speed")} />
+      ? selectedQuality && <MenuRow icon={SlidersHorizontal} label={t("watch.settings.quality")} value={selectedQuality} />
+      : qualityOptions.length > 1 && <MenuRow icon={SlidersHorizontal} label={t("watch.settings.quality")} value={selectedQuality ?? "—"} onClick={() => setPage("quality")} />}
+    {audioTrackOptions.length > 1 && <MenuRow icon={AudioLines} label={t("watch.settings.audioTrack")} value={selectedAudioTrack ?? "—"} onClick={() => setPage("audio")} />}
+    <MenuRow icon={Gauge} label={t("watch.settings.speed")} value={`${playbackSpeed}×`} onClick={() => setPage("speed")} />
     <MenuRow
+      icon={Moon}
       label={t("watch.settings.sleepTimer")}
       value={sleepEndsAt !== null ? t("watch.settings.sleepLeft", { count: minutesLeft(sleepEndsAt, Date.now()) }) : sleepLabel(sleepChoice)}
       onClick={() => setPage("sleep")}
     />
     <MenuRow
+      icon={Captions}
       label={t("watch.settings.subtitles")}
       value={subtitleOptions.find((o) => o.id === selectedSubtitleId)?.label ?? t("watch.subtitles.off")}
       onClick={() => setPage("subtitles")}
     />
-    {isMobile && <MenuRow label={t("watch.settings.orientation")} value={orientationLabels[playerOrientation]} onClick={() => setPage("orientation")} />}
-    {isWebGpuAvailable() && <MenuRow label={t("watch.settings.upscale")} value={upscaleLabels[upscale]} onClick={() => setPage("upscale")} />}
+    {isMobile && <MenuRow icon={RotateCwSquare} label={t("watch.settings.orientation")} value={orientationLabels[playerOrientation]} onClick={() => setPage("orientation")} />}
+    {isWebGpuAvailable() && <MenuRow icon={Sparkles} label={t("watch.settings.upscale")} value={upscaleLabels[upscale]} onClick={() => setPage("upscale")} />}
     <div className="my-1 border-t border-white/[.08]" />
-    <ToggleRow label={t("watch.settings.autoSkipSegments")} checked={autoSkipSegments} onChange={onToggleAutoSkip} />
-    <ToggleRow label={t("watch.settings.autoPlayNextEpisode")} checked={autoPlayNextEpisode} onChange={onToggleAutoPlay} />
-    <ToggleRow label={t("watch.settings.stableVolume")} checked={stableVolume} onChange={() => setStableVolume(!stableVolume)} />
+    <ToggleRow icon={FastForward} label={t("watch.settings.autoSkipSegments")} checked={autoSkipSegments} onChange={onToggleAutoSkip} />
+    <ToggleRow icon={SkipForward} label={t("watch.settings.autoPlayNextEpisode")} checked={autoPlayNextEpisode} onChange={onToggleAutoPlay} />
+    <ToggleRow icon={AudioWaveform} label={t("watch.settings.stableVolume")} checked={stableVolume} onChange={() => setStableVolume(!stableVolume)} />
   </div>;
 }
 
