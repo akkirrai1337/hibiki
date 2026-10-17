@@ -1,29 +1,6 @@
-## hibiki 3.2.0
+## hibiki 3.2.1
 
-**Player**
-- Sleep timer in the player's menu: 15, 30, 45 minutes, an hour, or the end of the episode. When it runs out playback pauses; "end of episode" lets the episode finish without starting the next one.
-- Stable volume (same menu): loud scenes and quiet dialogue are evened out, so there is less reaching for the volume at night.
-- Picture enhancement (Anime4K) no longer freezes the player when it is turned on: it runs off the main thread, a badge says it is starting, and a device that cannot keep up steps down from strong to light to off by itself.
-- Optional Anime4K upscaling for pictures under 1080p, and a hint about RTX Video Super Resolution on NVIDIA RTX cards.
-- With auto-skip on, loading stops a few seconds into an opening or ending and resumes after the skip, so the part you skip is not downloaded.
-
-**Less traffic**
-- New Settings > Network: data saver, home refresh, player buffer, Wi-Fi-only downloads and autoplay (phone), parallel downloads, source request timeout, DNS-over-HTTPS and proxy (desktop), Cloudflare reset, cache size, and a per-day traffic chart.
-- Data saver "auto" picks the starting quality from the measured speed of the connection (1080p, 720p, 480p or 360p).
-- Video you have already watched is kept on the device for a day (up to 200 MB): rewinding far back, reopening an episode or going back to a quality you used before no longer downloads it again. It is counted and cleared with the rest of the cache.
-- On mobile data or with data saver on, the player reads less ahead (10 or 15 seconds instead of 20 or 40) and follows a change of network in the middle of an episode.
-- The player never downloads a quality taller than the picture it shows, and while the picture is not seen (audio only on the phone, a hidden window on desktop) it drops to the lightest one.
-- HEVC and AV1 versions are preferred over H.264 of the same height when a source offers them.
-- Home rows and filter lists are saved on the device and reused instead of downloaded again; how often they refresh is up to you (every launch, daily, every 3 days, manually), and longer on mobile data. Search and catalog pages are not downloaded again when you come back from a title.
-- Source pages are asked about instead of downloaded again: a page that has not changed costs a few bytes. A title page reuses its details for 6 hours and its episode list for 10 minutes.
-- Android sources accept Brotli compression, as the Aniyomi ones already did.
-
-**Android**
-- The app opens on a dark screen with the same pulsing pink dot as on the computer, instead of a grey one, and the dot stays until the first screen is ready.
-- Wi-Fi-only downloads, Wi-Fi-only autoplay and the longer storage of home on mobile data now actually work: the app could not tell mobile data from Wi-Fi before.
-
-**Profile**
-- A picked profile picture opens a full-screen editor first: move it, zoom with a pinch, the mouse wheel or the slider, turn it by a quarter, and pick the part inside the square frame. Animated GIFs skip it and keep moving.
-
-**Aniyomi sources (Android)**
-- Extensions built for the newest Aniyomi extensions library (versions 14 to 17) install and run, including those that keep extra data on their videos and hosters.
+**Fixes**
+- Aniyomi sources (Anikoto and others): a title opened from a list keeps the poster its card had, instead of "No poster" on the title page.
+- The next episode starts in the dub you picked, not back in sub: the sound you choose (sub or dub where a source lists them as qualities, or an audio track) is remembered per title, on another server too if the first has none. Data saver no longer swaps your dub for sub when it lowers the quality.
+- A score that an extension writes into the description ("★★★★★ 9.63") is shown as a rating next to the year, and the description starts with the story.
