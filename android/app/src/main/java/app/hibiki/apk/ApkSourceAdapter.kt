@@ -282,9 +282,30 @@ class ApkSourceAdapter(
                 SAnime.COMPLETED, SAnime.PUBLISHING_FINISHED -> "completed"
                 else -> JSONObject.NULL
             })
-            put("description", anime.description?.takeIf(String::isNotBlank) ?: JSONObject.NULL)
+            val (description, score) = splitScoreLine(anime.description?.takeIf(String::isNotBlank))
+            put("description", description ?: JSONObject.NULL)
+            if (score != null) {
+                put("ratings", JSONArray().put(JSONObject().put("source", SCORE_LINE_SOURCE).put("value", score)))
+            }
             put("genres", JSONArray(anime.getGenres().orEmpty()))
         }
+    }
+
+    /**
+     * The score some extensions put into the description as text: five stars, filled to the score
+     * halved, then the number ("★★★★★ 9.63", the Zoro/Anikoto themes' "score position"), at the top
+     * or the bottom. Taken out of the text and returned as the number, so the page shows it as a
+     * rating like any other and the description starts with the story.
+     */
+    private fun splitScoreLine(description: String?): Pair<String?, Double?> {
+        if (description == null) return null to null
+        val lines = description.lines()
+        val index = listOf(lines.indexOfFirst { it.isNotBlank() }, lines.indexOfLast { it.isNotBlank() })
+            .firstOrNull { it >= 0 && SCORE_LINE.matches(lines[it].trim()) } ?: return description to null
+        val score = SCORE_LINE.matchEntire(lines[index].trim())?.groupValues?.get(1)?.toDoubleOrNull()
+            ?.takeIf { it > 0.0 && it <= 10.0 } ?: return description to null
+        val rest = lines.filterIndexed { i, _ -> i != index }.joinToString("\n").trim()
+        return rest.takeIf(String::isNotEmpty) to score
     }
 
     private fun toEpisodes(list: List<SEpisode>): JSONArray {
@@ -511,6 +532,9 @@ class ApkSourceAdapter(
         private const val SNIFF_TIMEOUT_MS = 8_000L
         // Related titles are an extra on the title's page; they never hold it up for longer than this.
         private const val RELATED_TIMEOUT_MS = 10_000L
+        /** What the star line's number is: the MAL score, as the extension themes that write it label it. */
+        private const val SCORE_LINE_SOURCE = "MAL"
+        private val SCORE_LINE = Regex("[\u2605\u2606]{5}\\s+(\\d+(?:\\.\\d+)?)")
         private const val MAX_RELATED = 24
         private val MEDIA_EXTENSIONS = listOf(".mp4", ".m4v", ".mkv", ".webm", ".mov", ".avi", ".ts", ".flv")
         private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
