@@ -987,12 +987,6 @@
   },
   "downloadsPanel": {
     "title": "Завантаження",
-    "running_one": "{{count}} завантажується",
-    "running_few": "{{count}} завантажуються",
-    "running_many": "{{count}} завантажуються",
-    "running_other": "{{count}} завантажуються",
-    "waiting": "{{count}} у черзі",
-    "pausedCount": "{{count}} на паузі",
     "paused": "Пауза",
     "pauseAll": "Пауза",
     "resumeAll": "Продовжити",

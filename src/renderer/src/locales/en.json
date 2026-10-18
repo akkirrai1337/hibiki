@@ -971,10 +971,6 @@
   },
   "downloadsPanel": {
     "title": "Downloads",
-    "running_one": "{{count}} downloading",
-    "running_other": "{{count}} downloading",
-    "waiting": "{{count}} waiting",
-    "pausedCount": "{{count}} paused",
     "paused": "Paused",
     "pauseAll": "Pause",
     "resumeAll": "Resume",

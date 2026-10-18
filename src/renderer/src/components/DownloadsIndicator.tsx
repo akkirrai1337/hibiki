@@ -3,7 +3,7 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { AnimatePresence, motion } from "motion/react";
-import { ArrowDown, Check, ChevronRight, Pause, Play, RotateCw, TriangleAlert, X } from "lucide-react";
+import { ArrowDown, ArrowDownToLine, Check, ChevronDown, ChevronRight, Clapperboard, Clock, HardDrive, Pause, Play, RotateCw, TriangleAlert, X, type LucideIcon } from "lucide-react";
 import { downloadKeyId } from "@shared/downloadKey";
 import type { ActiveDownload } from "@shared/types";
 import { hibiki } from "@/lib/hibiki";
@@ -200,8 +200,9 @@ function ModeIcon({ mode, small }: { mode: Mode; small: boolean }) {
 function SavedLink({ onNavigate }: { onNavigate: () => void }) {
   const { t } = useTranslation();
   return (
-    <Link to="/downloads" onClick={onNavigate} className="flex items-center justify-between py-1 text-[13px] font-semibold text-muted transition-colors hover:text-text">
-      {t("downloads.title")}
+    <Link to="/downloads" onClick={onNavigate} className="flex items-center gap-2.5 py-1 text-[13px] font-semibold text-muted transition-colors hover:text-text">
+      <HardDrive className="h-4 w-4 shrink-0" strokeWidth={2} />
+      <span className="flex-1">{t("downloads.title")}</span>
       <ChevronRight className="h-4 w-4" strokeWidth={2.2} />
     </Link>
   );
@@ -256,7 +257,6 @@ function DownloadsPanel({ onNavigate }: { onNavigate: () => void }) {
 
   return (
     <div>
-      {items.length > 0 && <Summary items={items} />}
       <div className="divide-y divide-border/70">
         {groups.map((group) => (
           <TitleSection key={group.key} group={group} posterUrl={posterOf(group.sourceId, group.animeId)} onNavigate={onNavigate} />
@@ -265,20 +265,6 @@ function DownloadsPanel({ onNavigate }: { onNavigate: () => void }) {
       {failed.length > 0 && <FailedSection failed={failed} />}
     </div>
   );
-}
-
-/** "2 downloading · 3 waiting" - the queue at a glance, under the header. */
-function Summary({ items }: { items: ActiveDownload[] }) {
-  const { t } = useTranslation();
-  const running = items.filter((item) => item.status === "downloading").length;
-  const queued = items.filter((item) => item.status === "queued").length;
-  const paused = items.filter((item) => item.status === "paused").length;
-  const parts = [
-    running > 0 && t("downloadsPanel.running", { count: running }),
-    queued > 0 && t("downloadsPanel.waiting", { count: queued }),
-    paused > 0 && t("downloadsPanel.pausedCount", { count: paused }),
-  ].filter(Boolean);
-  return <p className="pb-2 text-[12px] text-muted">{parts.join(" · ")}</p>;
 }
 
 /** "Downloads", with the whole queue paused, resumed or cancelled at once beside it. */
@@ -303,14 +289,19 @@ function PanelHeader() {
 
   return (
     <div className="flex min-h-7 items-center gap-2">
-      <span className="min-w-0 flex-1 truncate">{t("downloadsPanel.title")}</span>
+      <span className="flex min-w-0 flex-1 items-center gap-2">
+        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-accent/15 text-accent-text">
+          <ArrowDownToLine className="h-3.5 w-3.5" strokeWidth={2.5} />
+        </span>
+        <span className="truncate">{t("downloadsPanel.title")}</span>
+      </span>
       {items.length > 0 && (running > 0 ? (
-        <PillButton onClick={pauseAll}>{t("downloadsPanel.pauseAll")}</PillButton>
+        <PillButton onClick={pauseAll} icon={Pause} filled>{t("downloadsPanel.pauseAll")}</PillButton>
       ) : paused > 0 ? (
-        <PillButton onClick={resumeAll}>{t("downloadsPanel.resumeAll")}</PillButton>
+        <PillButton onClick={resumeAll} icon={Play} filled>{t("downloadsPanel.resumeAll")}</PillButton>
       ) : null)}
       {items.length > 0 && (
-        <PillButton onClick={confirmCancel ? cancelAll : () => setConfirmCancel(true)} danger={confirmCancel}>
+        <PillButton onClick={confirmCancel ? cancelAll : () => setConfirmCancel(true)} danger={confirmCancel} icon={confirmCancel ? TriangleAlert : X}>
           {confirmCancel ? t("downloadsPanel.cancelAllConfirm") : t("downloadsPanel.cancelAll")}
         </PillButton>
       )}
@@ -318,16 +309,17 @@ function PanelHeader() {
   );
 }
 
-function PillButton({ onClick, danger = false, children }: { onClick: () => void; danger?: boolean; children: React.ReactNode }) {
+function PillButton({ onClick, danger = false, icon: Icon, filled = false, children }: { onClick: () => void; danger?: boolean; icon: LucideIcon; filled?: boolean; children: React.ReactNode }) {
   return (
     <button
       type="button"
       onClick={onClick}
       className={cn(
-        "shrink-0 rounded-full px-3 py-1 text-[12px] font-semibold transition-colors",
+        "flex shrink-0 items-center gap-1.5 rounded-full py-1 pl-2.5 pr-3 text-[12px] font-semibold transition-colors",
         danger ? "bg-rose-500/15 text-rose-400 hover:bg-rose-500/25" : "bg-text/[.06] text-text/80 hover:bg-text/[.1] hover:text-text active:bg-text/[.12]",
       )}
     >
+      {filled ? <Icon className="h-3 w-3 fill-current" strokeWidth={0} /> : <Icon className="h-3.5 w-3.5" strokeWidth={2.4} />}
       {children}
     </button>
   );
@@ -356,8 +348,9 @@ function TitleSection({ group, posterUrl, onNavigate }: { group: TitleGroup; pos
         </span>
         <span className="min-w-0 flex-1">
           <span className="block truncate text-[14px] font-bold text-text">{group.animeTitle}</span>
-          <span className="mt-0.5 block text-[12px] tabular-nums text-muted">
-            {t("downloadsPanel.episodes", { count: group.items.length })} · {percent}%
+          <span className="mt-1 flex items-center gap-3 text-[12px] tabular-nums text-muted">
+            <span className="flex items-center gap-1"><Clapperboard className="h-3.5 w-3.5" strokeWidth={2} />{t("downloadsPanel.episodes", { count: group.items.length })}</span>
+            <span className="flex items-center gap-1"><ArrowDownToLine className="h-3.5 w-3.5" strokeWidth={2} />{percent}%</span>
           </span>
         </span>
         <ChevronRight className="h-4 w-4 shrink-0 text-muted transition-transform group-hover:translate-x-0.5" strokeWidth={2.2} />
@@ -367,7 +360,8 @@ function TitleSection({ group, posterUrl, onNavigate }: { group: TitleGroup; pos
           {shown.map((item) => <EpisodeRow key={downloadKeyId(item)} item={item} />)}
         </AnimatePresence>
         {hidden > 0 && (
-          <button type="button" onClick={() => setExpanded(true)} className="mt-1 text-[12px] font-semibold text-muted transition-colors hover:text-text">
+          <button type="button" onClick={() => setExpanded(true)} className="mt-1 flex items-center gap-1 text-[12px] font-semibold text-muted transition-colors hover:text-text">
+            <ChevronDown className="h-3.5 w-3.5" strokeWidth={2.4} />
             {t("downloadsPanel.more", { count: hidden })}
           </button>
         )}
@@ -381,6 +375,7 @@ function EpisodeRow({ item }: { item: ActiveDownload }) {
   const downloading = item.status === "downloading";
   const paused = item.status === "paused";
   const statusText = downloading ? `${item.percent}%` : paused ? t("downloadsPanel.paused") : t("detail.episodeMenu.queued");
+  const StatusIcon = downloading ? ArrowDown : paused ? Pause : Clock;
   return (
     <motion.div
       layout
@@ -394,7 +389,10 @@ function EpisodeRow({ item }: { item: ActiveDownload }) {
         <div className="min-w-0 flex-1">
           <div className="flex items-baseline justify-between gap-2">
             <span className="truncate text-[13px] font-semibold text-text/90">{item.episodeLabel}</span>
-            <span className={cn("shrink-0 text-[12px] tabular-nums", downloading ? "text-accent-text" : "text-muted")}>{statusText}</span>
+            <span className={cn("flex shrink-0 items-center gap-1 text-[12px] tabular-nums", downloading ? "text-accent-text" : "text-muted")}>
+              <StatusIcon className={cn("h-3 w-3", paused && "fill-current")} strokeWidth={paused ? 0 : 2.4} />
+              {statusText}
+            </span>
           </div>
           <div className="mt-1.5 h-[3px] overflow-hidden rounded-full bg-text/[.08]">
             <div
@@ -442,7 +440,10 @@ function FailedSection({ failed }: { failed: FailedDownload[] }) {
   const dismiss = useActiveDownloadsStore((s) => s.dismiss);
   return (
     <section className="mt-1 border-t border-border/70 pt-3">
-      <p className="mb-1 text-[12px] font-semibold uppercase tracking-wide text-rose-400">{t("downloadsPanel.failed")}</p>
+      <p className="mb-1 flex items-center gap-1.5 text-[12px] font-semibold uppercase tracking-wide text-rose-400">
+        <TriangleAlert className="h-3.5 w-3.5" strokeWidth={2.4} />
+        {t("downloadsPanel.failed")}
+      </p>
       {failed.map((item) => {
         const key = downloadKeyId(item);
         return (
