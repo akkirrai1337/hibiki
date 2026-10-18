@@ -54,6 +54,12 @@ describe("scoreMatch", () => {
     expect(scoreMatch(frieren, { names: ["Frieren: Beyond Journey's End"], year: 2023, type: "tv" })).toBe(1);
   });
 
+  it("reads a type the same whatever its case, and a type it does not know as unknown", () => {
+    // A source writing "TV" scored as a mismatch, which kept every one of its titles under the bar.
+    expect(scoreMatch({ ...frieren, type: "TV" }, { names: ["Frieren: Beyond Journey's End"], year: 2023, type: "tv" })).toBe(1);
+    expect(scoreMatch({ ...frieren, type: "тб" }, { names: ["Frieren: Beyond Journey's End"], year: 2023, type: "tv" })).toBeGreaterThanOrEqual(0.86);
+  });
+
   it("ignores a one-year disagreement between sites, not a bigger one", () => {
     expect(scoreMatch(frieren, { names: ["Frieren: Beyond Journey's End"], year: 2024, type: "tv" })).toBe(1);
     expect(scoreMatch(frieren, { names: ["Frieren: Beyond Journey's End"], year: 2018, type: "tv" })).toBeLessThan(0.86);

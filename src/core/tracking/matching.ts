@@ -98,6 +98,15 @@ export interface Comparable {
  * its sequel). Then a year within one counts for it and a further one against it, and so does the
  * type.
  */
+const KNOWN_TYPES = new Set(["tv", "ova", "ona", "movie", "special"]);
+
+/** A type both sides can be compared by: sources write "TV" or "tv", and some a word of their own
+ * language ("тб") that says nothing here - unknown, rather than a disagreement. */
+function comparableType(type: AnimeType | null | undefined): string | null {
+  const normalized = type?.trim().toLowerCase();
+  return normalized && KNOWN_TYPES.has(normalized) ? normalized : null;
+}
+
 export function scoreMatch(wanted: Comparable, offered: Comparable): number {
   const wantedNames = [...new Set(wanted.names.map(normalizeTitleForMatch).filter(Boolean))];
   const offeredNames = [...new Set(offered.names.map(normalizeTitleForMatch).filter(Boolean))];
@@ -118,7 +127,9 @@ export function scoreMatch(wanted: Comparable, offered: Comparable): number {
 
   // One year apart is not evidence against: a show starting in late December is filed under either.
   const yearScore = wanted.year == null || offered.year == null ? 0 : Math.abs(wanted.year - offered.year) <= 1 ? 1 : -1;
-  const typeScore = wanted.type == null || offered.type == null ? 0 : wanted.type === offered.type ? 1 : -1;
+  const wantedType = comparableType(wanted.type);
+  const offeredType = comparableType(offered.type);
+  const typeScore = wantedType == null || offeredType == null ? 0 : wantedType === offeredType ? 1 : -1;
   const score = Math.round((nameScore * 0.7 + yearScore * 0.2 + typeScore * 0.1) * 1000) / 1000;
   return Math.max(0, Math.min(1, score));
 }
@@ -135,7 +146,7 @@ export const CONFIDENT_MARGIN = 0.05;
  * The one candidate that clearly is `wanted`, or null. Candidates sharing a key (the same entry
  * found by two queries) count once.
  */
-export function pickConfident<K>(wanted: Comparable, candidates: Array<{ key: K; comparable: Comparable }>): { key: K; score: number } | null {
+export function pickConfident<K>(wanted: Comparable, candidates: Array<{ key: K; comparable: Comparable }>, minScore = CONFIDENT_MATCH): { key: K; score: number } | null {
   const best = new Map<K, number>();
   for (const candidate of candidates) {
     const score = scoreMatch(wanted, candidate.comparable);
@@ -143,7 +154,7 @@ export function pickConfident<K>(wanted: Comparable, candidates: Array<{ key: K;
   }
   const ranked = [...best.entries()].sort((a, b) => b[1] - a[1]);
   const [top, runnerUp] = ranked;
-  if (!top || top[1] < CONFIDENT_MATCH) return null;
+  if (!top || top[1] < minScore) return null;
   if (runnerUp && top[1] - runnerUp[1] < CONFIDENT_MARGIN) return null;
   return { key: top[0], score: top[1] };
 }
