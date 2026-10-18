@@ -950,5 +950,16 @@
       "noticeText": "Some data shows incompletely: its sources aren't installed here. Install them to fix it.",
       "show": "Install sources"
     }
+  },
+  "newEpisodes": {
+    "one": "Episode {{number}} is out",
+    "range": "Episodes {{from}}–{{to}} are out",
+    "channel": "New episodes",
+    "summary_one": "New episodes in {{count}} title",
+    "summary_other": "New episodes in {{count}} titles",
+    "bellOn": "Notify about new episodes",
+    "bellOff": "Stop notifying about new episodes",
+    "setting": "New episode notifications",
+    "settingHint": "For ongoing titles in Watching, in the dub you watch. Any title can be switched on or off with the bell on its page."
   }
 }

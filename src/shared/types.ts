@@ -88,6 +88,23 @@ export interface VideoSegment {
   endMs: number;
 }
 
+/** The title page's bell for new-episode notices: "auto" follows the library (an ongoing in
+ * "Watching"), "on" and "off" are the person's own word. */
+export type EpisodeBell = "auto" | "on" | "off";
+
+/** New episodes of one title in the dub it is watched in (core/newEpisodes). */
+export interface NewEpisodeNotice {
+  sourceId: string;
+  animeId: string;
+  title: string;
+  posterUrl: string | null;
+  groupId: string;
+  groupTitle: string;
+  /** The first new one, opened from the notice. */
+  episodeId: string;
+  numbers: number[];
+}
+
 /** AniSkip's openings and endings for an episode (core/skipTimes.ts), and the MAL id they were
  * looked up by - kept by the renderer so the next episode skips the AniList lookup. */
 export interface SkipTimesResult {

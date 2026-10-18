@@ -4,7 +4,8 @@
 // lib/hibiki.ts reads window.hibiki once at import time.
 import type { HibikiApi, PipAction } from "@shared/hibikiApi";
 import { IPC } from "@shared/ipc";
-import type { AppUpdate, DownloadProgress, TrackerImportProgress, UpdateDownloadProgress } from "@shared/types";
+import type { AppUpdate, DeepLinkWatchTarget, DownloadProgress, TrackerImportProgress, UpdateDownloadProgress } from "@shared/types";
+import { parseWatchDeepLink } from "../../core/deepLink";
 import { createCoreApi } from "../../core/api";
 import { installMissingSources } from "../../core/api/sourceAutoInstall";
 import { importLegacyData } from "../../core/legacyImport";
@@ -98,8 +99,23 @@ export async function installAndroidHibiki(): Promise<void> {
   const core = createCoreApi(runtime);
   await carryOverLegacyApp(platform, runtime);
   const nothing = () => () => {};
+  // hibiki://watch/... links - what a new-episode notice opens. One that started the app waits here
+  // until the page is listening.
+  const watchListeners = new Set<(target: DeepLinkWatchTarget) => void>();
+  let pendingWatch: DeepLinkWatchTarget | null = null;
+  const openLink = (url: string) => {
+    const target = parseWatchDeepLink(url);
+    if (!target) return void handleTrackingRedirect(url);
+    if (watchListeners.size === 0) pendingWatch = target;
+    for (const listener of watchListeners) listener(target);
+  };
   const api: HibikiApi = {
     ...core,
+    newEpisodes: {
+      ...core.newEpisodes,
+      notify: async (items, labels) => (await HibikiApp.notifyNewEpisodes({ items, ...labels })).shown,
+      ensurePermission: async () => (await HibikiApp.ensureNotifications()).granted,
+    },
     sources: { ...core.sources, onChanged: (callback) => events.on(IPC.sourcesChanged, () => callback()) },
     sync: {
       ...createSyncServerApi(),
@@ -190,7 +206,15 @@ export async function installAndroidHibiki(): Promise<void> {
       relaunch: () => platform.app.relaunch(),
       getHardwareAcceleration: async () => true,
       setHardwareAcceleration: async () => {},
-      onDeepLinkWatch: nothing,
+      onDeepLinkWatch: (callback) => {
+        watchListeners.add(callback);
+        if (pendingWatch) {
+          const target = pendingWatch;
+          pendingWatch = null;
+          callback(target);
+        }
+        return () => void watchListeners.delete(callback);
+      },
     },
     // Proxy and DNS-over-HTTPS are desktop-only (the WebView has no API for either): only the parts
     // core applies itself take effect here.
@@ -264,10 +288,10 @@ export async function installAndroidHibiki(): Promise<void> {
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "hidden") logImageStats();
   });
-  // AniList's sign-in comes back as hibiki://anilist-auth: to a running app as an event, or as the
-  // link the app was (re)started with when Android had ended it while the browser was in front.
-  void HibikiApp.addListener("deepLink", (event) => void handleTrackingRedirect(event.url));
-  void HibikiApp.takeLaunchUrl().then(({ url }) => url && handleTrackingRedirect(url)).catch(() => undefined);
+  // AniList's sign-in comes back as hibiki://anilist-auth, a new-episode notice opens
+  // hibiki://watch/...: to a running app as an event, or as the link the app was (re)started with.
+  void HibikiApp.addListener("deepLink", (event) => openLink(event.url));
+  void HibikiApp.takeLaunchUrl().then(({ url }) => url && openLink(url)).catch(() => undefined);
 
   // Device sync with the paired computer (core/sync): soon after start, on coming back to the
   // screen, on leaving it (a moment later, so the progress saved on the way out goes too - Android

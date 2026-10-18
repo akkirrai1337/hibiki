@@ -27,6 +27,8 @@ import type {
   PlayerLink,
   PlayerLinkPreference,
   SkipTimesResult,
+  EpisodeBell,
+  NewEpisodeNotice,
   RepositoryFetchResult,
   SearchFilterCatalog,
   SearchRequest,
@@ -71,6 +73,16 @@ export interface PipState {
 }
 
 export interface HibikiApi {
+  /** New-episode notices (phone only for now): checks what is due, the title page's bell. */
+  newEpisodes?: {
+    checkDue(): Promise<NewEpisodeNotice[]>;
+    getBell(sourceId: string, animeId: string): Promise<EpisodeBell>;
+    setBell(sourceId: string, animeId: string, bell: EpisodeBell): Promise<void>;
+    /** Shows the notices (texts are the renderer's, in the app's language); whether they could be. */
+    notify?(items: Array<{ key: string; title: string; text: string; url: string }>, labels: { channelName: string; summary: string }): Promise<boolean>;
+    /** Asks for the notification permission where it is missing; whether it is granted now. */
+    ensurePermission?(): Promise<boolean>;
+  };
   sources: {
     list(): Promise<SourceInfo[]>;
     search(sourceId: string, request: SearchRequest, requestId?: string): Promise<AnimeTitle[]>;

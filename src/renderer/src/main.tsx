@@ -6,6 +6,7 @@ import { RouterProvider, createHashHistory, createRouter } from "@tanstack/react
 import { routeTree } from "./routeTree.gen";
 import "./lib/i18n";
 import { startNetworkSync } from "./lib/networkSync";
+import { startNewEpisodeChecks } from "./lib/newEpisodes";
 import "./styles/globals.css";
 
 const queryClient = new QueryClient({
@@ -22,6 +23,7 @@ const queryClient = new QueryClient({
 
 // Settings > Network to the host, and the traffic counter running from the first request.
 startNetworkSync();
+startNewEpisodeChecks(queryClient);
 
 // Middle-clicking any link (the hero's "Open" button, anime cards, ...) is Chromium's native
 // "open in a new tab" gesture - main/index.ts forwards new-window requests to the real OS browser

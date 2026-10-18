@@ -1,5 +1,7 @@
 package app.hibiki;
 
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.PictureInPictureParams;
 import android.app.RemoteAction;
@@ -25,6 +27,8 @@ import android.view.Window;
 import android.view.WindowManager;
 import androidx.activity.result.ActivityResult;
 import androidx.annotation.RequiresApi;
+import androidx.core.app.NotificationCompat;
+import androidx.core.app.NotificationManagerCompat;
 import androidx.core.content.ContextCompat;
 import androidx.core.content.FileProvider;
 import androidx.core.view.WindowCompat;
@@ -293,6 +297,95 @@ public class HibikiAppPlugin extends Plugin {
         JSObject event = new JSObject();
         event.put("url", url);
         notifyListeners("deepLink", event, true);
+    }
+
+    private static final String EPISODES_CHANNEL = "new-episodes";
+    private static final String EPISODES_GROUP = "app.hibiki.NEW_EPISODES";
+    private static final int EPISODES_SUMMARY_ID = 7310;
+
+    /**
+     * New-episode notices (core/newEpisodes): one per title, replaced when more come out, opening the
+     * episode (a hibiki://watch/... link, the same one Discord's "Watch" opens) when tapped; with
+     * several titles at once, a summary groups them. Their own channel, so they can be silenced in
+     * Android's settings without silencing downloads. Answers whether they could be shown.
+     */
+    @PluginMethod
+    public void notifyNewEpisodes(PluginCall call) {
+        Context context = getContext();
+        if (!notificationsAllowed()) {
+            JSObject result = new JSObject();
+            result.put("shown", false);
+            call.resolve(result);
+            return;
+        }
+        if (Build.VERSION.SDK_INT >= 26) {
+            NotificationManager manager = context.getSystemService(NotificationManager.class);
+            if (manager != null && manager.getNotificationChannel(EPISODES_CHANNEL) == null) {
+                NotificationChannel channel = new NotificationChannel(EPISODES_CHANNEL, call.getString("channelName", "New episodes"), NotificationManager.IMPORTANCE_DEFAULT);
+                manager.createNotificationChannel(channel);
+            }
+        }
+        NotificationManagerCompat notifications = NotificationManagerCompat.from(context);
+        com.getcapacitor.JSArray items = call.getArray("items", new com.getcapacitor.JSArray());
+        NotificationCompat.InboxStyle inbox = new NotificationCompat.InboxStyle();
+        int shown = 0;
+        try {
+            for (int i = 0; i < items.length(); i++) {
+                org.json.JSONObject item = items.getJSONObject(i);
+                String key = item.optString("key");
+                String title = item.optString("title");
+                String text = item.optString("text");
+                int id = key.hashCode();
+                Intent open = new Intent(Intent.ACTION_VIEW, Uri.parse(item.optString("url")), context, MainActivity.class);
+                open.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+                PendingIntent tap = PendingIntent.getActivity(context, id, open, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+                notifications.notify(id, new NotificationCompat.Builder(context, EPISODES_CHANNEL)
+                    .setSmallIcon(R.drawable.ic_notification_episode)
+                    .setContentTitle(title)
+                    .setContentText(text)
+                    .setAutoCancel(true)
+                    .setContentIntent(tap)
+                    .setGroup(EPISODES_GROUP)
+                    .setCategory(NotificationCompat.CATEGORY_RECOMMENDATION)
+                    .build());
+                inbox.addLine(title + " — " + text);
+                shown++;
+            }
+            if (shown > 1) {
+                String summary = call.getString("summary", shown + " titles");
+                notifications.notify(EPISODES_SUMMARY_ID, new NotificationCompat.Builder(context, EPISODES_CHANNEL)
+                    .setSmallIcon(R.drawable.ic_notification_episode)
+                    .setContentTitle(summary)
+                    .setStyle(inbox.setSummaryText(summary))
+                    .setGroup(EPISODES_GROUP)
+                    .setGroupSummary(true)
+                    .setAutoCancel(true)
+                    .build());
+            }
+        } catch (SecurityException | org.json.JSONException e) {
+            call.reject("Could not show new-episode notices: " + e.getMessage());
+            return;
+        }
+        JSObject result = new JSObject();
+        result.put("shown", shown > 0);
+        call.resolve(result);
+    }
+
+    private boolean notificationsAllowed() {
+        return Build.VERSION.SDK_INT < 33
+            || ContextCompat.checkSelfPermission(getContext(), android.Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED;
+    }
+
+    /** Asks for the notification permission (Android 13+) if it is not granted; answers whether it is now. */
+    @PluginMethod
+    public void ensureNotifications(PluginCall call) {
+        boolean granted = notificationsAllowed();
+        if (!granted && getActivity() != null) {
+            androidx.core.app.ActivityCompat.requestPermissions(getActivity(), new String[] { android.Manifest.permission.POST_NOTIFICATIONS }, 7303);
+        }
+        JSObject result = new JSObject();
+        result.put("granted", granted);
+        call.resolve(result);
     }
 
     /** The page has drawn its first screen: MainActivity lets the launch splash go. */

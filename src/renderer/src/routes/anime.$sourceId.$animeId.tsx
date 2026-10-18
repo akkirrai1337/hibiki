@@ -7,7 +7,7 @@ import { useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
 import { AnimatePresence, motion, useIsPresent } from "motion/react";
 import * as ContextMenu from "@radix-ui/react-context-menu";
-import { ArrowDown01, ArrowDown10, ArrowLeft, ArrowUpDown, Captions, ChevronRight, Sparkles, LayoutGrid, List, Mic, Play, Bookmark, Check, ChevronDown, Clock, Download, Eraser, ExternalLink, Eye, Heart, Pause, Trash2, TriangleAlert, X } from "lucide-react";
+import { ArrowDown01, ArrowDown10, ArrowLeft, ArrowUpDown, Bell, BellOff, Captions, ChevronRight, Sparkles, LayoutGrid, List, Mic, Play, Bookmark, Check, ChevronDown, Clock, Download, Eraser, ExternalLink, Eye, Heart, Pause, Trash2, TriangleAlert, X } from "lucide-react";
 import { CommentsSection } from "@/components/CommentsSection";
 import { CloudflareCheckButton, useCloudflareText } from "@/components/CloudflareCheck";
 import { cloudflareCheckOf } from "@shared/cloudflare";
@@ -15,6 +15,7 @@ import { RatingButton, SourceRatings } from "@/components/RatingButton";
 import { TrackerLinkButton } from "@/components/TrackerLinkButton";
 import { useRecommendationReason } from "@/lib/recommendations";
 import { hibiki } from "@/lib/hibiki";
+import { useNewEpisodesPrefs } from "@/lib/newEpisodes";
 import { findListedTitle } from "@/lib/listedTitles";
 import { usePlaybackGroups } from "@/lib/playbackGroups";
 import { isGenericDubTitle } from "@/lib/dubTitle";
@@ -353,7 +354,11 @@ function AnimeDetailPage() {
   return <div className={cn("relative isolate min-h-full pb-16 mobile:pb-6", backgroundTheme && "bg-black/70 mobile:bg-transparent")}>
     {/* The phone's version of the backdrop: the poster across the top of the page, under the status
         bar, scrolling away with it - plus the way back and out, floating over it. */}
-    {isMobile && <MobileTitleChrome posterUrl={anime?.posterUrl} siteUrl={anime ? anime.pageUrl || source?.website : undefined} />}
+    {isMobile && <MobileTitleChrome
+      posterUrl={anime?.posterUrl}
+      siteUrl={anime ? anime.pageUrl || source?.website : undefined}
+      bell={anime ? <NewEpisodesBell sourceId={sourceId} animeId={animeId} ongoing={anime.status === "ongoing" || /^announce/i.test(anime.status ?? "")} inWatching={libraryEntry?.category === "watching"} /> : null}
+    />}
     {/* Skipped entirely once a background theme is active (see the comment on `backgroundTheme`
         above) - the flat tint above takes over instead. */}
     {!backgroundTheme && !isMobile && (
@@ -1328,7 +1333,46 @@ function DetailSkeleton() { if (isMobile) return <MobileDetailSkeleton />; retur
  * Phone only: the poster as artwork across the top of the title page, running under the status
  * bar and fading into the page, plus round Back and open-on-site buttons that stay over it.
  */
-function MobileTitleChrome({ posterUrl, siteUrl }: { posterUrl?: string | null; siteUrl?: string | null }) {
+/**
+ * New-episode notices for this title (core/newEpisodes), on the phone: on by itself for an ongoing
+ * in "Watching", and switched on or off here for any title. Shown where notices exist and the title
+ * can still have new episodes - or where it was switched on by hand.
+ */
+function NewEpisodesBell({ sourceId, animeId, ongoing, inWatching }: { sourceId: string; animeId: string; ongoing: boolean; inWatching: boolean }) {
+  const { t } = useTranslation();
+  const enabled = useNewEpisodesPrefs((s) => s.enabled);
+  const api = hibiki.newEpisodes;
+  const bellQuery = useQuery({
+    queryKey: ["episodeBell", sourceId, animeId],
+    queryFn: () => api!.getBell(sourceId, animeId),
+    enabled: !!api?.notify,
+  });
+  if (!api?.notify || !enabled || bellQuery.data === undefined) return null;
+  const bell = bellQuery.data;
+  const on = bell === "on" || (bell === "auto" && ongoing && inWatching);
+  if (!ongoing && bell !== "on") return null;
+  const toggle = async () => {
+    if (!on) await api.ensurePermission?.();
+    await api.setBell(sourceId, animeId, on ? "off" : "on");
+    void bellQuery.refetch();
+  };
+  return (
+    <motion.button
+      type="button"
+      onClick={() => void toggle()}
+      aria-label={t(on ? "newEpisodes.bellOff" : "newEpisodes.bellOn")}
+      aria-pressed={on}
+      initial={{ opacity: 0, scale: 0.85 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ duration: 0.2, ease: "easeOut" }}
+      className="pointer-events-auto flex h-10 w-10 items-center justify-center rounded-full bg-black/60 text-white ring-1 ring-white/10 backdrop-blur-md active:bg-black/80"
+    >
+      {on ? <Bell className="h-[18px] w-[18px] fill-current" strokeWidth={2} /> : <BellOff className="h-[18px] w-[18px]" strokeWidth={2} />}
+    </motion.button>
+  );
+}
+
+function MobileTitleChrome({ posterUrl, siteUrl, bell }: { posterUrl?: string | null; siteUrl?: string | null; bell?: React.ReactNode }) {
   const { t } = useTranslation();
   const router = useRouter();
   const navigate = useNavigate();
@@ -1365,7 +1409,9 @@ function MobileTitleChrome({ posterUrl, siteUrl }: { posterUrl?: string | null; 
       >
         <ArrowLeft className="h-5 w-5" strokeWidth={2.25} />
       </button>
-      {/* Known once the title has loaded: fades in then, beside the back button that is always there. */}
+      {/* Known once the title has loaded: fade in then, beside the back button that is always there. */}
+      <div className="flex gap-2">
+      {bell}
       {siteUrl && <motion.a
         href={siteUrl}
         target="_blank"
@@ -1376,6 +1422,7 @@ function MobileTitleChrome({ posterUrl, siteUrl }: { posterUrl?: string | null; 
         transition={{ duration: 0.2, ease: "easeOut" }}
         className={cn(button, "pointer-events-auto")}
       ><ExternalLink className="h-[18px] w-[18px]" strokeWidth={2} /></motion.a>}
+      </div>
     </div>, document.body)}
   </>;
 }

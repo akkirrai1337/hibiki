@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { FastForward, Gauge, HardDrive, BarChart3, Download, Globe, ShieldCheck, ShieldOff, Smartphone, Wifi, LogIn, LogOut, MemoryStick, ArrowDownToLine, ArrowUpDown, Ban, Check, CheckCircle2, ChevronDown, ChevronRight, DatabaseBackup, FileText, FolderOpen, Home, Info, Languages, MessageCircle, MonitorPlay, Moon, Palette, Radio, RefreshCw, RotateCcw, ScrollText, SlidersHorizontal, Sparkles, Sun, Timer, TriangleAlert } from "lucide-react";
+import { Bell, FastForward, Gauge, HardDrive, BarChart3, Download, Globe, ShieldCheck, ShieldOff, Smartphone, Wifi, LogIn, LogOut, MemoryStick, ArrowDownToLine, ArrowUpDown, Ban, Check, CheckCircle2, ChevronDown, ChevronRight, DatabaseBackup, FileText, FolderOpen, Home, Info, Languages, MessageCircle, MonitorPlay, Moon, Palette, Radio, RefreshCw, RotateCcw, ScrollText, SlidersHorizontal, Sparkles, Sun, Timer, TriangleAlert } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { isMobile, useBackHandler } from "@/lib/mobile";
 import { motion } from "motion/react";
@@ -26,6 +26,7 @@ import type { MemorySnapshot } from "@shared/types";
 import { forgetAllPersisted, persistedSize, useFilterCatalog } from "@/lib/persistedQuery";
 import { BUFFER_SECONDS, useNetworkPrefsStore, type BufferMode, type HomeRefreshMode } from "@/stores/networkPrefsStore";
 import { videoCache } from "@/lib/videoCache";
+import { useNewEpisodesPrefs } from "@/lib/newEpisodes";
 import { resetTrafficStats, useTrafficHistory } from "@/lib/trafficStats";
 import { TrafficChart, formatBytes } from "@/components/TrafficChart";
 import type { DohProvider } from "@shared/types";
@@ -1130,6 +1131,8 @@ export function SettingsPage() {
   const watchedThresholdPercent = usePlayerPrefsStore((s) => s.watchedThresholdPercent);
   const setWatchedThresholdPercent = usePlayerPrefsStore((s) => s.setWatchedThresholdPercent);
   const autoUpdate = useUiStore((s) => s.autoUpdate);
+  const newEpisodesEnabled = useNewEpisodesPrefs((s) => s.enabled);
+  const setNewEpisodesEnabled = useNewEpisodesPrefs((s) => s.setEnabled);
   const setAutoUpdate = useUiStore((s) => s.setAutoUpdate);
   const discordRpcEnabled = useUiStore((s) => s.discordRpcEnabled);
   const setDiscordRpcEnabled = useUiStore((s) => s.setDiscordRpcEnabled);
@@ -1309,6 +1312,17 @@ export function SettingsPage() {
               onChange={setDiscordIgnoreNsfwSources}
             />
           )}
+          {/* Notices exist where the host can show them (the phone). */}
+          {hibiki.newEpisodes?.notify && <SettingsToggleRow
+            icon={<Bell className="h-4 w-4" strokeWidth={2} />}
+            title={t("newEpisodes.setting")}
+            hint={t("newEpisodes.settingHint")}
+            checked={newEpisodesEnabled}
+            onChange={(value) => {
+              setNewEpisodesEnabled(value);
+              if (value) void hibiki.newEpisodes?.ensurePermission?.();
+            }}
+          />}
           <SettingsToggleRow
             icon={<ArrowDownToLine className="h-4 w-4" strokeWidth={2} />}
             title={t("settings.catalogAutoLoad.enabled")}

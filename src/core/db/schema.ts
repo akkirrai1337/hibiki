@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer, primaryKey, index, uniqueIndex } from "drizzle-orm/sqlite-core";
+import { sqliteTable, text, integer, real, primaryKey, index, uniqueIndex } from "drizzle-orm/sqlite-core";
 
 export const library = sqliteTable(
   "library",
@@ -228,4 +228,28 @@ export const trackerLinks = sqliteTable(
     checkedAt: integer("checked_at").notNull(),
   },
   (t) => [primaryKey({ columns: [t.tracker, t.sourceId, t.animeId] })],
+);
+
+// New-episode notices (core/newEpisodes): what is known about each title being watched for new
+// episodes, and when to look next. This device's own - another device keeps its own and notifies
+// for itself - so it is not part of device sync.
+export const episodeWatch = sqliteTable(
+  "episode_watch",
+  {
+    sourceId: text("source_id").notNull(),
+    animeId: text("anime_id").notNull(),
+    // "on" / "off" from the title page's bell; null = follow the library (an ongoing in "Watching").
+    bell: text("bell"),
+    groupId: text("group_id"),
+    knownCount: integer("known_count"),
+    knownMax: real("known_max"),
+    // JSON array of ms timestamps: when new episodes came out, newest last.
+    arrivals: text("arrivals").notNull().default("[]"),
+    waitingSince: integer("waiting_since"),
+    nextEpisodeAt: integer("next_episode_at"),
+    failures: integer("failures").notNull().default(0),
+    nextCheckAt: integer("next_check_at").notNull().default(0),
+    checkedAt: integer("checked_at"),
+  },
+  (t) => [primaryKey({ columns: [t.sourceId, t.animeId] }), index("episode_watch_next_check").on(t.nextCheckAt)],
 );

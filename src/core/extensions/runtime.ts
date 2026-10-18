@@ -730,6 +730,18 @@ export class ExtensionRuntime {
     });
   }
 
+  /**
+   * Whether an episode has a link the app can play, without resolving anything: the source's own
+   * list (from the title's snapshot when it holds), less the retired players and the embeds no
+   * resolver claims. For new-episode notices - an episode that exists only on a player the app
+   * cannot play is not news.
+   */
+  async hasPlayableLink(sourceId: string, titleId: string, groupId: string, episodeId: string): Promise<boolean> {
+    const snapshot = isApkSource(sourceId) ? null : await this.snapshotFor(sourceId, titleId, "links");
+    const links = await this.run<PlayerLink[]>("getPlayerLinks", sourceId, [titleId, groupId, episodeId], snapshot ? { snapshot: { serve: snapshot.responses } } : undefined);
+    return this.withoutUnplayableEmbeds(links.filter((link) => !isRetiredPlayerLink(link))).length > 0;
+  }
+
   async resolvePlayerLink(link: PlayerLink, options?: { dataSaver?: boolean }): Promise<PlayerLink[]> {
     if (isRetiredPlayerLink(link)) return [];
     return this.withoutUnplayableEmbeds(await this.resolveEmbedLinks([link], -1, options?.dataSaver === true));
