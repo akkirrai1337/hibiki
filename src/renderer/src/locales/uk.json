@@ -330,10 +330,24 @@
   "downloads": {
     "title": "Збережені серії",
     "empty": "Поки немає завантажених серій",
-    "episodeCount": "{{count}} еп.",
     "remove": "Видалити",
     "removeConfirmTitle": "Видалити завантаження?",
-    "removeConfirmMessage": "Серію {{episode}} — {{title}} буде видалено з пристрою. Щоб переглянути офлайн, її доведеться завантажити знову."
+    "removeConfirmMessage": "Серію {{episode}} — {{title}} буде видалено з пристрою. Щоб переглянути офлайн, її доведеться завантажити знову.",
+    "episodes_one": "{{count}} серія",
+    "episodes_few": "{{count}} серії",
+    "episodes_many": "{{count}} серій",
+    "episodes_other": "{{count}} серії",
+    "titles_one": "{{count}} тайтл",
+    "titles_few": "{{count}} тайтли",
+    "titles_many": "{{count}} тайтлів",
+    "titles_other": "{{count}} тайтла",
+    "minutes_one": "{{count}} хв",
+    "minutes_few": "{{count}} хв",
+    "minutes_many": "{{count}} хв",
+    "minutes_other": "{{count}} хв",
+    "removeAll": "Видалити всі серії тайтлу",
+    "removeAllConfirmTitle": "Видалити всі серії?",
+    "removeAllConfirmMessage": "{{title}}: {{episodes}} ({{size}}) буде видалено з пристрою. Щоб подивитися офлайн, їх доведеться завантажити знову."
   },
   "catalogPage": {
     "empty": "Тут поки що порожньо",
@@ -803,7 +817,8 @@
       "trafficDays_few": "{{count}} дні",
       "trafficDays_many": "{{count}} днів",
       "trafficDays_other": "{{count}} днів",
-      "trafficDayTotal": "Усього"
+      "trafficDayTotal": "Усього",
+      "downloadsOpen": "Відкрити"
     }
   },
   "update": {

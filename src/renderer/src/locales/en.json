@@ -326,10 +326,18 @@
   "downloads": {
     "title": "Downloaded episodes",
     "empty": "No downloaded episodes yet",
-    "episodeCount": "{{count}} ep.",
     "remove": "Remove",
     "removeConfirmTitle": "Remove download?",
-    "removeConfirmMessage": "Episode {{episode}} of {{title}} will be deleted from this device and will have to be downloaded again to watch offline."
+    "removeConfirmMessage": "Episode {{episode}} of {{title}} will be deleted from this device and will have to be downloaded again to watch offline.",
+    "episodes_one": "{{count}} episode",
+    "episodes_other": "{{count}} episodes",
+    "titles_one": "{{count}} title",
+    "titles_other": "{{count}} titles",
+    "minutes_one": "{{count}} min",
+    "minutes_other": "{{count}} min",
+    "removeAll": "Remove all of this title",
+    "removeAllConfirmTitle": "Remove every episode?",
+    "removeAllConfirmMessage": "{{title}}: {{episodes}} ({{size}}) will be deleted from this device and will have to be downloaded again to watch offline."
   },
   "catalogPage": {
     "empty": "Nothing here yet",
@@ -797,7 +805,8 @@
       "trafficTotal": "{{total}} in {{days}} days",
       "trafficDays_one": "{{count}} day",
       "trafficDays_other": "{{count}} days",
-      "trafficDayTotal": "Total"
+      "trafficDayTotal": "Total",
+      "downloadsOpen": "Open"
     }
   },
   "update": {

@@ -283,10 +283,24 @@
   "downloads": {
     "title": "Сохранённые эпизоды",
     "empty": "Пока нет скачанных серий",
-    "episodeCount": "{{count}} эп.",
     "remove": "Удалить",
     "removeConfirmTitle": "Удалить загрузку?",
-    "removeConfirmMessage": "Серия {{episode}} — {{title}} будет удалена с устройства. Чтобы посмотреть офлайн, её придётся скачать заново."
+    "removeConfirmMessage": "Серия {{episode}} — {{title}} будет удалена с устройства. Чтобы посмотреть офлайн, её придётся скачать заново.",
+    "episodes_one": "{{count}} серия",
+    "episodes_few": "{{count}} серии",
+    "episodes_many": "{{count}} серий",
+    "episodes_other": "{{count}} серии",
+    "titles_one": "{{count}} тайтл",
+    "titles_few": "{{count}} тайтла",
+    "titles_many": "{{count}} тайтлов",
+    "titles_other": "{{count}} тайтла",
+    "minutes_one": "{{count}} мин",
+    "minutes_few": "{{count}} мин",
+    "minutes_many": "{{count}} мин",
+    "minutes_other": "{{count}} мин",
+    "removeAll": "Удалить все серии тайтла",
+    "removeAllConfirmTitle": "Удалить все серии?",
+    "removeAllConfirmMessage": "{{title}}: {{episodes}} ({{size}}) будут удалены с устройства. Чтобы посмотреть офлайн, их придётся скачать заново."
   },
   "catalogPage": {
     "empty": "В этом источнике пока пусто",
@@ -803,7 +817,8 @@
       "trafficDays_few": "{{count}} дня",
       "trafficDays_many": "{{count}} дней",
       "trafficDays_other": "{{count}} дней",
-      "trafficDayTotal": "Всего"
+      "trafficDayTotal": "Всего",
+      "downloadsOpen": "Открыть"
     }
   },
   "update": {

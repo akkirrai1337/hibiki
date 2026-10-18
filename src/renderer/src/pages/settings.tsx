@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useNavigate } from "@tanstack/react-router";
 import { Bell, FastForward, Gauge, HardDrive, BarChart3, Download, Globe, ShieldCheck, ShieldOff, Smartphone, Wifi, LogIn, LogOut, MemoryStick, ArrowDownToLine, ArrowUpDown, Ban, Check, CheckCircle2, ChevronDown, ChevronRight, DatabaseBackup, FileText, FolderOpen, Home, Info, Languages, MessageCircle, MonitorPlay, Moon, Palette, Radio, RefreshCw, RotateCcw, ScrollText, SlidersHorizontal, Sparkles, Sun, Timer, TriangleAlert } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { isMobile, useBackHandler } from "@/lib/mobile";
@@ -905,6 +906,48 @@ function CacheRow() {
   );
 }
 
+/** How much the downloaded episodes take on this device, which titles take it, and the way to them. */
+function DownloadsStorageRow() {
+  const { t } = useTranslation();
+  const navigate = useNavigate();
+  const episodes = useQuery({ queryKey: ["downloadedEpisodes"], queryFn: () => hibiki.downloads.list() });
+  const list = episodes.data ?? [];
+  const byTitle = new Map<string, number>();
+  for (const ep of list) byTitle.set(`${ep.sourceId}:${ep.animeId}`, (byTitle.get(`${ep.sourceId}:${ep.animeId}`) ?? 0) + ep.fileSizeBytes);
+  const shares = [...byTitle].sort((a, b) => b[1] - a[1]);
+  const total = list.reduce((sum, ep) => sum + ep.fileSizeBytes, 0);
+  return (
+    <SettingsRow icon={<Download className="h-[18px] w-[18px]" strokeWidth={2} />}>
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-text">{t("downloads.title")}</p>
+          <p className="mt-0.5 text-xs text-muted">
+            {episodes.data === undefined
+              ? "…"
+              : list.length === 0
+                ? t("downloads.empty")
+                : `${formatBytes(total)} · ${t("downloads.episodes", { count: list.length })} · ${t("downloads.titles", { count: byTitle.size })}`}
+          </p>
+        </div>
+        <button
+          onClick={() => void navigate({ to: "/downloads" })}
+          className="shrink-0 rounded-lg bg-text/[.05] px-3 py-1.5 text-sm font-medium text-text transition-colors hover:bg-text/[.08]"
+        >
+          {t("settings.network.downloadsOpen")}
+        </button>
+      </div>
+      {/* Each title's share, the biggest first. */}
+      {shares.length > 0 && (
+        <div className="mt-3 flex h-1.5 gap-0.5 overflow-hidden rounded-full">
+          {shares.map(([key, bytes], index) => (
+            <span key={key} className="h-full rounded-full bg-accent" style={{ flexGrow: Math.max(bytes, 1), flexBasis: 0, opacity: Math.max(0.25, 1 - index * 0.2) }} />
+          ))}
+        </div>
+      )}
+    </SettingsRow>
+  );
+}
+
 const MAX_DOWNLOAD_OPTIONS = [1, 2, 3, 4];
 const TIMEOUT_OPTIONS = [15, 25, 45];
 const DOH_OPTIONS: DohProvider[] = ["off", "cloudflare", "google", "adguard"];
@@ -1098,6 +1141,7 @@ function NetworkSection() {
       <CloudflareResetRow />
       <TrafficRow />
       <CacheRow />
+      <DownloadsStorageRow />
     </SettingsSection>
   );
 }
