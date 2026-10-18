@@ -217,8 +217,14 @@ export interface DownloadedEpisode {
   animePosterUrl: string | null;
 }
 
-export interface DownloadProgress {
+/** Which download - see shared/downloadKey.ts for why the episode id alone is not enough. */
+export interface DownloadKey {
+  sourceId: string;
+  animeId: string;
   episodeId: string;
+}
+
+export interface DownloadProgress extends DownloadKey {
   status: "queued" | "downloading" | "paused" | "done" | "error" | "unsupported" | "cancelled";
   percent?: number;
   filePath?: string;

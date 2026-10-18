@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
+import { downloadKeyId } from "@shared/downloadKey";
 import type { DownloadProgress } from "@shared/types";
 import { hibiki } from "@/lib/hibiki";
 
@@ -44,15 +45,16 @@ export function BackgroundWorkNotice() {
     };
 
     const unsubscribe = hibiki.downloads.onProgress((progress) => {
-      const previous = jobs.get(progress.episodeId);
+      const key = downloadKeyId(progress);
+      const previous = jobs.get(key);
       const status = progress.status;
       if (status === "queued" || status === "downloading" || status === "paused") {
-        jobs.set(progress.episodeId, { status, percent: progress.percent ?? previous?.percent ?? 0 });
+        jobs.set(key, { status, percent: progress.percent ?? previous?.percent ?? 0 });
       } else {
-        jobs.delete(progress.episodeId);
+        jobs.delete(key);
       }
       // A start or an end shows at once; progress in between is spaced out.
-      const changedShape = !previous || previous.status !== status || !jobs.has(progress.episodeId);
+      const changedShape = !previous || previous.status !== status || !jobs.has(key);
       if (changedShape) {
         if (timer !== undefined) window.clearTimeout(timer);
         publish();

@@ -324,9 +324,9 @@ const api: HibikiApi = {
   },
   downloads: {
     start: (request: DownloadRequest): Promise<void> => ipcRenderer.invoke(IPC.downloadsStart, request),
-    pause: (episodeId: string): Promise<void> => ipcRenderer.invoke(IPC.downloadsPause, episodeId),
-    resume: (episodeId: string): Promise<void> => ipcRenderer.invoke(IPC.downloadsResume, episodeId),
-    cancel: (episodeId: string): Promise<void> => ipcRenderer.invoke(IPC.downloadsCancel, episodeId),
+    pause: (sourceId: string, animeId: string, episodeId: string): Promise<void> => ipcRenderer.invoke(IPC.downloadsPause, sourceId, animeId, episodeId),
+    resume: (sourceId: string, animeId: string, episodeId: string): Promise<void> => ipcRenderer.invoke(IPC.downloadsResume, sourceId, animeId, episodeId),
+    cancel: (sourceId: string, animeId: string, episodeId: string): Promise<void> => ipcRenderer.invoke(IPC.downloadsCancel, sourceId, animeId, episodeId),
     list: (): Promise<DownloadedEpisode[]> => ipcRenderer.invoke(IPC.downloadsList),
     remove: (sourceId: string, animeId: string, episodeId: string): Promise<void> =>
       ipcRenderer.invoke(IPC.downloadsRemove, sourceId, animeId, episodeId),

@@ -335,9 +335,9 @@ export interface HibikiApi {
   };
   downloads: {
     start(request: DownloadRequest): Promise<void>;
-    pause(episodeId: string): Promise<void>;
-    resume(episodeId: string): Promise<void>;
-    cancel(episodeId: string): Promise<void>;
+    pause(sourceId: string, animeId: string, episodeId: string): Promise<void>;
+    resume(sourceId: string, animeId: string, episodeId: string): Promise<void>;
+    cancel(sourceId: string, animeId: string, episodeId: string): Promise<void>;
     list(): Promise<DownloadedEpisode[]>;
     remove(sourceId: string, animeId: string, episodeId: string): Promise<void>;
     getForEpisode(sourceId: string, animeId: string, episodeId: string): Promise<DownloadedEpisodeFile | null>;

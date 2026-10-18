@@ -24,8 +24,9 @@ const sqlByTag = Object.fromEntries(
 
 const request = { sourceId: "src", animeId: "a1", groupId: "g1", episodeId: "e1", episodeNumber: 1, episodeLabel: "Episode 1", animeTitle: "Title" };
 
-/** Downloads one episode whose link is `link`, with `remote` answering every URL; resolves with the files written. */
-async function download(link: PlayerLink, remote: Record<string, string>) {
+/** A downloads API over a fresh database whose links are all `link`, with `remote` answering every
+ * URL (`gate`, when given, holds each segment fetch until it resolves); every event is collected. */
+async function setup(link: PlayerLink, remote: Record<string, string>, gate?: Promise<void>) {
   const sqlite = new DatabaseSync(":memory:");
   const values = (sql: string, params: unknown[]) => sqlite.prepare(sql).all(...(params as SQLInputValue[])).map((row) => Object.values(row));
   const db = drizzle(async (sql, params, method) => {
@@ -47,8 +48,8 @@ async function download(link: PlayerLink, remote: Record<string, string>) {
     if (!(url in remote)) throw new Error(`HTTP 404`);
     return remote[url];
   };
-  let finished!: (progress: DownloadProgress) => void;
-  const done = new Promise<DownloadProgress>((resolve) => { finished = resolve; });
+  const events: DownloadProgress[] = [];
+  const listeners = new Set<(progress: DownloadProgress) => void>();
   installPlatform({
     db: { get: () => db },
     paths: { downloads: "dl" },
@@ -61,14 +62,19 @@ async function download(link: PlayerLink, remote: Record<string, string>) {
     },
     http: { request: async ({ url }: { url: string }) => ({ status: 200, body: body(url) }) },
     downloads: {
-      fetchToFile: async ({ url, headers, filePath, append }: { url: string; headers?: Record<string, string>; filePath: string; append: boolean }) => {
+      fetchToFile: async ({ url, headers, filePath, append, signal }: { url: string; headers?: Record<string, string>; filePath: string; append: boolean; signal?: AbortSignal }) => {
         requested.push({ url, headers });
+        if (gate) {
+          const aborted = () => Object.assign(new Error("aborted"), { name: "AbortError" });
+          if (signal?.aborted) throw aborted();
+          await Promise.race([gate, new Promise((_, reject) => signal?.addEventListener("abort", () => reject(aborted())))]);
+        }
         const data = body(url);
         files.set(filePath, (append ? files.get(filePath) ?? "" : "") + data);
         return { status: 200, headers: {}, bytesWritten: data.length };
       },
     },
-    events: { emit: (_channel: string, progress: DownloadProgress) => { if (["done", "error", "unsupported"].includes(progress.status)) finished(progress); } },
+    events: { emit: (_channel: string, progress: DownloadProgress) => { events.push(progress); for (const listener of listeners) listener(progress); } },
   } as unknown as Platform);
 
   const runtime = {
@@ -77,6 +83,23 @@ async function download(link: PlayerLink, remote: Record<string, string>) {
     getPlaybackGroups: async () => [],
   } as unknown as ExtensionRuntime;
   const api = createDownloadsApi(runtime);
+  /** The first event among `statuses` for this title's episode. */
+  const settled = (animeId: string, statuses = ["done", "error", "unsupported", "cancelled"]) =>
+    new Promise<DownloadProgress>((resolve) => {
+      const listener = (progress: DownloadProgress) => {
+        if (progress.animeId !== animeId || !statuses.includes(progress.status)) return;
+        listeners.delete(listener);
+        resolve(progress);
+      };
+      listeners.add(listener);
+    });
+  return { api, files, requested, events, settled };
+}
+
+/** Downloads one episode whose link is `link`, with `remote` answering every URL; resolves with the files written. */
+async function download(link: PlayerLink, remote: Record<string, string>) {
+  const { api, files, requested, settled } = await setup(link, remote);
+  const done = settled(request.animeId);
   await api.start(request);
   const result = await done;
   return { result, files, requested, api };
@@ -99,7 +122,7 @@ describe("HLS downloads with separate audio", () => {
       "https://cdn.test/a/a1.aac": "A1",
       "https://cdn.test/a/a2.aac": "A2",
     });
-    expect(result).toEqual({ episodeId: "e1", status: "done", filePath: "dl/Title/Episode 1.ts" });
+    expect(result).toEqual({ sourceId: "src", animeId: "a1", episodeId: "e1", status: "done", filePath: "dl/Title/Episode 1.ts" });
     expect(files.get("dl/Title/Episode 1.ts")).toBe("V1V2");
     expect(files.get("dl/Title/Episode 1.audio.aac")).toBe("A1A2");
     expect(requested.find((r) => r.url.endsWith("a1.aac"))?.headers).toEqual({ Referer: "https://audio.test/" });
@@ -146,5 +169,39 @@ describe("HLS downloads with separate audio", () => {
       audio: "dl/Title/Episode 1.audio.m4s",
       audioInit: "dl/Title/Episode 1.audio.init.mp4",
     });
+  });
+});
+
+describe("downloads of two titles with the same episode id", () => {
+  const link: PlayerLink = { url: "https://cdn.test/v.m3u8", type: "DIRECT_HLS" };
+  const remote = { "https://cdn.test/v.m3u8": "#EXTM3U\n#EXTINF:4,\n1.ts\n#EXT-X-ENDLIST\n", "https://cdn.test/1.ts": "V1" };
+  // Some sources number episodes "1", "2"... in every title.
+  const first = { ...request, animeId: "a1", episodeId: "1", animeTitle: "First" };
+  const second = { ...request, animeId: "a2", episodeId: "1", animeTitle: "Second" };
+
+  it("both run, each into its own title's files and record", async () => {
+    const { api, files, settled } = await setup(link, remote);
+    const done = Promise.all([settled("a1"), settled("a2")]);
+    await api.start(first);
+    await api.start(second);
+    expect((await done).map((progress) => [progress.animeId, progress.status])).toEqual([["a1", "done"], ["a2", "done"]]);
+    expect(files.get("dl/First/Episode 1.ts")).toBe("V1");
+    expect(files.get("dl/Second/Episode 1.ts")).toBe("V1");
+    expect((await api.list()).map((row) => row.animeId).sort()).toEqual(["a1", "a2"]);
+  });
+
+  it("cancelling one leaves the other running", async () => {
+    let release!: () => void;
+    const { api, files, settled } = await setup(link, remote, new Promise<void>((resolve) => { release = resolve; }));
+    const running = Promise.all([settled("a1", ["downloading"]), settled("a2", ["downloading"])]);
+    const results = Promise.all([settled("a1"), settled("a2")]);
+    await api.start(first);
+    await api.start(second);
+    await running;
+    await api.cancel(first.sourceId, first.animeId, first.episodeId);
+    release();
+    expect((await results).map((progress) => [progress.animeId, progress.status])).toEqual([["a1", "cancelled"], ["a2", "done"]]);
+    expect(files.has("dl/First/Episode 1.ts")).toBe(false);
+    expect(files.get("dl/Second/Episode 1.ts")).toBe("V1");
   });
 });

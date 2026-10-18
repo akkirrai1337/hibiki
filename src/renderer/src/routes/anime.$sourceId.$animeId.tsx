@@ -245,17 +245,21 @@ function AnimeDetailPage() {
     [downloadedEpisodesQuery.data, sourceId, animeId],
   );
 
-  // Keyed by episodeId, not a single "current download" - more than one episode's context menu
-  // can kick off a download independently, and each chip only cares about its own entry here.
+  // This title's downloads by episodeId, not a single "current download" - more than one episode's
+  // context menu can kick off a download independently, and each chip only cares about its own
+  // entry here. Another title's episode can have the same id ("1", "2"... on some sources), so
+  // its events are left out.
   const [downloads, setDownloads] = useState<Record<string, DownloadProgress>>({});
   useEffect(() => {
+    setDownloads({});
     return hibiki.downloads.onProgress((progress) => {
-      setDownloads((prev) => ({ ...prev, [progress.episodeId]: progress }));
       // A finished (or deleted-out-from-under-us) download changes the *persisted* set this page
-      // checks against for "already downloaded" - not just the transient per-episode status above.
+      // checks against for "already downloaded" - not just the transient per-episode status below.
       if (progress.status === "done" || progress.status === "cancelled") {
         queryClient.invalidateQueries({ queryKey: ["downloadedEpisodes"] });
       }
+      if (progress.sourceId !== sourceId || progress.animeId !== animeId) return;
+      setDownloads((prev) => ({ ...prev, [progress.episodeId]: progress }));
       // "paused"/"queued" aren't terminal results to auto-clear after a few seconds like the
       // others below - they need to keep showing (and stay cancellable, or pausable/resumable for
       // "paused") until the user actually does one of those, or the queue actually gets to it.
@@ -273,7 +277,7 @@ function AnimeDetailPage() {
         }, DOWNLOAD_RESULT_DISPLAY_MS);
       }
     });
-  }, [queryClient]);
+  }, [queryClient, sourceId, animeId]);
 
   const anime = animeQuery.data;
   const groups = groupsQuery.data ?? [];
@@ -712,8 +716,8 @@ function EpisodeChip({
   const onTogglePause = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (downloading) hibiki.downloads.pause(episode.id);
-    else hibiki.downloads.resume(episode.id);
+    if (downloading) hibiki.downloads.pause(sourceId, animeId, episode.id);
+    else hibiki.downloads.resume(sourceId, animeId, episode.id);
   };
 
   return (
@@ -817,7 +821,7 @@ function EpisodeChip({
                   <>
                     {!queued && (
                       <ContextMenu.Item
-                        onSelect={() => (downloading ? hibiki.downloads.pause(episode.id) : hibiki.downloads.resume(episode.id))}
+                        onSelect={() => (downloading ? hibiki.downloads.pause(sourceId, animeId, episode.id) : hibiki.downloads.resume(sourceId, animeId, episode.id))}
                         className="flex cursor-default items-center gap-2.5 px-3.5 py-2.5 text-sm text-text outline-none transition-colors data-[highlighted]:bg-text/[.06]"
                       >
                         {downloading ? <Pause className="h-4 w-4 shrink-0 text-muted" strokeWidth={2} /> : <Play className="h-4 w-4 shrink-0 text-muted" strokeWidth={2} />}
@@ -825,7 +829,7 @@ function EpisodeChip({
                       </ContextMenu.Item>
                     )}
                     <ContextMenu.Item
-                      onSelect={() => hibiki.downloads.cancel(episode.id)}
+                      onSelect={() => hibiki.downloads.cancel(sourceId, animeId, episode.id)}
                       className="flex cursor-default items-center gap-2.5 px-3.5 py-2.5 text-sm text-rose-300 outline-none transition-colors data-[highlighted]:bg-text/[.06]"
                     >
                       <X className="h-4 w-4 shrink-0" strokeWidth={2} />

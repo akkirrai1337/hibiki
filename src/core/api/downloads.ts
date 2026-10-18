@@ -1,5 +1,6 @@
 import type { HibikiApi } from "@shared/hibikiApi";
 import { IPC } from "@shared/ipc";
+import { downloadKeyId, downloadKeyOf } from "@shared/downloadKey";
 import { subtitleTextToVtt } from "@shared/subtitles";
 import type { DownloadedParts, DownloadedSubtitle, DownloadProgress, DownloadRequest, PlayerLink } from "@shared/types";
 import type { ExtensionRuntime } from "../extensions/runtime";
@@ -354,10 +355,11 @@ async function downloadedSize(state: { outFile: string; parts: DownloadedParts }
 // A queued job is either a fresh download (still needs its link resolved - that happens lazily,
 // right when it's actually dequeued, not up front for the whole batch at once) or a paused one
 // waiting for a slot to resume into - both go through the same slot-limited pipe.
-type QueuedJob = { kind: "start"; request: DownloadRequest } | { kind: "resume"; episodeId: string };
+// Both are known by downloadKeyId, never the bare episode id.
+type QueuedJob = { kind: "start"; request: DownloadRequest } | { kind: "resume"; key: string };
 
-function jobEpisodeId(job: QueuedJob): string {
-  return job.kind === "start" ? job.request.episodeId : job.episodeId;
+function jobKey(job: QueuedJob): string {
+  return job.kind === "start" ? downloadKeyId(job.request) : job.key;
 }
 
 /** How a download is named in the log: which title and episode, not its opaque ids. */
@@ -370,53 +372,55 @@ const errorText = (err: unknown) => (err instanceof Error ? err.message : String
 /** The episode-download part of `window.hibiki`. Progress (including the final
  * done/error/paused/cancelled) goes out as `downloads:progress` events. */
 export function createDownloadsApi(runtime: ExtensionRuntime): Omit<HibikiApi["downloads"], "onProgress"> {
+  // By downloadKeyId.
   const downloads = new Map<string, DownloadState>();
   let activeCount = 0;
   const jobQueue: QueuedJob[] = [];
   const send = (progress: DownloadProgress) => getPlatform().events.emit(IPC.downloadsProgress, progress);
 
   async function runDownload(state: DownloadState): Promise<void> {
-    const episodeId = state.request.episodeId;
+    const key = downloadKeyId(state.request);
+    const at = downloadKeyOf(state.request);
     const label = jobLabel(state.request);
     const startedAt = Date.now();
     state.running = true;
     const resuming = state.hlsTracks?.some((track) => track.nextIndex > 0 || track.init?.done) || state.bytesReceived > 0;
     logger.info("download", `${label}: ${resuming ? `resumed at ${state.lastPercent}%` : "started"} (${state.link.type}, ${state.link.quality ?? "?"}, ${state.link.playerName ?? "?"})`);
     try {
-      send({ episodeId, status: "downloading", percent: state.lastPercent });
+      send({ ...at, status: "downloading", percent: state.lastPercent });
       const onProgress = (percent: number) => {
         state.lastPercent = percent;
-        send({ episodeId, status: "downloading", percent });
+        send({ ...at, status: "downloading", percent });
       };
       if (state.link.type === "DIRECT_HLS") await downloadHls(state, onProgress);
       else await downloadDirect(state, onProgress);
 
       const subtitles = await downloadSubtitles(state);
-      downloads.delete(episodeId);
+      downloads.delete(key);
       await cacheForOffline(state, subtitles);
       const size = (await downloadedSize(state)) ?? 0;
       logger.info("download", `${label}: done in ${Math.round((Date.now() - startedAt) / 1000)}s, ${(size / 1024 / 1024).toFixed(1)} MB`);
-      send({ episodeId, status: "done", filePath: state.outFile });
+      send({ ...at, status: "done", filePath: state.outFile });
     } catch (err) {
       if (!isAbortError(err)) {
         logger.warn("download", `${label}: failed at ${state.lastPercent}%: ${errorText(err)}`);
-        downloads.delete(episodeId);
-        send({ episodeId, status: "error", message: err instanceof Error ? err.message : String(err) });
+        downloads.delete(key);
+        send({ ...at, status: "error", message: err instanceof Error ? err.message : String(err) });
         return;
       }
       if (state.cancelled) {
-        downloads.delete(episodeId);
+        downloads.delete(key);
         // A half-written file left behind by a cancelled download isn't useful to anyone - clean it
         // up rather than leaving a truncated video sitting in the downloads folder.
         await removeDownloadFiles(state);
         logger.info("download", `${label}: cancelled at ${state.lastPercent}%`);
-        send({ episodeId, status: "cancelled" });
+        send({ ...at, status: "cancelled" });
       } else {
         logger.info("download", `${label}: paused at ${state.lastPercent}%`);
         // Just paused - the entry (and the partial file on disk) stays put for resume to continue.
         // `percent: state.lastPercent` so the chip keeps showing where it actually left off instead
         // of resetting to 0 (DownloadProgress.percent just wouldn't be there at all otherwise).
-        send({ episodeId, status: "paused", percent: state.lastPercent });
+        send({ ...at, status: "paused", percent: state.lastPercent });
       }
     } finally {
       state.running = false;
@@ -435,7 +439,7 @@ export function createDownloadsApi(runtime: ExtensionRuntime): Omit<HibikiApi["d
       if (!link || link.type === "EMBED" || link.type === "DIRECT_DASH" || (link.audioUrl && link.type !== "DIRECT_HLS")) {
         const why = !link ? `no link among ${links.length}` : link.audioUrl && link.type !== "DIRECT_HLS" ? `separate audio beside ${link.type}` : link.type;
         logger.info("download", `${jobLabel(request)}: can't be downloaded (${why})`);
-        send({ episodeId: request.episodeId, status: "unsupported" });
+        send({ ...downloadKeyOf(request), status: "unsupported" });
         return;
       }
 
@@ -446,11 +450,11 @@ export function createDownloadsApi(runtime: ExtensionRuntime): Omit<HibikiApi["d
       const outFile = files.join(animeDir, `${sanitizeFilename(request.episodeLabel)}.${ext}`);
 
       const state: DownloadState = { request, runtime, link, outFile, controller: new AbortController(), cancelled: false, running: false, parts: {}, bytesReceived: 0, lastPercent: 0 };
-      downloads.set(request.episodeId, state);
+      downloads.set(downloadKeyId(request), state);
       await runDownload(state);
     } catch (err) {
       logger.warn("download", `${jobLabel(request)}: could not start: ${errorText(err)}`);
-      send({ episodeId: request.episodeId, status: "error", message: errorText(err) });
+      send({ ...downloadKeyOf(request), status: "error", message: errorText(err) });
     }
   }
 
@@ -465,7 +469,7 @@ export function createDownloadsApi(runtime: ExtensionRuntime): Omit<HibikiApi["d
       if (job.kind === "start") {
         void resolveAndRunDownload(job.request).finally(settle);
       } else {
-        const state = downloads.get(job.episodeId);
+        const state = downloads.get(job.key);
         if (!state) {
           settle();
           continue;
@@ -483,41 +487,44 @@ export function createDownloadsApi(runtime: ExtensionRuntime): Omit<HibikiApi["d
     // of HLS segment requests), and the renderer only needs this call to *start* the job, not block
     // on its completion.
     async start(request: DownloadRequest): Promise<void> {
-      if (downloads.has(request.episodeId) || jobQueue.some((j) => jobEpisodeId(j) === request.episodeId)) return;
+      const key = downloadKeyId(request);
+      if (downloads.has(key) || jobQueue.some((j) => jobKey(j) === key)) return;
       jobQueue.push({ kind: "start", request });
-      send({ episodeId: request.episodeId, status: "queued" });
+      send({ ...downloadKeyOf(request), status: "queued" });
       pumpQueue();
     },
 
-    async pause(episodeId: string): Promise<void> {
+    async pause(sourceId: string, animeId: string, episodeId: string): Promise<void> {
       // Aborting is what actually stops the in-flight request - `runDownload`'s catch block sees
       // that abort, notices `cancelled` is still false, and reports "paused" instead of tearing the
       // entry down, leaving it ready to resume into later. The freed slot (via the `.finally` in
       // pumpQueue, once the abort actually unwinds runDownload) lets the next queued job start.
-      downloads.get(episodeId)?.controller.abort();
+      downloads.get(downloadKeyId({ sourceId, animeId, episodeId }))?.controller.abort();
     },
 
-    async resume(episodeId: string): Promise<void> {
-      const state = downloads.get(episodeId);
-      if (!state || state.running || jobQueue.some((j) => jobEpisodeId(j) === episodeId)) return;
-      jobQueue.push({ kind: "resume", episodeId });
-      send({ episodeId, status: "queued", percent: state.lastPercent });
+    async resume(sourceId: string, animeId: string, episodeId: string): Promise<void> {
+      const key = downloadKeyId({ sourceId, animeId, episodeId });
+      const state = downloads.get(key);
+      if (!state || state.running || jobQueue.some((j) => jobKey(j) === key)) return;
+      jobQueue.push({ kind: "resume", key });
+      send({ sourceId, animeId, episodeId, status: "queued", percent: state.lastPercent });
       pumpQueue();
     },
 
-    async cancel(episodeId: string): Promise<void> {
+    async cancel(sourceId: string, animeId: string, episodeId: string): Promise<void> {
+      const key = downloadKeyId({ sourceId, animeId, episodeId });
       // Still just waiting in line, never actually started - nothing for an abort to interrupt, so
       // this is the one case cancel doesn't go through runDownload's own cleanup path at all.
-      const queuedIndex = jobQueue.findIndex((j) => jobEpisodeId(j) === episodeId);
+      const queuedIndex = jobQueue.findIndex((j) => jobKey(j) === key);
       if (queuedIndex !== -1) {
         jobQueue.splice(queuedIndex, 1);
-        const state = downloads.get(episodeId);
-        downloads.delete(episodeId);
+        const state = downloads.get(key);
+        downloads.delete(key);
         if (state) await removeDownloadFiles(state);
-        send({ episodeId, status: "cancelled" });
+        send({ sourceId, animeId, episodeId, status: "cancelled" });
         return;
       }
-      const state = downloads.get(episodeId);
+      const state = downloads.get(key);
       if (!state) return;
       state.cancelled = true;
       if (state.running) {
@@ -528,9 +535,9 @@ export function createDownloadsApi(runtime: ExtensionRuntime): Omit<HibikiApi["d
       // Nothing's in flight (the download is currently paused) - there's no fetch for abort() to
       // interrupt, and so nothing that would otherwise reach runDownload's catch block to do the
       // cleanup. Do it here instead.
-      downloads.delete(episodeId);
+      downloads.delete(key);
       await removeDownloadFiles(state);
-      send({ episodeId, status: "cancelled" });
+      send({ sourceId, animeId, episodeId, status: "cancelled" });
     },
 
     list: () => listDownloadedEpisodes(),
