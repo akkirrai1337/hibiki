@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Bookmark, Home, LayoutGrid, Radio, User } from "lucide-react";
 import { useSourceUpdateCount } from "@/lib/sourceUpdates";
 import { cn } from "@/lib/cn";
+import { AvatarNavIcon } from "@/components/AvatarNavIcon";
 
 // The phone's whole navigation: five places, each owning the screens reached from it. History and
 // downloads live under the library, settings under the profile - the desktop sidebar's other
@@ -93,7 +94,15 @@ export function MobileTabBar() {
             className={cn("flex flex-1 flex-col items-center justify-center gap-0.5 text-[10.5px] font-medium transition-colors", isActive ? "text-accent-text" : "text-muted active:text-text")}
           >
             <span className="relative">
-              <tab.icon className="h-[21px] w-[21px]" strokeWidth={isActive ? 2.3 : 1.9} />
+              {tab.to === "/profile" ? (
+                <AvatarNavIcon
+                  active={isActive}
+                  className="h-[21px] w-[21px]"
+                  fallback={<tab.icon className="h-[21px] w-[21px]" strokeWidth={isActive ? 2.3 : 1.9} />}
+                />
+              ) : (
+                <tab.icon className="h-[21px] w-[21px]" strokeWidth={isActive ? 2.3 : 1.9} />
+              )}
               {tab.to === "/sources" && sourceUpdateCount > 0 && (
                 <span className="absolute -right-2 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-bold leading-none text-white">{sourceUpdateCount > 9 ? "9+" : sourceUpdateCount}</span>
               )}

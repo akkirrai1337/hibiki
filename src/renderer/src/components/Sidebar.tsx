@@ -9,6 +9,7 @@ import { useUiStore } from "@/stores/uiStore";
 import { useSpotlightStore } from "@/stores/spotlightStore";
 import { useSourceUpdateCount } from "@/lib/sourceUpdates";
 import { cn } from "@/lib/cn";
+import { AvatarNavIcon } from "@/components/AvatarNavIcon";
 import { clearSectionTitle, getSectionTitle, isRememberedTitlePath, type BrowseSection } from "@/lib/sectionTitleMemory";
 
 // 236px is the ceiling (the original full design). Below MIN_FULL_WIDTH there isn't room to keep
@@ -151,7 +152,11 @@ function NavLink({
       <span className={cn("absolute -left-3 top-1/2 h-4 w-[3px] -translate-y-1/2 rounded-r-full bg-accent transition-opacity", isActive ? "opacity-100" : "opacity-0")} />
       {isActive && <span className="absolute inset-0 rounded-lg bg-text/[.08]" />}
       <span className="relative z-10 shrink-0">
-        <Icon className="h-[17px] w-[17px]" strokeWidth={2} />
+        {to === "/profile" ? (
+          <AvatarNavIcon active={isActive} className="h-[18px] w-[18px]" fallback={<Icon className="h-[17px] w-[17px]" strokeWidth={2} />} />
+        ) : (
+          <Icon className="h-[17px] w-[17px]" strokeWidth={2} />
+        )}
         {badgeCount > 0 && <NavBadge count={badgeCount} />}
       </span>
       {!compact && <span className="relative z-10 truncate">{label}</span>}
