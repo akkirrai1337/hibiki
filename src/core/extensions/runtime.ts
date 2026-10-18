@@ -29,6 +29,8 @@ import { logger } from "../logger";
 import { ExtensionStorage } from "./extensionStorage";
 import { withTitleFacts } from "./titleFacts";
 import { chronologicalGroups } from "./episodeOrder";
+import { forgetSnapshot, markVerified, readSnapshot, requestKey, usable, versionOf, writeSnapshot, type TitleSnapshot } from "./titleSnapshots";
+import { getCachedAnime } from "../offlineCache";
 
 /** An extension asks for more than this build provides (see shared/hostApi.ts). */
 export class HostApiError extends Error {
@@ -186,6 +188,51 @@ function challengedUrls(kind: Parameters<BridgeHandler>[0], payload: Record<stri
 }
 
 const isEmptyResult = (result: unknown) => result === null || result === undefined || (Array.isArray(result) && result.length === 0);
+
+/** What a call does with a title's snapshot: answers from `serve`, and keeps in `record` what it
+ * had to download (titleSnapshots.ts). */
+interface SnapshotSession {
+  serve?: Record<string, NetFetchResult>;
+  record?: Record<string, NetFetchResult>;
+}
+
+const isGet = (options: { method?: string } | undefined) => (options?.method ?? "GET").toUpperCase() === "GET";
+
+/** A bridge that answers a call's GETs from a snapshot and records the ones it downloads. */
+function throughSnapshot(forward: BridgeHandler, session: SnapshotSession): BridgeHandler {
+  const keep = (key: string, result: unknown) => {
+    const response = result as NetFetchResult | undefined;
+    if (session.record && response && response.status === 200 && !response.error) session.record[key] = response;
+  };
+  return async (kind, payload) => {
+    if (kind === "netFetch") {
+      const options = payload.options as { method?: string; headers?: Record<string, string> } | undefined;
+      if (!isGet(options)) return forward(kind, payload);
+      const key = requestKey(payload.url as string, options?.headers);
+      const stored = session.serve?.[key];
+      if (stored) return stored;
+      const result = await forward(kind, payload);
+      keep(key, result);
+      return result;
+    }
+    if (kind === "netFetchAll") {
+      const requests = (payload.requests as Array<{ url: string; options?: { method?: string; headers?: Record<string, string> } }>) ?? [];
+      const keys = requests.map((request) => (isGet(request.options) ? requestKey(request.url, request.options?.headers) : null));
+      const results: unknown[] = keys.map((key) => (key ? session.serve?.[key] : undefined));
+      const missing = results.map((result, index) => (result === undefined ? index : -1)).filter((index) => index >= 0);
+      if (missing.length > 0) {
+        const fetched = (await forward(kind, { ...payload, requests: missing.map((index) => requests[index]) })) as unknown[];
+        missing.forEach((index, i) => {
+          results[index] = fetched[i];
+          const key = keys[index];
+          if (key) keep(key, fetched[i]);
+        });
+      }
+      return results;
+    }
+    return forward(kind, payload);
+  };
+}
 
 export function isApkSource(sourceId: string): boolean {
   return sourceId.startsWith("apk:");
@@ -358,7 +405,7 @@ export class ExtensionRuntime {
     method: ExtensionMethod,
     sourceId: string,
     args: unknown[],
-    options?: { extensionsDir?: string; requestId?: string; timeoutMs?: number },
+    options?: { extensionsDir?: string; requestId?: string; timeoutMs?: number; snapshot?: SnapshotSession },
   ): Promise<T> {
     if (isApkSource(sourceId)) return this.runApk<T>(method, sourceId, args);
     const extensionsDir = options?.extensionsDir ?? this.extensionsDir;
@@ -373,11 +420,12 @@ export class ExtensionRuntime {
     // error offers to pass it. A call that got what it needed despite one blocked request (one of
     // several mirrors, say) is left alone.
     const challenged: string[] = [];
-    const bridge: BridgeHandler = (kind, payload) =>
+    const forward: BridgeHandler = (kind, payload) =>
       this.bridge(kind, payload).then((result) => {
         challenged.push(...challengedUrls(kind, payload, result));
         return result;
       });
+    const bridge = options?.snapshot ? throughSnapshot(forward, options.snapshot) : forward;
     const challengeError = () => (challenged.length > 0 ? cloudflareCheckError(sourceId, challenged[0]) : null);
 
     // Registered before anything is awaited: a search the renderer supersedes a keystroke later
@@ -610,12 +658,66 @@ export class ExtensionRuntime {
   }
 
   getPlaybackGroups(sourceId: string, titleId: string): Promise<PlaybackGroup[]> {
-    return this.shareRead("getPlaybackGroups", sourceId, [titleId], async () => chronologicalGroups(await this.run<PlaybackGroup[]>("getPlaybackGroups", sourceId, [titleId])));
+    return this.shareRead("getPlaybackGroups", sourceId, [titleId], async () => chronologicalGroups(await this.playbackGroupsThroughSnapshot(sourceId, titleId)));
+  }
+
+  /**
+   * The episode list from the title's snapshot while it holds (titleSnapshots.ts), else from the
+   * source - and then what the source downloaded for it becomes the new snapshot, under the
+   * details' version as they are now (read alongside: the title page asks for them at the same
+   * moment, and shareRead makes that one request).
+   */
+  private async playbackGroupsThroughSnapshot(sourceId: string, titleId: string): Promise<PlaybackGroup[]> {
+    if (isApkSource(sourceId)) return this.run<PlaybackGroup[]>("getPlaybackGroups", sourceId, [titleId]);
+    const snapshot = await this.snapshotFor(sourceId, titleId, "list");
+    if (snapshot) {
+      const added: Record<string, NetFetchResult> = {};
+      const groups = await this.run<PlaybackGroup[]>("getPlaybackGroups", sourceId, [titleId], { snapshot: { serve: snapshot.responses, record: added } });
+      if (Object.keys(added).length > 0) await writeSnapshot(sourceId, titleId, { ...snapshot, responses: { ...snapshot.responses, ...added } });
+      logger.debug("ext", `${sourceId}.getPlaybackGroups(${titleId}) from its snapshot${Object.keys(added).length ? `, ${Object.keys(added).length} request(s) added` : ""}`);
+      return groups;
+    }
+    const recorded: Record<string, NetFetchResult> = {};
+    const [groups, details] = await Promise.all([
+      this.run<PlaybackGroup[]>("getPlaybackGroups", sourceId, [titleId], { snapshot: { record: recorded } }),
+      this.getById(sourceId, titleId).catch(() => null),
+    ]);
+    if (Object.keys(recorded).length > 0) {
+      const now = Date.now();
+      await writeSnapshot(sourceId, titleId, { version: versionOf(details), savedAt: now, verifiedAt: now, responses: recorded });
+    }
+    return groups;
+  }
+
+  /**
+   * The title's snapshot if it may stand in for the source now, checking the light details when
+   * it is due to (titleSnapshots.usable). Null when there is none, it is too old, or the details
+   * say something new came out.
+   */
+  private async snapshotFor(sourceId: string, titleId: string, purpose: "list" | "links"): Promise<TitleSnapshot | null> {
+    const snapshot = await readSnapshot(sourceId, titleId);
+    if (!snapshot) return null;
+    const cached = await getCachedAnime(sourceId, titleId).catch(() => null);
+    const verdict = usable(snapshot, purpose, cached ? versionOf(cached) : undefined);
+    if (verdict === "yes") return snapshot;
+    if (verdict === "no") return null;
+    const details = await this.getById(sourceId, titleId).catch(() => null);
+    if (!details) return null;
+    const version = versionOf(details);
+    if (version !== snapshot.version) {
+      logger.info("ext", `${sourceId}/${titleId}: details changed (${snapshot.version} -> ${version}), episode list is downloaded again`);
+      return null;
+    }
+    await markVerified(sourceId, titleId, snapshot, version);
+    return snapshot;
   }
 
   getPlayerLinks(sourceId: string, titleId: string, groupId: string, episodeId: string, preference?: PlayerLinkPreference): Promise<PlayerLink[]> {
     return this.shareRead("getPlayerLinks", sourceId, [titleId, groupId, episodeId, preference ?? null], async () => {
-      const sourceLinks = await this.run<PlayerLink[]>("getPlayerLinks", sourceId, [titleId, groupId, episodeId]);
+      // Asked for fresh links (the old ones expired): the snapshot they came from is stale too.
+      if (preference?.fresh) await forgetSnapshot(sourceId, titleId);
+      const snapshot = isApkSource(sourceId) || preference?.fresh ? null : await this.snapshotFor(sourceId, titleId, "links");
+      const sourceLinks = await this.run<PlayerLink[]>("getPlayerLinks", sourceId, [titleId, groupId, episodeId], snapshot ? { snapshot: { serve: snapshot.responses } } : undefined);
       const links = sourceLinks.filter((link) => !isRetiredPlayerLink(link));
       if (links.length !== sourceLinks.length) {
         logger.info("resolve", `removed ${sourceLinks.length - links.length} retired CVH/Sibnet link(s) before playback`);

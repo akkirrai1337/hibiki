@@ -25,6 +25,7 @@ import { applyNetworkConfig, clearCloudflareCookies } from "./network";
 import { dataBytesThisSession, setNetworkConfig } from "../core/networkConfig";
 import { forgetAllClearances } from "../core/extensions/cloudflare";
 import { clearHttpCache, httpCacheSize } from "../core/extensions/httpCache";
+import { clearTitleSnapshots, titleSnapshotsSize } from "../core/extensions/titleSnapshots";
 import { resolveFinalStreamUrl } from "./playerStream";
 import { clearDiscordPresence, setDiscordRpcEnabled, setIdleDiscordPresence, shutdownDiscordRpc, updateDiscordPresence } from "./discordRpc";
 import { DEEP_LINK_SCHEME, findDeepLinkInArgv, parseWatchDeepLink } from "../core/deepLink";
@@ -433,8 +434,9 @@ app.whenReady().then(async () => {
     await clearCloudflareCookies();
   });
   ipcMain.handle(IPC.networkTraffic, (): TrafficSnapshot => ({ data: dataBytesThisSession(), images: imageBytesThisSession() }));
-  ipcMain.handle(IPC.networkSourceCacheSize, () => httpCacheSize());
-  ipcMain.handle(IPC.networkClearSourceCache, () => clearHttpCache());
+  // Source pages kept for revalidation, and the titles' saved episode lists.
+  ipcMain.handle(IPC.networkSourceCacheSize, async () => (await httpCacheSize()) + (await titleSnapshotsSize()));
+  ipcMain.handle(IPC.networkClearSourceCache, async () => { await clearHttpCache(); await clearTitleSnapshots(); });
   ipcMain.handle(IPC.appHttpCacheSize, () => session.defaultSession.getCacheSize());
   ipcMain.handle(IPC.appClearHttpCache, () => session.defaultSession.clearCache());
   // Chromium names the GPU only in its "complete" info, as ANGLE's renderer string

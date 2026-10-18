@@ -252,16 +252,18 @@ function WatchPage() {
   // some hours, Alloha's (vkvideo) within minutes - and the list below is kept for the whole
   // episode, so a link that has been sitting here a while is not worth trying as it is.
   const linkIssuedAtRef = useRef(new Map<string, number>());
-  const discoverLinks = useCallback(async () => {
+  // `fresh`: the links handed out before have expired - the source is asked again, not the episode
+  // list it saved for this title (core/extensions/titleSnapshots.ts).
+  const discoverLinks = useCallback(async (fresh = false) => {
     const startedAt = performance.now();
-    log.info("player", `link discovery started: source=${sourceId}, anime=${animeId}, group=${groupId}, episode=${episodeId}`);
+    log.info("player", `link discovery started: source=${sourceId}, anime=${animeId}, group=${groupId}, episode=${episodeId}${fresh ? " (fresh)" : ""}`);
     try {
       const links = await hibiki.sources.playerLinks(
         sourceId,
         animeId,
         groupId,
         episodeId,
-        { ...usePlayerSelectionStore.getState().get(sourceId, animeId, groupId), dataSaver: isDataSaverActive() },
+        { ...usePlayerSelectionStore.getState().get(sourceId, animeId, groupId), dataSaver: isDataSaverActive(), ...(fresh ? { fresh: true } : {}) },
       );
       log.info("player", `link discovery finished in ${Math.round(performance.now() - startedAt)}ms: ${links.length} link(s); ${links.map((item) => `${item.type}:${item.playerName ?? "?"}/${item.translation ?? "?"}/${item.quality ?? "?"}`).join(", ") || "none"}`);
       const issuedAt = Date.now();
@@ -282,7 +284,7 @@ function WatchPage() {
   // the whole hls.js (re)attach, snapping playback back near the last saved progress checkpoint.
   const linksQuery = useQuery({
     queryKey: ["playerLinks", sourceId, animeId, groupId, episodeId],
-    queryFn: discoverLinks,
+    queryFn: () => discoverLinks(),
     staleTime: Infinity,
     refetchOnWindowFocus: false,
   });
@@ -412,7 +414,7 @@ function WatchPage() {
     if (!isExpiredLink(stale)) return null;
     const startedAt = performance.now();
     log.info("player", `renewing ${stale.playerName ?? "?"}/${stale.quality ?? "?"} in place`);
-    const fresh = await discoverLinks();
+    const fresh = await discoverLinks(true);
     const candidate = pickRefreshedLink(fresh, stale);
     if (!candidate) return null;
     let renewed: PlayerLink | undefined = candidate;
@@ -434,7 +436,7 @@ function WatchPage() {
     try {
       const fresh = await queryClient.fetchQuery({
         queryKey: ["playerLinks", sourceId, animeId, groupId, episodeId],
-        queryFn: discoverLinks,
+        queryFn: () => discoverLinks(true),
         staleTime: 0,
       });
       if (requestId !== selectionRequestRef.current) return;

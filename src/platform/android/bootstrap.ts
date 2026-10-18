@@ -12,6 +12,7 @@ import { handleTrackingRedirect } from "../../core/api/tracking";
 import { ExtensionRuntime } from "../../core/extensions/runtime";
 import { forgetAllClearances } from "../../core/extensions/cloudflare";
 import { clearHttpCache, httpCacheSize } from "../../core/extensions/httpCache";
+import { clearTitleSnapshots, titleSnapshotsSize } from "../../core/extensions/titleSnapshots";
 import { dataBytesThisSession, setNetworkConfig } from "../../core/networkConfig";
 import { log, recentEntries, renderLog } from "../../core/logger";
 import { installPlatform } from "../../core/platform";
@@ -197,8 +198,8 @@ export async function installAndroidHibiki(): Promise<void> {
       configure: async (config) => setNetworkConfig(config),
       resetCloudflare: async () => forgetAllClearances(),
       traffic: async () => ({ data: dataBytesThisSession(), images: null }),
-      sourceCacheSize: () => httpCacheSize(),
-      clearSourceCache: () => clearHttpCache(),
+      sourceCacheSize: async () => (await httpCacheSize()) + (await titleSnapshotsSize()),
+      clearSourceCache: async () => { await clearHttpCache(); await clearTitleSnapshots(); },
       onMeteredChange: (callback) => {
         void HibikiApp.networkState().then((state) => callback(state.metered), () => undefined);
         const handle = HibikiApp.addListener("networkChange", (event) => callback(event.metered));

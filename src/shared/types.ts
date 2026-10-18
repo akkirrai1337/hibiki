@@ -625,6 +625,8 @@ export interface PlayerLinkPreference {
   /** Data saver is on (renderer lib/connectionQuality.ts): resolvers may trade extras for fewer
    * requests - Kodik skips its per-episode player page (and the skip timecodes on it). */
   dataSaver?: boolean;
+  /** The links handed out before have expired: ask the source again, not its saved episode list. */
+  fresh?: boolean;
 }
 
 /** An episode-group list read from the on-disk cache, with when it was last refreshed. */
