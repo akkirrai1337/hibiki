@@ -88,6 +88,13 @@ export interface VideoSegment {
   endMs: number;
 }
 
+/** AniSkip's openings and endings for an episode (core/skipTimes.ts), and the MAL id they were
+ * looked up by - kept by the renderer so the next episode skips the AniList lookup. */
+export interface SkipTimesResult {
+  malId: number | null;
+  segments: VideoSegment[];
+}
+
 export interface SubtitleTrack {
   url: string;
   label?: string | null;

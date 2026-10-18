@@ -21,6 +21,8 @@ export function registerSourceHandlers(runtime: ExtensionRuntime): void {
       sources.playerLinks(sourceId, titleId, groupId, episodeId, preference),
   );
   ipcMain.handle(IPC.sourceResolvePlayerLink, (_e, link: PlayerLink, options?: { dataSaver?: boolean }) => sources.resolvePlayerLink(link, options));
+  ipcMain.handle(IPC.sourceSkipTimes, (_e, sourceId: string, animeId: string, episodeNumber: number, durationMs: number, knownMalId?: number | null) =>
+    sources.skipTimes(sourceId, animeId, episodeNumber, durationMs, knownMalId));
   ipcMain.handle(IPC.sourceFilterCatalog, (_e, sourceId: string) => sources.filterCatalog(sourceId));
   ipcMain.handle(IPC.sourceRecommendations, (_e, sourceId: string, sort?: string) => sources.recommendations(sourceId, sort));
 

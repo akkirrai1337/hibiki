@@ -67,10 +67,12 @@ const STATUS_TO_ANILIST: Record<TrackerStatus, string> = {
   rewatching: "REPEATING",
 };
 
-const MEDIA_FIELDS = "id title { romaji english native userPreferred } synonyms seasonYear startDate { year } format episodes coverImage { large } siteUrl";
+const MEDIA_FIELDS = "id idMal title { romaji english native userPreferred } synonyms seasonYear startDate { year } format episodes coverImage { large } siteUrl";
 
 export interface AniListMedia {
   id: number;
+  /** The same show's MyAnimeList id, when AniList knows it (core/skipTimes.ts). */
+  idMal?: number | null;
   title?: { romaji?: string | null; english?: string | null; native?: string | null; userPreferred?: string | null } | null;
   synonyms?: string[] | null;
   seasonYear?: number | null;

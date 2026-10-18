@@ -6,6 +6,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { ArrowLeft, Loader2, TriangleAlert } from "lucide-react";
 import type { DownloadedEpisodeFile, PlaybackGroup, PlayerLink } from "@shared/types";
+import { fetchSkipTimes } from "@/lib/skipTimes";
 import { pickDataSaverLink, pickDefaultLink, pickPlaybackFallback, pickPreferredLink, pickRefreshedLink, pickResolvedLink, qualityVariant } from "@/lib/playerLinks";
 import { usePlaybackGroups } from "@/lib/playbackGroups";
 import { autoQualityCap, describeConnection, isDataSaverActive } from "@/lib/connectionQuality";
@@ -582,6 +583,14 @@ function WatchPage() {
   const prevEpisode = episodeIndex > 0 ? group!.episodes[episodeIndex - 1] : undefined;
   const nextEpisode = episodeIndex >= 0 && episodeIndex < (group?.episodes.length ?? 0) - 1 ? group!.episodes[episodeIndex + 1] : undefined;
   const episodeNumber = episode?.number ?? 0;
+  // AniSkip knows episodes by number: this source's own numbering of this one. The episode list is
+  // only loaded here on demand, so a player opened straight from "Continue watching" takes the
+  // number its saved progress has.
+  const skipEpisodeNumber = episodeNumber > 0 ? episodeNumber : (progressQuery.data?.episodeNumber ?? 0);
+  const fetchEpisodeSkipTimes = useMemo(
+    () => (skipEpisodeNumber > 0 ? (durationMs: number) => fetchSkipTimes(sourceId, animeId, skipEpisodeNumber, durationMs) : undefined),
+    [sourceId, animeId, skipEpisodeNumber],
+  );
 
   // Only checked at all while the *current* episode is itself a downloaded copy - if this episode
   // came from a live link, prev/next should behave exactly as they always have (no reason to
@@ -993,6 +1002,7 @@ function WatchPage() {
           onSelectLink={selectLinkManually}
           preferredAudioTrack={usePlayerSelectionStore.getState().get(sourceId, animeId, groupId)?.audioTrack ?? null}
           onAudioTrackPicked={rememberAudioTrack}
+          fetchSkipTimes={fetchEpisodeSkipTimes}
           onPlaybackFailure={handlePlaybackFailure}
           onRefreshStream={refreshStream}
           startPositionMs={progressQuery.data?.positionMs}

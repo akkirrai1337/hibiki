@@ -63,6 +63,7 @@ import { isMobile, useBackHandler } from "@/lib/mobile";
 import { useNetworkPrefsStore } from "@/stores/networkPrefsStore";
 import { countVideoBytes, countVideoCacheHit } from "@/lib/trafficStats";
 import { videoCache } from "@/lib/videoCache";
+import { hasOwnSkipSegments } from "@/lib/skipTimes";
 import { bufferedEnd, setLoadHold, skipHoldPoint, skipMarginSeconds } from "./loadGate";
 import { minutesLeft, SLEEP_TIMER_CHOICES, sleepTimerTakesEpisodeEnd, useSleepTimerStore, type SleepTimerChoice } from "./sleepTimer";
 import { attachStableVolume } from "./stableVolume";
@@ -111,6 +112,8 @@ interface VideoPlayerProps {
   preferredAudioTrack?: string | null;
   /** An audio track picked inside an HLS stream, to remember for the next episodes. */
   onAudioTrackPicked?: (label: string) => void;
+  /** Openings/endings from elsewhere (AniSkip) for a link that marks none, once its length is known. */
+  fetchSkipTimes?: (durationMs: number) => Promise<VideoSegment[]>;
   onPlaybackFailure?: (link: PlayerLink, reason: string) => boolean;
   /** A freshly issued link to the same stream as `link` (same player, dub, quality), for renewing an
    * expired CDN token mid-play - or null when there is none worth trying. */
@@ -639,7 +642,7 @@ function pipLabels(t: (key: string) => string) {
   };
 }
 
-export function VideoPlayer({ link, availableLinks, offlinePlayback, dubOptions, selectedDubId, onSelectDub, sourceSwitching, unplayable, onSelectLink, preferredAudioTrack, onAudioTrackPicked, onPlaybackFailure, onRefreshStream, startPositionMs, onProgress, onPlayStateChange, onCaptureThumbnail, title, episodeLabel, onBack, onPrevEpisode, onNextEpisode, onOpenEpisodes, episodesLoading, episodes, currentEpisodeId, onSelectEpisode, streakToast, playerSwitchToast }: VideoPlayerProps) {
+export function VideoPlayer({ link, availableLinks, offlinePlayback, dubOptions, selectedDubId, onSelectDub, sourceSwitching, unplayable, onSelectLink, preferredAudioTrack, onAudioTrackPicked, fetchSkipTimes, onPlaybackFailure, onRefreshStream, startPositionMs, onProgress, onPlayStateChange, onCaptureThumbnail, title, episodeLabel, onBack, onPrevEpisode, onNextEpisode, onOpenEpisodes, episodesLoading, episodes, currentEpisodeId, onSelectEpisode, streakToast, playerSwitchToast }: VideoPlayerProps) {
   const { t } = useTranslation();
   // Held in a ref, deliberately not read as a prop from inside the effects below. Both the source
   // setup and the media-element wiring would otherwise have to list it as a dependency, and the
@@ -651,6 +654,16 @@ export function VideoPlayer({ link, availableLinks, offlinePlayback, dubOptions,
   // Same reasoning: read when the manifest is parsed, never a reason to rebuild the stream.
   const preferredAudioTrackRef = useRef(preferredAudioTrack);
   preferredAudioTrackRef.current = preferredAudioTrack;
+  const fetchSkipTimesRef = useRef(fetchSkipTimes);
+  fetchSkipTimesRef.current = fetchSkipTimes;
+  // Openings/endings AniSkip gave for the stream playing (by URL), used when the link has none.
+  const [fetchedSegments, setFetchedSegments] = useState<{ url: string; segments: VideoSegment[] } | null>(null);
+  const segments = hasOwnSkipSegments(link?.segments)
+    ? link?.segments
+    : fetchedSegments && fetchedSegments.url === link?.url ? fetchedSegments.segments : link?.segments;
+  // Read by the timeupdate handler and the load gate, which live per stream, not per render.
+  const segmentsRef = useRef(segments);
+  segmentsRef.current = segments;
   const refreshStreamRef = useRef(onRefreshStream);
   refreshStreamRef.current = onRefreshStream;
   // Which of the three load paths below ends up owning the <video> element's source - read by the
@@ -1866,7 +1879,7 @@ export function VideoPlayer({ link, availableLinks, offlinePlayback, dubOptions,
         onProgress(video.currentTime * 1000, video.duration * 1000);
       }
       const nowMs = video.currentTime * 1000;
-      const segment = link?.segments?.find((s) => (s.type === "OPENING" || s.type === "ENDING") && nowMs >= s.startMs && nowMs < s.endMs) ?? null;
+      const segment = segmentsRef.current?.find((s) => (s.type === "OPENING" || s.type === "ENDING") && nowMs >= s.startMs && nowMs < s.endMs) ?? null;
       const key = segment ? segmentKey(segment) : null;
       if (key !== activeSegmentKeyRef.current) {
         activeSegmentKeyRef.current = key;
@@ -2039,6 +2052,38 @@ export function VideoPlayer({ link, availableLinks, offlinePlayback, dubOptions,
     setDismissedSegmentKey(null);
   }, [link?.url]);
 
+  // A link without its own opening/ending asks for AniSkip's once the episode's length is known
+  // (the length tells AniSkip which cut of the episode the times must fit). See lib/skipTimes.ts
+  // for when it does not ask at all (data saver). The episode list can arrive after the stream: the
+  // ask waits for it (canFetchSkipTimes) rather than being missed.
+  const canFetchSkipTimes = !!fetchSkipTimes;
+  useEffect(() => {
+    const video = videoRef.current;
+    const url = link?.url;
+    if (!video || !url || hasOwnSkipSegments(link?.segments) || !fetchSkipTimesRef.current) return;
+    let cancelled = false;
+    let asked = false;
+    const ask = () => {
+      if (asked || cancelled || !Number.isFinite(video.duration) || video.duration <= 0) return;
+      asked = true;
+      void fetchSkipTimesRef.current?.(video.duration * 1000)
+        .then((found) => {
+          if (cancelled || found.length === 0) return;
+          log.info("player", `skip times from AniSkip: ${found.map((s) => `${s.type} ${Math.round(s.startMs / 1000)}-${Math.round(s.endMs / 1000)}s`).join(", ")}`);
+          setFetchedSegments({ url, segments: found });
+        })
+        .catch(() => undefined);
+    };
+    ask();
+    video.addEventListener("durationchange", ask);
+    video.addEventListener("loadedmetadata", ask);
+    return () => {
+      cancelled = true;
+      video.removeEventListener("durationchange", ask);
+      video.removeEventListener("loadedmetadata", ask);
+    };
+  }, [link?.url, canFetchSkipTimes]);
+
   // Mirrors Android's PlayerSkipSegmentOverlay/SKIP_SEGMENT_COUNTDOWN_SECONDS: the button (and its
   // countdown) is shown for every OPENING/ENDING segment regardless of the auto-skip setting - that
   // setting only decides what happens once the countdown reaches zero (jump automatically vs. just
@@ -2118,8 +2163,7 @@ export function VideoPlayer({ link, availableLinks, offlinePlayback, dubOptions,
 
   // The link object is rebuilt on unrelated re-renders (see the [link?.url] effect above); its
   // segments are read through a ref so the effect below runs per stream, not per render.
-  const linkSegmentsRef = useRef(link?.segments);
-  linkSegmentsRef.current = link?.segments;
+  const linkSegmentsRef = segmentsRef;
   // Traffic: with auto-skip on, hls.js stops a few seconds into an opening/ending instead of
   // downloading all of it only to jump over it, and starts again once the jump happens - or right
   // away when "Watch" is pressed (the segment is then dismissed, so nothing holds it). A paused

@@ -26,6 +26,7 @@ import type {
   PlaybackGroup,
   PlayerLink,
   PlayerLinkPreference,
+  SkipTimesResult,
   RepositoryFetchResult,
   SearchFilterCatalog,
   SearchRequest,
@@ -81,6 +82,8 @@ export interface HibikiApi {
     playbackGroups(sourceId: string, titleId: string): Promise<PlaybackGroup[]>;
     playerLinks(sourceId: string, titleId: string, groupId: string, episodeId: string, preference?: PlayerLinkPreference): Promise<PlayerLink[]>;
     resolvePlayerLink(link: PlayerLink, options?: { dataSaver?: boolean }): Promise<PlayerLink[]>;
+    /** Opening/ending times from AniSkip for an episode its source marks none in. */
+    skipTimes(sourceId: string, animeId: string, episodeNumber: number, durationMs: number, knownMalId?: number | null): Promise<SkipTimesResult>;
     filterCatalog(sourceId: string): Promise<SearchFilterCatalog>;
     /** What to watch next on this source, from what was watched on it. `sort` is the order its genre
      * searches use - the home screen's own. */

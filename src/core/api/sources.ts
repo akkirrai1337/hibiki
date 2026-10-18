@@ -4,6 +4,7 @@ import type { ExtensionRuntime } from "../extensions/runtime";
 import { solveChallenge } from "../extensions/cloudflare";
 import { logger } from "../logger";
 import { recommendationsForSource } from "../recommendations/forSource";
+import { skipTimesFor } from "../skipTimes";
 import { cacheAnime, cachePlaybackGroups, getCachedAnime, getCachedAnimeMany, getCachedPlaybackGroups, getCachedPlaybackGroupsEntry } from "../offlineCache";
 
 /** Everything `window.hibiki.sources` asks of an installed source: catalog, playback, account. */
@@ -38,6 +39,11 @@ export function createSourcesApi(runtime: ExtensionRuntime): SourcesApi {
     // Cheap on purpose - one batched, indexed SQLite read for the whole screen, answered from disk
     // without waiting on any source.
     cachedTitles: (keys) => getCachedAnimeMany(keys),
+
+    // The title's names for the AniList lookup come from the cache the title page filled.
+    skipTimes: (sourceId, animeId, episodeNumber, durationMs, knownMalId) =>
+      skipTimesFor(sourceId, animeId, episodeNumber, durationMs, knownMalId, async () =>
+        (await getCachedAnime(sourceId, animeId)) ?? (await runtime.getById(sourceId, animeId).catch(() => null))),
     cachedPlaybackGroups: (sourceId, titleId) => getCachedPlaybackGroupsEntry(sourceId, titleId),
 
     async playbackGroups(sourceId: string, titleId: string): Promise<PlaybackGroup[]> {

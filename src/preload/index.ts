@@ -21,6 +21,7 @@ import type {
   PlaybackGroup,
   PlayerLink,
   PlayerLinkPreference,
+  SkipTimesResult,
   RepositoryFetchResult,
   SearchFilterCatalog,
   SourceRecommendations,
@@ -67,6 +68,8 @@ const api: HibikiApi = {
       ipcRenderer.invoke(IPC.sourcePlayerLinks, sourceId, titleId, groupId, episodeId, preference),
     resolvePlayerLink: (link: PlayerLink, options?: { dataSaver?: boolean }): Promise<PlayerLink[]> =>
       ipcRenderer.invoke(IPC.sourceResolvePlayerLink, link, options),
+    skipTimes: (sourceId: string, animeId: string, episodeNumber: number, durationMs: number, knownMalId?: number | null): Promise<SkipTimesResult> =>
+      ipcRenderer.invoke(IPC.sourceSkipTimes, sourceId, animeId, episodeNumber, durationMs, knownMalId),
     filterCatalog: (sourceId: string): Promise<SearchFilterCatalog> =>
       ipcRenderer.invoke(IPC.sourceFilterCatalog, sourceId),
     recommendations: (sourceId: string, sort?: string): Promise<SourceRecommendations> =>

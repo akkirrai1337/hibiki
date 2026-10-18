@@ -11,6 +11,7 @@ export const IPC = {
   sourcePlaybackGroups: "source:playbackGroups",
   sourcePlayerLinks: "source:playerLinks",
   sourceResolvePlayerLink: "source:resolvePlayerLink",
+  sourceSkipTimes: "source:skipTimes",
   sourceFilterCatalog: "source:filterCatalog",
   sourceRecommendations: "source:recommendations",
 
