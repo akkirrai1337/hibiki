@@ -12,6 +12,7 @@ import { CloudflareCheckButton, useCloudflareText } from "@/components/Cloudflar
 import { HERO_ACTION_CLASS, HeroCarousel, type HeroSlide } from "@/components/Hero";
 import { MobileHero } from "@/components/MobileHero";
 import { MobileSearchButton } from "@/components/MobileSearchButton";
+import { DownloadsButton } from "@/components/DownloadsIndicator";
 import { isMobile } from "@/lib/mobile";
 import { cn } from "@/lib/cn";
 import { useContinueWatching } from "@/lib/continueWatching";
@@ -202,7 +203,7 @@ export function CatalogPage() {
   ]);
   return <div className="relative min-h-full bg-app-bg pb-12">
     <PullToRefresh onRefresh={refreshHome} />
-    {isMobile && <div className="absolute right-3 z-10" style={{ top: "calc(0.5rem + var(--safe-top))" }}><MobileSearchButton overArtwork /></div>}
+    {isMobile && <div className="absolute right-3 z-10 flex items-center gap-2" style={{ top: "calc(0.5rem + var(--safe-top))" }}><DownloadsButton variant="artwork" /><MobileSearchButton overArtwork /></div>}
     {sources.isLoading && <HeroSkeleton />}{sources.data?.length === 0 && <EmptySources />}{sources.isError && <ErrorBanner message={(sources.error as Error).message} className="m-8" />}
     {source && <>
       {/* Neither answered: the source is down or the phone is offline. One plain statement of that,

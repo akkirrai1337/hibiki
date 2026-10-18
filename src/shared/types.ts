@@ -224,6 +224,19 @@ export interface DownloadKey {
   episodeId: string;
 }
 
+/** A download still under way - waiting its turn, running or paused - as the downloads panel lists
+ * it; everything needed to start it again is here too. */
+export interface ActiveDownload extends DownloadKey {
+  groupId: string;
+  episodeNumber: number;
+  animeTitle: string;
+  episodeLabel: string;
+  quality: string | null;
+  playerName: string | null;
+  status: "queued" | "downloading" | "paused";
+  percent: number;
+}
+
 export interface DownloadProgress extends DownloadKey {
   status: "queued" | "downloading" | "paused" | "done" | "error" | "unsupported" | "cancelled";
   percent?: number;

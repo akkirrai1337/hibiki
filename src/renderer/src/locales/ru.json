@@ -984,5 +984,32 @@
     "bellOff": "Не уведомлять о новых сериях",
     "setting": "Уведомления о новых сериях",
     "settingHint": "О сериях онгоингов из «Смотрю» в той озвучке, которую вы смотрите. Для любого тайтла можно включить или выключить колокольчиком на его странице."
+  },
+  "downloadsPanel": {
+    "title": "Загрузки",
+    "running_one": "{{count}} скачивается",
+    "running_few": "{{count}} скачиваются",
+    "running_many": "{{count}} скачиваются",
+    "running_other": "{{count}} скачиваются",
+    "waiting": "{{count}} в очереди",
+    "pausedCount": "{{count}} на паузе",
+    "paused": "Пауза",
+    "pauseAll": "Пауза",
+    "resumeAll": "Продолжить",
+    "cancelAll": "Отменить все",
+    "cancelAllConfirm": "Точно отменить?",
+    "episodes_one": "{{count}} серия",
+    "episodes_few": "{{count}} серии",
+    "episodes_many": "{{count}} серий",
+    "episodes_other": "{{count}} серии",
+    "more": "Ещё {{count}}",
+    "failed": "Не удалось",
+    "retry": "Повторить",
+    "dismiss": "Убрать",
+    "allDone": "Всё скачано",
+    "completed_one": "Скачана {{count}} серия",
+    "completed_few": "Скачаны {{count}} серии",
+    "completed_many": "Скачано {{count}} серий",
+    "completed_other": "Скачано {{count}} серии"
   }
 }

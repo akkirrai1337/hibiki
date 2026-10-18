@@ -984,5 +984,32 @@
     "bellOff": "Не сповіщати про нові серії",
     "setting": "Сповіщення про нові серії",
     "settingHint": "Про серії онгоїнгів із «Дивлюся» в тій озвучці, яку ви дивитеся. Для будь-якого тайтлу можна ввімкнути або вимкнути дзвіночком на його сторінці."
+  },
+  "downloadsPanel": {
+    "title": "Завантаження",
+    "running_one": "{{count}} завантажується",
+    "running_few": "{{count}} завантажуються",
+    "running_many": "{{count}} завантажуються",
+    "running_other": "{{count}} завантажуються",
+    "waiting": "{{count}} у черзі",
+    "pausedCount": "{{count}} на паузі",
+    "paused": "Пауза",
+    "pauseAll": "Пауза",
+    "resumeAll": "Продовжити",
+    "cancelAll": "Скасувати всі",
+    "cancelAllConfirm": "Точно скасувати?",
+    "episodes_one": "{{count}} серія",
+    "episodes_few": "{{count}} серії",
+    "episodes_many": "{{count}} серій",
+    "episodes_other": "{{count}} серії",
+    "more": "Ще {{count}}",
+    "failed": "Не вдалося",
+    "retry": "Повторити",
+    "dismiss": "Прибрати",
+    "allDone": "Усе завантажено",
+    "completed_one": "Завантажено {{count}} серію",
+    "completed_few": "Завантажено {{count}} серії",
+    "completed_many": "Завантажено {{count}} серій",
+    "completed_other": "Завантажено {{count}} серії"
   }
 }

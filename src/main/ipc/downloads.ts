@@ -11,6 +11,7 @@ export function registerDownloadHandlers(runtime: ExtensionRuntime): void {
   ipcMain.handle(IPC.downloadsResume, (_e, sourceId: string, animeId: string, episodeId: string) => downloads.resume(sourceId, animeId, episodeId));
   ipcMain.handle(IPC.downloadsCancel, (_e, sourceId: string, animeId: string, episodeId: string) => downloads.cancel(sourceId, animeId, episodeId));
   ipcMain.handle(IPC.downloadsList, () => downloads.list());
+  ipcMain.handle(IPC.downloadsActive, () => downloads.active());
   ipcMain.handle(IPC.downloadsGetForEpisode, (_e, sourceId: string, animeId: string, episodeId: string) =>
     downloads.getForEpisode(sourceId, animeId, episodeId),
   );

@@ -16,6 +16,7 @@ import { useCatalogIntentStore } from "@/stores/catalogIntentStore";
 import { activeFilterCount, toSearchRequestFilters, type SearchFilters } from "@/lib/searchFilters";
 import { isMobile } from "@/lib/mobile";
 import { MobileSearchButton } from "@/components/MobileSearchButton";
+import { DownloadsButton } from "@/components/DownloadsIndicator";
 import type { AnimeTitle } from "@shared/types";
 import { useFilterCatalog } from "@/lib/persistedQuery";
 
@@ -124,7 +125,7 @@ export function CatalogBrowsePage() {
             loading={settings.isLoading}
           >
             {modes.length > 1 && <SortMenu mode={mode} modes={modes} onChange={setRequestedMode} />}
-            {isMobile && <MobileSearchButton className="-mr-2 ml-auto" />}
+            {isMobile && <div className="-mr-2 ml-auto flex items-center"><DownloadsButton variant="plain" /><MobileSearchButton /></div>}
           </CatalogFilters>
 
           {isLoading ? (

@@ -198,10 +198,15 @@ describe("downloads of two titles with the same episode id", () => {
     await api.start(first);
     await api.start(second);
     await running;
+    expect((await api.active()).map((entry) => [entry.animeId, entry.status, entry.animeTitle])).toEqual([
+      ["a1", "downloading", "First"],
+      ["a2", "downloading", "Second"],
+    ]);
     await api.cancel(first.sourceId, first.animeId, first.episodeId);
     release();
     expect((await results).map((progress) => [progress.animeId, progress.status])).toEqual([["a1", "cancelled"], ["a2", "done"]]);
     expect(files.has("dl/First/Episode 1.ts")).toBe(false);
     expect(files.get("dl/Second/Episode 1.ts")).toBe("V1");
+    expect(await api.active()).toEqual([]);
   });
 });

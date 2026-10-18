@@ -13,6 +13,7 @@ import type {
   DiscordPresence,
   DownloadedEpisode,
   DownloadedEpisodeFile,
+  ActiveDownload,
   DownloadProgress,
   DownloadRequest,
   InstalledVersions,
@@ -328,6 +329,7 @@ const api: HibikiApi = {
     resume: (sourceId: string, animeId: string, episodeId: string): Promise<void> => ipcRenderer.invoke(IPC.downloadsResume, sourceId, animeId, episodeId),
     cancel: (sourceId: string, animeId: string, episodeId: string): Promise<void> => ipcRenderer.invoke(IPC.downloadsCancel, sourceId, animeId, episodeId),
     list: (): Promise<DownloadedEpisode[]> => ipcRenderer.invoke(IPC.downloadsList),
+    active: (): Promise<ActiveDownload[]> => ipcRenderer.invoke(IPC.downloadsActive),
     remove: (sourceId: string, animeId: string, episodeId: string): Promise<void> =>
       ipcRenderer.invoke(IPC.downloadsRemove, sourceId, animeId, episodeId),
     getForEpisode: (sourceId: string, animeId: string, episodeId: string): Promise<DownloadedEpisodeFile | null> =>

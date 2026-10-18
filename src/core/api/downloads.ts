@@ -2,7 +2,7 @@ import type { HibikiApi } from "@shared/hibikiApi";
 import { IPC } from "@shared/ipc";
 import { downloadKeyId, downloadKeyOf } from "@shared/downloadKey";
 import { subtitleTextToVtt } from "@shared/subtitles";
-import type { DownloadedParts, DownloadedSubtitle, DownloadProgress, DownloadRequest, PlayerLink } from "@shared/types";
+import type { ActiveDownload, DownloadedParts, DownloadedSubtitle, DownloadProgress, DownloadRequest, PlayerLink } from "@shared/types";
 import type { ExtensionRuntime } from "../extensions/runtime";
 import {
   cacheAnime,
@@ -541,6 +541,26 @@ export function createDownloadsApi(runtime: ExtensionRuntime): Omit<HibikiApi["d
     },
 
     list: () => listDownloadedEpisodes(),
+
+    async active(): Promise<ActiveDownload[]> {
+      const entry = (request: DownloadRequest, status: ActiveDownload["status"], percent: number): ActiveDownload => ({
+        ...downloadKeyOf(request),
+        groupId: request.groupId,
+        episodeNumber: request.episodeNumber,
+        animeTitle: request.animeTitle,
+        episodeLabel: request.episodeLabel,
+        quality: request.quality ?? null,
+        playerName: request.playerName ?? null,
+        status,
+        percent,
+      });
+      const waiting = new Set(jobQueue.map(jobKey));
+      // Started (running or paused) first, in the order they were asked for, then those not begun.
+      const started = [...downloads].map(([key, state]) =>
+        entry(state.request, state.running ? "downloading" : waiting.has(key) ? "queued" : "paused", state.lastPercent));
+      const notBegun = jobQueue.flatMap((job) => (job.kind === "start" ? [entry(job.request, "queued", 0)] : []));
+      return [...started, ...notBegun];
+    },
     getForEpisode: (sourceId: string, animeId: string, episodeId: string) => getDownloadedEpisode(sourceId, animeId, episodeId),
 
     async remove(sourceId: string, animeId: string, episodeId: string): Promise<void> {

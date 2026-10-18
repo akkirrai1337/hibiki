@@ -5,6 +5,7 @@ import { hibiki } from "@/lib/hibiki";
 import { useUiStore } from "@/stores/uiStore";
 import { useSpotlightStore } from "@/stores/spotlightStore";
 import { UpdateButton } from "@/components/UpdateButton";
+import { DownloadsButton } from "@/components/DownloadsIndicator";
 import { cn } from "@/lib/cn";
 import appIcon from "@/assets/app-icon.png";
 
@@ -113,6 +114,7 @@ export function TitleBar() {
           of the centred search box. UpdateButton renders nothing at all unless there is actually
           a newer release, in which case this collapses to just the window controls. */}
       <div className="ml-auto flex h-full shrink-0 items-center">
+        <DownloadsButton variant="titlebar" className="mr-2" />
         <UpdateButton />
         <WindowControls />
       </div>

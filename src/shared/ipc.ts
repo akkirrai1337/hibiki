@@ -80,6 +80,7 @@ export const IPC = {
   downloadsResume: "downloads:resume",
   downloadsCancel: "downloads:cancel",
   downloadsList: "downloads:list",
+  downloadsActive: "downloads:active",
   downloadsRemove: "downloads:remove",
   downloadsGetForEpisode: "downloads:getForEpisode",
   // Pushed main -> renderer (not a request/response handle) - the only channel in the app that

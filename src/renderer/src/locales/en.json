@@ -968,5 +968,26 @@
     "bellOff": "Stop notifying about new episodes",
     "setting": "New episode notifications",
     "settingHint": "For ongoing titles in Watching, in the dub you watch. Any title can be switched on or off with the bell on its page."
+  },
+  "downloadsPanel": {
+    "title": "Downloads",
+    "running_one": "{{count}} downloading",
+    "running_other": "{{count}} downloading",
+    "waiting": "{{count}} waiting",
+    "pausedCount": "{{count}} paused",
+    "paused": "Paused",
+    "pauseAll": "Pause",
+    "resumeAll": "Resume",
+    "cancelAll": "Cancel all",
+    "cancelAllConfirm": "Cancel them all?",
+    "episodes_one": "{{count}} episode",
+    "episodes_other": "{{count}} episodes",
+    "more": "{{count}} more",
+    "failed": "Failed",
+    "retry": "Retry",
+    "dismiss": "Dismiss",
+    "allDone": "All downloaded",
+    "completed_one": "{{count}} episode downloaded",
+    "completed_other": "{{count}} episodes downloaded"
   }
 }

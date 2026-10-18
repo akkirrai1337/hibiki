@@ -17,6 +17,7 @@ import type {
   SyncCandidate,
   SyncPairMode,
   SyncDevice,
+  ActiveDownload,
   DownloadProgress,
   DownloadRequest,
   InstalledVersions,
@@ -339,6 +340,8 @@ export interface HibikiApi {
     resume(sourceId: string, animeId: string, episodeId: string): Promise<void>;
     cancel(sourceId: string, animeId: string, episodeId: string): Promise<void>;
     list(): Promise<DownloadedEpisode[]>;
+    /** What is queued, running or paused right now, in the order it was asked for. */
+    active(): Promise<ActiveDownload[]>;
     remove(sourceId: string, animeId: string, episodeId: string): Promise<void>;
     getForEpisode(sourceId: string, animeId: string, episodeId: string): Promise<DownloadedEpisodeFile | null>;
     /** Where the page loads a downloaded file from, where that is not the desktop's
