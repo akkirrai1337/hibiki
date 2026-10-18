@@ -6,7 +6,7 @@
 // liked enough to keep going. Guessing more from status or drop-off was judged not worth its noise.
 // Everything else comes from the source itself - its "similar" lists, which are the site's own
 // recommendations, and its genre names, which mean the same thing everywhere within one source.
-import type { AnimeTitle, RecommendationReason, RecommendedTitle, RelatedAnimeTitle } from "@shared/types";
+import type { AnimeTitle, BecauseYouWatchedRow, RecommendationReason, RecommendedTitle, RelatedAnimeTitle } from "@shared/types";
 
 /** Episodes watched before a title counts as liked. */
 export const MIN_WATCHED_EPISODES = 3;
@@ -120,6 +120,35 @@ export function rankCandidates(seeds: Seed[], candidates: Candidate[], exclude: 
     }
     return { anime: candidate.anime, reason };
   });
+}
+
+/**
+ * "Because you watched X" rows: for the most recently watched seeds, the site's own "similar" list,
+ * in the site's order, without what is excluded or already in an earlier row. One seed is enough -
+ * the link is the site's, not a guess from the person's taste - but a list too short to fill a row
+ * (under `minTitles`) is passed over for the next seed.
+ */
+export function becauseYouWatched(
+  seeds: Seed[],
+  exclude: Set<string>,
+  { rows, minTitles, maxTitles, lookAt }: { rows: number; minTitles: number; maxTitles: number; lookAt: number },
+): BecauseYouWatchedRow[] {
+  const shown = new Set<string>();
+  const out: BecauseYouWatchedRow[] = [];
+  for (const seed of seeds.slice(0, lookAt)) {
+    if (out.length >= rows) break;
+    const titles: RecommendedTitle[] = [];
+    for (const entry of seed.anime.similarAnime ?? []) {
+      if (titles.length >= maxTitles) break;
+      if (entry.id === seed.anime.id || exclude.has(entry.id) || shown.has(entry.id) || titles.some((title) => title.anime.id === entry.id)) continue;
+      titles.push({ anime: relatedToTitle(entry, seed.anime.sourceId), reason: { kind: "similar", to: [nameOf(seed.anime)] } });
+    }
+    if (titles.length < minTitles) continue;
+    for (const title of titles) shown.add(title.anime.id);
+    const { id, sourceId, russianName, englishName, originalName, posterUrl } = seed.anime;
+    out.push({ seed: { id, sourceId, russianName, englishName, originalName, posterUrl }, titles });
+  }
+  return out;
 }
 
 /**

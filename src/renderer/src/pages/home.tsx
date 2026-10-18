@@ -170,6 +170,7 @@ export function CatalogPage() {
   });
   const picks = recommendations.data?.picks ?? [];
   const continuations = recommendations.data?.continuations ?? [];
+  const becauseRows = recommendations.data?.becauseYouWatched ?? [];
   // Shared with the profile page's own "continue watching" row - see useContinueWatching, which
   // caches per-title lookups under query keys both pages agree on so whichever loads first does
   // the actual work.
@@ -224,6 +225,9 @@ export function CatalogPage() {
         {continuations.length > 0 && <Section title={t("catalog.continuations")}>
           <HomeTitles>{continuations.map(({ anime }) => <AnimeCard key={anime.id} anime={anime} />)}</HomeTitles>
         </Section>}
+        {becauseRows.map((row) => <Section key={row.seed.id} eyebrow={t("catalog.becauseYouWatched")} title={animeTitle(row.seed)}>
+          <HomeTitles>{row.titles.map(({ anime }) => <AnimeCard key={anime.id} anime={anime} />)}</HomeTitles>
+        </Section>)}
         {picks.length > 0 && <Section title={t("catalog.forYou", { source: source.name })}>
           <HomeTitles layout="grid">{picks.map(({ anime }) => <AnimeCard key={anime.id} anime={anime} />)}</HomeTitles>
         </Section>}
@@ -265,7 +269,9 @@ function toHeroSlide(anime: AnimeTitle, openLabel: string, sourceIconUrl?: strin
   };
 }
 
-function Section({ title, action, to, children }: { title: string; action?: string; to?: "/catalog" | "/history"; children: React.ReactNode }) { return <section><div className="mb-5 flex items-center justify-between gap-3 mobile:mb-3"><h2 className="text-2xl font-bold tracking-[-.02em] text-text mobile:truncate mobile:text-[19px]">{title}</h2>{action && to && <Link to={to} className="text-sm font-semibold text-muted transition-colors hover:text-accent-text mobile:shrink-0 mobile:text-[13px]">{action} →</Link>}</div>{children}</section>; }
+// `eyebrow`: a quiet line above the heading, for a heading that is a title's name ("because you
+// watched" over it) - the name keeps the whole line, so the phone truncates only the name.
+function Section({ title, eyebrow, action, to, children }: { title: string; eyebrow?: string; action?: string; to?: "/catalog" | "/history"; children: React.ReactNode }) { return <section><div className="mb-5 flex items-center justify-between gap-3 mobile:mb-3"><div className="min-w-0">{eyebrow && <p className="mb-1 text-sm font-semibold text-muted mobile:mb-0.5 mobile:text-[13px]">{eyebrow}</p>}<h2 className="text-2xl font-bold tracking-[-.02em] text-text mobile:truncate mobile:text-[19px]">{title}</h2></div>{action && to && <Link to={to} className="text-sm font-semibold text-muted transition-colors hover:text-accent-text mobile:shrink-0 mobile:text-[13px]">{action} →</Link>}</div>{children}</section>; }
 // A grid on desktop; on the phone a row the thumb scrolls sideways, so a section stays one screen-line tall.
 // On the phone the two kinds of section read differently: a feed of what is new (latest episodes,
 // continuations) is a row the thumb runs through, while a selection (for you, popular, a genre) is a

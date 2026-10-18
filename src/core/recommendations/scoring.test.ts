@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { AnimeTitle } from "@shared/types";
-import { findContinuations, genreProfile, rankCandidates, type Candidate, type Seed } from "./scoring";
+import { becauseYouWatched, findContinuations, genreProfile, rankCandidates, type Candidate, type Seed } from "./scoring";
 
 function title(id: string, extra: Partial<AnimeTitle> = {}): AnimeTitle {
   return { id, sourceId: "src", russianName: `Title ${id}`, ...extra };
@@ -66,5 +66,35 @@ describe("findContinuations", () => {
     const found = findContinuations(seeds, new Set(["watched"]), 10);
     expect(found.map((item) => item.anime.id)).toEqual(["sequel"]);
     expect(found[0].reason).toEqual({ kind: "continues", of: "Title s1" });
+  });
+});
+
+describe("becauseYouWatched", () => {
+  const similar = (...ids: string[]) => ids.map((id) => ({ id, title: `Title ${id}` }));
+  const opts = { rows: 2, minTitles: 2, maxTitles: 3, lookAt: 6 };
+
+  it("makes a row from a single seed, in the site's order and capped", () => {
+    const rows = becauseYouWatched([seed("a", { similarAnime: similar("x", "y", "z", "w") })], new Set(), opts);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].seed).toEqual({ id: "a", sourceId: "src", russianName: "Title a", englishName: undefined, originalName: undefined, posterUrl: undefined });
+    expect(rows[0].titles.map((title) => title.anime.id)).toEqual(["x", "y", "z"]);
+    expect(rows[0].titles[0].reason).toEqual({ kind: "similar", to: ["Title a"] });
+  });
+
+  it("leaves out what is excluded and what an earlier row shows, and skips a seed left too short", () => {
+    const rows = becauseYouWatched([
+      seed("a", { similarAnime: similar("x", "watched", "y") }),
+      seed("b", { similarAnime: similar("x", "y", "q") }),
+      seed("c", { similarAnime: similar("q", "r") }),
+    ], new Set(["watched"]), opts);
+    expect(rows.map((row) => [row.seed.id, row.titles.map((title) => title.anime.id)])).toEqual([
+      ["a", ["x", "y"]],
+      ["c", ["q", "r"]],
+    ]);
+  });
+
+  it("stops at the row limit", () => {
+    const seeds = ["a", "b", "c"].map((id) => seed(id, { similarAnime: similar(`${id}1`, `${id}2`) }));
+    expect(becauseYouWatched(seeds, new Set(), { ...opts, rows: 2 }).map((row) => row.seed.id)).toEqual(["a", "b"]);
   });
 });

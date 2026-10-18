@@ -497,6 +497,15 @@ export interface SourceRecommendations {
   picks: RecommendedTitle[];
   /** Later entries of watched titles' franchises: the next season, a sequel. */
   continuations: RecommendedTitle[];
+  /** "Because you watched X" - from a single liked title on, unlike `picks`. */
+  becauseYouWatched: BecauseYouWatchedRow[];
+}
+
+/** The source's own "similar" list for one recently watched title, minus what is not news. */
+export interface BecauseYouWatchedRow {
+  /** The watched title, only as much of it as its name and card need. */
+  seed: AnimeTitle;
+  titles: RecommendedTitle[];
 }
 
 export interface SearchRequest {

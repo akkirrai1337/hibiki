@@ -6,15 +6,6 @@ import { chronologicalGroups } from "./extensions/episodeOrder";
 
 const getDb = () => getPlatform().db.get();
 
-/** Strips the parts of an AnimeTitle that are only useful for navigating to *other* titles
- * (related/franchise/similar anime) before it goes into cachedAnime - offline, there's nothing to
- * navigate to (those titles' own pages likely aren't cached), so this would just be dead weight in
- * the table for every title that ever has one episode downloaded. */
-function stripForCache(anime: AnimeTitle): AnimeTitle {
-  const { relatedAnime: _related, franchiseAnime: _franchise, similarAnime: _similar, ...rest } = anime;
-  return rest;
-}
-
 /**
  * Everything already on disk for the given titles, keyed "sourceId:animeId".
  *
@@ -56,10 +47,10 @@ export async function getCachedAnimeMany(
 export async function cacheAnime(sourceId: string, animeId: string, anime: AnimeTitle): Promise<void> {
   await getDb()
     .insert(cachedAnime)
-    .values({ sourceId, animeId, animeJson: JSON.stringify(stripForCache(anime)), cachedAt: Date.now() })
+    .values({ sourceId, animeId, animeJson: JSON.stringify(anime), cachedAt: Date.now() })
     .onConflictDoUpdate({
       target: [cachedAnime.sourceId, cachedAnime.animeId],
-      set: { animeJson: JSON.stringify(stripForCache(anime)), cachedAt: Date.now() },
+      set: { animeJson: JSON.stringify(anime), cachedAt: Date.now() },
     })
     .run();
 }

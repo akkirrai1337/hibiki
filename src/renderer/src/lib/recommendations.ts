@@ -7,7 +7,8 @@ import type { RecommendationReason, SourceRecommendations } from "@shared/types"
 export function useRecommendationReason(sourceId: string, animeId: string): RecommendationReason | null {
   const queryClient = useQueryClient();
   for (const [, data] of queryClient.getQueriesData<SourceRecommendations>({ queryKey: ["recommendations", sourceId] })) {
-    const found = [...(data?.picks ?? []), ...(data?.continuations ?? [])].find((item) => item.anime.id === animeId);
+    const rows = (data?.becauseYouWatched ?? []).flatMap((row) => row.titles);
+    const found = [...(data?.picks ?? []), ...rows, ...(data?.continuations ?? [])].find((item) => item.anime.id === animeId);
     if (found) return found.reason;
   }
   return null;
