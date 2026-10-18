@@ -181,7 +181,8 @@ function AnimeDetailPage() {
   // is active, this page falls back to the same translucent bg-app-bg every other page already
   // uses, letting the app-wide gradient bleed through consistently instead.
   const backgroundTheme = useUiStore((s) => s.backgroundTheme);
-  const [downloadEpisode, setDownloadEpisode] = useState<Episode | null>(null);
+  // An episode's download dialog, or "all" for the whole title's.
+  const [downloadEpisode, setDownloadEpisode] = useState<Episode | "all" | null>(null);
   const [posterPreviewOpen, setPosterPreviewOpen] = useState(false);
   const [screenshotPreview, setScreenshotPreview] = useState<string | null>(null);
   const queryClient = useQueryClient();
@@ -279,6 +280,7 @@ function AnimeDetailPage() {
   const activeGroup = groups.find((g) => g.id === requestedGroupId) ?? groups[0];
   const setActiveGroupId = (id: string) => navigate({ to: "/anime/$sourceId/$animeId", params: { sourceId, animeId }, search: { group: id }, replace: true });
   const progressByEpisode = new Map((progressQuery.data ?? []).map((p) => [p.episodeId, p]));
+  const watchedEpisodeIds = new Set((progressQuery.data ?? []).filter((p) => p.watched).map((p) => p.episodeId));
   // Every screen that reads this episode's progress: this page's own grid, the watch route's
   // resume position, and the "continue watching" rows the home and profile pages share.
   const invalidateProgress = (episodeId: string) => {
@@ -410,8 +412,9 @@ function AnimeDetailPage() {
                   </span>
                 )}
               </div>
-              {activeGroup && activeGroup.episodes.length > 1 && (
+              {activeGroup && activeGroup.episodes.length > 0 && (
                 <div className="flex shrink-0 items-center">
+                  {activeGroup.episodes.length > 1 && <>
                   {([["tiles", LayoutGrid], ["list", List]] as const).map(([view, Icon]) => (
                     <button key={view} onClick={() => setEpisodesView(view)} aria-label={t(`detail.episodesView.${view}`)} className={cn("flex h-8 w-8 items-center justify-center rounded-full", episodesView === view ? "bg-text/[.1] text-text" : "text-muted")}>
                       <Icon className="h-[18px] w-[18px]" strokeWidth={2} />
@@ -419,6 +422,10 @@ function AnimeDetailPage() {
                   ))}
                   <button onClick={() => setEpisodesNewestFirst(!episodesNewestFirst)} aria-label={episodesNewestFirst ? t("detail.episodesNewestFirst") : t("detail.episodesOldestFirst")} className="flex h-8 w-8 items-center justify-center rounded-full text-muted active:bg-text/[.08]">
                     {episodesNewestFirst ? <ArrowDown10 className="h-[18px] w-[18px]" strokeWidth={2} /> : <ArrowDown01 className="h-[18px] w-[18px]" strokeWidth={2} />}
+                  </button>
+                  </>}
+                  <button onClick={() => setDownloadEpisode("all")} aria-label={t("detail.downloadDialog.titleAll")} className="flex h-8 w-8 items-center justify-center rounded-full text-muted active:bg-text/[.08]">
+                    <Download className="h-[18px] w-[18px]" strokeWidth={2} />
                   </button>
                 </div>
               )}
@@ -460,6 +467,16 @@ function AnimeDetailPage() {
               >
                 <ArrowUpDown className="h-4 w-4" strokeWidth={2} />
                 {episodesNewestFirst ? t("detail.episodesNewestFirst") : t("detail.episodesOldestFirst")}
+              </button>
+            )}
+            {activeGroup && activeGroup.episodes.length > 0 && (
+              <button
+                onClick={() => setDownloadEpisode("all")}
+                aria-label={t("detail.downloadDialog.titleAll")}
+                title={t("detail.downloadDialog.titleAll")}
+                className="flex h-9 w-9 items-center justify-center rounded-lg bg-text/[.06] text-muted transition-colors hover:bg-text/[.1] hover:text-text"
+              >
+                <Download className="h-4 w-4" strokeWidth={2} />
               </button>
             )}
           </div>
@@ -589,13 +606,15 @@ function AnimeDetailPage() {
       <AnimatePresence>
         {downloadEpisode && (
           <DownloadDialog
-            key={downloadEpisode.id}
+            key={downloadEpisode === "all" ? "all" : downloadEpisode.id}
             sourceId={sourceId}
             animeId={animeId}
             animeTitle={animeTitle(anime)}
-            episode={downloadEpisode}
+            episode={downloadEpisode === "all" ? null : downloadEpisode}
             groups={groups}
             defaultGroupId={activeGroup?.id ?? groups[0]?.id ?? ""}
+            downloadedIds={downloadedEpisodeIds}
+            watchedIds={watchedEpisodeIds}
             onClose={() => setDownloadEpisode(null)}
           />
         )}
@@ -1156,18 +1175,35 @@ function LibraryButton({ category, onSelect, onRemove }: { category: LibraryCate
 // silently grabbing whatever selectPlayerLink (see main/ipc/downloads.ts) would've picked on its
 // own - which was always "the best available", with no way to deliberately ask for something
 // smaller/cheaper on a slow connection or limited disk space.
+/**
+ * One episode, or - with `episode` null - the whole title in the chosen dub (sites often list each
+ * season as a title of its own, so a title is the season). The whole title is every episode not
+ * yet downloaded, or only the unwatched ones, queued oldest first with the quality and player
+ * picked here; the qualities offered are the first such episode's, and an episode without that
+ * exact one falls back to its best (downloads.ts's selectPlayerLink).
+ */
 function DownloadDialog({
-  sourceId, animeId, animeTitle, episode, groups, defaultGroupId, onClose,
+  sourceId, animeId, animeTitle, episode, groups, defaultGroupId, downloadedIds, watchedIds, onClose,
 }: {
-  sourceId: string; animeId: string; animeTitle: string; episode: Episode; groups: PlaybackGroup[]; defaultGroupId: string; onClose: () => void;
+  sourceId: string; animeId: string; animeTitle: string; episode: Episode | null; groups: PlaybackGroup[]; defaultGroupId: string;
+  downloadedIds: ReadonlySet<string>; watchedIds: ReadonlySet<string>; onClose: () => void;
 }) {
   const { t } = useTranslation();
   const [groupId, setGroupId] = useState(defaultGroupId);
   const [variantId, setVariantId] = useState<string | null>(null);
+  const [onlyUnwatched, setOnlyUnwatched] = useState(true);
+
+  const missing = episode ? [] : [...(groups.find((group) => group.id === groupId)?.episodes ?? [])].filter((ep) => !downloadedIds.has(ep.id)).sort((a, b) => a.number - b.number);
+  const unwatched = missing.filter((ep) => !watchedIds.has(ep.id));
+  // A choice only when it changes something: some of what is left watched, some not.
+  const offerUnwatched = unwatched.length > 0 && unwatched.length < missing.length;
+  const targets = episode ? [episode] : offerUnwatched && onlyUnwatched ? unwatched : missing;
+  const probe = targets[0] ?? null;
 
   const linksQuery = useQuery({
-    queryKey: ["playerLinks", sourceId, animeId, groupId, episode.id],
-    queryFn: () => hibiki.sources.playerLinks(sourceId, animeId, groupId, episode.id),
+    queryKey: ["playerLinks", sourceId, animeId, groupId, probe?.id],
+    queryFn: () => hibiki.sources.playerLinks(sourceId, animeId, groupId, probe!.id),
+    enabled: probe !== null,
   });
 
   // Same "can this actually be saved to disk" rule as resolveAndRunDownload's own check - an embed
@@ -1197,24 +1233,26 @@ function DownloadDialog({
   const selectedLink = selected?.link ?? downloadableLinks[0] ?? null;
   const subtitleNames = Array.from(new Set((selectedLink?.subtitles ?? []).map((track) => track.label ?? track.language ?? "?")));
   const unsupported = linksQuery.isSuccess && downloadableLinks.length === 0;
-  const episodeLabel = episode.title || t("detail.episodeFallback", { number: episode.number });
+  const labelOf = (ep: Episode) => ep.title || t("detail.episodeFallback", { number: ep.number });
 
   // "Downloads only on Wi-Fi" (Settings > Network): on mobile data the download still starts, but
   // only once the user has seen the warning and pressed the button that says so.
   const onMobileData = useNetworkPrefsStore((s) => s.wifiOnlyDownloads) && isCellular();
 
   const onConfirm = () => {
-    hibiki.downloads.start({
-      sourceId, animeId, groupId, episodeId: episode.id, episodeNumber: episode.number,
-      animeTitle, episodeLabel, quality: selected?.link.quality ?? null, playerName: selected?.link.playerName ?? null,
-    });
+    for (const ep of targets) {
+      void hibiki.downloads.start({
+        sourceId, animeId, groupId, episodeId: ep.id, episodeNumber: ep.number,
+        animeTitle, episodeLabel: labelOf(ep), quality: selected?.link.quality ?? null, playerName: selected?.link.playerName ?? null,
+      });
+    }
     onClose();
   };
 
   return (
     <Modal onDismiss={onClose}>
-      <h2 className="text-base font-bold text-text">{t("detail.downloadDialog.title")}</h2>
-      <p className="mt-1 truncate text-sm text-muted">{episodeLabel}</p>
+      <h2 className="text-base font-bold text-text">{t(episode ? "detail.downloadDialog.title" : "detail.downloadDialog.titleAll")}</h2>
+      <p className="mt-1 truncate text-sm text-muted">{episode ? labelOf(episode) : animeTitle}</p>
 
       {groups.length > 1 && (
         <div className="mt-4">
@@ -1223,7 +1261,26 @@ function DownloadDialog({
         </div>
       )}
 
-      <div className="mt-4">
+      {!episode && offerUnwatched && (
+        <div className="mt-4">
+          <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted">{t("detail.downloadDialog.episodes")}</p>
+          <div className="flex rounded-lg bg-text/[.06] p-0.5">
+            {([[true, unwatched.length, "unwatched"], [false, missing.length, "all"]] as const).map(([value, count, key]) => (
+              <button
+                key={key}
+                onClick={() => { setOnlyUnwatched(value); setVariantId(null); }}
+                className={cn("flex-1 rounded-md px-3 py-1.5 text-sm font-semibold transition-colors", onlyUnwatched === value ? "bg-text/[.12] text-text" : "text-muted hover:text-text")}
+              >
+                {t(`detail.downloadDialog.${key}`)} <span className="tabular-nums opacity-60">{count}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {!probe ? (
+        <p className="mt-4 text-sm text-muted">{t("detail.downloadDialog.allDownloaded")}</p>
+      ) : <div className="mt-4">
         <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted">{t("detail.downloadDialog.quality")}</p>
         {linksQuery.isLoading ? (
           <p className="text-sm text-muted">{t("detail.downloadDialog.loadingQualities")}</p>
@@ -1247,21 +1304,21 @@ function DownloadDialog({
             {t("detail.downloadDialog.subtitles", { list: subtitleNames.join(", ") })}
           </p>
         )}
-      </div>
+      </div>}
 
-      {onMobileData && (
+      {onMobileData && probe && (
         <p className="mt-4 rounded-lg bg-text/[.05] px-3 py-2 text-xs leading-relaxed text-muted">{t("detail.downloadDialog.mobileData")}</p>
       )}
 
       <div className="mt-5 flex justify-end gap-2">
         <button onClick={onClose} className="rounded-lg px-3.5 py-2 text-sm font-semibold text-muted transition-colors hover:bg-text/[.06]">{t("common.cancel")}</button>
-        <button
+        {probe && <button
           onClick={onConfirm}
           disabled={!linksQuery.isSuccess || unsupported}
           className="rounded-lg bg-text px-3.5 py-2 text-sm font-bold text-bg transition-opacity hover:opacity-90 disabled:opacity-50"
         >
-          {t(onMobileData ? "detail.downloadDialog.downloadAnyway" : "detail.episodeMenu.download")}
-        </button>
+          {onMobileData ? t("detail.downloadDialog.downloadAnyway") : episode ? t("detail.episodeMenu.download") : t("detail.downloadDialog.downloadCount", { count: targets.length })}
+        </button>}
       </div>
     </Modal>
   );

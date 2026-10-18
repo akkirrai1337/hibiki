@@ -106,7 +106,16 @@
       "qualityUnknown": "Качество неизвестно, но серию можно скачать",
       "subtitles": "Субтитры: {{list}} — скачаются вместе с серией",
       "mobileData": "Сейчас мобильная сеть, а загрузки включены только по Wi-Fi.",
-      "downloadAnyway": "Всё равно скачать"
+      "downloadAnyway": "Всё равно скачать",
+      "titleAll": "Скачать все серии",
+      "episodes": "Серии",
+      "unwatched": "Непросмотренные",
+      "all": "Все",
+      "allDownloaded": "Все серии в этой озвучке уже скачаны.",
+      "downloadCount_one": "Скачать {{count}} серию",
+      "downloadCount_few": "Скачать {{count}} серии",
+      "downloadCount_many": "Скачать {{count}} серий",
+      "downloadCount_other": "Скачать {{count}} серии"
     },
     "relatedTitles": "Связанные тайтлы",
     "relatedCurrentTitle": "Вы сейчас здесь",

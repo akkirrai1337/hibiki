@@ -106,7 +106,16 @@
       "qualityUnknown": "Якість невідома, але серію можна завантажити",
       "subtitles": "Субтитри: {{list}} — завантажаться разом із серією",
       "mobileData": "Зараз мобільна мережа, а завантаження увімкнені лише через Wi-Fi.",
-      "downloadAnyway": "Все одно завантажити"
+      "downloadAnyway": "Все одно завантажити",
+      "titleAll": "Завантажити всі серії",
+      "episodes": "Серії",
+      "unwatched": "Непереглянуті",
+      "all": "Усі",
+      "allDownloaded": "Усі серії в цьому озвученні вже завантажені.",
+      "downloadCount_one": "Завантажити {{count}} серію",
+      "downloadCount_few": "Завантажити {{count}} серії",
+      "downloadCount_many": "Завантажити {{count}} серій",
+      "downloadCount_other": "Завантажити {{count}} серії"
     },
     "relatedTitles": "Пов'язані тайтли",
     "relatedCurrentTitle": "Ви зараз тут",

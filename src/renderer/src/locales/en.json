@@ -106,7 +106,14 @@
       "qualityUnknown": "Quality unknown, but this episode can be downloaded",
       "subtitles": "Subtitles: {{list}} — saved with the episode",
       "mobileData": "You're on mobile data, and downloads are set to Wi-Fi only.",
-      "downloadAnyway": "Download anyway"
+      "downloadAnyway": "Download anyway",
+      "titleAll": "Download all episodes",
+      "episodes": "Episodes",
+      "unwatched": "Unwatched",
+      "all": "All",
+      "allDownloaded": "Every episode in this dub is already downloaded.",
+      "downloadCount_one": "Download {{count}} episode",
+      "downloadCount_other": "Download {{count}} episodes"
     },
     "relatedTitles": "Related titles",
     "relatedCurrentTitle": "You're currently here",
