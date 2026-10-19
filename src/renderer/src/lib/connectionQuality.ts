@@ -90,6 +90,10 @@ function estimatedMbps(): number | null {
   return null;
 }
 
+/** On mobile data "auto" stops here however fast the line is: 1080p costs about twice 720p's
+ * traffic (~1.3 GB an hour against ~0.6), and on a phone's screen the difference hardly shows. */
+const METERED_MAX_HEIGHT = 720;
+
 /**
  * The tallest picture an episode should start at, or null for no limit - read at the moment a
  * decision is made, never subscribed to, so a verdict changing mid-episode never reloads the
@@ -101,9 +105,11 @@ export function autoQualityCap(): number | null {
   if (mode === "off") return null;
   if (mode === "on" || connection?.saveData) return 480;
   const mbps = estimatedMbps();
-  if (mbps === null) return null;
-  const tier = QUALITY_TIERS.find((t) => mbps >= t.minMbps) ?? QUALITY_TIERS[QUALITY_TIERS.length - 1];
-  return Number.isFinite(tier.maxHeight) ? tier.maxHeight : null;
+  const tier = mbps === null ? null : QUALITY_TIERS.find((t) => mbps >= t.minMbps) ?? QUALITY_TIERS[QUALITY_TIERS.length - 1];
+  const bySpeed = tier && Number.isFinite(tier.maxHeight) ? tier.maxHeight : null;
+  // The phone's own word on mobile data (hostMetered); desktop has none and is never capped here.
+  if (hostMetered === true) return Math.min(bySpeed ?? METERED_MAX_HEIGHT, METERED_MAX_HEIGHT);
+  return bySpeed;
 }
 
 /** Whether the connection calls for the light end (480p or lower) - what sources are told when
@@ -121,6 +127,7 @@ export function describeConnection(): string {
     connection?.effectiveType ? `effectiveType=${connection.effectiveType}` : null,
     typeof connection?.downlink === "number" ? `downlink=${connection.downlink}` : null,
     connection?.saveData ? "saveData" : null,
+    hostMetered ? "mobile data" : null,
   ].filter(Boolean);
   return parts.join(", ") || "no connection info";
 }
@@ -146,8 +153,8 @@ export function useAutoQualityCap(): number | null {
 }
 
 /** Mobile data (on Android, from the system's metered flag; desktop Chromium has no such signal).
- * Not a reason to lower video quality on its own, but a reason not to re-download things the app
- * already has. */
+ * A reason not to re-download things the app already has, a shorter read-ahead, and "auto"
+ * quality held to METERED_MAX_HEIGHT. */
 export function isCellular(): boolean {
   return hostMetered ?? connection?.type === "cellular";
 }

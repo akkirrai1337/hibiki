@@ -682,7 +682,7 @@
       "watchedThreshold": "Auto-watched threshold",
       "watchedThresholdHint": "Episode share to mark as watched",
       "dataSaver": "Data saver",
-      "dataSaverHint": "Picks the starting quality. Auto follows the connection's speed: fast - 1080p and up, medium - 720p, slow - 480p, very slow - 360p. On holds to 480p.",
+      "dataSaverHint": "Picks the starting quality. Auto follows the connection's speed: fast - 1080p and up, medium - 720p, slow - 480p, very slow - 360p; on mobile data no higher than 720p. On holds to 480p.",
       "dataSaverAuto": "Auto",
       "dataSaverOn": "On",
       "dataSaverOff": "Off",
