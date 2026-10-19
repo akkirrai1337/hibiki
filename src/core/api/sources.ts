@@ -6,6 +6,7 @@ import { logger } from "../logger";
 import { recommendationsForSource } from "../recommendations/forSource";
 import { skipTimesFor } from "../skipTimes";
 import { cacheAnime, cachePlaybackGroups, getCachedAnime, getCachedAnimeMany, getCachedPlaybackGroups, getCachedPlaybackGroupsEntry } from "../offlineCache";
+import { forCache, mergeKnownExtras, withExtras } from "../titleParts";
 
 /** Everything `window.hibiki.sources` asks of an installed source: catalog, playback, account. */
 export type SourcesApi = Omit<HibikiApi["sources"], "repositories" | "marketplace" | "install" | "uninstall" | "installedVersions" | "missingSources" | "onChanged">;
@@ -24,8 +25,17 @@ export function createSourcesApi(runtime: ExtensionRuntime): SourcesApi {
     // itself being unreachable (offline, taken down, extension uninstalled, ...) shouldn't also take
     // down the title page, or a continue-watching/library card, for a title seen before. A title with
     // nothing cached still fails exactly as before.
-    async getById(sourceId: string, id: string): Promise<AnimeTitle> {
+    async getById(sourceId: string, id: string, options?: { extras?: boolean }): Promise<AnimeTitle> {
       try {
+        if (options?.extras === false) {
+          const core = await runtime.getTitleCore(sourceId, id);
+          // Without its extras: the ones an earlier visit found come back with it, and the cache - which
+          // recommendations read the similar titles from - keeps them (titleParts.ts).
+          const previous = core.extrasPending ? await getCachedAnime(sourceId, id).catch(() => null) : null;
+          const { title, complete } = mergeKnownExtras(core, previous);
+          await cacheAnime(sourceId, id, forCache(title, complete));
+          return title;
+        }
         const anime = await runtime.getById(sourceId, id);
         await cacheAnime(sourceId, id, anime);
         return anime;
@@ -34,6 +44,14 @@ export function createSourcesApi(runtime: ExtensionRuntime): SourcesApi {
         if (cached) return cached;
         throw err;
       }
+    },
+
+    async titleExtras(sourceId: string, id: string) {
+      const extras = await runtime.getTitleExtras(sourceId, id);
+      if (!extras) return null;
+      const cached = await getCachedAnime(sourceId, id).catch(() => null);
+      if (cached) await cacheAnime(sourceId, id, withExtras(cached, extras));
+      return extras;
     },
 
     // Cheap on purpose - one batched, indexed SQLite read for the whole screen, answered from disk

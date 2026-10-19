@@ -4,6 +4,7 @@ export type ExtensionMethod =
   | "search"
   | "latest"
   | "getById"
+  | "getTitleExtras"
   | "getPlaybackGroups"
   | "getPlayerLinks"
   | "getSettings"

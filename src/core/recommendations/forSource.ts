@@ -125,10 +125,11 @@ async function compute(runtime: ExtensionRuntime, sourceId: string, sort: string
 /** Each seed's full details: from the cache, or - for a few - from the source. */
 async function seedDetails(runtime: ExtensionRuntime, sourceId: string, titles: WatchedTitle[]): Promise<Seed[]> {
   const cached = await getCachedAnimeMany(titles.map((title) => ({ sourceId, animeId: title.titleId })));
-  // The cache used to be written without the similar/related lists, which are all a seed is here
-  // for: such a copy counts as missing, and fetching it once caches it whole.
+  // A copy without the similar/related lists - cached that way once, or kept while its extras had
+  // not arrived (titleParts.ts) - is no use as a seed: it counts as missing, and fetching it once
+  // caches it whole.
   for (const [key, entry] of Object.entries(cached)) {
-    if (!("similarAnime" in entry.title) && !("relatedAnime" in entry.title)) delete cached[key];
+    if (entry.title.extrasPending || (!("similarAnime" in entry.title) && !("relatedAnime" in entry.title))) delete cached[key];
   }
   const missing = titles.filter((title) => !cached[`${sourceId}:${title.titleId}`]).slice(0, MAX_DETAIL_FETCHES);
   const fetched = new Map<string, AnimeTitle>();

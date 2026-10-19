@@ -20,8 +20,15 @@ export function invokeProvider(provider: Record<string, unknown>, sourceId: stri
       return results.map((r) => tagSource(sourceId, r));
     }
     case "getById": {
-      const fn = provider.getById as (id: string) => { id: string };
-      return tagSource(sourceId, fn.call(provider, args[0] as string));
+      // The second argument, "core", asks for the title without its extras (see getTitleExtras). A
+      // script that does not know it ignores it and answers in full, which is just as good.
+      const fn = provider.getById as (id: string, part?: string) => { id: string };
+      return tagSource(sourceId, fn.call(provider, args[0] as string, args[1] as string | undefined));
+    }
+    case "getTitleExtras": {
+      // Optional: a script without it has all of a title in getById, and the host does not ask.
+      const fn = provider.getTitleExtras as ((id: string) => unknown) | undefined;
+      return typeof fn === "function" ? (fn.call(provider, args[0] as string) ?? null) : null;
     }
     case "getPlaybackGroups": {
       const fn = provider.getPlaybackGroups as (titleId: string) => unknown[];

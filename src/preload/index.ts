@@ -36,6 +36,7 @@ import type {
   MissingSources,
   SourceLibraryEntry,
   SourceReview,
+  TitleExtras,
   UpdateDownloadProgress,
   WatchProgress,
   RatingSyncResult,
@@ -57,8 +58,10 @@ const api: HibikiApi = {
     cancelSearch: (requestId: string): void => ipcRenderer.send(IPC.sourceSearchCancel, requestId),
     latest: (sourceId: string, limit: number): Promise<AnimeTitle[]> =>
       ipcRenderer.invoke(IPC.sourceLatest, sourceId, limit),
-    getById: (sourceId: string, id: string): Promise<AnimeTitle> =>
-      ipcRenderer.invoke(IPC.sourceGetById, sourceId, id),
+    getById: (sourceId: string, id: string, options?: { extras?: boolean }): Promise<AnimeTitle> =>
+      ipcRenderer.invoke(IPC.sourceGetById, sourceId, id, options),
+    titleExtras: (sourceId: string, id: string): Promise<TitleExtras | null> =>
+      ipcRenderer.invoke(IPC.sourceTitleExtras, sourceId, id),
     cachedTitles: (keys: Array<{ sourceId: string; animeId: string }>): Promise<Record<string, CachedAnimeEntry>> =>
       ipcRenderer.invoke(IPC.sourceCachedTitles, keys),
     cachedPlaybackGroups: (sourceId: string, titleId: string): Promise<CachedPlaybackGroupsEntry | null> =>

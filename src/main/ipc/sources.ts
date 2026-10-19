@@ -11,7 +11,8 @@ export function registerSourceHandlers(runtime: ExtensionRuntime): void {
   ipcMain.handle(IPC.sourceSearch, (_e, sourceId: string, request: SearchRequest, requestId?: string) => sources.search(sourceId, request, requestId));
   ipcMain.on(IPC.sourceSearchCancel, (_e, requestId: string) => sources.cancelSearch(requestId));
   ipcMain.handle(IPC.sourceLatest, (_e, sourceId: string, limit: number) => sources.latest(sourceId, limit));
-  ipcMain.handle(IPC.sourceGetById, (_e, sourceId: string, id: string) => sources.getById(sourceId, id));
+  ipcMain.handle(IPC.sourceGetById, (_e, sourceId: string, id: string, options?: { extras?: boolean }) => sources.getById(sourceId, id, options));
+  ipcMain.handle(IPC.sourceTitleExtras, (_e, sourceId: string, id: string) => sources.titleExtras(sourceId, id));
   ipcMain.handle(IPC.sourceCachedTitles, (_e, keys: Array<{ sourceId: string; animeId: string }>) => sources.cachedTitles(keys));
   ipcMain.handle(IPC.sourceCachedPlaybackGroups, (_e, sourceId: string, titleId: string) => sources.cachedPlaybackGroups(sourceId, titleId));
   ipcMain.handle(IPC.sourcePlaybackGroups, (_e, sourceId: string, titleId: string) => sources.playbackGroups(sourceId, titleId));

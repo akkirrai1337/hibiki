@@ -18,6 +18,7 @@ import { hibiki } from "@/lib/hibiki";
 import { useNewEpisodesPrefs } from "@/lib/newEpisodes";
 import { findListedTitle } from "@/lib/listedTitles";
 import { usePlaybackGroups } from "@/lib/playbackGroups";
+import { useTitleExtras } from "@/lib/titleExtras";
 import { isGenericDubTitle } from "@/lib/dubTitle";
 import { animeTitle } from "@/components/AnimeCard";
 import { GenreChip } from "@/components/GenreChip";
@@ -204,7 +205,9 @@ function AnimeDetailPage() {
   const animeQuery = useQuery({
     queryKey: ["anime", sourceId, animeId],
     queryFn: async () => {
-      const anime = await hibiki.sources.getById(sourceId, animeId);
+      // The title alone: the similar titles come from a request of their own (useTitleExtras below), so
+      // a slow one never holds the page back.
+      const anime = await hibiki.sources.getById(sourceId, animeId, { extras: false });
       if (anime.posterUrl) return anime;
       // A source whose details come without a cover: the one its list showed.
       const listed = findListedTitle(
@@ -280,6 +283,7 @@ function AnimeDetailPage() {
   }, [queryClient, sourceId, animeId]);
 
   const anime = animeQuery.data;
+  useTitleExtras(sourceId, animeId, anime);
   const groups = groupsQuery.data ?? [];
   const activeGroup = groups.find((g) => g.id === requestedGroupId) ?? groups[0];
   const setActiveGroupId = (id: string) => navigate({ to: "/anime/$sourceId/$animeId", params: { sourceId, animeId }, search: { group: id }, replace: true });

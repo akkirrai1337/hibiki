@@ -66,6 +66,17 @@ export interface AnimeTitle {
   relatedAnime?: RelatedAnimeTitle[];
   franchiseAnime?: RelatedAnimeTitle[];
   similarAnime?: RelatedAnimeTitle[];
+  /**
+   * Set by a source that hands the title out in two parts (Provider.getById(id, "core")): the
+   * similar titles are not in this one, `sources.titleExtras` brings them. A source that sends
+   * everything at once never sets it.
+   */
+  extrasPending?: boolean;
+}
+
+/** The part of a title that may arrive after the rest (AnimeTitle.extrasPending). */
+export interface TitleExtras {
+  similarAnime: RelatedAnimeTitle[];
 }
 
 export interface Episode {

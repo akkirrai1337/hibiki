@@ -18,6 +18,7 @@ import type {
   SourceInfo,
   SourceLibraryEntry,
   SourceReview,
+  TitleExtras,
 } from "@shared/types";
 import type { ExtensionMethod } from "./methods";
 import type { BridgeHandler } from "../../platform/types";
@@ -657,6 +658,22 @@ export class ExtensionRuntime {
     return this.shareRead("getById", sourceId, [id], () => this.run("getById", sourceId, [id]));
   }
 
+  /**
+   * The title without its extras, for what needs no more than the title: a page about to draw it,
+   * the episode list's freshness check. A source that hands titles out in parts answers with just the
+   * title and `extrasPending` set (getTitleExtras brings the rest); any other answers in full, as
+   * getById does, and the title is not pending anything.
+   */
+  getTitleCore(sourceId: string, id: string): Promise<AnimeTitle> {
+    return this.shareRead("getByIdCore", sourceId, [id], () => this.run("getById", sourceId, [id, "core"]));
+  }
+
+  /** What getTitleCore left out, from its own request; null for a source with nothing to add. */
+  getTitleExtras(sourceId: string, id: string): Promise<TitleExtras | null> {
+    if (isApkSource(sourceId)) return Promise.resolve(null);
+    return this.shareRead("getTitleExtras", sourceId, [id], () => this.run<TitleExtras | null>("getTitleExtras", sourceId, [id]));
+  }
+
   getPlaybackGroups(sourceId: string, titleId: string): Promise<PlaybackGroup[]> {
     return this.shareRead("getPlaybackGroups", sourceId, [titleId], async () => chronologicalGroups(await this.playbackGroupsThroughSnapshot(sourceId, titleId)));
   }
@@ -680,7 +697,7 @@ export class ExtensionRuntime {
     const recorded: Record<string, NetFetchResult> = {};
     const [groups, details] = await Promise.all([
       this.run<PlaybackGroup[]>("getPlaybackGroups", sourceId, [titleId], { snapshot: { record: recorded } }),
-      this.getById(sourceId, titleId).catch(() => null),
+      this.getTitleCore(sourceId, titleId).catch(() => null),
     ]);
     if (Object.keys(recorded).length > 0) {
       const now = Date.now();
@@ -701,7 +718,7 @@ export class ExtensionRuntime {
     const verdict = usable(snapshot, purpose, cached ? versionOf(cached) : undefined);
     if (verdict === "yes") return snapshot;
     if (verdict === "no") return null;
-    const details = await this.getById(sourceId, titleId).catch(() => null);
+    const details = await this.getTitleCore(sourceId, titleId).catch(() => null);
     if (!details) return null;
     const version = versionOf(details);
     if (version !== snapshot.version) {

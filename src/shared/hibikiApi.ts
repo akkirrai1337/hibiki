@@ -39,6 +39,7 @@ import type {
   MissingSources,
   SourceLibraryEntry,
   SourceReview,
+  TitleExtras,
   TrackerAccount,
   TrackerId,
   TrackerImportProgress,
@@ -89,7 +90,14 @@ export interface HibikiApi {
     search(sourceId: string, request: SearchRequest, requestId?: string): Promise<AnimeTitle[]>;
     cancelSearch(requestId: string): void;
     latest(sourceId: string, limit: number): Promise<AnimeTitle[]>;
-    getById(sourceId: string, id: string): Promise<AnimeTitle>;
+    /**
+     * The title's details. With `extras: false`, a source that hands titles out in parts answers
+     * with the title alone and `extrasPending` set - `titleExtras` fetches the rest, so a slow
+     * request for it never holds a page back. Any other source answers in full either way.
+     */
+    getById(sourceId: string, id: string, options?: { extras?: boolean }): Promise<AnimeTitle>;
+    /** What `getById(..., { extras: false })` left out; null when the source has nothing to add. */
+    titleExtras(sourceId: string, id: string): Promise<TitleExtras | null>;
     cachedTitles(keys: Array<{ sourceId: string; animeId: string }>): Promise<Record<string, CachedAnimeEntry>>;
     cachedPlaybackGroups(sourceId: string, titleId: string): Promise<CachedPlaybackGroupsEntry | null>;
     playbackGroups(sourceId: string, titleId: string): Promise<PlaybackGroup[]>;

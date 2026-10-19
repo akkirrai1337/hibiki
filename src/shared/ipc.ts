@@ -4,6 +4,7 @@ export const IPC = {
   sourceSearchCancel: "source:search:cancel",
   sourceLatest: "source:latest",
   sourceGetById: "source:getById",
+  sourceTitleExtras: "source:titleExtras",
   // Whatever is already on disk for a set of titles - lets a screen paint before the network
   // answers. See offlineCache.getCachedAnimeMany.
   sourceCachedTitles: "source:cachedTitles",
