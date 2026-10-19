@@ -29,6 +29,13 @@ export interface TitleRating {
   votes?: number | null;
 }
 
+/** One size of a title's poster - see AnimeTitle.posterVariants. */
+export interface PosterVariant {
+  url: string;
+  /** The picture's width in pixels. */
+  width: number;
+}
+
 export interface AnimeTitle {
   id: string;
   sourceId: string;
@@ -41,6 +48,10 @@ export interface AnimeTitle {
   episodeCount?: number | null;
   availableEpisodeCount?: number | null;
   posterUrl?: string | null;
+  /** The same poster in other sizes, where the source has them. Cards and thumbnails take the
+   * smallest that is still sharp at their size (srcset); posterUrl stays the largest, for the
+   * title page and the hero. */
+  posterVariants?: PosterVariant[] | null;
   /** Stills from the title as a whole - not from any one episode. Only some sources have them. */
   screenshots?: string[];
   /** This title's own page on the source's website, when the source supplies one. Only it can: an

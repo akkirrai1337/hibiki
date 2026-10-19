@@ -1,6 +1,7 @@
 import { memo } from "react";
 import { useNearViewport } from "@/lib/useNearViewport";
 import { SmoothImage } from "@/components/SmoothImage";
+import { posterSrcSet } from "@/components/PosterImage";
 import { Link } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import { Radio, Trash2 } from "lucide-react";
@@ -92,6 +93,8 @@ export function SourceBadge({ source }: { source?: AnimeCardSource }) {
 interface PosterCardProps {
   title: string;
   posterUrl?: string | null;
+  /** The poster's smaller sizes (posterSrcSet), so a card downloads only what it shows. */
+  posterSrcSet?: string;
   type?: string | null;
   year?: number | null;
   episodeCount?: number | null;
@@ -108,7 +111,7 @@ interface PosterCardProps {
 }
 
 /** Shared visual body for source titles and provider entries; navigation stays with each caller. */
-export function PosterCard({ title, posterUrl, type, year, episodeCount, rating, genres, description, progress, source, compact }: PosterCardProps) {
+export function PosterCard({ title, posterUrl, posterSrcSet, type, year, episodeCount, rating, genres, description, progress, source, compact }: PosterCardProps) {
   const { t } = useTranslation();
   const meta = compact ? [year].filter(Boolean).join(" · ") : [
     year,
@@ -121,6 +124,7 @@ export function PosterCard({ title, posterUrl, type, year, episodeCount, rating,
     <div ref={frameRef} className="relative aspect-[2/3] overflow-hidden rounded-xl bg-surface ring-1 ring-border">
       {posterUrl ? <SmoothImage
         src={nearScreen ? posterUrl : undefined}
+        srcSet={posterSrcSet}
         alt={nearScreen ? title : ""}
         // `will-change` only while actually hovered, not unconditionally - applied to every card
         // at once, it makes the browser keep a persistent GPU compositing layer alive for every
@@ -174,6 +178,7 @@ export const AnimeCard = memo(function AnimeCard({ anime, progress, source, comp
     <PosterCard
       title={title}
       posterUrl={anime.posterUrl}
+      posterSrcSet={posterSrcSet(anime.posterVariants)}
       type={anime.type}
       year={anime.year}
       episodeCount={anime.availableEpisodeCount}

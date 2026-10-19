@@ -10,6 +10,7 @@ import { hibiki, searchSource } from "@/lib/hibiki";
 import { animeTitle } from "@/components/AnimeCard";
 import { FilterSections, FiltersControl, pickedCount, useLiveFilters } from "@/components/CatalogFilters";
 import { SmoothImage } from "@/components/SmoothImage";
+import { posterSrcSet } from "@/components/PosterImage";
 import { usePopoverTheme } from "@/lib/usePopoverTheme";
 import { activeFilterCount, toSearchRequestFilters } from "@/lib/searchFilters";
 import { useUiStore } from "@/stores/uiStore";
@@ -323,7 +324,7 @@ function SpotlightPanel() {
               return (
                 <button key={`${anime.sourceId}:${anime.id}`} data-row={index} onMouseMove={() => pointAt(index)} onClick={() => openTitle(anime)} className={cn("flex w-full items-center gap-3.5 rounded-xl px-2.5 py-2 text-left transition-colors", effectiveSelected === index && "bg-text/[.08]")}>
                   <div className="h-[54px] w-9 shrink-0 overflow-hidden rounded-md bg-surface ring-1 ring-border">
-                    {anime.posterUrl && <SmoothImage lazy src={anime.posterUrl} alt="" className="h-full w-full object-cover" />}
+                    {anime.posterUrl && <SmoothImage lazy src={anime.posterUrl} srcSet={posterSrcSet(anime.posterVariants)} alt="" className="h-full w-full object-cover" />}
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="line-clamp-1 text-sm font-semibold text-text">{animeTitle(anime)}</p>
