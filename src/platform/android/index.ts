@@ -61,7 +61,6 @@ export async function createAndroidPlatform(version: string): Promise<{ platform
       zoom: false,
       discordPresence: false,
       hardwareAccelerationToggle: false,
-      appUpdates: "apk",
       revealLogFolder: false,
     },
     paths,
@@ -75,6 +74,7 @@ export async function createAndroidPlatform(version: string): Promise<{ platform
     events,
     app: {
       version: () => version,
+      updateKey: () => "android",
       openExternal: async (url) => {
         window.open(url, "_blank");
       },
@@ -87,6 +87,7 @@ export async function createAndroidPlatform(version: string): Promise<{ platform
       deviceName: async () => (await HibikiSync.deviceName()).name,
     },
     appInstaller: {
+      supports: (kind) => kind === "apk",
       canInstall: async () => (await HibikiApp.canInstallPackages()).granted,
       requestPermission: async () => (await HibikiApp.openInstallSettings()).granted,
       verify: async (path, expectedVersion) => {

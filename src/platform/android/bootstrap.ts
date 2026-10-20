@@ -17,7 +17,7 @@ import { clearTitleSnapshots, titleSnapshotsSize } from "../../core/extensions/t
 import { dataBytesThisSession, setNetworkConfig } from "../../core/networkConfig";
 import { log, recentEntries, renderLog } from "../../core/logger";
 import { installPlatform } from "../../core/platform";
-import { checkForUpdate, cleanUpdateLeftovers, downloadUpdate, installUpdate } from "../../core/updates";
+import { checkForUpdate, cleanUpdateLeftovers, downloadAndInstall } from "../../core/updates";
 import { createSyncServerApi } from "../../core/api/sync";
 import { deviceId } from "../../core/sync/changes";
 import { syncNow } from "../../core/sync/client";
@@ -148,13 +148,11 @@ export async function installAndroidHibiki(): Promise<void> {
     discord: { setEnabled: async () => {}, updatePresence: async () => {}, setIdlePresence: async () => {}, clearPresence: async () => {} },
     window: { unmaximizeForDrag() {}, minimize() {}, toggleMaximize() {}, close() {}, isMaximized: async () => false, onMaximizedChanged: nothing },
     updates: {
-      check: () => checkForUpdate("android"),
-      downloadAndInstall: async (update: AppUpdate) => {
-        const path = await downloadUpdate(update, (receivedBytes, totalBytes) => {
+      check: () => checkForUpdate(),
+      downloadAndInstall: (update: AppUpdate) =>
+        downloadAndInstall(update, (receivedBytes, totalBytes) => {
           events.emit(IPC.updatesProgress, { receivedBytes, totalBytes } satisfies UpdateDownloadProgress);
-        });
-        await installUpdate(path, update.version);
-      },
+        }),
       openRelease: (url) => platform.app.openExternal(url),
       onProgress: (callback) => events.on(IPC.updatesProgress, (progress) => callback(progress as UpdateDownloadProgress)),
       installPermission: {

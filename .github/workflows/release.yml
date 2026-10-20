@@ -329,9 +329,18 @@ jobs:
     if: ${{ !cancelled() && needs.version.result == 'success' && !contains(needs.*.result, 'failure') }}
     runs-on: ubuntu-latest
     steps:
+      # For scripts/make-update-manifest.mjs below; the builds themselves arrive as artifacts.
+      - uses: actions/checkout@v4
+
       - uses: actions/download-artifact@v4
         with:
           path: artifacts
+
+      # What the app reads to find its own platform's file in this release (core/updates.ts).
+      # Without it a release is published but nobody is offered it as an update. A platform that was
+      # left out of the run just has no entry, so its users are offered nothing rather than a wrong file.
+      - name: Write the update manifest
+        run: node scripts/make-update-manifest.mjs "${{ needs.version.outputs.version }}" artifacts artifacts/update-manifest.json
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
@@ -343,4 +352,5 @@ jobs:
           files: |
             artifacts/windows/*.exe
             artifacts/android/*.apk
+            artifacts/update-manifest.json
           prerelease: ${{ needs.version.outputs.is_prerelease }}

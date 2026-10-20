@@ -8,6 +8,7 @@
 // The interfaces grow as Phase 2 moves modules into the shared core: each extraction replaces a
 // direct electron/node import with one of these ports, and adds what that module turns out to need.
 import type { BaseSQLiteDatabase } from "drizzle-orm/sqlite-core";
+import type { UpdateKind } from "@shared/appUpdateSelection";
 import type { PlayerLink, SourceInfo, SubtitleTrack } from "@shared/types";
 import type * as schema from "../core/db/schema";
 
@@ -23,8 +24,6 @@ export interface Capabilities {
   discordPresence: boolean;
   /** A restart-to-apply GPU acceleration toggle. */
   hardwareAccelerationToggle: boolean;
-  /** How an app update is applied: a Windows installer, an Android package, or not at all. */
-  appUpdates: "installer" | "apk" | "none";
   /** "Open the log folder" in the system file manager. */
   revealLogFolder: boolean;
 }
@@ -62,6 +61,9 @@ export interface FilesPort {
   /** No-op when nothing exists at `path`. Directories are removed with their contents. */
   remove(path: string): Promise<void>;
   rename(from: string, to: string): Promise<void>;
+  /** Lower-case hex SHA-256 of the file. Absent where hashing a large file is not practical
+   * (Android, which verifies a package's signature instead). */
+  sha256?(path: string): Promise<string>;
 }
 
 /** OS-backed encryption for small secrets at rest (source session tokens): DPAPI via Electron's
@@ -216,6 +218,9 @@ export interface EventsPort {
 
 export interface AppPort {
   version(): string;
+  /** Which entry of a release's update manifest is this build's: "win32-x64", "darwin-arm64",
+   * "linux-x64", "android". */
+  updateKey(): string;
   /** Hands a URL to the system browser. */
   openExternal(url: string): Promise<void>;
   relaunch(): void;
@@ -238,7 +243,7 @@ export interface Platform {
   /** Compiled sources the platform runs itself, beside the JS ones (Android: Aniyomi APK
    * extensions). Absent where there are none. */
   apkSources?: ApkSourcesPort;
-  /** Installing an update of the app itself, where the platform does it in-app (Android). */
+  /** Applying an update of the app itself, for the kinds of update the platform can do in-app. */
   appInstaller?: AppInstallerPort;
   /** Reaching a computer on the local network for device sync (Android; the computer listens instead). */
   syncTransport?: SyncTransportPort;
@@ -254,6 +259,9 @@ export interface SyncTransportPort {
 }
 
 export interface AppInstallerPort {
+  /** Whether this platform applies updates of `kind` itself. Anything it doesn't is sent to the
+   * release page - so a kind a future release introduces degrades to a manual download. */
+  supports(kind: UpdateKind): boolean;
   /** Whether the system lets this app start installing packages. */
   canInstall(): Promise<boolean>;
   /** Takes the person to the system setting that allows it; resolves with the state once they are back. */
@@ -261,8 +269,8 @@ export interface AppInstallerPort {
   /** Whether the file is a newer build of this very app, signed the same way. `reason` is an
    * UpdateErrorCode (core/updates.ts). */
   verify(path: string, version: string): Promise<{ ok: true } | { ok: false; reason: string }>;
-  /** Opens the system installer on the file. Resolves once it is up, not when the install ends. */
-  install(path: string): Promise<void>;
+  /** Applies the file the way `kind` says. Resolves once that is under way, not when it ends. */
+  install(path: string, kind: UpdateKind): Promise<void>;
 }
 
 /**

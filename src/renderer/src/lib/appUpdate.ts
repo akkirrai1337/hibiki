@@ -68,6 +68,10 @@ export const useUpdateFlow = create<UpdateFlowState>((set, get) => ({
   closeSheet: () => set({ sheetOpen: false }),
   start: async (update) => {
     if (get().phase.kind === "downloading") return;
+    if (update.kind === "manual") {
+      await hibiki.updates.openRelease(update.releaseUrl);
+      return;
+    }
     if (!progressAttached) {
       progressAttached = true;
       hibiki.updates.onProgress(({ receivedBytes, totalBytes }) => {

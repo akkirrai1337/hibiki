@@ -46,6 +46,12 @@ export function UpdateButton() {
 
   const install = useCallback(async (target: AppUpdate) => {
     setError(null);
+    // Nothing to download or quit for: the person installs it from the release page themselves.
+    if (target.kind === "manual") {
+      log.info("update", `opening the release page for ${target.version}`);
+      await hibiki.updates.openRelease(target.releaseUrl);
+      return;
+    }
     setProgress({ received: 0, total: target.sizeBytes });
     log.info("update", `downloading ${target.version} (${target.sizeBytes} bytes)`);
     try {
@@ -64,7 +70,8 @@ export function UpdateButton() {
   // that silently would read as a crash.
   const [autoStarted, setAutoStarted] = useState(false);
   useEffect(() => {
-    if (!autoUpdate || !update || autoStarted) return;
+    // Never for a manual one: that would open the browser at every launch.
+    if (!autoUpdate || !update || update.kind === "manual" || autoStarted) return;
     setAutoStarted(true);
     setOpen(true);
     void install(update);

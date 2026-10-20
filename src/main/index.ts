@@ -37,7 +37,7 @@ import { createElectronPlatform } from "../platform/electron";
 import { exportLog, openLogFolder } from "./logExport";
 import { isHardwareAccelerationEnabled, setHardwareAccelerationEnabled } from "./hardwareAcceleration";
 import { collectMemorySnapshot, formatMemorySnapshot } from "./memoryDiagnostics";
-import { checkForUpdate, downloadUpdate, installUpdate } from "./appUpdates";
+import { checkForUpdate, cleanUpdateLeftovers, downloadAndInstall } from "../core/updates";
 import type { AppUpdate, DiscordPresence, NetworkConfig, TrafficSnapshot, UpdateDownloadProgress } from "@shared/types";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -229,6 +229,7 @@ app.whenReady().then(async () => {
   // yet, and the macOS `activate` path can replace it later.
   installPlatform(createElectronPlatform(() => mainWindow));
   initLogger(app.getPath("userData"));
+  void cleanUpdateLeftovers().catch((error) => logger.warn("update", `could not clean old update files: ${error}`));
   // Without these, a rejected promise anywhere in main (a download stream, an IPC handler, the
   // Discord socket) vanishes with nothing but a console line no user ever sees - and those are
   // precisely the failures an exported log is meant to explain.
@@ -451,16 +452,14 @@ app.whenReady().then(async () => {
     }
   });
   ipcMain.handle(IPC.updatesCheck, () => checkForUpdate());
-  // One handler for both halves on purpose: an installer that has been downloaded but not launched
-  // is just a large file in temp, and leaving that state reachable from the renderer invites it.
-  ipcMain.handle(IPC.updatesDownloadAndInstall, async (event, update: AppUpdate) => {
-    const installerPath = await downloadUpdate(update, (receivedBytes, totalBytes) => {
+  // One handler for both halves on purpose - see downloadAndInstall in core/updates.ts.
+  ipcMain.handle(IPC.updatesDownloadAndInstall, (event, update: AppUpdate) =>
+    downloadAndInstall(update, (receivedBytes, totalBytes) => {
       if (!event.sender.isDestroyed()) {
         event.sender.send(IPC.updatesProgress, { receivedBytes, totalBytes } satisfies UpdateDownloadProgress);
       }
-    });
-    await installUpdate(installerPath);
-  });
+    }),
+  );
   ipcMain.handle(IPC.updatesOpenRelease, (_e, url: string) => {
     // Only this project's own releases - shell.openExternal hands the string to the OS, so an
     // arbitrary one from the renderer would be a way to launch anything the shell knows how to.

@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+import { createReadStream } from "node:fs";
 import fs from "node:fs/promises";
 import path from "node:path";
 import type { FilesPort } from "../types";
@@ -44,4 +46,10 @@ export const electronFiles: FilesPort = {
   },
   remove: (target) => fs.rm(target, { recursive: true, force: true }),
   rename: (from, to) => fs.rename(from, to),
+  // Streamed: an installer is ~120MB and has to land in memory only a chunk at a time.
+  async sha256(target) {
+    const hash = createHash("sha256");
+    for await (const chunk of createReadStream(target)) hash.update(chunk as Buffer);
+    return hash.digest("hex");
+  },
 };

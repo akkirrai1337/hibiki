@@ -1,6 +1,7 @@
 // Shared IPC contract types, mirrored from the Android app's Kotlin models
 // (hibiki/parsers/.../model/Models.kt) so extension output needs no reshaping
 // between main and renderer.
+import type { UpdateKind } from "./appUpdateSelection";
 
 export type AnimeType = "tv" | "ova" | "ona" | "movie" | "special" | string;
 export type AnimeStatus = "ongoing" | "released" | "announced" | string;
@@ -647,7 +648,7 @@ export interface DeepLinkWatchTarget {
   episodeId: string;
 }
 
-/** A GitHub release newer than the running build - see main/appUpdates.ts. */
+/** A GitHub release newer than the running build, with the file this platform takes - see core/updates.ts. */
 export interface AppUpdate {
   /** Without the leading "v" of the tag. */
   version: string;
@@ -655,6 +656,11 @@ export interface AppUpdate {
   downloadUrl: string;
   fileName: string;
   sizeBytes: number;
+  /** Lower-case hex SHA-256 of the file, from the release's manifest. */
+  sha256: string;
+  /** How this platform applies the file. "manual" - also for a kind the platform cannot apply
+   * itself - means: open the release page, nothing is downloaded or quit. */
+  kind: UpdateKind;
   notes: string;
   publishedAt: string | null;
 }

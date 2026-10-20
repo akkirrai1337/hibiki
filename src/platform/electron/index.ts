@@ -1,6 +1,8 @@
 import { app, shell, type BrowserWindow } from "electron";
+import { desktopUpdateKey } from "@shared/appUpdateSelection";
 import { electronSyncTransport } from "./syncTransport";
 import type { Platform } from "../types";
+import { electronAppInstaller } from "./appInstaller";
 import { electronBrowser } from "./browser";
 import { electronDb } from "./db";
 import { electronDownloadTransfer } from "./downloadTransfer";
@@ -21,7 +23,6 @@ export function createElectronPlatform(getWindow: () => BrowserWindow | null): P
       zoom: true,
       discordPresence: true,
       hardwareAccelerationToggle: true,
-      appUpdates: "installer",
       revealLogFolder: true,
     },
     paths: electronPaths(),
@@ -40,6 +41,7 @@ export function createElectronPlatform(getWindow: () => BrowserWindow | null): P
     },
     app: {
       version: () => app.getVersion(),
+      updateKey: () => desktopUpdateKey(process.platform, process.arch),
       openExternal: (url) => shell.openExternal(url),
       relaunch() {
         app.relaunch();
@@ -47,6 +49,7 @@ export function createElectronPlatform(getWindow: () => BrowserWindow | null): P
       },
     },
     extensionHost: new ElectronExtensionHost(),
+    appInstaller: electronAppInstaller,
     // Reaching another computer for device sync; this one also listens (main/sync.ts).
     syncTransport: electronSyncTransport,
   };
