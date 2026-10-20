@@ -48,3 +48,16 @@ export function findListedTitle(payloads: Iterable<unknown>, sourceId: string, a
   }
   return undefined;
 }
+
+/**
+ * `title` with `poster` as its cover when it has none of its own.
+ *
+ * A source's details can come back without the cover its list showed (an APK extension builds a
+ * fresh title there and fills in the text only), and the page then lost the picture it had been
+ * showing a moment before. The cover a title was last seen with stays; a cover the details do carry
+ * is never replaced.
+ */
+export function withKnownPoster(title: AnimeTitle | undefined, poster: string | null): AnimeTitle | undefined {
+  if (!title || title.posterUrl || !poster) return title;
+  return { ...title, posterUrl: poster };
+}

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { AnimeTitle } from "@shared/types";
-import { findListedTitle } from "./listedTitles";
+import { findListedTitle, withKnownPoster } from "./listedTitles";
 
 function title(sourceId: string, id: string, name = "Some title"): AnimeTitle {
   return { id, sourceId, russianName: name } as unknown as AnimeTitle;
@@ -50,5 +50,28 @@ describe("findListedTitle", () => {
     const fresh = title("yummy-anime", "1", "Fresh");
     const stale = title("yummy-anime", "1", "Stale");
     expect(findListedTitle([[fresh], [stale]], "yummy-anime", "1")?.russianName).toBe("Fresh");
+  });
+});
+
+describe("withKnownPoster", () => {
+  const bare = title("apk:anikoto", "a");
+
+  it("gives a title without a cover the one it was last seen with", () => {
+    expect(withKnownPoster(bare, "http://poster/1")?.posterUrl).toBe("http://poster/1");
+  });
+
+  it("never replaces a cover the details do carry", () => {
+    const own = { ...bare, posterUrl: "http://poster/own" } as AnimeTitle;
+    expect(withKnownPoster(own, "http://poster/1")).toBe(own);
+  });
+
+  it("leaves a title alone when there is no cover to give, or no title", () => {
+    expect(withKnownPoster(bare, null)).toBe(bare);
+    expect(withKnownPoster(undefined, "http://poster/1")).toBeUndefined();
+  });
+
+  it("treats an empty cover as none", () => {
+    const empty = { ...bare, posterUrl: "" } as AnimeTitle;
+    expect(withKnownPoster(empty, "http://poster/1")?.posterUrl).toBe("http://poster/1");
   });
 });

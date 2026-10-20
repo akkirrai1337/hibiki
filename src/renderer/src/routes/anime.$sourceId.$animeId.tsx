@@ -16,7 +16,7 @@ import { TrackerLinkButton } from "@/components/TrackerLinkButton";
 import { useRecommendationReason } from "@/lib/recommendations";
 import { hibiki } from "@/lib/hibiki";
 import { useNewEpisodesPrefs } from "@/lib/newEpisodes";
-import { findListedTitle } from "@/lib/listedTitles";
+import { findListedTitle, withKnownPoster } from "@/lib/listedTitles";
 import { usePlaybackGroups } from "@/lib/playbackGroups";
 import { useTitleExtras } from "@/lib/titleExtras";
 import { isGenericDubTitle } from "@/lib/dubTitle";
@@ -282,7 +282,15 @@ function AnimeDetailPage() {
     });
   }, [queryClient, sourceId, animeId]);
 
-  const anime = animeQuery.data;
+  // The cover this title was last seen with, kept across what arrives next: details that come without
+  // one (an APK extension's) must not take away the picture the list gave a moment before.
+  const titleKey = `${sourceId}/${animeId}`;
+  const knownPoster = useRef<{ key: string; url: string } | null>(null);
+  if (animeQuery.data?.posterUrl) knownPoster.current = { key: titleKey, url: animeQuery.data.posterUrl };
+  const anime = useMemo(
+    () => withKnownPoster(animeQuery.data, knownPoster.current?.key === titleKey ? knownPoster.current.url : null),
+    [animeQuery.data, titleKey],
+  );
   useTitleExtras(sourceId, animeId, anime);
   const groups = groupsQuery.data ?? [];
   const activeGroup = groups.find((g) => g.id === requestedGroupId) ?? groups[0];
