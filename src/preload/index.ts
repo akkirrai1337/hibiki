@@ -27,6 +27,7 @@ import type {
   SearchFilterCatalog,
   SourceRecommendations,
   SyncCandidate,
+  SyncPairingInfo,
   SyncPairMode,
   SyncDevice,
   SearchRequest,
@@ -141,13 +142,14 @@ const api: HibikiApi = {
   sync: {
     devices: (): Promise<SyncDevice[]> => ipcRenderer.invoke(IPC.syncDevices),
     remove: (deviceId: string): Promise<void> => ipcRenderer.invoke(IPC.syncRemove, deviceId),
-    startPairing: (): Promise<{ code: string; expiresAt: number }> => ipcRenderer.invoke(IPC.syncStartPairing),
+    startPairing: (): Promise<SyncPairingInfo> => ipcRenderer.invoke(IPC.syncStartPairing),
     stopPairing: (): Promise<void> => ipcRenderer.invoke(IPC.syncStopPairing),
+    pairingInfo: (): Promise<SyncPairingInfo | null> => ipcRenderer.invoke(IPC.syncPairingInfo),
     discover: (): Promise<SyncCandidate[]> => ipcRenderer.invoke(IPC.syncDiscover),
     pair: (candidate: SyncCandidate, code: string, mode: SyncPairMode): Promise<SyncDevice> => ipcRenderer.invoke(IPC.syncPair, candidate, code, mode),
     syncNow: (): Promise<void> => ipcRenderer.invoke(IPC.syncNow),
-    onChanged: (callback: (what: "devices" | "data") => void): (() => void) => {
-      const listener = (_e: Electron.IpcRendererEvent, payload: { what: "devices" | "data" }) => callback(payload.what);
+    onChanged: (callback: (what: "devices" | "data" | "pairing") => void): (() => void) => {
+      const listener = (_e: Electron.IpcRendererEvent, payload: { what: "devices" | "data" | "pairing" }) => callback(payload.what);
       ipcRenderer.on(IPC.syncChanged, listener);
       return () => ipcRenderer.removeListener(IPC.syncChanged, listener);
     },

@@ -165,7 +165,9 @@ export interface HibikiSyncPlugin {
   discover(options: { timeoutMs: number; port: number; probe: string }): Promise<{ devices: Array<{ deviceId: string; name: string; host: string; port: number; kind: "computer" | "phone" }> }>;
   deviceName(): Promise<{ name: string }>;
   /** Listens for other devices while the app is on screen; each request arrives as a "request" event. */
-  startServer(options: { port: number; discoveryPort: number; probe: string; answer: string }): Promise<void>;
+  /** `probe` is answered only while a pairing window is open (`pairing`, then setPairingOpen); a probe made of `locatePrefix` and `deviceId` is answered always. */
+  startServer(options: { port: number; discoveryPort: number; probe: string; locatePrefix: string; deviceId: string; pairing: boolean; answer: string }): Promise<void>;
+  setPairingOpen(options: { open: boolean }): Promise<void>;
   stopServer(): Promise<void>;
   /** The answer to a "request" event. */
   respond(options: { id: string; message: string }): Promise<void>;

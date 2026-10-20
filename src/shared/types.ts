@@ -504,6 +504,15 @@ export interface SyncDevice {
  */
 export type SyncPairMode = "merge" | "keep-here" | "take-there";
 
+/** An open pairing window: the code to show now, when it is replaced by a new one, and when the window itself ends. */
+export interface SyncPairingInfo {
+  code: string;
+  /** When this code stops working and the next one takes its place. */
+  expiresAt: number;
+  /** The latest the window stays open, whatever happens before. */
+  closesAt: number;
+}
+
 /** A device found on the network that this one can pair with. */
 export interface SyncCandidate {
   deviceId: string;

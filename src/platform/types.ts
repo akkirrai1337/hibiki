@@ -252,8 +252,11 @@ export interface Platform {
 export interface SyncTransportPort {
   /** Sends one framed message (core/sync/protocol.ts) to host:port and resolves the answer. */
   request(host: string, port: number, message: string, timeoutMs: number): Promise<string>;
-  /** Broadcasts the discovery probe and collects the answers that arrive within the time. */
-  discover(timeoutMs: number): Promise<Array<{ deviceId: string; name: string; host: string; port: number; kind: "computer" | "phone" }>>;
+  /** Broadcasts a probe (by default the one that asks who is open for pairing) and collects the answers that arrive within the time. */
+  discover(timeoutMs: number, probe?: string): Promise<Array<{ deviceId: string; name: string; host: string; port: number; kind: "computer" | "phone" }>>;
+  /** Tells the platform's own listening socket, where it has one (the phone's), whether a pairing
+   * window is open - it answers the pairing probe only while one is. Absent where the app answers itself. */
+  setPairingOpen?(open: boolean): Promise<void> | void;
   /** What this device is called, as the computer will list it. */
   deviceName(): Promise<string>;
 }

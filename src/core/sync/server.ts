@@ -2,49 +2,142 @@
 // itself (TCP, UDP discovery) is the host's - see main/sync.ts; this only turns one request into its
 // answer.
 import { IPC } from "@shared/ipc";
+import type { SyncPairingInfo } from "@shared/types";
 import { logger } from "../logger";
 import { getPlatform } from "../platform";
 import { applyChanges, changeCount, collectChanges, currentSeq, describeChanges, deviceId, KnownVersions, wipeSyncedData } from "./changes";
 import { checkProof, deriveSharedKey, keyProof, newPairingCode, newPairingKeys, open, seal, type Bytes } from "./crypto";
 import { getPeer, peerKey, removePeer, savePeer, updatePeer } from "./peers";
-import { PROTOCOL_VERSION, type SyncAnswer, type SyncPayload, type SyncRequest, type SyncResponse, type UnpairPayload } from "./protocol";
+import { DISCOVERY_PROBE, LOCATE_PROBE_PREFIX, PROTOCOL_VERSION, type DiscoveryAnswer, type SyncAnswer, type SyncPayload, type SyncRequest, type SyncResponse, type UnpairPayload } from "./protocol";
 
-const PAIRING_WINDOW_MS = 5 * 60 * 1000;
-/** Wrong codes allowed per pairing window before it closes. */
+// While a pairing window is open the device shows up in other devices' searches and takes a code. The
+// code is replaced every couple of minutes, so one that was read over a shoulder or intercepted does
+// not stay good; the window itself ends on its own, after a few tries, or when a device has paired.
+const CODE_LIFETIME_MS = 2 * 60 * 1000;
+const WINDOW_MAX_MS = 10 * 60 * 1000;
+/** Tries (a device saying hello with a code) per window before it closes. */
 const MAX_PAIRING_ATTEMPTS = 5;
+/** After the last try is used, how long that one may still be completed. */
+const LAST_ATTEMPT_GRACE_MS = 15 * 1000;
 
 interface PairingSession {
   code: string;
-  expiresAt: number;
+  codeExpiresAt: number;
+  closesAt: number;
   attempts: number;
   /** Phones that said hello with this session, waiting to prove the code. */
   pending: Map<string, { name: string; key: Bytes; address: string }>;
+  rotateTimer: ReturnType<typeof setTimeout> | null;
+  closeTimer: ReturnType<typeof setTimeout> | null;
 }
 
 let session: PairingSession | null = null;
 
-/** Opens a pairing window: the code to show, and until when it works. */
-export function startPairing(): { code: string; expiresAt: number } {
-  session = { code: newPairingCode(), expiresAt: Date.now() + PAIRING_WINDOW_MS, attempts: 0, pending: new Map() };
+/** A timer that does not keep a process alive just to fire. */
+function timer(callback: () => void, ms: number): ReturnType<typeof setTimeout> {
+  const handle = setTimeout(callback, Math.max(0, ms));
+  (handle as { unref?: () => void }).unref?.();
+  return handle;
+}
+
+const infoOf = (current: PairingSession): SyncPairingInfo => ({ code: current.code, expiresAt: current.codeExpiresAt, closesAt: current.closesAt });
+
+/** Tells whatever listens for discovery probes (the platform's own socket, where it has one) whether to answer. */
+function announceOpen(open: boolean): void {
+  const failed = (error: unknown) => logger.warn("sync", `could not tell the network layer the pairing window is ${open ? "open" : "closed"}: ${error}`);
+  try {
+    void Promise.resolve(getPlatform().syncTransport?.setPairingOpen?.(open)).catch(failed);
+  } catch (error) {
+    failed(error);
+  }
+  notifySyncChanged("pairing");
+}
+
+function armCloseTimer(current: PairingSession): void {
+  if (current.closeTimer) clearTimeout(current.closeTimer);
+  current.closeTimer = timer(() => {
+    if (session === current) closeSession("ran out");
+  }, current.closesAt - Date.now());
+}
+
+function armRotation(current: PairingSession): void {
+  if (current.rotateTimer) clearTimeout(current.rotateTimer);
+  current.rotateTimer = timer(() => {
+    if (session !== current) return;
+    current.code = newPairingCode();
+    current.codeExpiresAt = Date.now() + CODE_LIFETIME_MS;
+    logger.info("sync", "pairing code replaced");
+    notifySyncChanged("pairing");
+    armRotation(current);
+  }, CODE_LIFETIME_MS);
+}
+
+function closeSession(reason: string): void {
+  const current = session;
+  if (!current) return;
+  if (current.rotateTimer) clearTimeout(current.rotateTimer);
+  if (current.closeTimer) clearTimeout(current.closeTimer);
+  session = null;
+  logger.info("sync", `pairing window closed (${reason})`);
+  announceOpen(false);
+}
+
+/** Opens a pairing window: the code to show now, and when it is replaced. */
+export function startPairing(): SyncPairingInfo {
+  if (session) closeSession("reopened");
+  const now = Date.now();
+  const current: PairingSession = {
+    code: newPairingCode(),
+    codeExpiresAt: now + CODE_LIFETIME_MS,
+    closesAt: now + WINDOW_MAX_MS,
+    attempts: 0,
+    pending: new Map(),
+    rotateTimer: null,
+    closeTimer: null,
+  };
+  session = current;
+  armRotation(current);
+  armCloseTimer(current);
   logger.info("sync", "pairing window opened");
-  return { code: session.code, expiresAt: session.expiresAt };
+  announceOpen(true);
+  return infoOf(current);
 }
 
 export function stopPairing(): void {
-  if (session) logger.info("sync", "pairing window closed");
-  session = null;
+  closeSession("stopped");
 }
 
 function activeSession(): PairingSession | null {
-  if (session && Date.now() > session.expiresAt) {
-    logger.info("sync", "pairing window ran out");
-    session = null;
-  }
+  if (session && Date.now() > session.closesAt) closeSession("ran out");
   return session;
 }
 
-/** Tells the UI something changed: paired devices, or data a sync brought in. */
-export function notifySyncChanged(what: "devices" | "data"): void {
+/** The window that is open and its code, or null. */
+export function pairingInfo(): SyncPairingInfo | null {
+  const current = activeSession();
+  return current ? infoOf(current) : null;
+}
+
+export function isPairingOpen(): boolean {
+  return activeSession() !== null;
+}
+
+/**
+ * What to answer a UDP probe with, or null for silence. A search for devices to pair with is
+ * answered only while a window is open - otherwise this device does not show up in anyone's list. A
+ * search for one particular paired device (after its address changed) is answered whenever it is
+ * this one that is asked for: it takes knowing its id, and says nothing a paired device does not know.
+ */
+export async function answerProbe(text: string, name: string, port: number, kind: DiscoveryAnswer["kind"]): Promise<DiscoveryAnswer | null> {
+  const id = await deviceId();
+  const mine = (): DiscoveryAnswer => ({ app: "hibiki", v: PROTOCOL_VERSION, deviceId: id, name, port, kind });
+  if (text === DISCOVERY_PROBE) return isPairingOpen() ? mine() : null;
+  if (text.startsWith(LOCATE_PROBE_PREFIX) && text.slice(LOCATE_PROBE_PREFIX.length) === id) return mine();
+  return null;
+}
+
+/** Tells the UI something changed: paired devices, data a sync brought in, or the pairing window. */
+export function notifySyncChanged(what: "devices" | "data" | "pairing"): void {
   getPlatform().events.emit(IPC.syncChanged, { what });
 }
 
@@ -77,10 +170,17 @@ async function answer(request: SyncRequest, address: string, ownName: string): P
     if (!current) return { ok: false, error: "not-pairing" };
     if (current.attempts >= MAX_PAIRING_ATTEMPTS) {
       logger.warn("sync", `pairing window closed after ${MAX_PAIRING_ATTEMPTS} attempts`);
-      session = null;
+      closeSession("too many attempts");
       return { ok: false, error: "too-many-attempts" };
     }
     current.attempts++;
+    // The last try: the window does not wait for another. It stays just long enough for this one to
+    // be finished (the code may be right) and then closes, and has to be opened again.
+    if (current.attempts >= MAX_PAIRING_ATTEMPTS) {
+      current.closesAt = Math.min(current.closesAt, Date.now() + LAST_ATTEMPT_GRACE_MS);
+      armCloseTimer(current);
+      notifySyncChanged("pairing");
+    }
     logger.info("sync", `pairing request from "${String(request.name).slice(0, 80)}" at ${address} (attempt ${current.attempts}/${MAX_PAIRING_ATTEMPTS})`);
     const keys = await newPairingKeys();
     const key = await deriveSharedKey(keys.privateKey, request.pub, current.code);
@@ -97,7 +197,7 @@ async function answer(request: SyncRequest, address: string, ownName: string): P
       return { ok: false, error: "bad-code" };
     }
     await savePeer(request.from, pending.name, pending.key, pending.address, false);
-    session = null;
+    closeSession("paired");
     logger.info("sync", `paired with "${pending.name}" (${address}, ${request.from.slice(0, 8)}); it starts the syncs`);
     notifySyncChanged("devices");
     return { ok: true, type: "pair-confirm" };

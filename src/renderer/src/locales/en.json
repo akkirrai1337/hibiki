@@ -909,7 +909,7 @@
     "connectComputer": "Connect to a device",
     "connectAnother": "Connect another device",
     "enterOnPhone": "On the other device: Settings → Sync → Connect to a device, then pick this computer and enter the code:",
-    "waiting": "Waiting for the other device… the code works for 5 minutes.",
+    "waiting": "Waiting for the other device… the code changes every 2 minutes.",
     "findHint": "On the device you are connecting to, open Settings → Sync and show its code (on a computer: “Show a code”). Both need to be on the same network.",
     "searching": "Looking for devices…",
     "notFound": "Nothing found",

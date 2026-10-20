@@ -329,12 +329,13 @@ describe("pairing and syncing over the protocol", () => {
     expect(await listPeers()).toEqual([]);
   });
 
-  it("does not pair when no pairing window is open", async () => {
+  it("does not show up, and does not pair, when no pairing window is open", async () => {
     const net = connect(pc, phone);
     net.asComputer();
     stopPairing();
     net.asPhone();
-    const [found] = await discover();
-    await expect(pair(found, "123456")).rejects.toMatchObject({ code: "not-pairing" });
+    expect(await discover()).toEqual([]);
+    // Someone who knows the address anyway is refused too.
+    await expect(pair({ deviceId: "x", name: "Test PC", host: "10.0.0.2", port: 47652, kind: "computer" }, "123456")).rejects.toMatchObject({ code: "not-pairing" });
   });
 });

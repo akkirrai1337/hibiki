@@ -83,7 +83,10 @@ export async function createAndroidPlatform(version: string): Promise<{ platform
     extensionHost: new AndroidExtensionHost(androidFiles),
     syncTransport: {
       request: async (host, port, message, timeoutMs) => (await HibikiSync.request({ host, port, message, timeoutMs })).message,
-      discover: async (timeoutMs) => (await HibikiSync.discover({ timeoutMs, port: DISCOVERY_PORT, probe: DISCOVERY_PROBE })).devices,
+      discover: async (timeoutMs, probe) => (await HibikiSync.discover({ timeoutMs, port: DISCOVERY_PORT, probe: probe ?? DISCOVERY_PROBE })).devices,
+      setPairingOpen: async (open) => {
+        await HibikiSync.setPairingOpen({ open });
+      },
       deviceName: async () => (await HibikiSync.deviceName()).name,
     },
     appInstaller: {

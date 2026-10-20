@@ -11,8 +11,9 @@ import * as schema from "../db/schema";
 import { applyMigrations, type MigrationJournal } from "../db/migrate";
 import { installPlatform } from "../platform";
 import type { Platform } from "../../platform/types";
-import { applyChanges, collectChanges, deviceId } from "./changes";
-import { handleSyncRequest } from "./server";
+import { applyChanges, collectChanges } from "./changes";
+import { DISCOVERY_PROBE } from "./protocol";
+import { answerProbe, handleSyncRequest } from "./server";
 
 const migrationsDir = fileURLToPath(new URL("../db/migrations", import.meta.url));
 export const journal = JSON.parse(readFileSync(`${migrationsDir}/meta/_journal.json`, "utf-8")) as MigrationJournal;
@@ -97,11 +98,12 @@ export function connect(computer: Db, phoneDb: Db) {
     db: { get: () => phoneDb },
     syncTransport: {
       deviceName: async () => "Test phone",
-      discover: async () => {
+      // The computer answers as it does on the network: its pairing probe only while a window is open.
+      discover: async (_timeoutMs: number, probe?: string) => {
         asComputer();
-        const id = await deviceId();
+        const answer = await answerProbe(probe ?? DISCOVERY_PROBE, "Test PC", 47652, "computer");
         asPhone();
-        return [{ deviceId: id, name: "Test PC", host: state.computerHost, port: 47652 }];
+        return answer ? [{ deviceId: answer.deviceId, name: answer.name, host: state.computerHost, port: answer.port, kind: answer.kind }] : [];
       },
       request: async (host: string, _port: number, message: string) => {
         if (!state.reachable || state.deadHosts.has(host)) throw new Error("connection refused");

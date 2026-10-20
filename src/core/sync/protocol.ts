@@ -9,7 +9,11 @@ import type { Sealed } from "./crypto";
 
 export const SYNC_PORT = 47652;
 export const DISCOVERY_PORT = 47653;
+/** Asks who is open for pairing: answered only while a pairing window is open. */
 export const DISCOVERY_PROBE = "hibiki-sync-discover v1";
+/** Asks where one particular, already paired device is now: this prefix and its device id. Answered
+ * whether or not a window is open, but only by the device the id belongs to. */
+export const LOCATE_PROBE_PREFIX = "hibiki-sync-locate v1 ";
 export const PROTOCOL_VERSION = 1;
 
 /** What a computer answers a discovery probe with. */

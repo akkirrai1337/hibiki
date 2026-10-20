@@ -478,7 +478,7 @@ describe("the pairing window", () => {
   it("closes when its time runs out", async () => {
     const { code, found } = await discovered();
     const now = Date.now();
-    vi.spyOn(Date, "now").mockReturnValue(now + 6 * 60 * 1000);
+    vi.spyOn(Date, "now").mockReturnValue(now + 11 * 60 * 1000);
     await expect(pair(found, code)).rejects.toMatchObject({ code: "not-pairing" });
   });
 

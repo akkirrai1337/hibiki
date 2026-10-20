@@ -154,6 +154,7 @@ export const IPC = {
   syncRemove: "sync:remove",
   syncStartPairing: "sync:startPairing",
   syncStopPairing: "sync:stopPairing",
+  syncPairingInfo: "sync:pairingInfo",
   syncDiscover: "sync:discover",
   syncPair: "sync:pair",
   syncNow: "sync:now",

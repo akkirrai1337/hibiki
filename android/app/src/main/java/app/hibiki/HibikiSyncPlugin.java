@@ -167,13 +167,17 @@ public class HibikiSyncPlugin extends Plugin {
 
     private volatile java.net.ServerSocket server;
     private volatile DatagramSocket discoverySocket;
+    /** Whether a pairing window is open on this phone: only then does it answer the "who can I pair with" probe. */
+    private volatile boolean pairingOpen;
     private WifiManager.MulticastLock multicastLock;
     private final java.util.concurrent.ConcurrentHashMap<String, java.util.concurrent.CompletableFuture<String>> pendingAnswers = new java.util.concurrent.ConcurrentHashMap<>();
     private final java.util.concurrent.atomic.AtomicLong nextRequestId = new java.util.concurrent.atomic.AtomicLong();
 
     /**
      * Listens like the computer does (main/sync.ts): requests on `port`, the discovery probe on
-     * `discoveryPort`, answered with `answer`. Each request goes to the page as a "request" event and
+     * `discoveryPort`, answered with `answer` - the pairing probe (`probe`) only while a pairing window
+     * is open (`pairing`, then setPairingOpen), a search for this very device (`locatePrefix` and
+     * `deviceId`) whenever it comes. Each request goes to the page as a "request" event and
      * waits for its answer through respond(). Stopped when the app leaves the screen - Android would
      * not keep it running anyway.
      */
@@ -182,7 +186,9 @@ public class HibikiSyncPlugin extends Plugin {
         int port = call.getInt("port", 47652);
         int discoveryPort = call.getInt("discoveryPort", 47653);
         String probe = call.getString("probe", "");
+        String locateProbe = call.getString("locatePrefix", "") + call.getString("deviceId", "");
         String answer = call.getString("answer", "");
+        pairingOpen = Boolean.TRUE.equals(call.getBoolean("pairing", false));
         if (server != null) {
             call.resolve();
             return;
@@ -232,7 +238,9 @@ public class HibikiSyncPlugin extends Plugin {
                         DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
                         udp.receive(packet);
                         String text = new String(packet.getData(), 0, packet.getLength(), StandardCharsets.UTF_8).trim();
-                        if (!text.equals(probe)) continue;
+                        boolean pairingProbe = text.equals(probe) && pairingOpen;
+                        boolean locateProbeForMe = !locateProbe.isEmpty() && text.equals(locateProbe);
+                        if (!pairingProbe && !locateProbeForMe) continue;
                         report("debug", "discovery probe from " + packet.getAddress().getHostAddress() + ":" + packet.getPort());
                         udp.send(new DatagramPacket(reply, reply.length, packet.getAddress(), packet.getPort()));
                     } catch (Exception closed) {
@@ -286,6 +294,13 @@ public class HibikiSyncPlugin extends Plugin {
             // A dropped or timed-out connection: the other device retries on its next sync.
             report("debug", "connection from " + from + ": " + error);
         }
+    }
+
+    /** The page opened or closed a pairing window: the pairing probe is answered only while one is open. */
+    @PluginMethod
+    public void setPairingOpen(PluginCall call) {
+        pairingOpen = Boolean.TRUE.equals(call.getBoolean("open", false));
+        call.resolve();
     }
 
     /** The page's answer to a "request" event. */

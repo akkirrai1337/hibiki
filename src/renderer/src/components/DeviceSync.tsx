@@ -11,9 +11,9 @@ import { Modal } from "@/components/Modal";
 import { cn } from "@/lib/cn";
 import { hibiki } from "@/lib/hibiki";
 import { isMobile } from "@/lib/mobile";
-import { pairedSince } from "@/lib/pairing";
 
 const DEVICES_KEY = ["syncDevices"];
+const PAIRING_KEY = ["syncPairing"];
 // What a sync can bring in: everything that shows the library, progress, ratings or xp.
 const DATA_KEYS = ["library", "recent-progress", "progress-all", "progress", "dailyActivity", "rating", "xpEvents", "recommendations", "missingSources"];
 
@@ -25,6 +25,7 @@ export function SyncListener() {
   const queryClient = useQueryClient();
   useEffect(() => hibiki.sync.onChanged((what) => {
     if (what === "devices") void queryClient.invalidateQueries({ queryKey: DEVICES_KEY });
+    else if (what === "pairing") void queryClient.invalidateQueries({ queryKey: PAIRING_KEY });
     else for (const key of DATA_KEYS) void queryClient.invalidateQueries({ queryKey: [key] });
   }), [queryClient]);
   return null;
@@ -161,28 +162,27 @@ function syncErrorText(message: string, t: (key: string) => string): string {
   }
 }
 
-/** Open a pairing window and show its code until the other device takes it (or it runs out). */
+/**
+ * Open a pairing window and show its code. The code is replaced every couple of minutes and the
+ * window closes by itself - when a device has paired, after five tries, or when its time is up - so
+ * what is shown is whatever the device says is current, and the window goes when it says it is closed.
+ */
 function ShowCode() {
   const { t } = useTranslation();
-  const [pairing, setPairing] = useState<{ code: string; expiresAt: number } | null>(null);
-  const devices = useQuery({ queryKey: DEVICES_KEY, queryFn: () => hibiki.sync.devices() });
-  const [openedAt, setOpenedAt] = useState(0);
+  const queryClient = useQueryClient();
+  const [open, setOpen] = useState(false);
+  const info = useQuery({ queryKey: PAIRING_KEY, queryFn: () => hibiki.sync.pairingInfo!(), enabled: open, staleTime: Infinity });
+  const pairing = open ? info.data ?? null : null;
 
-  // The other device paired - possibly one this device already knew - and the window closed itself
-  // on this side.
+  // Closed from the other side: a device paired, the tries ran out, or the time did.
   useEffect(() => {
-    if (pairing && pairedSince(devices.data, openedAt)) setPairing(null);
-  }, [devices.data, pairing, openedAt]);
-  useEffect(() => {
-    if (!pairing) return;
-    const timer = window.setTimeout(() => setPairing(null), Math.max(0, pairing.expiresAt - Date.now()));
-    return () => window.clearTimeout(timer);
-  }, [pairing]);
+    if (open && info.isSuccess && info.data === null) setOpen(false);
+  }, [open, info.isSuccess, info.data]);
   useEffect(() => () => void hibiki.sync.stopPairing?.(), []);
 
   const close = () => {
     void hibiki.sync.stopPairing?.();
-    setPairing(null);
+    setOpen(false);
   };
   const body = pairing && (
     <div>
@@ -200,8 +200,8 @@ function ShowCode() {
       <button
         type="button"
         onClick={async () => {
-          setOpenedAt(Date.now());
-          setPairing(await hibiki.sync.startPairing!());
+          queryClient.setQueryData(PAIRING_KEY, await hibiki.sync.startPairing!());
+          setOpen(true);
         }}
         className={isMobile
           ? "flex h-10 w-full items-center justify-center rounded-full text-sm font-semibold text-muted active:bg-text/[.06]"

@@ -49,7 +49,7 @@ export const electronSyncTransport: SyncTransportPort = {
     });
   },
 
-  discover(timeoutMs) {
+  discover(timeoutMs, probe = DISCOVERY_PROBE) {
     return new Promise((resolve) => {
       const found = new Map<string, { deviceId: string; name: string; host: string; port: number; kind: "computer" | "phone" }>();
       const socket = dgram.createSocket("udp4");
@@ -74,7 +74,7 @@ export const electronSyncTransport: SyncTransportPort = {
       });
       socket.bind(() => {
         socket.setBroadcast(true);
-        for (const address of broadcastAddresses()) socket.send(DISCOVERY_PROBE, DISCOVERY_PORT, address, () => {});
+        for (const address of broadcastAddresses()) socket.send(probe, DISCOVERY_PORT, address, () => {});
         setTimeout(finish, timeoutMs);
       });
     });

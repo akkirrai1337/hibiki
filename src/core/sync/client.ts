@@ -7,7 +7,7 @@ import { getPlatform } from "../platform";
 import { applyChanges, changeCount, collectChanges, currentSeq, describeChanges, deviceId, KnownVersions, noChanges, wipeSyncedData } from "./changes";
 import { checkProof, deriveSharedKey, keyProof, newPairingKeys, open, seal } from "./crypto";
 import { getPeer, listPeers, peerKey, removePeer, savePeer, toDevice, updatePeer, type PeerRow } from "./peers";
-import { PROTOCOL_VERSION, SYNC_PORT, type SyncAnswer, type SyncErrorCode, type SyncPayload, type SyncRequest, type SyncResponse, type UnpairPayload } from "./protocol";
+import { LOCATE_PROBE_PREFIX, PROTOCOL_VERSION, SYNC_PORT, type SyncAnswer, type SyncErrorCode, type SyncPayload, type SyncRequest, type SyncResponse, type UnpairPayload } from "./protocol";
 import { notifySyncChanged } from "./server";
 
 const REQUEST_TIMEOUT_MS = 20_000;
@@ -60,7 +60,7 @@ async function request(host: string, port: number, message: SyncRequest): Promis
   return response;
 }
 
-/** Devices running hibiki on this network that answer the discovery probe. */
+/** Devices on this network that are open for pairing right now: only those with a pairing window open answer. */
 export async function discover(): Promise<SyncCandidate[]> {
   const startedAt = Date.now();
   let found: SyncCandidate[];
@@ -210,7 +210,7 @@ async function syncWith(peer: PeerRow): Promise<void> {
     if (!(error instanceof SyncError) || error.code !== "unreachable") throw error;
     // The other device's address changed (a new one from the router), or it was never known: look again.
     logger.debug("sync", `"${peer.name}" not at ${peer.lastAddress ?? "an unknown address"} (${errorText(error)}), looking for it`);
-    const found = (await discover()).find((candidate) => candidate.deviceId === peer.deviceId);
+    const found = await locate(peer.deviceId);
     if (!found) throw error;
     logger.info("sync", `"${peer.name}" found at a new address ${found.host}:${found.port}`);
     address = { host: found.host, port: found.port };
@@ -221,6 +221,12 @@ async function syncWith(peer: PeerRow): Promise<void> {
   logger[quiet ? "debug" : "info"]("sync", `synced with "${peer.name}" in ${Date.now() - startedAt}ms: ${sentRows} row(s) sent, ${receivedRows} received, ${changedHere} changed here`);
   if (changedHere > 0) notifySyncChanged("data");
   notifySyncChanged("devices");
+}
+
+/** Where a device we are already paired with is now. It answers a search for it by id whether or not a window is open. */
+async function locate(deviceId: string): Promise<SyncCandidate | null> {
+  const found = await transport().discover(DISCOVERY_TIMEOUT_MS, LOCATE_PROBE_PREFIX + deviceId);
+  return found.find((candidate) => candidate.deviceId === deviceId) ?? null;
 }
 
 let running: Promise<void> | null = null;

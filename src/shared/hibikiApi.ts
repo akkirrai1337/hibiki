@@ -15,6 +15,7 @@ import type {
   DownloadedEpisodeFile,
   SourceRecommendations,
   SyncCandidate,
+  SyncPairingInfo,
   SyncPairMode,
   SyncDevice,
   ActiveDownload,
@@ -224,11 +225,13 @@ export interface HibikiApi {
   sync: {
     devices(): Promise<SyncDevice[]>;
     remove(deviceId: string): Promise<void>;
-    /** Something changed: the paired devices, or data a sync brought in. */
-    onChanged(callback: (what: "devices" | "data") => void): () => void;
-    /** Computer: open a pairing window and get the code to show. */
-    startPairing?(): Promise<{ code: string; expiresAt: number }>;
+    /** Something changed: the paired devices, data a sync brought in, or the pairing window (a new code, or closed). */
+    onChanged(callback: (what: "devices" | "data" | "pairing") => void): () => void;
+    /** Open a pairing window and get the code to show. The code is replaced every couple of minutes. */
+    startPairing?(): Promise<SyncPairingInfo>;
     stopPairing?(): Promise<void>;
+    /** The pairing window that is open and its current code, or null once it has closed. */
+    pairingInfo?(): Promise<SyncPairingInfo | null>;
     /** Computers running hibiki on this network (other than this one). */
     discover?(): Promise<SyncCandidate[]>;
     /** Pair with a found computer using its code. Rejects with a message ending in the error code ("bad-code"...). */

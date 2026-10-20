@@ -11,6 +11,7 @@ export function registerSyncHandlers(): void {
   ipcMain.handle(IPC.syncRemove, (_e, deviceId: string) => sync.remove(deviceId));
   ipcMain.handle(IPC.syncStartPairing, () => sync.startPairing!());
   ipcMain.handle(IPC.syncStopPairing, () => sync.stopPairing!());
+  ipcMain.handle(IPC.syncPairingInfo, () => sync.pairingInfo!());
   ipcMain.handle(IPC.syncDiscover, () => sync.discover!());
   ipcMain.handle(IPC.syncPair, (_e, candidate: SyncCandidate, code: string, mode: SyncPairMode) => sync.pair!(candidate, code, mode));
   ipcMain.handle(IPC.syncNow, () => sync.syncNow!());

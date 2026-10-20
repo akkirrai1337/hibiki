@@ -21,8 +21,8 @@ import { checkForUpdate, cleanUpdateLeftovers, downloadAndInstall } from "../../
 import { createSyncServerApi } from "../../core/api/sync";
 import { deviceId } from "../../core/sync/changes";
 import { syncNow } from "../../core/sync/client";
-import { DISCOVERY_PORT, DISCOVERY_PROBE, PROTOCOL_VERSION, SYNC_PORT, type DiscoveryAnswer } from "../../core/sync/protocol";
-import { handleSyncRequest } from "../../core/sync/server";
+import { DISCOVERY_PORT, DISCOVERY_PROBE, LOCATE_PROBE_PREFIX, PROTOCOL_VERSION, SYNC_PORT, type DiscoveryAnswer } from "../../core/sync/protocol";
+import { handleSyncRequest, isPairingOpen } from "../../core/sync/server";
 import { createAndroidPlatform } from "./index";
 import type { Platform } from "../types";
 import { previousSessionLog, startAndroidLogFile } from "./logFile";
@@ -121,7 +121,7 @@ export async function installAndroidHibiki(): Promise<void> {
     sources: { ...core.sources, onChanged: (callback) => events.on(IPC.sourcesChanged, () => callback()) },
     sync: {
       ...createSyncServerApi(),
-      onChanged: (callback) => events.on(IPC.syncChanged, (payload) => callback((payload as { what: "devices" | "data" }).what)),
+      onChanged: (callback) => events.on(IPC.syncChanged, (payload) => callback((payload as { what: "devices" | "data" | "pairing" }).what)),
     },
     tracking: {
       ...core.tracking,
@@ -315,8 +315,10 @@ export async function installAndroidHibiki(): Promise<void> {
   // Java and would otherwise be seen only in logcat.
   void HibikiSync.addListener("log", (event) => log(event.level, "sync", event.message));
   const listen = async () => {
-    const answer: DiscoveryAnswer = { app: "hibiki", v: PROTOCOL_VERSION, deviceId: await deviceId(), name: phoneName, port: SYNC_PORT, kind: "phone" };
-    await HibikiSync.startServer({ port: SYNC_PORT, discoveryPort: DISCOVERY_PORT, probe: DISCOVERY_PROBE, answer: JSON.stringify(answer) })
+    const id = await deviceId();
+    const answer: DiscoveryAnswer = { app: "hibiki", v: PROTOCOL_VERSION, deviceId: id, name: phoneName, port: SYNC_PORT, kind: "phone" };
+    // The socket answers the pairing probe only while a window is open; one may be open already (the app was backgrounded and came back).
+    await HibikiSync.startServer({ port: SYNC_PORT, discoveryPort: DISCOVERY_PORT, probe: DISCOVERY_PROBE, locatePrefix: LOCATE_PROBE_PREFIX, deviceId: id, pairing: isPairingOpen(), answer: JSON.stringify(answer) })
       .then(() => log("debug", "sync", `waiting for other devices on port ${SYNC_PORT} as "${phoneName}"`))
       .catch((error) => log("warn", "sync", `not waiting for other devices: ${error instanceof Error ? error.message : String(error)}`));
   };

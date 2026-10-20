@@ -5,9 +5,8 @@ import dgram from "node:dgram";
 import net from "node:net";
 import os from "node:os";
 import { logger } from "../core/logger";
-import { deviceId } from "../core/sync/changes";
-import { DISCOVERY_PORT, DISCOVERY_PROBE, MAX_MESSAGE_BYTES, PROTOCOL_VERSION, SYNC_PORT, frame, type DiscoveryAnswer } from "../core/sync/protocol";
-import { handleSyncRequest } from "../core/sync/server";
+import { DISCOVERY_PORT, MAX_MESSAGE_BYTES, SYNC_PORT, frame } from "../core/sync/protocol";
+import { answerProbe, handleSyncRequest } from "../core/sync/server";
 
 const CONNECTION_TIMEOUT_MS = 60_000;
 
@@ -65,10 +64,10 @@ export function startSyncServer(): void {
     udp.close();
   });
   udp.on("message", (message, remote) => {
-    if (message.toString("utf-8").trim() !== DISCOVERY_PROBE) return;
-    logger.debug("sync", `discovery probe from ${remote.address}:${remote.port}`);
-    void deviceId().then((id) => {
-      const answer: DiscoveryAnswer = { app: "hibiki", v: PROTOCOL_VERSION, deviceId: id, name: computerName(), port: SYNC_PORT, kind: "computer" };
+    // Silence unless the probe is one this device answers right now (see answerProbe).
+    void answerProbe(message.toString("utf-8").trim(), computerName(), SYNC_PORT, "computer").then((answer) => {
+      if (!answer) return;
+      logger.debug("sync", `discovery probe from ${remote.address}:${remote.port}`);
       udp.send(JSON.stringify(answer), remote.port, remote.address);
     }).catch((error: unknown) => logger.warn("sync", `discovery answer not sent: ${error instanceof Error ? error.message : String(error)}`));
   });

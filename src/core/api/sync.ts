@@ -4,7 +4,7 @@
 import type { HibikiApi } from "@shared/hibikiApi";
 import { discover, forgetPeer, pair, syncNow } from "../sync/client";
 import { listPeers, toDevice } from "../sync/peers";
-import { startPairing, stopPairing } from "../sync/server";
+import { pairingInfo, startPairing, stopPairing } from "../sync/server";
 
 type SyncApi = Omit<HibikiApi["sync"], "onChanged">;
 
@@ -22,6 +22,7 @@ export function createSyncServerApi(): SyncApi {
     ...common(),
     startPairing: async () => startPairing(),
     stopPairing: async () => stopPairing(),
+    pairingInfo: async () => pairingInfo(),
     discover,
     pair,
     syncNow,
