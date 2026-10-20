@@ -84,6 +84,10 @@ export interface HibikiApi {
     notify?(items: Array<{ key: string; title: string; text: string; url: string }>, labels: { channelName: string; summary: string }): Promise<boolean>;
     /** Asks for the notification permission where it is missing; whether it is granted now. */
     ensurePermission?(): Promise<boolean>;
+    /** Whether the system's battery optimization is already lifted for the app. */
+    batteryUnrestricted?(): Promise<boolean>;
+    /** Opens the system's screen to lift battery optimization for the app. */
+    openBatterySettings?(): Promise<void>;
   };
   sources: {
     list(): Promise<SourceInfo[]>;

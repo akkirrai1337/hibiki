@@ -115,6 +115,8 @@ export async function installAndroidHibiki(): Promise<void> {
       ...core.newEpisodes,
       notify: async (items, labels) => (await HibikiApp.notifyNewEpisodes({ items, ...labels })).shown,
       ensurePermission: async () => (await HibikiApp.ensureNotifications()).granted,
+      batteryUnrestricted: async () => (await HibikiApp.batteryUnrestricted()).unrestricted,
+      openBatterySettings: () => HibikiApp.openBatterySettings(),
     },
     sources: { ...core.sources, onChanged: (callback) => events.on(IPC.sourcesChanged, () => callback()) },
     sync: {

@@ -1,4 +1,4 @@
-package app.hibiki
+﻿package app.hibiki
 
 import android.app.Application
 import eu.kanade.tachiyomi.network.JavaScriptEngine

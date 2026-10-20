@@ -388,6 +388,29 @@ public class HibikiAppPlugin extends Plugin {
         call.resolve(result);
     }
 
+    /** Whether the system's battery optimization is lifted for the app (it may then work in the background freely). */
+    @PluginMethod
+    public void batteryUnrestricted(PluginCall call) {
+        android.os.PowerManager power = getContext().getSystemService(android.os.PowerManager.class);
+        JSObject result = new JSObject();
+        result.put("unrestricted", power != null && power.isIgnoringBatteryOptimizations(getContext().getPackageName()));
+        call.resolve(result);
+    }
+
+    /** The system's own request to lift battery optimization for the app; the list of apps where that request is missing. */
+    @PluginMethod
+    public void openBatterySettings(PluginCall call) {
+        try {
+            getContext().startActivity(new Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, Uri.parse("package:" + getContext().getPackageName())).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+        } catch (ActivityNotFoundException | SecurityException error) {
+            try {
+                getContext().startActivity(new Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+            } catch (ActivityNotFoundException ignored) {
+            }
+        }
+        call.resolve();
+    }
+
     /** The page has drawn its first screen: MainActivity lets the launch splash go. */
     @PluginMethod
     public void hideSplash(PluginCall call) {

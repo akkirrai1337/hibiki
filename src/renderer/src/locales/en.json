@@ -976,7 +976,13 @@
     "bellOn": "Notify about new episodes",
     "bellOff": "Stop notifying about new episodes",
     "setting": "New episode notifications",
-    "settingHint": "For ongoing titles in Watching, in the dub you watch. Any title can be switched on or off with the bell on its page."
+    "settingHint": "For ongoing titles in Watching, in the dub you watch. Any title can be switched on or off with the bell on its page.",
+    "battery": {
+      "title": "Notifications may not arrive",
+      "hint": "Some phones limit what apps can do in the background, so new-episode notifications may come late or not at all. To avoid that, allow hibiki to run without battery restrictions.",
+      "open": "Open settings",
+      "later": "Not now"
+    }
   },
   "downloadsPanel": {
     "title": "Downloads",

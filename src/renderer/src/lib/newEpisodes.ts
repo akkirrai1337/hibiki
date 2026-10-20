@@ -19,11 +19,22 @@ const RESUME_GAP_MS = 30 * 60 * 1000;
 interface NewEpisodesPrefs {
   enabled: boolean;
   setEnabled: (enabled: boolean) => void;
+  /** The battery note (title page's bell) was shown: it is not shown again. */
+  batteryHintSeen: boolean;
+  setBatteryHintSeen: () => void;
 }
 
 /** Settings' "New episodes" switch (phone). */
 export const useNewEpisodesPrefs = create<NewEpisodesPrefs>()(
-  persist((set) => ({ enabled: true, setEnabled: (enabled) => set({ enabled }) }), { name: "hibiki-new-episodes" }),
+  persist(
+    (set) => ({
+      enabled: true,
+      setEnabled: (enabled) => set({ enabled }),
+      batteryHintSeen: false,
+      setBatteryHintSeen: () => set({ batteryHintSeen: true }),
+    }),
+    { name: "hibiki-new-episodes" },
+  ),
 );
 
 /** The notice's line under the title: which episodes, in which dub. */

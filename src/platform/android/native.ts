@@ -109,6 +109,10 @@ export interface HibikiAppPlugin {
   notifyNewEpisodes(options: { items: Array<{ key: string; title: string; text: string; url: string }>; channelName: string; summary: string }): Promise<{ shown: boolean }>;
   /** Asks for the notification permission when it is missing (Android 13+); whether it is granted now. */
   ensureNotifications(): Promise<{ granted: boolean }>;
+  /** Whether the system's battery optimization is already lifted for the app. */
+  batteryUnrestricted(): Promise<{ unrestricted: boolean }>;
+  /** The system's request to lift battery optimization for the app (the list of apps if there is no request screen). */
+  openBatterySettings(): Promise<void>;
   /** The page has drawn its first screen: the launch splash (MainActivity) can go. */
   hideSplash(): Promise<void>;
   /** The hibiki:// link the app was started with, once. */

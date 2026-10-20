@@ -1406,6 +1406,9 @@ function DetailSkeleton() { if (isMobile) return <MobileDetailSkeleton />; retur
 function NewEpisodesBell({ sourceId, animeId, ongoing, inWatching }: { sourceId: string; animeId: string; ongoing: boolean; inWatching: boolean }) {
   const { t } = useTranslation();
   const enabled = useNewEpisodesPrefs((s) => s.enabled);
+  const batteryHintSeen = useNewEpisodesPrefs((s) => s.batteryHintSeen);
+  const setBatteryHintSeen = useNewEpisodesPrefs((s) => s.setBatteryHintSeen);
+  const [batteryHint, setBatteryHint] = useState(false);
   const api = hibiki.newEpisodes;
   const bellQuery = useQuery({
     queryKey: ["episodeBell", sourceId, animeId],
@@ -1420,8 +1423,27 @@ function NewEpisodesBell({ sourceId, animeId, ongoing, inWatching }: { sourceId:
     if (!on) await api.ensurePermission?.();
     await api.setBell(sourceId, animeId, on ? "off" : "on");
     void bellQuery.refetch();
+    // Once, on the first bell switched on: phones' battery savers may hold notices back.
+    if (!on && !batteryHintSeen && api.batteryUnrestricted && !(await api.batteryUnrestricted().catch(() => true))) setBatteryHint(true);
   };
-  return (
+  const closeBatteryHint = (openSettings: boolean) => {
+    setBatteryHint(false);
+    setBatteryHintSeen();
+    if (openSettings) void api.openBatterySettings?.();
+  };
+  return (<>
+    <AnimatePresence>
+      {batteryHint && (
+        <Modal onDismiss={() => closeBatteryHint(false)}>
+          <h2 className="text-base font-bold text-text">{t("newEpisodes.battery.title")}</h2>
+          <p className="mt-1.5 text-sm leading-relaxed text-muted">{t("newEpisodes.battery.hint")}</p>
+          <div className="mt-5 flex justify-end gap-2">
+            <button type="button" onClick={() => closeBatteryHint(false)} className="rounded-lg px-3.5 py-2 text-sm font-semibold text-muted transition-colors hover:bg-text/[.06]">{t("newEpisodes.battery.later")}</button>
+            <button type="button" onClick={() => closeBatteryHint(true)} className="rounded-lg bg-text px-3.5 py-2 text-sm font-bold text-bg transition-opacity hover:opacity-90">{t("newEpisodes.battery.open")}</button>
+          </div>
+        </Modal>
+      )}
+    </AnimatePresence>
     <motion.button
       type="button"
       onClick={() => void toggle()}
@@ -1434,7 +1456,7 @@ function NewEpisodesBell({ sourceId, animeId, ongoing, inWatching }: { sourceId:
     >
       {on ? <Bell className="h-[18px] w-[18px] fill-current" strokeWidth={2} /> : <BellOff className="h-[18px] w-[18px]" strokeWidth={2} />}
     </motion.button>
-  );
+  </>);
 }
 
 function MobileTitleChrome({ posterUrl, siteUrl, bell }: { posterUrl?: string | null; siteUrl?: string | null; bell?: React.ReactNode }) {
