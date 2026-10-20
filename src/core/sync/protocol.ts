@@ -48,7 +48,9 @@ export interface SyncPayload {
   replace?: boolean;
 }
 
-/** Inside a sealed unpair request: when it was asked, so an old one cannot be replayed into a newer pairing. */
+/** Inside a sealed unpair request. Sealing with the pair's key is what authorises it. `pairedAt` is
+ * the sender's own record of when the pairing began; the receiver does not compare it (the two
+ * devices record it independently), but versions before that fix still require it to be present. */
 export interface UnpairPayload {
   unpair: true;
   pairedAt: number;

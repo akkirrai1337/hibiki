@@ -9,12 +9,13 @@ import { and, eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/sqlite-proxy";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import * as schema from "../db/schema";
-import { cachedAnime, dailyActivity, library, titleRatings, watchProgress, xpEvents } from "../db/schema";
+import { cachedAnime, dailyActivity, library, syncPeers, titleRatings, watchProgress, xpEvents } from "../db/schema";
 import { applyMigrations, type MigrationJournal } from "../db/migrate";
 import { installPlatform } from "../platform";
 import type { Platform } from "../../platform/types";
 import { applyChanges, collectChanges, currentSeq, deviceId, mergeProgress, type ProgressRow } from "./changes";
 import { discover, forgetPeer, pair, syncNow } from "./client";
+import { seal } from "./crypto";
 import { listPeers, removePeer } from "./peers";
 import { handleSyncRequest, startPairing, stopPairing } from "./server";
 
@@ -370,6 +371,32 @@ describe("pairing and syncing over the protocol", () => {
       net.asPhone();
       expect(left).toEqual([]);
     });
+  });
+
+  // Each device stamps its own pairing time, so the two never match in practice; this used to make
+  // the notification bounce unless both stamps happened to fall in the same millisecond.
+  it("ends the pairing on the other device although the two recorded different pairing times", async () => {
+    const { net, computerId } = await paired();
+    net.asComputer();
+    await pc.update(syncPeers).set({ pairedAt: 1 }).run();
+    net.asPhone();
+    await forgetPeer(computerId);
+    await vi.waitFor(async () => {
+      net.asComputer();
+      const left = await listPeers();
+      net.asPhone();
+      expect(left).toEqual([]);
+    });
+  });
+
+  it("refuses an unpair that was not sealed with the pair's key", async () => {
+    const { net } = await paired();
+    net.asPhone();
+    const phoneId = await deviceId();
+    net.asComputer();
+    const forged = { v: 1, type: "unpair", from: phoneId, sealed: await seal(new Uint8Array(32).fill(7), { unpair: true, pairedAt: 0 }) };
+    expect(JSON.parse(await handleSyncRequest(JSON.stringify(forged), "10.0.0.9:1", "pc"))).toEqual({ ok: false, error: "bad-message" });
+    expect(await listPeers()).toHaveLength(1);
   });
 
   it("a device the other one forgot while it was away forgets it on its next sync", async () => {

@@ -107,9 +107,12 @@ async function answer(request: SyncRequest, address: string, ownName: string): P
   if (request.type === "unpair") {
     const peer = await getPeer(request.from);
     if (!peer) return { ok: true, type: "unpair" };
-    // Opening it proves the pair's key; the time keeps an unpair from an earlier pairing out of this one.
+    // Opening it proves the pair's key - and every pairing has a key of its own, so an unpair from
+    // an earlier pairing cannot be opened here at all. (Its `pairedAt` is not compared: each device
+    // stamps that itself when the pairing completes, so the two never agree, and requiring them to
+    // made every unpair bounce.)
     const payload = await open<UnpairPayload>(await peerKey(peer), request.sealed);
-    if (!payload.unpair || payload.pairedAt !== peer.pairedAt) return { ok: false, error: "bad-message" };
+    if (!payload.unpair) return { ok: false, error: "bad-message" };
     await removePeer(peer.deviceId);
     logger.info("sync", `"${peer.name}" forgot this device; forgotten here too`);
     notifySyncChanged("devices");
