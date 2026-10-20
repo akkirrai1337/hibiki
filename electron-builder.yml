@@ -32,13 +32,28 @@ nsis:
   # next to those. Plain productName here keeps the title itself clean.
   uninstallDisplayName: ${productName}
 mac:
-  target: dmg
+  # Two builds, one per Mac architecture: the dmg is what a person downloads for a first install, the
+  # zip is what the app updates itself from (see scripts/make-update-manifest.mjs). The name carries
+  # the architecture so the update manifest can tell them apart.
+  target:
+    - target: dmg
+      arch: [arm64, x64]
+    - target: zip
+      arch: [arm64, x64]
+  artifactName: ${productName}-v${version}-mac-${arch}.${ext}
   # A 1024x1024 PNG rather than an .icns - electron-builder converts it itself, and it's the one
   # format both this and the Linux target below can share (the Windows .ico above can't be reused:
   # it tops out at 256px, under the 512px minimum a mac icon needs).
   icon: electron-builder-resources/hibiki.png
   category: public.app-category.entertainment
+# No Developer ID certificate: the app is ad-hoc signed by scripts/afterPack.cjs instead.
+afterPack: scripts/afterPack.cjs
 linux:
-  target: AppImage
+  # x64 only for now; the name is spelled out because electron-builder's own ${arch} for an AppImage
+  # is x86_64, and the update manifest keys on the name (scripts/make-update-manifest.mjs).
+  target:
+    - target: AppImage
+      arch: x64
+  artifactName: ${productName}-v${version}-linux-x64.${ext}
   icon: electron-builder-resources/hibiki.png
   category: AudioVideo

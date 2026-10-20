@@ -1,0 +1,2 @@
+# Shell scripts run on macOS and Linux: a CRLF in one breaks it ("/bin/sh^M: bad interpreter").
+*.sh text eol=lf

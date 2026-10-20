@@ -1,7 +1,9 @@
-# Cuts a release of both builds from one version - package.json's, which the desktop app, the web
+# Cuts a release of every build from one version - package.json's, which the desktop app, the web
 # layer and the Android build (android/app/build.gradle) all read - and publishes them together as
-# one GitHub Release: the Windows NSIS installer and the signed Android APK. Either can be left out
-# from the run form. (build-macos.yml stays separate and only uploads its .dmg as an artifact.)
+# one GitHub Release: the Windows NSIS installer, the macOS dmg and zip for both Mac architectures,
+# the Linux AppImage and the signed Android APK, plus update-manifest.json, which tells the app
+# which file each platform updates itself from. Any platform can be left out from the run form: a
+# platform with no file in the release is simply offered no update from it.
 #
 # Deliberately workflow_dispatch-only: cutting a release is a decision, not something a push should
 # do on its own.
@@ -32,6 +34,16 @@ on:
         required: true
         default: true
         type: boolean
+      macos:
+        description: Build the macOS app (Apple Silicon and Intel)
+        required: true
+        default: true
+        type: boolean
+      linux:
+        description: Build the Linux AppImage
+        required: true
+        default: true
+        type: boolean
 
 permissions:
   contents: write
@@ -56,9 +68,9 @@ jobs:
           fetch-depth: 0
 
       - name: Refuse an empty release
-        if: ${{ !inputs.windows && !inputs.android }}
+        if: ${{ !inputs.windows && !inputs.android && !inputs.macos && !inputs.linux }}
         run: |
-          echo "Neither the Windows installer nor the Android APK was picked."
+          echo "No platform was picked."
           exit 1
 
       - name: Determine release version
@@ -322,9 +334,115 @@ jobs:
           name: android
           path: dist-release/*.apk
 
+  linux:
+    name: Linux AppImage
+    needs: version
+    if: ${{ inputs.linux }}
+    # better-sqlite3 is a native module compiled for the host, so the AppImage is built on Linux.
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      # The first run of the tests anywhere but Windows: what only works by luck of the platform shows here.
+      - name: Test
+        run: npm test
+
+      - name: Build the AppImage
+        env:
+          ANILIST_CLIENT_ID: ${{ secrets.ANILIST_CLIENT_ID }}
+        run: npm run build -- --linux --publish never
+
+      - name: Rename the AppImage
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          FILES=(release/hibiki-v*-linux-x64.AppImage)
+          if [ ${#FILES[@]} -ne 1 ] || [ ! -s "${FILES[0]}" ]; then
+            echo "Expected exactly one AppImage in release/, found ${#FILES[@]}:"
+            ls -la release || true
+            exit 1
+          fi
+          # The built name carries package.json's version; a prerelease's differs.
+          mkdir -p dist-release
+          cp "${FILES[0]}" "dist-release/hibiki-v${{ needs.version.outputs.version }}-linux-x64.AppImage"
+          ls -la dist-release
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux
+          path: dist-release/*.AppImage
+
+  macos:
+    name: macOS app
+    needs: version
+    if: ${{ inputs.macos }}
+    # better-sqlite3 is a native module and dmg packaging needs macOS's own tooling. A mac runner costs
+    # ten times a Linux one per minute, so the tests are left to the other builds - this one only builds.
+    runs-on: macos-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Both architectures from one runner: electron-builder fetches the native module for each. No
+      # Developer ID certificate exists, so it is told not to go looking for one; scripts/afterPack.cjs
+      # signs the app ad hoc instead. Unsigned means Gatekeeper asks on first launch (see the README);
+      # the zip, which the app updates itself from, is never quarantined.
+      - name: Build
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+          ANILIST_CLIENT_ID: ${{ secrets.ANILIST_CLIENT_ID }}
+        run: npm run build -- --mac --arm64 --x64 --publish never
+
+      - name: Rename the builds
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist-release
+          for arch in arm64 x64; do
+            for ext in zip dmg; do
+              FILE="release/hibiki-v*-mac-${arch}.${ext}"
+              MATCHES=($FILE)
+              if [ ${#MATCHES[@]} -ne 1 ] || [ ! -s "${MATCHES[0]}" ]; then
+                echo "Expected exactly one ${FILE}, found ${#MATCHES[@]}:"
+                ls -la release || true
+                exit 1
+              fi
+              cp "${MATCHES[0]}" "dist-release/hibiki-v${{ needs.version.outputs.version }}-mac-${arch}.${ext}"
+            done
+          done
+          ls -la dist-release
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos
+          path: |
+            dist-release/*.zip
+            dist-release/*.dmg
+
   publish:
     name: Create the GitHub Release
-    needs: [version, windows, android]
+    needs: [version, windows, android, linux, macos]
     # Runs when every picked build succeeded; a build left out of the run is skipped, not failed.
     if: ${{ !cancelled() && needs.version.result == 'success' && !contains(needs.*.result, 'failure') }}
     runs-on: ubuntu-latest
@@ -352,5 +470,8 @@ jobs:
           files: |
             artifacts/windows/*.exe
             artifacts/android/*.apk
+            artifacts/linux/*.AppImage
+            artifacts/macos/*.zip
+            artifacts/macos/*.dmg
             artifacts/update-manifest.json
           prerelease: ${{ needs.version.outputs.is_prerelease }}
