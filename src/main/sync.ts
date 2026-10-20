@@ -15,7 +15,8 @@ function computerName(): string {
   return os.hostname() || "hibiki";
 }
 
-function serveConnection(socket: net.Socket): void {
+/** One connection: a framed request in, a framed answer out. Exported for tests, which run it on a port of their own. */
+export function serveConnection(socket: net.Socket): void {
   const address = (socket.remoteAddress ?? "?").replace(/^::ffff:/, "");
   let buffer = Buffer.alloc(0);
   let expected: number | null = null;

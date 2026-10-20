@@ -74,9 +74,16 @@ export async function currentSeq(): Promise<number> {
  * Each table is read up to its own limit in change order. When a table fills its limit, its last
  * change number is a cut: every table's rows past the lowest such cut wait for the next batch, so a
  * batch is always "everything up to `upTo`" and nothing is skipped between batches.
+ *
+ * `upTo` never exceeds the counter as it stood *before* the tables were read. A write that lands
+ * while they are being read gets a number above that, so it is left for the next batch; reading the
+ * counter afterwards would put the bound past a change this batch does not contain, and the cursor
+ * would move over it for good. The same bound also pulls back a cursor that is ahead of this
+ * database's counter (a database restored from an older copy), so what it changes next is sent.
  */
 export async function collectChanges(since: number): Promise<ChangeSet> {
   const db = getDb();
+  const head = await currentSeq();
   const read = async <T extends { changeSeq: number }>(rows: T[] | Promise<T[]>, limit: number) => {
     const list = await rows;
     return { list, full: list.length >= limit, last: list.at(-1)?.changeSeq ?? 0 };
@@ -91,7 +98,7 @@ export async function collectChanges(since: number): Promise<ChangeSet> {
   ]);
   const all = [lib, prog, rat, xp, act, tomb];
   const cuts = all.filter((part) => part.full).map((part) => part.last);
-  const upTo = cuts.length > 0 ? Math.min(...cuts) : await currentSeq();
+  const upTo = Math.min(head, ...cuts);
   const keep = <T extends { changeSeq: number }>(rows: T[]) => rows.filter((row) => row.changeSeq <= upTo);
   const strip = <T extends { changeSeq: number }>({ changeSeq: _seq, ...rest }: T) => rest;
   const progress = keep(prog.list).map(strip);

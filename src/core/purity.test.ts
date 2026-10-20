@@ -14,11 +14,16 @@ const FORBIDDEN_PACKAGES = [/^electron$/, /^node:/, /^better-sqlite3$/, /^undici
 // Relative imports may stay inside core, or reach the shared types and the platform contract.
 const ALLOWED_OUTSIDE = [path.join(srcDir, "shared"), path.join(srcDir, "platform", "types.ts")];
 
-function sourceFiles(dir: string): string[] {
+/** Test support (`*.testkit.ts`) may use Node - it is only ever imported by tests, which the check
+ * below pins down. */
+const TESTKIT = ".testkit.ts";
+
+function sourceFiles(dir: string, { withTestkit = false } = {}): string[] {
   return fs.readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
     const full = path.join(dir, entry.name);
-    if (entry.isDirectory()) return sourceFiles(full);
-    return entry.name.endsWith(".ts") && !entry.name.endsWith(".test.ts") ? [full] : [];
+    if (entry.isDirectory()) return sourceFiles(full, { withTestkit });
+    if (!entry.name.endsWith(".ts") || entry.name.endsWith(".test.ts")) return [];
+    return entry.name.endsWith(TESTKIT) && !withTestkit ? [] : [full];
   });
 }
 
@@ -51,5 +56,13 @@ describe("core purity", () => {
         .map((specifier) => `${path.relative(srcDir, file)} -> ${specifier}`),
     );
     expect(problems).toEqual([]);
+  });
+
+  it("keeps test support out of anything that ships", () => {
+    const problems = sourceFiles(coreDir)
+      .flatMap((file) => importsOf(file).filter((specifier) => specifier.includes(".testkit")).map((specifier) => `${path.relative(srcDir, file)} -> ${specifier}`));
+    expect(problems).toEqual([]);
+    // ...and the test support itself is where the exemption applies: nothing else in core is called that.
+    expect(sourceFiles(coreDir, { withTestkit: true }).filter((file) => file.endsWith(TESTKIT)).map((file) => path.basename(file))).toEqual(["syncDevices.testkit.ts"]);
   });
 });

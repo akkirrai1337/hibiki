@@ -4,7 +4,7 @@
 import { IPC } from "@shared/ipc";
 import { logger } from "../logger";
 import { getPlatform } from "../platform";
-import { applyChanges, changeCount, collectChanges, describeChanges, deviceId, wipeSyncedData } from "./changes";
+import { applyChanges, changeCount, collectChanges, currentSeq, describeChanges, deviceId, wipeSyncedData } from "./changes";
 import { checkProof, deriveSharedKey, keyProof, newPairingCode, newPairingKeys, open, seal, type Bytes } from "./crypto";
 import { getPeer, peerKey, removePeer, savePeer, updatePeer } from "./peers";
 import { PROTOCOL_VERSION, type SyncAnswer, type SyncPayload, type SyncRequest, type SyncResponse, type UnpairPayload } from "./protocol";
@@ -134,13 +134,17 @@ async function answer(request: SyncRequest, address: string, ownName: string): P
       throw error;
     }
     const startedAt = Date.now();
+    // `want` is how far the other device has read this one's changes. It cannot be ahead of this
+    // device's own counter unless this database went back in time (restored from an older copy):
+    // then the mark means nothing, and everything is sent - merging it again is harmless.
+    const want = Number.isFinite(payload.want) && payload.want >= 0 && payload.want <= (await currentSeq()) ? payload.want : 0;
     // The other device chose, when pairing, that its data replaces this one's.
     if (payload.replace) {
       logger.info("sync", `"${peer.name}" replaces this device's data with its own`);
       await wipeSyncedData();
     }
     const { changed } = await applyChanges(payload.changes);
-    const outgoing = await collectChanges(payload.want);
+    const outgoing = await collectChanges(want);
     await updatePeer(peer.deviceId, { lastAddress: address, lastSyncAt: Date.now() });
     const received = changeCount(payload.changes);
     const sent = changeCount(outgoing);

@@ -1,68 +1,19 @@
-// Two real databases, migrated as the Android build migrates them (core/db/migrate.ts over drizzle's
-// async sqlite-proxy driver), standing in for two devices. node:sqlite rather than better-sqlite3:
-// the latter is built for Electron and does not load in plain Node.
+// Device sync against two real databases standing in for two devices (see syncDevices.testkit.ts).
 import { createHash } from "node:crypto";
-import { readdirSync, readFileSync } from "node:fs";
-import { DatabaseSync, type SQLInputValue } from "node:sqlite";
-import { fileURLToPath } from "node:url";
+import { DatabaseSync } from "node:sqlite";
 import { and, eq } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/sqlite-proxy";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import * as schema from "../db/schema";
+import { applyMigrations } from "../db/migrate";
 import { cachedAnime, dailyActivity, library, syncPeers, titleRatings, watchProgress, xpEvents } from "../db/schema";
-import { applyMigrations, type MigrationJournal } from "../db/migrate";
-import { installPlatform } from "../platform";
-import type { Platform } from "../../platform/types";
-import { applyChanges, collectChanges, currentSeq, deviceId, mergeProgress, type ProgressRow } from "./changes";
+import { collectChanges, currentSeq, deviceId, mergeProgress, type ProgressRow } from "./changes";
 import { discover, forgetPeer, pair, syncNow } from "./client";
 import { seal } from "./crypto";
 import { listPeers, removePeer } from "./peers";
 import { handleSyncRequest, startPairing, stopPairing } from "./server";
-
-const migrationsDir = fileURLToPath(new URL("../db/migrations", import.meta.url));
-const journal = JSON.parse(readFileSync(`${migrationsDir}/meta/_journal.json`, "utf-8")) as MigrationJournal;
-const sqlByTag = Object.fromEntries(
-  readdirSync(migrationsDir).filter((name) => name.endsWith(".sql")).map((name) => [name.replace(/\.sql$/, ""), readFileSync(`${migrationsDir}/${name}`, "utf-8")]),
-);
-
-async function openDevice() {
-  const sqlite = new DatabaseSync(":memory:");
-  const values = (sql: string, params: unknown[]) => sqlite.prepare(sql).all(...(params as SQLInputValue[])).map((row) => Object.values(row));
-  const db = drizzle(async (sql, params, method) => {
-    if (method === "run") {
-      sqlite.prepare(sql).run(...(params as SQLInputValue[]));
-      return { rows: [] };
-    }
-    const rows = values(sql, params);
-    return { rows: method === "get" ? (rows[0] as unknown as unknown[]) : rows };
-  }, { schema });
-  await applyMigrations(journal, sqlByTag, {
-    exec: async (sql) => void sqlite.exec(sql),
-    values: async (sql) => values(sql, []),
-  }, async (text) => createHash("sha256").update(text).digest("hex"));
-  return db;
-}
-type Db = Awaited<ReturnType<typeof openDevice>>;
+import { connect, journal, openDevice, on, push, sqlByTag, type Db } from "./syncDevices.testkit";
 
 let pc: Db;
 let phone: Db;
-function on(db: Db): Db {
-  installPlatform({ db: { get: () => db } } as unknown as Platform);
-  return db;
-}
-
-/** Everything one device has changed since `since`, applied on the other, as a sync round does. */
-async function push(from: Db, to: Db, since = 0): Promise<number> {
-  let cursor = since;
-  for (;;) {
-    on(from);
-    const batch = await collectChanges(cursor);
-    on(to);
-    await applyChanges(batch);
-    cursor = batch.upTo;
-    if (!batch.more) return cursor;
-  }
-}
 
 const progress = (overrides: Partial<ProgressRow> = {}): ProgressRow => ({
   sourceId: "s", titleId: "t", episodeId: "e1", episodeNumber: 1, groupId: "g", quality: null, translation: null, playerName: null,
@@ -248,39 +199,6 @@ describe("migration of an existing database", () => {
 });
 
 describe("pairing and syncing over the protocol", () => {
-  // The computer's request handler behind a fake network: each request runs with the computer's
-  // database installed, then the phone's comes back.
-  function connect(computer: Db, phoneDb: Db) {
-    const events: string[] = [];
-    const base = {
-      secureStore: { isAvailable: async () => true, encrypt: async (text: string) => `x${text}`, decrypt: async (text: string) => text.slice(1) },
-      events: { emit: (_channel: string, payload: unknown) => events.push((payload as { what: string }).what) },
-    };
-    const asComputer = () => installPlatform({ ...base, db: { get: () => computer } } as unknown as Platform);
-    const asPhone = () => installPlatform({
-      ...base,
-      db: { get: () => phoneDb },
-      syncTransport: {
-        deviceName: async () => "Test phone",
-        discover: async () => {
-          asComputer();
-          const id = await deviceId();
-          asPhone();
-          return [{ deviceId: id, name: "Test PC", host: "10.0.0.2", port: 47652 }];
-        },
-        request: async (_host: string, _port: number, message: string) => {
-          asComputer();
-          try {
-            return await handleSyncRequest(message, "10.0.0.5", "Test PC");
-          } finally {
-            asPhone();
-          }
-        },
-      },
-    } as unknown as Platform);
-    return { asComputer, asPhone, events };
-  }
-
   it("refuses a wrong code, pairs with the right one, then syncs both ways", async () => {
     const net = connect(pc, phone);
     net.asComputer();
@@ -291,6 +209,8 @@ describe("pairing and syncing over the protocol", () => {
     await expect(pair(found, wrong)).rejects.toMatchObject({ code: "bad-code" });
     const device = await pair(found, code);
     expect(device.name).toBe("Test PC");
+    // Pairing starts a first sync in the background; let it finish before the devices are touched.
+    await syncNow();
 
     await phone.insert(library).values({ sourceId: "s", animeId: "from-phone", category: "watching", addedAt: 1, animeJson: "{}" }).run();
     net.asComputer();
