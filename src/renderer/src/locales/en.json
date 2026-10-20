@@ -820,7 +820,7 @@
     "close": "Close",
     "releaseNotes": "Release page",
     "downloading": "Downloading… {{received}} of {{total}}",
-    "willRestart": "The app will close and start the installer.",
+    "willRestart": "The app will close and restart to finish the update.",
     "failed": "Update failed: {{message}}",
     "versionChange": "{{from}} → {{to}} · {{size}}",
     "whatsNew": "What's new",
