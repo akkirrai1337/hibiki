@@ -18,7 +18,13 @@ describe("subtitleTracksFrom", () => {
       ["https://cdn.example/eng-2.vtt", "English", "en"],
       ["https://cdn.example/spa.vtt", "es", "es"],
     ]);
-    expect(tracks[0].headers).toEqual({ Referer: EMBED, Origin: "https://megaplay.buzz", "User-Agent": "UA/1" });
+    // The subtitle host is another one than the embed page, so it gets the page origin as a browser would send it.
+    expect(tracks[0].headers).toEqual({ Referer: "https://megaplay.buzz/", Origin: "https://megaplay.buzz", "User-Agent": "UA/1" });
+  });
+
+  it("sends the embed page address whole to a file on the page own host", () => {
+    const tracks = subtitleTracksFrom([{ url: "https://megaplay.buzz/subs/eng.vtt", label: "English" }], EMBED);
+    expect(tracks[0].headers).toEqual({ Referer: EMBED, Origin: "https://megaplay.buzz" });
   });
 
   it("drops what cannot be read: page-local URLs and the seek-bar thumbnail sheet", () => {
