@@ -24,6 +24,24 @@
 * Download episodes for offline viewing
 * Customize the appearance and interface language, and optionally enable Discord Rich Presence
 
+### 📥 Install
+
+Download from the [Releases](https://github.com/akkirrai1337/hibiki/releases) page, or:
+
+* **Windows**: run `hibiki-v…-setup.exe`.
+* **Android**: install `hibiki-v….apk`.
+* **macOS** and **Linux**, one command:
+
+  ```sh
+  curl -fsSL https://raw.githubusercontent.com/akkirrai1337/hibiki/main/scripts/install.sh | sh
+  ```
+
+  It picks the build for your system (macOS Apple Silicon or Intel, Linux x64), checks it against the release's checksum and installs it: `hibiki.app` into `/Applications`, or an AppImage as `~/.local/bin/hibiki` with a menu entry. A Linux AppImage needs FUSE 2 (`sudo apt install libfuse2` on Debian/Ubuntu).
+
+  **macOS and Gatekeeper.** The app is not signed with an Apple Developer certificate, so a copy you download in a browser is blocked on first launch. Installing with the command above avoids that. If you used the `.dmg` instead: drag the app to Applications, then run `xattr -cr /Applications/hibiki.app` once (or, on macOS 15, allow it in System Settings → Privacy & Security → "Open Anyway").
+
+Updates are offered inside the app. On Windows it runs the new installer; on macOS and Linux it swaps the app itself and restarts (if the app sits somewhere you cannot write to, it opens the release page instead).
+
 ### 🖼️ Screenshots
 
 
