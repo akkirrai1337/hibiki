@@ -74,6 +74,8 @@ export function connect(computer: Db, phoneDb: Db) {
     reachable: true,
     /** Every request that reached the line, as sent. */
     requests: [] as string[],
+    /** The computer's answers, as sent back (the ones that arrived and the ones that were lost). */
+    answers: [] as string[],
     /** How many more requests get through before the line goes down; null for no limit. */
     budget: null as number | null,
     /** Requests of this type (pair-hello, sync, unpair...) never arrive. */
@@ -117,6 +119,7 @@ export function connect(computer: Db, phoneDb: Db) {
         } finally {
           asPhone();
         }
+        state.answers.push(answer);
         if (state.loseAnswerOf === type) throw new Error("connection reset before the answer");
         return answer;
       },

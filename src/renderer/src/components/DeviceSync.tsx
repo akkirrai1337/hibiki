@@ -11,6 +11,7 @@ import { Modal } from "@/components/Modal";
 import { cn } from "@/lib/cn";
 import { hibiki } from "@/lib/hibiki";
 import { isMobile } from "@/lib/mobile";
+import { pairedSince } from "@/lib/pairing";
 
 const DEVICES_KEY = ["syncDevices"];
 // What a sync can bring in: everything that shows the library, progress, ratings or xp.
@@ -165,12 +166,13 @@ function ShowCode() {
   const { t } = useTranslation();
   const [pairing, setPairing] = useState<{ code: string; expiresAt: number } | null>(null);
   const devices = useQuery({ queryKey: DEVICES_KEY, queryFn: () => hibiki.sync.devices() });
-  const [countAtStart, setCountAtStart] = useState(0);
+  const [openedAt, setOpenedAt] = useState(0);
 
-  // The other device paired: the list grew, and the window closed itself on this side.
+  // The other device paired - possibly one this device already knew - and the window closed itself
+  // on this side.
   useEffect(() => {
-    if (pairing && (devices.data?.length ?? 0) > countAtStart) setPairing(null);
-  }, [devices.data, pairing, countAtStart]);
+    if (pairing && pairedSince(devices.data, openedAt)) setPairing(null);
+  }, [devices.data, pairing, openedAt]);
   useEffect(() => {
     if (!pairing) return;
     const timer = window.setTimeout(() => setPairing(null), Math.max(0, pairing.expiresAt - Date.now()));
@@ -198,7 +200,7 @@ function ShowCode() {
       <button
         type="button"
         onClick={async () => {
-          setCountAtStart(devices.data?.length ?? 0);
+          setOpenedAt(Date.now());
           setPairing(await hibiki.sync.startPairing!());
         }}
         className={isMobile

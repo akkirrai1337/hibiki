@@ -4,7 +4,7 @@
 import { IPC } from "@shared/ipc";
 import { logger } from "../logger";
 import { getPlatform } from "../platform";
-import { applyChanges, changeCount, collectChanges, currentSeq, describeChanges, deviceId, wipeSyncedData } from "./changes";
+import { applyChanges, changeCount, collectChanges, currentSeq, describeChanges, deviceId, KnownVersions, wipeSyncedData } from "./changes";
 import { checkProof, deriveSharedKey, keyProof, newPairingCode, newPairingKeys, open, seal, type Bytes } from "./crypto";
 import { getPeer, peerKey, removePeer, savePeer, updatePeer } from "./peers";
 import { PROTOCOL_VERSION, type SyncAnswer, type SyncPayload, type SyncRequest, type SyncResponse, type UnpairPayload } from "./protocol";
@@ -144,7 +144,10 @@ async function answer(request: SyncRequest, address: string, ownName: string): P
       await wipeSyncedData();
     }
     const { changed } = await applyChanges(payload.changes);
-    const outgoing = await collectChanges(want);
+    // What the other device has just sent is not sent back to it (see KnownVersions).
+    const known = new KnownVersions();
+    known.remember(payload.changes);
+    const outgoing = known.without(await collectChanges(want));
     await updatePeer(peer.deviceId, { lastAddress: address, lastSyncAt: Date.now() });
     const received = changeCount(payload.changes);
     const sent = changeCount(outgoing);

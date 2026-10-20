@@ -4,7 +4,7 @@
 import type { SyncCandidate, SyncDevice, SyncPairMode } from "@shared/types";
 import { logger } from "../logger";
 import { getPlatform } from "../platform";
-import { applyChanges, changeCount, collectChanges, currentSeq, describeChanges, deviceId, wipeSyncedData } from "./changes";
+import { applyChanges, changeCount, collectChanges, currentSeq, describeChanges, deviceId, KnownVersions, noChanges, wipeSyncedData } from "./changes";
 import { checkProof, deriveSharedKey, keyProof, newPairingKeys, open, seal } from "./crypto";
 import { getPeer, listPeers, peerKey, removePeer, savePeer, toDevice, updatePeer, type PeerRow } from "./peers";
 import { PROTOCOL_VERSION, SYNC_PORT, type SyncAnswer, type SyncErrorCode, type SyncPayload, type SyncRequest, type SyncResponse, type UnpairPayload } from "./protocol";
@@ -106,6 +106,7 @@ async function pairSteps(candidate: SyncCandidate, code: string, mode: SyncPairM
   // A different code (or someone in between) gives a different key: the computer's proof fails here.
   if (!(await checkProof(key, "server", hello.proof))) throw new SyncError("bad-code", "the other device's proof does not match this code");
   await request(candidate.host, candidate.port, { v: PROTOCOL_VERSION, type: "pair-confirm", from: await deviceId(), proof: await keyProof(key, "client") });
+  knownFrom.delete(hello.from);
   const peer = await savePeer(hello.from, hello.name, key, `${candidate.host}:${candidate.port}`, true, {
     replace: mode === "keep-here" ? "send" : mode === "take-there" ? "take" : null,
     // Taking the other device's data: what is here now goes, so none of it is sent.
@@ -124,6 +125,14 @@ function splitAddress(address: string | null): { host: string; port: number } | 
   return { host: address.slice(0, index), port: Number(address.slice(index + 1)) || SYNC_PORT };
 }
 
+/**
+ * What each computer has been seen to send, so the next batch to it leaves those rows out. Kept in
+ * memory only: after a restart the first sync simply sends them once more.
+ * Forgotten whenever it could be wrong - a new pairing, a replacement, or the other device's
+ * counter going backwards (its database was restored from an older copy and lacks rows it once had).
+ */
+const knownFrom = new Map<string, KnownVersions>();
+
 /** One full sync with one computer: batches both ways until neither side has more. */
 async function syncWith(peer: PeerRow): Promise<void> {
   const key = await peerKey(peer);
@@ -136,11 +145,23 @@ async function syncWith(peer: PeerRow): Promise<void> {
   let receivedRows = 0;
   let pendingReplace = peer.pendingReplace as "send" | "take" | null;
   const startedAt = Date.now();
+  if (pendingReplace) knownFrom.delete(peer.deviceId);
+  const known = knownFrom.get(peer.deviceId) ?? new KnownVersions();
+  knownFrom.set(peer.deviceId, known);
+
+  // The other device has answered in this run, so its counter has been checked against what is known of it.
+  let checked = false;
 
   const exchange = async (target: { host: string; port: number }) => {
     for (let round = 0; round < 200; round++) {
-      const outgoing = await collectChanges(sentSeq);
-      logger.debug("sync", `"${peer.name}" round ${round + 1}: sending ${describeChanges(outgoing)}, asking for changes after ${receivedSeq}`);
+      const everything = await collectChanges(sentSeq);
+      let outgoing = known.without(everything);
+      // Rows are about to be left out as already sent by the other device. That holds only while its
+      // database is still the one they came from, which its counter shows - so ask first, with
+      // nothing to send, instead of leaving rows out on the strength of a memory that may be stale.
+      const probing = !checked && changeCount(outgoing) < changeCount(everything);
+      if (probing) outgoing = noChanges(sentSeq);
+      logger.debug("sync", `"${peer.name}" round ${round + 1}: ${probing ? "checking the other device first, " : ""}sending ${describeChanges(outgoing)}, asking for changes after ${receivedSeq}`);
       const response = await request(target.host, target.port, {
         v: PROTOCOL_VERSION,
         type: "sync",
@@ -155,20 +176,30 @@ async function syncWith(peer: PeerRow): Promise<void> {
         logger.info("sync", `replacing this device's data with "${peer.name}"'s`);
         await wipeSyncedData();
       }
+      // The other device's counter is behind where it was: its database went back in time (restored
+      // from an older copy), and what it was once sent may be gone from it. So nothing is taken as
+      // already known, and everything is sent again from the start - merging it twice is harmless.
+      const wentBack = changes.upTo < receivedSeq;
+      if (wentBack) {
+        logger.info("sync", `"${peer.name}" is behind where it was (${changes.upTo} < ${receivedSeq}): its data was restored; sending it everything`);
+        known.clear();
+      }
+      checked = true;
+      known.remember(changes);
       const { changed } = await applyChanges(changes);
       changedHere += changed;
       sentRows += changeCount(outgoing);
       receivedRows += changeCount(changes);
       logger.debug("sync", `"${peer.name}" round ${round + 1}: received ${describeChanges(changes)}, ${changed} changed here`);
       // Both sides have what this round carried: the cursors move on, and stay put if it failed.
-      sentSeq = outgoing.upTo;
+      sentSeq = wentBack ? 0 : outgoing.upTo;
       receivedSeq = changes.upTo;
       // A replacement is done once its first exchange has gone through; the rest is an ordinary sync.
       if (pendingReplace === "send") logger.info("sync", `"${peer.name}" replaced its data with this device's`);
       await updatePeer(peer.deviceId, { sentSeq, receivedSeq, lastAddress: `${target.host}:${target.port}`, lastSyncAt: Date.now(), pendingReplace: null });
       if (pendingReplace) changedHere++;
       pendingReplace = null;
-      if (!outgoing.more && !changes.more) return;
+      if (!probing && !wentBack && !outgoing.more && !changes.more) return;
     }
   };
 
@@ -206,6 +237,7 @@ export async function forgetPeer(peerId: string): Promise<void> {
   const peer = await getPeer(peerId);
   if (!peer) return;
   const key = await peerKey(peer);
+  knownFrom.delete(peerId);
   await removePeer(peerId);
   logger.info("sync", `forgot "${peer.name}" (${peerId.slice(0, 8)})`);
   notifySyncChanged("devices");
@@ -239,6 +271,7 @@ export function syncNow(): Promise<void> {
           } catch (error) {
             // The other device has forgotten this one: so does this one, instead of failing every sync.
             if (error instanceof SyncError && error.code === "unknown-device") {
+              knownFrom.delete(peer.deviceId);
               await removePeer(peer.deviceId);
               logger.info("sync", `"${peer.name}" forgot this device; forgotten here too`);
               notifySyncChanged("devices");

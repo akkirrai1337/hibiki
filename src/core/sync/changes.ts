@@ -53,6 +53,9 @@ export interface ChangeSet {
 
 export type TitleCacheRow = typeof cachedAnime.$inferSelect;
 
+/** A batch with nothing in it, standing at `upTo`: a request that only asks. */
+export const noChanges = (upTo: number): ChangeSet => ({ upTo, more: false, library: [], progress: [], ratings: [], xp: [], activity: [], tombstones: [] });
+
 // Per table and batch. Progress rows can carry a frame thumbnail (tens of kilobytes), so fewer.
 const BATCH_ROWS = 400;
 const BATCH_PROGRESS_ROWS = 80;
@@ -129,6 +132,69 @@ async function cachedTitlesFor(titles: Array<{ sourceId: string; animeId: string
     if (row) rows.push(row);
   }
   return rows;
+}
+
+// --- Not sending back what was just received ------------------------------------------------------------
+
+/** Cheap 32-bit hash (FNV-1a): enough to tell two frame thumbnails apart without keeping them. */
+function hashText(text: string | null): string {
+  if (!text) return "0";
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < text.length; i++) hash = Math.imul(hash ^ text.charCodeAt(i), 0x01000193);
+  return `${text.length}:${(hash >>> 0).toString(36)}`;
+}
+
+const versionOf = {
+  library: (r: LibraryRow) => `L${SEP}${libraryKey(r)}${SEP}${r.updatedAt}${SEP}${r.category}`,
+  progress: (r: ProgressRow) => `P${SEP}${progressKey(r)}${SEP}${r.updatedAt}${SEP}${r.watched ? 1 : 0}${SEP}${hashText(r.thumbnailDataUrl)}`,
+  ratings: (r: RatingRow) => `R${SEP}${libraryKey({ sourceId: r.sourceId, animeId: r.animeId })}${SEP}${r.ratedAt}${SEP}${r.rating}`,
+  xp: (r: XpRow) => `X${SEP}${r.uid}`,
+  activity: (r: ActivityRow) => `A${SEP}${r.date}${SEP}${r.deviceId}${SEP}${r.watchedMs}${SEP}${r.completedCount}`,
+  tombstones: (r: Tombstone) => `T${SEP}${r.tbl}${SEP}${r.key}${SEP}${r.deletedAt}`,
+};
+
+/**
+ * Versions of rows another device has just sent, so they are not sent straight back to it.
+ *
+ * Applying a row here gives it a new change number, which is how it would travel on to a third
+ * device - but to the device it came from it is the same row it already has. Only an exact match is
+ * left out: a row that differs in any way (this device holds a newer version, or the merge produced
+ * something of its own) is still sent, and so is a row changed here a moment after it arrived. The
+ * cursors are not touched - a batch still covers everything up to its `upTo`.
+ */
+export class KnownVersions {
+  private seen = new Set<string>();
+
+  remember(changes: ChangeSet): void {
+    // Bounded: a long-lived device would otherwise collect every version it was ever sent.
+    if (this.seen.size > 50_000) this.seen.clear();
+    for (const [kind, rows] of Object.entries({ library: changes.library, progress: changes.progress, ratings: changes.ratings, xp: changes.xp, activity: changes.activity, tombstones: changes.tombstones })) {
+      for (const row of rows) this.seen.add((versionOf[kind as keyof typeof versionOf] as (row: unknown) => string)(row));
+    }
+  }
+
+  clear(): void {
+    this.seen.clear();
+  }
+
+  /** `changes` without the rows already known. Same `upTo` and `more`. */
+  without(changes: ChangeSet): ChangeSet {
+    const fresh = <T,>(rows: T[], version: (row: T) => string) => rows.filter((row) => !this.seen.has(version(row)));
+    const progress = fresh(changes.progress, versionOf.progress);
+    const ratings = fresh(changes.ratings, versionOf.ratings);
+    // The cards ride along with the rows they are about: no row left, no card.
+    const needed = new Set([...progress.map((r) => libraryKey({ sourceId: r.sourceId, animeId: r.titleId })), ...ratings.map((r) => libraryKey(r))]);
+    return {
+      ...changes,
+      library: fresh(changes.library, versionOf.library),
+      progress,
+      ratings,
+      xp: fresh(changes.xp, versionOf.xp),
+      activity: fresh(changes.activity, versionOf.activity),
+      tombstones: fresh(changes.tombstones, versionOf.tombstones),
+      ...(changes.titles ? { titles: changes.titles.filter((card) => needed.has(libraryKey({ sourceId: card.sourceId, animeId: card.animeId }))) } : {}),
+    };
+  }
 }
 
 // --- Merge decisions (pure) -------------------------------------------------------------------------
