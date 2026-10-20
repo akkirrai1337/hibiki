@@ -14,9 +14,24 @@ import appIcon from "@/assets/app-icon.png";
 // - not Electron's titleBarOverlay (Window Controls Overlay), which technically also works but
 // always paints a solid, opaque rectangle behind the OS-drawn buttons that a gradient "background
 // theme" (see lib/theme.ts) couldn't follow. Plain page content follows app theming exactly like
-// everything else. macOS keeps its normal system title bar (close/minimize/zoom, drag - see createWindow in
-// main/index.ts) and this bar sits below it as the app's own: navigation, search, updates. WindowControls
-// only renders on other platforms.
+// everything else. macOS has no system title bar either, but keeps its own traffic lights: real
+// ones, floated over the left end of this bar (see MAC_TRAFFIC_LIGHTS in main/index.ts), so the bar
+// leaves them room and WindowControls, which would be a second set, only renders on other platforms.
+// The system also moves the window when this bar is dragged and zooms it on a double-click.
+
+/** Room for the macOS traffic lights at the bar's left end: they end about 66px in (see main/index.ts). */
+const MAC_LIGHTS_INSET = "pl-[78px]";
+
+/** Whether the window is in the system's full screen - macOS hides its traffic lights there. */
+function useFullScreen(): boolean {
+  const [fullScreen, setFullScreen] = useState(false);
+  useEffect(() => {
+    hibiki.window.isFullScreen().then(setFullScreen);
+    return hibiki.window.onFullScreenChanged(setFullScreen);
+  }, []);
+  return fullScreen;
+}
+
 export function TitleBar() {
   const router = useRouter();
   const [canGoBack, setCanGoBack] = useState(router.history.canGoBack());
@@ -64,22 +79,24 @@ export function TitleBar() {
   // do") fixes that specific case; a genuinely empty click on the bar itself is the only thing that
   // should trigger it, not a click that landed on the search box or a button (those already work
   // fine and shouldn't unmaximize as a side effect).
-  // On macOS the system title bar above this one is what moves and maximizes the window; this bar is the app's own.
-  const nativeFrame = hibiki.platform === "darwin";
+  // On macOS the system moves and zooms the window from this bar's drag region itself, and the
+  // traffic lights sit over its left end.
+  const mac = hibiki.platform === "darwin";
+  const fullScreen = useFullScreen();
   const onBarMouseDown = (e: React.MouseEvent) => {
-    if (!nativeFrame && e.target === e.currentTarget) hibiki.window.unmaximizeForDrag(e.screenX);
+    if (!mac && e.target === e.currentTarget) hibiki.window.unmaximizeForDrag(e.screenX);
   };
   // A real OS title bar toggles maximize/restore on a double-click anywhere on the bar itself -
   // free with a native frame, but a fully custom one (see the comment up top for why this isn't
-  // titleBarOverlay) gets none of that automatically, so it's wired up by hand here. Same
-  // `e.target === e.currentTarget` guard as the drag handler above, so double-clicking the search
-  // box or a nav button doesn't also toggle the window.
+  // titleBarOverlay) gets none of that automatically, so it's wired up by hand here (macOS does it
+  // itself). Same `e.target === e.currentTarget` guard as the drag handler above, so double-clicking
+  // the search box or a nav button doesn't also toggle the window.
   const onBarDoubleClick = (e: React.MouseEvent) => {
-    if (!nativeFrame && e.target === e.currentTarget) hibiki.window.toggleMaximize();
+    if (!mac && e.target === e.currentTarget) hibiki.window.toggleMaximize();
   };
 
   return (
-    <div className="app-drag relative flex h-10 shrink-0 items-center bg-app-surface pl-3" onMouseDown={onBarMouseDown} onDoubleClick={onBarDoubleClick}>
+    <div className={cn("app-drag relative flex h-10 shrink-0 items-center bg-app-surface", mac && !fullScreen ? MAC_LIGHTS_INSET : "pl-3")} onMouseDown={onBarMouseDown} onDoubleClick={onBarDoubleClick}>
       <div className="flex shrink-0 items-center gap-1">
         <img src={appIcon} alt="" className="mr-1.5 h-6 w-6 rounded-[7px]" />
         <button
@@ -136,8 +153,8 @@ function WindowControls() {
     return hibiki.window.onMaximizedChanged(setMaximized);
   }, []);
 
-  // Only Windows/Linux - macOS keeps its native hiddenInset traffic lights (see createWindow in
-  // main/index.ts), which already sit top-left and would collide with a second set drawn here.
+  // Only Windows/Linux - macOS has its own traffic lights floated over the bar's left end (see
+  // MAC_TRAFFIC_LIGHTS in main/index.ts), which would collide with a second set drawn here.
   if (hibiki.platform === "darwin") return null;
 
   return (

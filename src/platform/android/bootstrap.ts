@@ -146,7 +146,7 @@ export async function installAndroidHibiki(): Promise<void> {
     // Desktop-only surfaces: present so the renderer's calls are harmless, hidden from the UI by
     // platform.capabilities as the mobile layout lands.
     discord: { setEnabled: async () => {}, updatePresence: async () => {}, setIdlePresence: async () => {}, clearPresence: async () => {} },
-    window: { unmaximizeForDrag() {}, minimize() {}, toggleMaximize() {}, close() {}, isMaximized: async () => false, onMaximizedChanged: nothing },
+    window: { unmaximizeForDrag() {}, minimize() {}, toggleMaximize() {}, close() {}, isMaximized: async () => false, onMaximizedChanged: nothing, isFullScreen: async () => false, onFullScreenChanged: nothing },
     updates: {
       check: () => checkForUpdate(),
       downloadAndInstall: (update: AppUpdate) =>

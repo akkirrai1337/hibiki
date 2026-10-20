@@ -256,6 +256,12 @@ const api: HibikiApi = {
       ipcRenderer.on(IPC.windowMaximizedChanged, listener);
       return () => ipcRenderer.removeListener(IPC.windowMaximizedChanged, listener);
     },
+    isFullScreen: (): Promise<boolean> => ipcRenderer.invoke(IPC.windowIsFullScreen),
+    onFullScreenChanged: (callback: (fullScreen: boolean) => void): (() => void) => {
+      const listener = (_e: Electron.IpcRendererEvent, fullScreen: boolean) => callback(fullScreen);
+      ipcRenderer.on(IPC.windowFullScreenChanged, listener);
+      return () => ipcRenderer.removeListener(IPC.windowFullScreenChanged, listener);
+    },
   },
   // Not IPC: zoom belongs to this frame, and webFrame is only reachable from a preload script -
   // the renderer can't import electron, and routing it through the main process would add a round

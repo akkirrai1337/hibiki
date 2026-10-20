@@ -137,7 +137,7 @@ function handleDeepLink(rawUrl: string): void {
 // it through the IPC handlers it was registered with.
 let extensionRuntime: ExtensionRuntime | null = null;
 
-// Windows/Linux: hide the native title bar entirely and draw our own minimize/maximize/close
+// Windows/Linux (macOS too, apart from its traffic lights): hide the native title bar and draw our own minimize/maximize/close
 // buttons in the renderer (see TitleBar.tsx) instead of Electron's titleBarOverlay (Window
 // Controls Overlay). titleBarOverlay was tried first and technically worked, but Windows always
 // paints a solid, opaque rectangle behind those buttons - there's no way to make that region
@@ -147,6 +147,9 @@ let extensionRuntime: ExtensionRuntime | null = null;
 // the same as everything else, at the cost of us owning their hit-testing/hover/click ourselves
 // (see the new window:* IPC handlers below) instead of getting that for free from the OS. macOS
 // uses the standard native frame and title bar.
+/** Where macOS puts the window's traffic lights: centred in the 40px title bar (3 x 12px and gaps, about 52px wide). TitleBar.tsx leaves room for them. */
+const MAC_TRAFFIC_LIGHTS = { x: 14, y: 14 };
+
 function createWindow(): void {
   mainWindow = new BrowserWindow({
     width: 1280,
@@ -156,7 +159,11 @@ function createWindow(): void {
     backgroundColor: "#0c0c0f",
     title: "hibiki",
     icon: path.join(__dirname, "../../electron-builder-resources/hibiki.ico"),
-    ...(process.platform === "darwin" ? {} : { titleBarStyle: "hidden" as const }),
+    // The title bar is the app's own on every platform (see TitleBar.tsx). Windows and Linux draw their
+    // window buttons in it too; macOS keeps the system's own traffic lights - real ones, so the green
+    // one still means full screen - floated over the left end of the bar where the bar leaves room.
+    titleBarStyle: "hidden" as const,
+    ...(process.platform === "darwin" ? { trafficLightPosition: MAC_TRAFFIC_LIGHTS } : {}),
     webPreferences: {
       preload: path.join(__dirname, "../preload/index.mjs"),
       contextIsolation: true,
@@ -198,6 +205,9 @@ function createWindow(): void {
   // via the `activate` handler below still gets this wired up, not just the very first one.
   mainWindow.on("maximize", () => mainWindow?.webContents.send(IPC.windowMaximizedChanged, true));
   mainWindow.on("unmaximize", () => mainWindow?.webContents.send(IPC.windowMaximizedChanged, false));
+  // macOS hides the traffic lights in full screen, so the title bar must stop leaving room for them.
+  mainWindow.on("enter-full-screen", () => mainWindow?.webContents.send(IPC.windowFullScreenChanged, true));
+  mainWindow.on("leave-full-screen", () => mainWindow?.webContents.send(IPC.windowFullScreenChanged, false));
 
   if (VITE_DEV_SERVER_URL) {
     mainWindow.webContents.on("console-message", (_e, level, message, line, sourceId) => {
@@ -393,6 +403,7 @@ app.whenReady().then(async () => {
   });
   ipcMain.on(IPC.windowClose, () => mainWindow?.close());
   ipcMain.handle(IPC.windowIsMaximized, () => mainWindow?.isMaximized() ?? false);
+  ipcMain.handle(IPC.windowIsFullScreen, () => mainWindow?.isFullScreen() ?? false);
 
   ipcMain.handle(IPC.playerCaptureFrame, async () => {
     if (!mainWindow || mainWindow.isDestroyed()) return null;

@@ -112,6 +112,9 @@ export const IPC = {
   // taskbar's own context menu), so the maximize/restore button's icon needs to stay in sync via a
   // push rather than only updating itself right after its own click.
   windowMaximizedChanged: "window:maximizedChanged",
+  // macOS hides the window's traffic lights in full screen, and the title bar stops leaving room for them.
+  windowIsFullScreen: "window:isFullScreen",
+  windowFullScreenChanged: "window:fullScreenChanged",
 
   backupCreate: "backup:create",
   backupRestore: "backup:restore",

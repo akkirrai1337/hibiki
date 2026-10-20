@@ -216,6 +216,9 @@ export interface HibikiApi {
     close(): void;
     isMaximized(): Promise<boolean>;
     onMaximizedChanged(callback: (maximized: boolean) => void): () => void;
+    /** The window is in the system's full screen (macOS hides its window buttons there). */
+    isFullScreen(): Promise<boolean>;
+    onFullScreenChanged(callback: (fullScreen: boolean) => void): () => void;
   };
   /**
    * Syncing the library, progress, ratings and xp between a computer and a phone on the same network
