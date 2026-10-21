@@ -206,6 +206,7 @@
     "loadingLink": "Loading link…",
     "linkError": "Could not get link: {{message}}",
     "unsupportedPlayer": "This player isn't supported. Pick another one in the player settings.",
+    "playerUnavailable": "This player's site isn't responding right now. Try again, or pick another dub or player in the settings.",
     "noLinks": "This source has no playable link for this episode",
     "playerSwitchedToast": "Player switched automatically",
     "availableSources": "Available sources: {{count}}",

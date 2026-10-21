@@ -329,7 +329,10 @@ function WatchPage() {
   // page itself. Cleared by the next pick or episode.
   const [resolveFailed, setResolveFailed] = useState(false);
   useEffect(() => { setResolveFailed(false); }, [episodeId]);
+  // The last pick, for asking again when its page could not be resolved.
+  const lastPickedRef = useRef<PlayerLink | null>(null);
   const selectLink = useCallback(async (selected: PlayerLink) => {
+    lastPickedRef.current = selected;
     const requestId = ++selectionRequestRef.current;
     setResolveFailed(false);
     if (selected.type !== "EMBED") {
@@ -1001,6 +1004,8 @@ function WatchPage() {
           onSelectDub={selectDub}
           sourceSwitching={sourceSwitching || (!link && preferencePending)}
           unplayable={!link && !preferencePending && !sourceSwitching && !!linksQuery.data && linksQuery.data.length > 0 || resolveFailed}
+          unplayableReason={resolveFailed ? "failed" : "unsupported"}
+          onRetryUnplayable={() => { if (lastPickedRef.current) void selectLink(lastPickedRef.current); }}
           onSelectLink={selectLinkManually}
           preferredAudioTrack={usePlayerSelectionStore.getState().get(sourceId, animeId, groupId)?.audioTrack ?? null}
           onAudioTrackPicked={rememberAudioTrack}

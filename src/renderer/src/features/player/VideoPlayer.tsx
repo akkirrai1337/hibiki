@@ -107,6 +107,10 @@ interface VideoPlayerProps {
   // The episode has links but none this player can play (an unsupported/unresolvable player page) -
   // said out loud over the still-reachable chrome instead of a spinner that never ends.
   unplayable?: boolean;
+  /** Why: "failed" - the player page could not be turned into a stream (its site is down, blocked or changed), which a retry may fix; "unsupported" - none of the links is something this player can play. */
+  unplayableReason?: "failed" | "unsupported";
+  /** Asks again for the stream of the pick that failed. */
+  onRetryUnplayable?: () => void;
   onSelectLink?: (link: PlayerLink) => void;
   /** The audio track remembered for this title (an HLS stream's own), tried before the link's. */
   preferredAudioTrack?: string | null;
@@ -642,7 +646,7 @@ function pipLabels(t: (key: string) => string) {
   };
 }
 
-export function VideoPlayer({ link, availableLinks, offlinePlayback, dubOptions, selectedDubId, onSelectDub, sourceSwitching, unplayable, onSelectLink, preferredAudioTrack, onAudioTrackPicked, fetchSkipTimes, onPlaybackFailure, onRefreshStream, startPositionMs, onProgress, onPlayStateChange, onCaptureThumbnail, title, episodeLabel, onBack, onPrevEpisode, onNextEpisode, onOpenEpisodes, episodesLoading, episodes, currentEpisodeId, onSelectEpisode, streakToast, playerSwitchToast }: VideoPlayerProps) {
+export function VideoPlayer({ link, availableLinks, offlinePlayback, dubOptions, selectedDubId, onSelectDub, sourceSwitching, unplayable, unplayableReason, onRetryUnplayable, onSelectLink, preferredAudioTrack, onAudioTrackPicked, fetchSkipTimes, onPlaybackFailure, onRefreshStream, startPositionMs, onProgress, onPlayStateChange, onCaptureThumbnail, title, episodeLabel, onBack, onPrevEpisode, onNextEpisode, onOpenEpisodes, episodesLoading, episodes, currentEpisodeId, onSelectEpisode, streakToast, playerSwitchToast }: VideoPlayerProps) {
   const { t } = useTranslation();
   // Held in a ref, deliberately not read as a prop from inside the effects below. Both the source
   // setup and the media-element wiring would otherwise have to list it as a dependency, and the
@@ -3285,7 +3289,16 @@ export function VideoPlayer({ link, availableLinks, offlinePlayback, dubOptions,
       ) : unplayable ? (
         <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/60 px-8 text-center">
           <TriangleAlert className="h-10 w-10 text-rose-400" strokeWidth={1.75} />
-          <p className="text-sm text-zinc-300">{t("watch.unsupportedPlayer")}</p>
+          <p className="text-sm text-zinc-300">{t(unplayableReason === "failed" ? "watch.playerUnavailable" : "watch.unsupportedPlayer")}</p>
+          {unplayableReason === "failed" && onRetryUnplayable && (
+            <button
+              type="button"
+              onClick={onRetryUnplayable}
+              className="pointer-events-auto rounded-full bg-rose-500 px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-rose-400"
+            >
+              {t("common.retry")}
+            </button>
+          )}
         </div>
       ) : (sourceSwitching || switchingSource || buffering || !link) && (
         // `!link` is the "still deciding what to play" case - the spinner sits over the chrome
