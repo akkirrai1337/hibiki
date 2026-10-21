@@ -120,8 +120,8 @@ const runnable = fs.existsSync(lib);
 describe.skipIf(!runnable)("ApkHostProcess with the real host", () => {
   const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), "hibiki-apk-host-"));
   const host = new ApkHostProcess({ java: process.env.HIBIKI_JAVA ?? "java", libDir: lib }, dataDir);
-  afterAll(() => {
-    host.stop();
+  afterAll(async () => {
+    await host.stop();
     fs.rmSync(dataDir, { recursive: true, force: true });
   });
 

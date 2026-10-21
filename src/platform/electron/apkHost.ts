@@ -129,14 +129,21 @@ export class ApkHostProcess {
     }
   }
 
-  /** Closing its stdin is how the host knows to quit; the kill is for one that does not. */
-  stop() {
+  /**
+   * Closing its stdin is how the host knows to quit; the kill is for one that does not. Resolves once
+   * the process is gone (its files are not held any longer).
+   */
+  stop(): Promise<void> {
     const child = this.child;
-    if (!child) return;
+    if (!child) return Promise.resolve();
     this.child = null;
     this.starting = null;
-    child.stdin?.end();
-    setTimeout(() => child.kill(), 2_000).unref();
+    return new Promise((resolve) => {
+      if (child.exitCode !== null) return resolve();
+      child.once("exit", () => resolve());
+      child.stdin?.end();
+      setTimeout(() => child.kill(), 2_000).unref();
+    });
   }
 
   async fetchRaw(pathAndQuery: string, init: RequestInit = {}): Promise<Response> {

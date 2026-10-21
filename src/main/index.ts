@@ -575,5 +575,5 @@ app.on("before-quit", () => {
   // Idle extension worker threads would otherwise keep the process alive past the last window.
   extensionRuntime?.dispose();
   shutdownDiscordRpc();
-  getApkHost()?.stop();
+  void getApkHost()?.stop();
 });
