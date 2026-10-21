@@ -325,8 +325,12 @@ function WatchPage() {
   const [sourceSwitching, setSourceSwitching] = useState(false);
   const selectionRequestRef = useRef(0);
   const failedPlaybackUrlsRef = useRef(new Set<string>());
+  // A pick by hand made before the full list arrived (from the plain one): the saved pick must not
+  // be adopted over it when that list comes in.
+  const handPickedRef = useRef(false);
   useEffect(() => {
     selectionRequestRef.current += 1;
+    handPickedRef.current = false;
     failedPlaybackUrlsRef.current.clear();
     linkIssuedAtRef.current.clear();
     setManualLink(null);
@@ -489,9 +493,13 @@ function WatchPage() {
       // A stream with its own audio tracks keeps the one picked inside it (rememberAudioTrack).
       audioTrack: selected.audioTrack ?? previous?.audioTrack ?? null,
     });
-    if (isExpiredLink(selected)) void refreshAndSelect(selected);
+    handPickedRef.current = true;
+    // A pick from the plain list (the full one is still resolving) is fresh by definition, and asking
+    // for the list again would only wait on that same slow call.
+    const fullListIn = !!queryClient.getQueryData<PlayerLink[]>(["playerLinks", sourceId, animeId, groupId, episodeId]);
+    if (fullListIn && isExpiredLink(selected)) void refreshAndSelect(selected);
     else void selectLink(selected);
-  }, [rememberSelection, selectLink, isExpiredLink, refreshAndSelect, sourceId, animeId, groupId]);
+  }, [queryClient, rememberSelection, selectLink, isExpiredLink, refreshAndSelect, sourceId, animeId, groupId, episodeId]);
 
   // An audio track picked inside an HLS stream (several dubs in one playlist): kept for the title's
   // next episodes, which start on it when their stream has it.
@@ -560,7 +568,7 @@ function WatchPage() {
   const [preferencePending, setPreferencePending] = useState(true);
   useEffect(() => { setPreferencePending(true); }, [episodeId]);
   useEffect(() => {
-    if (manualLink) { setPreferencePending(false); return; }
+    if (manualLink || handPickedRef.current) { setPreferencePending(false); return; }
     // A refresh picks its own link from the new list; adopting the saved pick here would race it.
     if (linksRefreshingRef.current) return;
     // A downloaded copy wins over any link list anyway, so there's nothing to wait for.
