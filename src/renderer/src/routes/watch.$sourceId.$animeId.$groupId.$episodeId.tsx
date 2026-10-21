@@ -4,7 +4,7 @@ import { isMobile } from "@/lib/mobile";
 import { createFileRoute, useNavigate, useRouter } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { ArrowLeft, Loader2, TriangleAlert } from "lucide-react";
+import { ArrowLeft, TriangleAlert } from "lucide-react";
 import type { DownloadedEpisodeFile, PlaybackGroup, PlayerLink } from "@shared/types";
 import { fetchSkipTimes } from "@/lib/skipTimes";
 import { pickDataSaverLink, pickDefaultLink, pickPlaybackFallback, pickPreferredLink, pickRefreshedLink, pickResolvedLink, qualityVariant } from "@/lib/playerLinks";
@@ -932,7 +932,11 @@ function WatchPage() {
   // (still waiting on linksQuery's very first answer, or that answer was an error/empty result),
   // none of that chrome exists yet, and the screen used to be nothing but a bare spinner on black:
   // no way back except knowing a keyboard shortcut, no sense of what was even being loaded.
-  const videoPlayerMounted = !!(link || (linksQuery.data && linksQuery.data.length > 0));
+  // Mounted from the start, while the links are still being asked for too: its settings (the dub, the
+  // speed, ...) are reachable the whole time, and the player rows fill in the moment the links arrive.
+  // The same moment the route showed its own bare spinner for.
+  const linksPending = !link && !linksQuery.data && !linksQuery.isError;
+  const videoPlayerMounted = !!(link || (linksQuery.data && linksQuery.data.length > 0) || linksPending);
 
   return (
     <div className="relative h-full w-full bg-black">
@@ -958,11 +962,6 @@ function WatchPage() {
           network to resolve a live link with) no longer matters, since it isn't what's playing. */}
       {/* `preferencePending` covers the window where the links are in but the saved player/dub pick
           is still being applied (or its EMBED link resolved) - the spinner belongs there too. */}
-      {!link && !linksQuery.data && !linksQuery.isError && (
-        <div className="flex h-full items-center justify-center">
-          <Loader2 className="h-10 w-10 animate-spin text-white/70" strokeWidth={2} />
-        </div>
-      )}
       {!link && linksQuery.isError && (
         <div className="flex h-full flex-col items-center justify-center gap-3 px-8 text-center">
           <TriangleAlert className="h-8 w-8 text-rose-400" strokeWidth={2} />
