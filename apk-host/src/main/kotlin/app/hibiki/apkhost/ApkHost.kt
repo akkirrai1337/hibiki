@@ -109,6 +109,12 @@ class ApkHost(val dataDir: File) {
         for ((name, value) in cookies) manager.setCookie(url, "$name=$value; Domain=$host; Path=/")
         Clearances.remember(url, userAgent)
     }
+
+    /** Settings > Network's "Reset Cloudflare": every site is asked for its check again. */
+    fun resetClearances() {
+        Clearances.clear()
+        android.webkit.CookieManager.getInstance().removeCookiesWhere { it.name == "cf_clearance" || it.name.startsWith("__cf") || it.name.startsWith("cf_") }
+    }
     fun trust(packageName: String, fingerprint: String) {
         val installed = store.find(packageName) ?: throw IllegalStateException("$packageName is not installed")
         check(installed.signingFingerprint == fingerprint) { "The extension's signature changed" }

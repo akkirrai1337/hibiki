@@ -137,6 +137,7 @@ export class PageBridge {
     try {
       switch (command.cmd) {
         case "load":
+          logger.debug("apk-pages", `page ${command.page}: load ${command.url}`);
           this.page(command.page).load(command.url ?? "about:blank", { headers: command.headers ?? {}, userAgent: command.userAgent ?? "", cookies: command.cookies ?? "" });
           break;
         case "loadData":

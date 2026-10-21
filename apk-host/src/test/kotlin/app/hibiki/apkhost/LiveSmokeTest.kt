@@ -51,7 +51,7 @@ class LiveSmokeTest {
             } catch (error: Throwable) {
                 var cause: Throwable = error
                 while (cause.cause != null && cause.cause !== cause) cause = cause.cause!!
-                line.append("FAILED at ${line.length}: ${error.message} <- ${cause.javaClass.simpleName}: ${cause.message}")
+                line.append("FAILED at ${line.length}: ${error.message} <- ${cause.javaClass.simpleName}: ${cause.message} @ ${cause.stackTrace.take(6).joinToString(" | ")}")
             }
             report.appendLine(line)
             println(line)

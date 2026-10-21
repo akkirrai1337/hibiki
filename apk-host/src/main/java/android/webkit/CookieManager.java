@@ -65,4 +65,11 @@ public class CookieManager {
         cookies.clear();
         if (callback != null) callback.onReceiveValue(true);
     }
+
+    /** Drops the cookies [test] picks out (not an Android call: the host's own housekeeping). */
+    public synchronized int removeCookiesWhere(java.util.function.Predicate<Cookie> test) {
+        int before = cookies.size();
+        cookies.removeIf(test::test);
+        return before - cookies.size();
+    }
 }

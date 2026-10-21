@@ -47,6 +47,32 @@ class ClearanceTest {
     }
 
     @Test
+    fun `a compressed or chunked challenge page is read without the body being found closed`() {
+        val gzipped = okio.Buffer().also { buffer -> okio.GzipSink(buffer).use { sink -> okio.Buffer().writeUtf8(wall).let { sink.write(it, it.size) } } }
+        web.enqueue(MockResponse().setResponseCode(403).setHeader("Server", "cloudflare").setHeader("Content-Encoding", "gzip").setBody(gzipped))
+        web.enqueue(MockResponse().setResponseCode(503).setHeader("Server", "cloudflare").setChunkedBody(wall, 7))
+        web.enqueue(MockResponse().setResponseCode(403).setHeader("Server", "cloudflare"))
+        web.start()
+        val client = NetworkHelper.instance().client
+        repeat(2) {
+            assertFailsWith<CloudflareChallengeException> { client.newCall(Request.Builder().url(web.url("/x")).build()).execute() }
+        }
+        // An empty answer is just a refusal, not a challenge.
+        client.newCall(Request.Builder().url(web.url("/x")).build()).execute().use { assertEquals(403, it.code) }
+    }
+
+    @Test
+    fun `a body an inner interceptor already closed is not taken for a challenge and does not crash`() {
+        web.enqueue(cloudflare(403, wall))
+        web.start()
+        // How a source's own interceptor looks from outside: it sits closer to the network and consumed the body.
+        val client = NetworkHelper.instance().client.newBuilder()
+            .addInterceptor { chain -> chain.proceed(chain.request()).also { it.body.string() } }
+            .build()
+        client.newCall(Request.Builder().url(web.url("/x")).build()).execute().use { assertEquals(403, it.code) }
+    }
+
+    @Test
     fun `a plain refusal or an ordinary page is left alone`() {
         web.enqueue(cloudflare(403, "<html><body>Sorry, you have been blocked</body></html>"))
         web.enqueue(MockResponse().setResponseCode(403).setHeader("Server", "nginx").setBody(wall))
@@ -77,6 +103,16 @@ class ClearanceTest {
         assertEquals("UA", Clearances.userAgentFor("example.com"))
         assertEquals(null, Clearances.userAgentFor("example.org"))
         assertEquals(null, Clearances.userAgentFor("com"))
+    }
+
+    @Test
+    fun `resetting drops the clearances and only Cloudflare's cookies`() {
+        val url = "https://example.com/"
+        host.applyClearance(url, "UA", mapOf("cf_clearance" to "a", "__cf_bm" to "b"))
+        android.webkit.CookieManager.getInstance().setCookie(url, "session=keep; Path=/")
+        host.resetClearances()
+        assertEquals("session=keep", android.webkit.CookieManager.getInstance().getCookie(url))
+        assertEquals(null, Clearances.userAgentFor("example.com"))
     }
 
     @Test

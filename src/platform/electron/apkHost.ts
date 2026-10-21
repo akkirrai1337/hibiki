@@ -217,6 +217,9 @@ export function apkSourcesPort(host: ApkHostProcess): ApkSourcesPort {
     applyClearance: async (url, session) => {
       await host.request("POST", "/clearance", { url, userAgent: session.userAgent, cookies: session.cookies });
     },
+    resetClearances: async () => {
+      await host.request("POST", "/clearance/reset", {});
+    },
     call: async (sourceId, method, args) => {
       switch (method) {
         case "search": return items(sourceId, "search", { request: args[0] ?? {} });

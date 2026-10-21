@@ -2,6 +2,7 @@ package eu.kanade.tachiyomi.network
 
 import android.content.Context
 import android.webkit.WebSettings
+import app.hibiki.apkhost.TrustStores
 import eu.kanade.tachiyomi.network.interceptor.ClearanceInterceptor
 import eu.kanade.tachiyomi.network.interceptor.CloudflareInterceptor
 import eu.kanade.tachiyomi.network.interceptor.IgnoreGzipInterceptor
@@ -29,6 +30,8 @@ class NetworkHelper(context: Context) {
     private fun clientBuilder(): OkHttpClient.Builder = OkHttpClient.Builder()
         .cookieJar(cookieJar)
         .dns(FallbackDns())
+        // The runtime's CA list plus the system's: a site on a newer CA than the runtime knows must still load.
+        .sslSocketFactory(TrustStores.socketFactory, TrustStores.manager)
         .connectTimeout(30, TimeUnit.SECONDS)
         .readTimeout(30, TimeUnit.SECONDS)
         .callTimeout(120, TimeUnit.SECONDS)

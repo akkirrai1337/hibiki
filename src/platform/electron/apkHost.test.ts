@@ -107,6 +107,16 @@ describe("apkSourcesPort", () => {
     ]);
   });
 
+  it("hands over a passed check and a reset, to the host's routes", async () => {
+    calls.length = 0;
+    await port.applyClearance!("https://x.example/", { cookies: { cf_clearance: "a" }, cookieHeader: "cf_clearance=a", userAgent: "UA" });
+    await port.resetClearances!();
+    expect(calls.map((call) => [call.route, call.body])).toEqual([
+      ["/clearance", { url: "https://x.example/", userAgent: "UA", cookies: { cf_clearance: "a" } }],
+      ["/clearance/reset", {}],
+    ]);
+  });
+
   it("unwraps lists and refuses what it does not know", async () => {
     expect(await port.call("apk:5", "search", [{}])).toEqual([{ id: "x" }]);
     await expect(port.call("apk:5", "explode", [])).rejects.toThrow(/do not support/);

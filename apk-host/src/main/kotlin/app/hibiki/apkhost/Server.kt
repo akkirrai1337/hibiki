@@ -84,6 +84,10 @@ class Server(private val host: ApkHost, private val token: String, private val p
                     host.applyClearance(body.getString("url"), body.getString("userAgent"), cookies.keys().asSequence().associateWith { cookies.getString(it) })
                     reply(exchange, 200, JSONObject())
                 }
+                method == "POST" && path == "/clearance/reset" -> {
+                    host.resetClearances()
+                    reply(exchange, 200, JSONObject())
+                }
                 method == "POST" && path == "/uninstall" -> {
                     host.uninstall(body(exchange).getString("packageName"))
                     reply(exchange, 200, host.describe())

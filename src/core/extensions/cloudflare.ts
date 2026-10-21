@@ -80,6 +80,7 @@ export function forgetAllClearances(): void {
   const count = clearances.size;
   clearances.clear();
   logger.info("cloudflare", `all clearances dropped (${count})`);
+  void getPlatform().apkSources?.resetClearances?.().catch((error: unknown) => logger.warn("cloudflare", `APK sources kept their clearances: ${error}`));
 }
 
 /** Called when a request carrying a clearance was challenged again: the clearance has expired. */

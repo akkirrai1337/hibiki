@@ -24,7 +24,10 @@ class CloudflareInterceptor : Interceptor {
 
     private fun shouldIntercept(response: Response): Boolean {
         if (response.code !in ERROR_CODES || response.header("Server") !in SERVER_CHECK) return false
-        val document = Jsoup.parse(response.peekBody(Long.MAX_VALUE).string(), response.request.url.toString())
+        // A source's own interceptor, run closer to the network than this one, may already have read and
+        // closed the body; a page that can no longer be read cannot be told to be a challenge.
+        val html = runCatching { response.peekBody(Long.MAX_VALUE).string() }.getOrNull() ?: return false
+        val document = Jsoup.parse(html, response.request.url.toString())
         // A captcha/JS challenge, not a geo block.
         return document.getElementById("challenge-error-title") != null ||
             document.getElementById("challenge-error-text") != null

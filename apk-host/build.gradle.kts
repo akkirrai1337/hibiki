@@ -106,14 +106,16 @@ val jlinkRuntime = tasks.register<Exec>("jlinkRuntime") {
     val jdk = (findProperty("runtimeJdk") as String?) ?: javaToolchains.launcherFor(java.toolchain).get().metadata.installationPath.asFile.absolutePath
     val output = bundleDir.map { it.dir("runtime").asFile }
     inputs.property("jdk", jdk)
-    inputs.property("modules", runtimeModules)
+    // The Windows certificate store is read through a module only a Windows JDK has.
+    val modules = runtimeModules + if (File(jdk, "jmods/jdk.crypto.mscapi.jmod").exists()) ",jdk.crypto.mscapi" else ""
+    inputs.property("modules", modules)
     outputs.dir(output)
     doFirst { delete(output) }
     val exe = if (org.gradle.internal.os.OperatingSystem.current().isWindows) "jlink.exe" else "jlink"
     commandLine(
         File(jdk, "bin/$exe").absolutePath,
         "--module-path", File(jdk, "jmods").absolutePath,
-        "--add-modules", runtimeModules,
+        "--add-modules", modules,
         "--strip-debug", "--no-header-files", "--no-man-pages", "--compress", "zip-6",
         "--output", output.get().absolutePath,
     )
