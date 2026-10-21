@@ -30,8 +30,10 @@ import java.util.concurrent.Executors
  *                                          filterCatalog, readSettings, writeSetting
  *   GET  /image?s=<source>&u=<url>        a picture fetched the way the source fetches
  *   GET  /icon?p=<package>                an extension's icon
+ *   GET  /pages/commands                  a stream (a JSON command a line) the application keeps open to run
+ *                                         the pages extensions load; POST /pages/event reports back (RemotePages)
  */
-class Server(private val host: ApkHost, private val token: String) {
+class Server(private val host: ApkHost, private val token: String, private val pages: RemotePages = RemotePages()) {
     private val http = HttpServer.create(InetSocketAddress(InetAddress.getLoopbackAddress(), 0), 0)
     val address: InetSocketAddress get() = http.address
     val port: Int get() = address.port
@@ -56,6 +58,11 @@ class Server(private val host: ApkHost, private val token: String) {
                 method == "GET" && path == "/extensions" -> reply(exchange, 200, host.describe())
                 method == "GET" && path == "/image" -> image(exchange)
                 method == "GET" && path == "/icon" -> icon(exchange)
+                method == "GET" && path == "/pages/commands" -> commandStream(exchange)
+                method == "POST" && path == "/pages/event" -> {
+                    pages.deliver(body(exchange))
+                    reply(exchange, 200, JSONObject())
+                }
                 method == "POST" && path == "/install" -> {
                     val body = body(exchange)
                     val installed = runBlocking { host.install(body.getString("url"), body.optString("packageName").ifEmpty { null }) }
@@ -117,6 +124,26 @@ class Server(private val host: ApkHost, private val token: String) {
         }
     }
 
+
+    /**
+     * Holds the connection open and writes a command a line as pages ask for them; ends when the
+     * application disconnects (the write fails), which drops every page it was running.
+     */
+    private fun commandStream(exchange: HttpExchange) {
+        exchange.responseHeaders.add("Content-Type", "application/x-ndjson; charset=utf-8")
+        exchange.sendResponseHeaders(200, 0)
+        val out = exchange.responseBody
+        try {
+            while (true) {
+                // A line of nothing when idle keeps the connection honest: a dead peer shows as a failed write.
+                val line = pages.nextCommand(15_000)?.toString() ?: ""
+                out.write((line + "\n").toByteArray(Charsets.UTF_8))
+                out.flush()
+            }
+        } catch (_: java.io.IOException) {
+            pages.dropAll()
+        }
+    }
     // --- pictures -----------------------------------------------------------------------------------------
 
     private fun query(exchange: HttpExchange, name: String): String? =

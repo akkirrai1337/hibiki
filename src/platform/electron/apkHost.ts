@@ -70,6 +70,8 @@ export class ApkHostError extends Error {}
 export class ApkHostProcess {
   private child: ChildProcess | null = null;
   private starting: Promise<{ port: number; token: string }> | null = null;
+  private readonly startedListeners: Array<() => void> = [];
+  private readonly stoppedListeners: Array<() => void> = [];
 
   constructor(
     private readonly location: ApkHostLocation,
@@ -106,6 +108,8 @@ export class ApkHostProcess {
           settled = true;
           clearTimeout(timer);
           resolve({ port: Number(ready[1]), token });
+          // After the promise settles, so a listener that calls the host finds it ready.
+          queueMicrotask(() => this.startedListeners.forEach((listener) => listener()));
         }
       });
       child.stderr!.setEncoding("utf8");
@@ -122,10 +126,21 @@ export class ApkHostProcess {
     return this.starting;
   }
 
+  /** Called each time the host process has started and is ready for requests. */
+  onStarted(listener: () => void) {
+    this.startedListeners.push(listener);
+  }
+
+  /** Called when the host process is gone: it exited, or was stopped. */
+  onStopped(listener: () => void) {
+    this.stoppedListeners.push(listener);
+  }
+
   private reset(child: ChildProcess) {
     if (this.child === child) {
       this.child = null;
       this.starting = null;
+      this.stoppedListeners.forEach((listener) => listener());
     }
   }
 
@@ -138,6 +153,7 @@ export class ApkHostProcess {
     if (!child) return Promise.resolve();
     this.child = null;
     this.starting = null;
+    this.stoppedListeners.forEach((listener) => listener());
     return new Promise((resolve) => {
       if (child.exitCode !== null) return resolve();
       child.once("exit", () => resolve());

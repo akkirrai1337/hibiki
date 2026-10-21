@@ -21,7 +21,9 @@ fun main(args: Array<String>) {
     options["--image-base"]?.let { ApkImageProxy.base = it }
 
     val host = ApkHost(data)
-    val server = Server(host, token)
+    val pages = RemotePages()
+    android.webkit.WebView.backend = pages
+    val server = Server(host, token, pages)
     server.start()
     println("READY ${server.port}")
     System.out.flush()

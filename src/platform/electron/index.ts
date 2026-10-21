@@ -1,6 +1,8 @@
 import path from "node:path";
 import { app, shell, type BrowserWindow } from "electron";
 import { ApkHostProcess, apkSourcesPort, locateApkHost, setApkHost, systemLocateOptions } from "./apkHost";
+import { PageBridge } from "./apkPages";
+import { createElectronPageDriver } from "./apkPageWindow";
 import { desktopUpdateKey } from "@shared/appUpdateSelection";
 import { electronSyncTransport } from "./syncTransport";
 import type { Platform } from "../types";
@@ -23,6 +25,8 @@ export function createElectronPlatform(getWindow: () => BrowserWindow | null): P
   const apkLocation = locateApkHost(systemLocateOptions(app.getAppPath(), app.isPackaged ? process.resourcesPath : null));
   const apkHost = apkLocation ? new ApkHostProcess(apkLocation, path.join(app.getPath("userData"), "apk-host")) : null;
   setApkHost(apkHost);
+  // The pages APK sources load (a player embed whose requests give away the video) run as hidden windows here.
+  if (apkHost) new PageBridge(apkHost, createElectronPageDriver);
   return {
     kind: "electron",
     capabilities: {
