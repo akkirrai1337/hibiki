@@ -24,14 +24,23 @@ import java.util.concurrent.atomic.AtomicLong
  * Commands: {"cmd":"load","page":1,"url":…,"headers":{…},"userAgent":…,"cookies":"a=b; c=d"}
  *           {"cmd":"loadData","page":1,"baseUrl":…,"data":…,"mimeType":…,"userAgent":…}
  *           {"cmd":"evaluate","page":1,"call":7,"script":…}  {"cmd":"stop","page":1}  {"cmd":"close","page":1}
+ *           {"cmd":"interface","page":1,"name":"Bridge","methods":["onResult"]}
  * Events:   {"page":1,"type":"request","url":…,"method":…,"headers":{…},"mainFrame":true}
  *           {"page":1,"type":"finished","url":…}  {"page":1,"type":"error","url":…,"code":-105,"description":…}
  *           {"page":1,"type":"evaluated","call":7,"result":"\"json text\""}
+ *           {"page":1,"type":"jsCall","name":"Bridge","method":"onResult","args":["…",null]}
+ *
+ * A page's call into an addJavascriptInterface object runs on a thread of its own, as Android's bridge
+ * thread does, never on the main thread. Its return value does not reach the page: the extensions that
+ * use the bridge (6 of 251 sampled) only ever call void methods to hand a result back.
  */
 class RemotePages : WebView.Backend {
     private val commands = LinkedBlockingQueue<JSONObject>()
     private val pages = ConcurrentHashMap<Long, RemotePage>()
     private val nextPage = AtomicLong(1)
+    private val bridgeThread = java.util.concurrent.Executors.newSingleThreadExecutor { runnable ->
+        Thread(runnable, "JavaBridge").apply { isDaemon = true }
+    }
 
     override fun open(view: WebView): WebView.Page = RemotePage(nextPage.getAndIncrement(), view).also { pages[it.id] = it }
 
@@ -81,6 +90,32 @@ class RemotePages : WebView.Backend {
 
         override fun stop() = send(JSONObject().put("cmd", "stop"))
 
+        override fun addInterface(name: String, methods: List<String>) {
+            send(JSONObject().put("cmd", "interface").put("name", name).put("methods", JSONArray(methods)))
+        }
+
+        private fun call(event: JSONObject) {
+            val name = event.optString("name")
+            val methodName = event.optString("method")
+            val target = view.javascriptInterface(name) ?: return
+            val raw = event.optJSONArray("args") ?: JSONArray()
+            val args = (0 until raw.length()).map { if (raw.isNull(it)) null else raw.get(it) }
+            val method = target.javaClass.methods.firstOrNull {
+                it.name == methodName && it.parameterCount == args.size && it.isAnnotationPresent(android.webkit.JavascriptInterface::class.java)
+            }
+            if (method == null) {
+                System.err.println("page $id: no @JavascriptInterface $name.$methodName taking " + args.size + " argument(s)")
+                return
+            }
+            bridgeThread.execute {
+                try {
+                    method.invoke(target, *method.parameterTypes.mapIndexed { i, type -> convert(args[i], type) }.toTypedArray())
+                } catch (error: Throwable) {
+                    System.err.println("page $id: $name.$methodName failed: " + (error.cause ?: error))
+                }
+            }
+        }
+
         override fun close() {
             pages.remove(id)
             send(JSONObject().put("cmd", "close"))
@@ -107,6 +142,7 @@ class RemotePages : WebView.Backend {
                     val error = PageError(event.optInt("code", -1), event.optString("description"))
                     mainThread.post { client.onReceivedError(view, request, error) }
                 }
+                "jsCall" -> call(event)
                 "evaluated" -> evaluations.remove(event.optLong("call"))?.onReceiveValue(if (event.isNull("result")) null else event.optString("result"))
             }
         }
@@ -115,6 +151,17 @@ class RemotePages : WebView.Backend {
             val manager = CookieManager.getInstance()
             for (i in 0 until cookies.length()) manager.setCookie(url, cookies.getString(i))
         }
+    }
+
+    /** A page's argument as the Java parameter takes it - the conversions Android's bridge makes. */
+    private fun convert(value: Any?, type: Class<*>): Any? = when {
+        type == String::class.java -> value?.toString()
+        type == Int::class.javaPrimitiveType || type == Int::class.javaObjectType -> (value as? Number)?.toInt() ?: value?.toString()?.toDoubleOrNull()?.toInt() ?: 0
+        type == Long::class.javaPrimitiveType || type == Long::class.javaObjectType -> (value as? Number)?.toLong() ?: value?.toString()?.toDoubleOrNull()?.toLong() ?: 0L
+        type == Double::class.javaPrimitiveType || type == Double::class.javaObjectType -> (value as? Number)?.toDouble() ?: value?.toString()?.toDoubleOrNull() ?: 0.0
+        type == Float::class.javaPrimitiveType || type == Float::class.javaObjectType -> (value as? Number)?.toFloat() ?: value?.toString()?.toFloatOrNull() ?: 0f
+        type == Boolean::class.javaPrimitiveType || type == Boolean::class.javaObjectType -> value == true || value?.toString() == "true"
+        else -> value
     }
 
     private class PageRequest(event: JSONObject, private val mainFrame: Boolean = event.optBoolean("mainFrame")) : WebResourceRequest {

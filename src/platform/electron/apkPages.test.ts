@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ApkHostProcess } from "./apkHost";
-import { PageBridge, type PageDriver, type PageEvents } from "./apkPages";
+import { interfaceScript, PageBridge, parseBridgeCall, type PageDriver, type PageEvents } from "./apkPages";
 
 class FakeHost {
   started: Array<() => void> = [];
@@ -37,6 +37,7 @@ class FakeDriver implements PageDriver {
   loadData(baseUrl: string, data: string, mimeType: string, userAgent: string) { this.calls.push(["loadData", baseUrl, data, mimeType, userAgent]); }
   async evaluate(script: string) { this.calls.push(["evaluate", script]); return this.result; }
   stop() { this.calls.push(["stop"]); }
+  addInterface(name: string, methods: string[]) { this.calls.push(["interface", name, methods]); }
   close() { this.closed = true; }
 }
 
@@ -154,5 +155,34 @@ describe("PageBridge", () => {
     host.started[0]();
     await flush();
     expect(host.fetches).toBe(2);
+  });
+
+  it("adds an extension's javascript interface to its page, and sends the page's calls back", () => {
+    bridge.dispatch(line({ cmd: "interface", page: 3, name: "SenshiBridge", methods: ["onResult", "onError"] }));
+    expect(drivers[0].calls).toEqual([["interface", "SenshiBridge", ["onResult", "onError"]]]);
+    drivers[0].events.jsCall("SenshiBridge", "onResult", ['{"url":"x"}', null]);
+    expect(host.sent).toEqual([{ route: "/pages/event", body: { page: 3, type: "jsCall", name: "SenshiBridge", method: "onResult", args: ['{"url":"x"}', null] } }]);
+  });
+});
+
+describe("javascript interface script", () => {
+  it("puts the object on the page, and its calls reach the bridge as JSON", () => {
+    const calls: string[] = [];
+    const page: Record<string, unknown> = { __hibikiJavaBridge: (payload: string) => calls.push(payload) };
+    new Function("window", interfaceScript("HexaCap", ["onToken", "onError"]))(page);
+    const hexa = page.HexaCap as { onToken: (...args: unknown[]) => void };
+    hexa.onToken("tok", 5, undefined, { a: 1 });
+    expect(calls.map((payload) => parseBridgeCall(payload))).toEqual([{ name: "HexaCap", method: "onToken", args: ["tok", 5, null, "[object Object]"] }]);
+  });
+
+  it("does nothing on a page without the bridge", () => {
+    const page: Record<string, unknown> = {};
+    new Function("window", interfaceScript("X", ["a"]))(page);
+    expect(page.X).toBeUndefined();
+  });
+
+  it("ignores payloads that are not bridge calls", () => {
+    expect(parseBridgeCall("not json")).toBeNull();
+    expect(parseBridgeCall(JSON.stringify({ name: "X" }))).toBeNull();
   });
 });

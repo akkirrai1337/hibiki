@@ -2,7 +2,8 @@
 // of their own: nothing here touches the cookies, caches or request hooks of the app's own session,
 // and what they set is handed back to the host explicitly.
 import { BrowserWindow, session, type Session, type WebContents } from "electron";
-import type { PageDriver, PageDriverFactory, PageEvents } from "./apkPages";
+import { BRIDGE_BINDING, interfaceScript, parseBridgeCall, type PageDriver, type PageDriverFactory, type PageEvents } from "./apkPages";
+import { logger } from "../../core/logger";
 
 const PARTITION = "apk-pages";
 const RESOURCE_MAIN_FRAME = "mainFrame";
@@ -70,10 +71,38 @@ export const createElectronPageDriver: PageDriverFactory = (events): PageDriver 
   contents.setWindowOpenHandler(() => ({ action: "deny" }));
 
   let currentUrl = "";
+  // addJavascriptInterface: the objects go into every new document through the DevTools protocol (the
+  // window stays sandboxed, with no preload of its own), and their calls come back as a binding. A load
+  // waits for them, since an extension adds its interface right before loading the page that uses it.
+  let interfacesReady: Promise<void> = Promise.resolve();
+  let debuggerAttached = false;
+  // The blank document above is the bridge's, not something the extension loaded: it hears nothing of it.
+  let warmingUp = false;
+  const attachDebugger = async () => {
+    if (debuggerAttached) return;
+    // A window that has loaded nothing yet has no renderer, and the protocol's commands wait for one
+    // forever (seen: Runtime.enable never answered). A blank document gives it one.
+    if (!contents.getURL()) {
+      warmingUp = true;
+      await contents.loadURL("about:blank").finally(() => { warmingUp = false; });
+    }
+    contents.debugger.attach("1.3");
+    debuggerAttached = true;
+    contents.debugger.on("message", (_event, method, params: { name?: string; payload?: string }) => {
+      if (method !== "Runtime.bindingCalled" || params.name !== BRIDGE_BINDING || !params.payload) return;
+      const call = parseBridgeCall(params.payload);
+      if (call) events.jsCall(call.name, call.method, call.args);
+    });
+    await contents.debugger.sendCommand("Runtime.enable");
+    await contents.debugger.sendCommand("Runtime.addBinding", { name: BRIDGE_BINDING });
+    await contents.debugger.sendCommand("Page.enable");
+  };
   contents.on("did-finish-load", () => {
+    if (warmingUp) return;
     void cookieLines(ses, currentUrl || contents.getURL()).then((cookies) => events.finished(contents.getURL() || currentUrl, cookies));
   });
   contents.on("did-fail-load", (_event, code, description, url, isMainFrame) => {
+    if (warmingUp) return;
     // -3 is a navigation that was cancelled by the next one (a redirect, a stop): not a failure.
     if (isMainFrame && code !== -3) events.failed(url || currentUrl, code, description);
   });
@@ -81,7 +110,7 @@ export const createElectronPageDriver: PageDriverFactory = (events): PageDriver 
   return {
     load(url, options) {
       currentUrl = url;
-      void seedCookies(ses, url, options.cookies).then(() => {
+      void Promise.all([seedCookies(ses, url, options.cookies), interfacesReady]).then(() => {
         if (window.isDestroyed()) return;
         const extraHeaders = Object.entries(options.headers)
           .filter(([name]) => name.toLowerCase() !== "user-agent")
@@ -95,7 +124,7 @@ export const createElectronPageDriver: PageDriverFactory = (events): PageDriver 
     },
     loadData(baseUrl, data, mimeType, userAgent) {
       currentUrl = baseUrl;
-      void contents.loadURL(`data:${mimeType};charset=utf-8,${encodeURIComponent(data)}`, { baseURLForDataURL: baseUrl, userAgent: userAgent || undefined }).catch(() => undefined);
+      void interfacesReady.then(() => window.isDestroyed() ? undefined : contents.loadURL(`data:${mimeType};charset=utf-8,${encodeURIComponent(data)}`, { baseURLForDataURL: baseUrl, userAgent: userAgent || undefined })).catch(() => undefined);
     },
     async evaluate(script) {
       if (window.isDestroyed()) return null;
@@ -105,6 +134,15 @@ export const createElectronPageDriver: PageDriverFactory = (events): PageDriver 
     },
     stop() {
       if (!window.isDestroyed()) contents.stop();
+    },
+    addInterface(name, methods) {
+      interfacesReady = interfacesReady
+        .then(async () => {
+          if (window.isDestroyed()) return;
+          await attachDebugger();
+          await contents.debugger.sendCommand("Page.addScriptToEvaluateOnNewDocument", { source: interfaceScript(name, methods) });
+        })
+        .catch((error: unknown) => logger.warn("apk-pages", `javascript interface ${name} not added: ${error}`));
     },
     close() {
       live.delete(id);

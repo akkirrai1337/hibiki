@@ -195,4 +195,47 @@ class RemotePagesTest {
             server.stop()
         }
     }
+
+    class Bridge {
+        val calls = CopyOnWriteArrayList<String>()
+        val called = CountDownLatch(1)
+
+        @android.webkit.JavascriptInterface
+        fun onResult(url: String?, count: Int) {
+            calls += "onResult $url $count on ${Thread.currentThread().name}"
+            called.countDown()
+        }
+
+        fun notExposed(value: String?) {
+            calls += "notExposed $value"
+        }
+    }
+
+    @Test
+    fun `an interface added before loading reaches the page first, and the page's calls reach its annotated methods`() {
+        val view = view(WebViewClient())
+        val bridge = Bridge()
+        view.addJavascriptInterface(bridge, "SenshiBridge")
+        view.loadUrl("https://embed.example/")
+        val added = command()
+        assertEquals("interface", added.getString("cmd"))
+        assertEquals("SenshiBridge", added.getString("name"))
+        val methods = added.getJSONArray("methods")
+        assertEquals(listOf("onResult"), (0 until methods.length()).map { methods.getString(it) })
+        assertEquals("load", command().getString("cmd"))
+        val page = added.getLong("page")
+        pages.deliver(JSONObject().put("page", page).put("type", "jsCall").put("name", "SenshiBridge").put("method", "notExposed").put("args", org.json.JSONArray().put("x")))
+        pages.deliver(JSONObject().put("page", page).put("type", "jsCall").put("name", "SenshiBridge").put("method", "onResult").put("args", org.json.JSONArray().put("https://cdn.example/a.m3u8").put(3)))
+        assertTrue(bridge.called.await(2, TimeUnit.SECONDS))
+        assertEquals(listOf("onResult https://cdn.example/a.m3u8 3 on JavaBridge"), bridge.calls.toList())
+    }
+
+    @Test
+    fun `an interface added to a page already open is sent at once`() {
+        val view = view(WebViewClient())
+        view.loadUrl("https://embed.example/")
+        assertEquals("load", command().getString("cmd"))
+        view.addJavascriptInterface(Bridge(), "HexaCap")
+        assertEquals("interface", command().getString("cmd"))
+    }
 }

@@ -17,6 +17,8 @@ export interface PageEvents {
   request(info: PageRequestInfo): void;
   finished(url: string, setCookies: string[]): void;
   failed(url: string, code: number, description: string): void;
+  /** The page called a method of an object the extension added with addJavascriptInterface. */
+  jsCall(name: string, method: string, args: Array<string | number | boolean | null>): void;
 }
 
 /** One hidden page. */
@@ -27,12 +29,14 @@ export interface PageDriver {
   evaluate(script: string): Promise<string | null>;
   stop(): void;
   close(): void;
+  /** Makes `name.method(...)` callable from the page's scripts, from the next document it loads on. */
+  addInterface(name: string, methods: string[]): void;
 }
 
 export type PageDriverFactory = (events: PageEvents) => PageDriver;
 
 interface Command {
-  cmd: "load" | "loadData" | "evaluate" | "stop" | "close";
+  cmd: "load" | "loadData" | "evaluate" | "stop" | "close" | "interface";
   page: number;
   call?: number;
   url?: string;
@@ -43,6 +47,42 @@ interface Command {
   headers?: Record<string, string>;
   userAgent?: string;
   cookies?: string;
+  name?: string;
+  methods?: string[];
+}
+
+// The one function every page gets for calling back into the host (Runtime.addBinding): an interface
+// object's methods are thin wrappers that hand it their name and arguments as JSON.
+export const BRIDGE_BINDING = "__hibikiJavaBridge";
+
+/** The script that puts `name` on a document before its own scripts run, as Android's WebView does. */
+export function interfaceScript(name: string, methods: string[]): string {
+  return `(function () {
+  var bridge = window[${JSON.stringify(BRIDGE_BINDING)}];
+  if (typeof bridge !== "function") return;
+  var target = {};
+  ${JSON.stringify(methods)}.forEach(function (method) {
+    target[method] = function () {
+      var args = Array.prototype.map.call(arguments, function (value) {
+        if (value === undefined || value === null) return null;
+        return typeof value === "number" || typeof value === "boolean" ? value : String(value);
+      });
+      bridge(JSON.stringify({ name: ${JSON.stringify(name)}, method: method, args: args }));
+    };
+  });
+  Object.defineProperty(window, ${JSON.stringify(name)}, { value: target, configurable: true });
+})();`;
+}
+
+/** A binding call's payload, or null when it is not one this bridge sent. */
+export function parseBridgeCall(payload: string): { name: string; method: string; args: Array<string | number | boolean | null> } | null {
+  try {
+    const call = JSON.parse(payload) as { name?: unknown; method?: unknown; args?: unknown };
+    if (typeof call.name !== "string" || typeof call.method !== "string" || !Array.isArray(call.args)) return null;
+    return { name: call.name, method: call.method, args: call.args as Array<string | number | boolean | null> };
+  } catch {
+    return null;
+  }
 }
 
 /** A page that nobody closed (the extension crashed, its timeout fired first) is closed after this long. */
@@ -120,6 +160,7 @@ export class PageBridge {
       request: (info) => this.send({ page: id, type: "request", ...info }),
       finished: (url, setCookies) => this.send({ page: id, type: "finished", url, setCookies }),
       failed: (url, code, description) => this.send({ page: id, type: "error", url, code, description }),
+      jsCall: (name, method, args) => this.send({ page: id, type: "jsCall", name, method, args }),
     });
     this.pages.set(id, { driver, timer: setTimeout(() => this.closePage(id), PAGE_LIFETIME_MS) });
     return driver;
@@ -148,6 +189,9 @@ export class PageBridge {
             .evaluate(command.script ?? "")
             .catch(() => null)
             .then((result) => this.send({ page: command.page, type: "evaluated", call: command.call, result }));
+          break;
+        case "interface":
+          if (command.name) this.page(command.page).addInterface(command.name, command.methods ?? []);
           break;
         case "stop":
           this.pages.get(command.page)?.driver.stop();
