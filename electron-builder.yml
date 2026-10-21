@@ -6,6 +6,11 @@ files:
   - dist
   - dist-electron
 extraResources:
+  # The APK source host (apk-host/): its jars and a trimmed Java to run them, one build per architecture
+  # (`gradlew bundle -PbundleName=<arch>`, see release.yml). Absent in a build made without it, which
+  # leaves the app without APK sources instead of failing.
+  - from: apk-host/build/bundle-${arch}
+    to: apk-host
   - from: src/core/db/migrations
     to: migrations
 # Lets the installer itself register the "hibiki://" scheme (a Discord Rich Presence "Watch"

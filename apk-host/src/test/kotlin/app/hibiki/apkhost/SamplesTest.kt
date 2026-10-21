@@ -30,11 +30,17 @@ class SamplesTest {
         java.util.jar.JarFile(jar).use { jf ->
             for (entry in jf.entries()) {
                 if (!entry.name.endsWith(".class")) continue
+                // Rhino's own debugger window (a copy rides along in some extensions): never loaded, and it
+                // needs AWT, which the trimmed runtime leaves out.
+                if (entry.name.startsWith("org/mozilla/javascript/tools/")) continue
                 total++
                 val name = entry.name.removeSuffix(".class").replace('/', '.')
                 try {
                     Class.forName(name, false, extension.classLoader).declaredMethods
                 } catch (error: Throwable) {
+                    // Rhino's Context mentions java.beans in two method signatures; listing methods resolves
+                    // them, running a script does not, and Android has no java.beans either.
+                    if (error is NoClassDefFoundError && error.message?.startsWith("java/beans/") == true) continue
                     problems.merge("${error.javaClass.simpleName}: ${error.message?.take(600)}", 1, Int::plus)
                 }
             }

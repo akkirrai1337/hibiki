@@ -205,6 +205,21 @@ jobs:
       - name: Test
         run: npm test
 
+      # APK sources (Aniyomi extensions) run in a JVM process of their own that ships inside the
+      # installer: its jars and a Java trimmed to what they use, built here and picked up by
+      # electron-builder (extraResources in electron-builder.yml).
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Build the APK source host
+        working-directory: apk-host
+        shell: bash
+        run: ./gradlew bundle -PbundleName=x64 --no-daemon
+
       # `-- --publish never` passes the flag through npm to electron-builder itself. It sees the CI
       # environment variables and assumes a build there is meant to be released, so it goes looking
       # for a GH_TOKEN and fails the job *after* the installer has already been built. Publishing
@@ -359,6 +374,19 @@ jobs:
       - name: Test
         run: npm test
 
+      # The APK source host's own tests (the offline ones: the sample extensions are not downloaded
+      # here), then its jars and the trimmed Java that ship inside the AppImage.
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Test and bundle the APK source host
+        working-directory: apk-host
+        run: ./gradlew test bundle -PbundleName=x64 --no-daemon
+
       - name: Build the AppImage
         env:
           ANILIST_CLIENT_ID: ${{ secrets.ANILIST_CLIENT_ID }}
@@ -403,6 +431,30 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      # The APK source host ships a Java trimmed from a JDK of the app's own architecture, so both are
+      # installed (the x64 one runs under Rosetta); the arm64 one goes last, and runs Gradle itself.
+      - uses: actions/setup-java@v4
+        id: java-x64
+        with:
+          distribution: temurin
+          java-version: 21
+          architecture: x64
+
+      - uses: actions/setup-java@v4
+        id: java-arm64
+        with:
+          distribution: temurin
+          java-version: 21
+          architecture: aarch64
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Build the APK source host
+        working-directory: apk-host
+        run: |
+          ./gradlew bundle -PbundleName=arm64 -PruntimeJdk="${{ steps.java-arm64.outputs.path }}" --no-daemon
+          ./gradlew bundle -PbundleName=x64 -PruntimeJdk="${{ steps.java-x64.outputs.path }}" --no-daemon
 
       # Both architectures from one runner: electron-builder fetches the native module for each. No
       # Developer ID certificate exists, so it is told not to go looking for one; scripts/afterPack.cjs

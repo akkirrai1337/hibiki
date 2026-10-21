@@ -2,10 +2,8 @@ package app.hibiki.apkhost
 
 import org.json.JSONObject
 import java.io.File
-import java.net.URI
-import java.net.http.HttpClient
-import java.net.http.HttpRequest
-import java.net.http.HttpResponse
+import java.net.HttpURLConnection
+import java.net.URL
 import java.nio.file.Files
 import kotlin.test.AfterTest
 import kotlin.test.Test
@@ -19,16 +17,27 @@ class ServerTest {
         ?.listFiles { f -> f.name.startsWith("aniyomi-ru.animevost-") }?.firstOrNull()
     private val host = ApkHost(dir)
     private val server = Server(host, "secret").also { it.start() }
-    private val client = HttpClient.newHttpClient()
 
     @AfterTest
     fun stop() = server.stop()
 
-    private fun send(method: String, path: String, body: String? = null, token: String? = "secret"): HttpResponse<String> {
-        val request = HttpRequest.newBuilder(URI("http://127.0.0.1:${server.port}$path"))
-            .method(method, if (body == null) HttpRequest.BodyPublishers.noBody() else HttpRequest.BodyPublishers.ofString(body))
-        if (token != null) request.header(Server.TOKEN_HEADER, token)
-        return client.send(request.build(), HttpResponse.BodyHandlers.ofString())
+    /** What came back: the status and the raw body (the JDK's own client, so the test runs on a trimmed runtime too). */
+    private class Answer(val status: Int, val bytes: ByteArray) {
+        fun statusCode() = status
+        fun body() = bytes.decodeToString()
+    }
+
+    private fun send(method: String, path: String, body: String? = null, token: String? = "secret"): Answer {
+        val connection = URL("http://127.0.0.1:${server.port}$path").openConnection() as HttpURLConnection
+        connection.requestMethod = method
+        if (token != null) connection.setRequestProperty(Server.TOKEN_HEADER, token)
+        if (body != null) {
+            connection.doOutput = true
+            connection.outputStream.use { it.write(body.toByteArray()) }
+        }
+        val status = connection.responseCode
+        val stream = if (status >= 400) connection.errorStream else connection.inputStream
+        return Answer(status, stream?.use { it.readBytes() } ?: ByteArray(0))
     }
 
     private fun install() = host.install(dir.resolve("in.apk").also { sample!!.copyTo(it, overwrite = true) }, null)
@@ -83,13 +92,10 @@ class ServerTest {
     fun `icons are served and trust and removal work over the wire`() {
         if (sample == null) return
         val installed = install()
-        val icon = client.send(
-            HttpRequest.newBuilder(URI("http://127.0.0.1:${server.port}/icon?p=${installed.packageName}")).header(Server.TOKEN_HEADER, "secret").build(),
-            HttpResponse.BodyHandlers.ofByteArray(),
-        )
+        val icon = send("GET", "/icon?p=${installed.packageName}")
         // Only an extension that ships a PNG icon has one; whichever it is, the answer is well-formed.
         assertTrue(icon.statusCode() == 200 || icon.statusCode() == 404)
-        if (icon.statusCode() == 200) assertTrue(icon.body().size > 8 && icon.body()[1] == 'P'.code.toByte())
+        if (icon.statusCode() == 200) assertTrue(icon.bytes.size > 8 && icon.bytes[1] == 'P'.code.toByte())
 
         val wrong = send("POST", "/trust", JSONObject().put("packageName", installed.packageName).put("fingerprint", "00").toString())
         assertEquals(500, wrong.statusCode())
