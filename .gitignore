@@ -35,3 +35,5 @@ Thumbs.db
 docs/*.md
 # Downloads and scratch files (APKs, sources to compare, etc.)
 .tmp/
+apk-host/build/
+apk-host/.gradle/
