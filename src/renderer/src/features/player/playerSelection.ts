@@ -102,10 +102,18 @@ export class SelectionMachine {
   }
 
   expand(embed: PlayerLink, renditions: PlayerLink[]): void {
+    for (const rendition of renditions) this.origins.set(rendition.url, embed);
     const expansions = new Map(this.state.expansions);
     expansions.set(embed.url, renditions);
     this.set({ expansions });
   }
+
+  /** The player page a stream was resolved from: asking it again is what renews the stream's token. */
+  originOf(streamUrl: string): PlayerLink | undefined {
+    return this.origins.get(streamUrl);
+  }
+
+  private origins = new Map<string, PlayerLink>();
 
   private set(patch: Partial<SelectionState>): void {
     this.state = { ...this.state, ...patch };
@@ -156,12 +164,33 @@ async function resolveEmbed(machine: SelectionMachine, deps: PickDeps, embed: Pl
   return requested.quality ? pick : deps.withDataSaver(playable, pick);
 }
 
-/** The same stream under freshly issued URLs (its old ones expired), or another route of the same dub. */
+/**
+ * The same stream under freshly issued URLs (its old ones expired). A stream resolved from a player
+ * page gets them from that page again - the episode's list of players is asked for once per visit, a
+ * dub that appears shows up on every player at once, so asking again would only cost time. Only a
+ * stream the source itself listed has nowhere else to come from.
+ */
 async function refreshed(machine: SelectionMachine, deps: PickDeps, stale: PlayerLink): Promise<PlayerLink> {
+  const origin = machine.originOf(stale.url);
+  if (origin) return resolveEmbed(machine, deps, origin, stale);
   const fresh = await deps.fetchList(true);
   const next = pickRefreshedLink(fresh, stale) ?? pickPlaybackFallback(fresh, stale, machine.failedUrls);
   if (!next) throw new PickFailedError("failed", `nothing left to play after asking for ${stale.playerName ?? "?"} again`);
   return next.type === "EMBED" ? resolveEmbed(machine, deps, next, stale) : next;
+}
+
+/**
+ * A playing stream's renewal (VideoPlayer moves onto it without a restart): the same stream under new
+ * URLs, or null when there is none of the same kind. Nothing about what plays changes.
+ */
+export async function renewStream(machine: SelectionMachine, deps: PickDeps, stale: PlayerLink): Promise<PlayerLink | null> {
+  try {
+    const renewed = await refreshed(machine, deps, stale);
+    return renewed.type === stale.type ? renewed : null;
+  } catch (error) {
+    deps.log(`renewing ${stale.playerName ?? "?"} failed: ${error instanceof Error ? error.message : String(error)}`);
+    return null;
+  }
 }
 
 /** A given link into something playable. */

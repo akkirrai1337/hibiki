@@ -1,15 +1,24 @@
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { PlayerLink } from "@shared/types";
-import { pickDataSaverLink, pickPlaybackFallback, pickRefreshedLink, pickResolvedLink, type PlaybackPreference } from "@/lib/playerLinks";
+import { pickDataSaverLink, pickPlaybackFallback, type PlaybackPreference } from "@/lib/playerLinks";
 import { autoQualityCap, describeConnection, isDataSaverActive } from "@/lib/connectionQuality";
 import { hibiki } from "@/lib/hibiki";
 import { log } from "@/lib/log";
-import { menuLinks, runPick, SelectionMachine, type PickDeps } from "./playerSelection";
+import { menuLinks, renewStream, runPick, SelectionMachine, type PickDeps } from "./playerSelection";
 
-// Kodik's stream tokens last hours, Alloha's (vkvideo) minutes; a stream that fails sooner than this
-// after being handed out is broken, not expired, and goes to the fallback.
-const LINK_TOKEN_TTL_MS = 3 * 60 * 1000;
+// How long a stream URL is trusted before it is renewed instead of played as it is. Alloha's (vkvideo)
+// tokens were seen dying six minutes after being issued, so the default stays well under that;
+// Kodik's last hours, so a Kodik stream picked again within the hour plays without asking anew. One
+// that dies sooner anyway is renewed mid-play (VideoPlayer) on the first refusal.
+const DEFAULT_TOKEN_LIFETIME_MS = 3 * 60 * 1000;
+const TOKEN_LIFETIME_MS: Record<string, number> = { kodik: 60 * 60 * 1000 };
+function tokenLifetime(link: PlayerLink): number {
+  return TOKEN_LIFETIME_MS[(link.playerName ?? "").trim().toLowerCase()] ?? DEFAULT_TOKEN_LIFETIME_MS;
+}
+// A stream refused this soon after being handed out is broken, not expired: renewing it would hand
+// out the same thing, the fallback deals with it better.
+const BROKEN_WITHIN_MS = 30 * 1000;
 // One player's page into a stream. Longer than this and the pick says the site isn't answering
 // (with Retry) instead of a spinner that never ends; the core gives up on its own at 90 s.
 const RESOLVE_TIMEOUT_MS = 45_000;
@@ -91,7 +100,7 @@ export function usePlayerSelection({ sourceId, animeId, groupId, episodeId, auto
     // An embed is a player page, not a stream: resolving it is what hands out fresh tokens.
     if (link.type === "EMBED") return false;
     const issuedAt = issuedAtRef.current.get(link.url);
-    return issuedAt === undefined || Date.now() - issuedAt > LINK_TOKEN_TTL_MS;
+    return issuedAt === undefined || Date.now() - issuedAt > tokenLifetime(link);
   }, []);
 
   const deps = useMemo((): PickDeps => ({
@@ -154,18 +163,11 @@ export function usePlayerSelection({ sourceId, animeId, groupId, episodeId, auto
   // The same stream under a freshly issued URL, for the player to move a playing stream onto without
   // restarting it (VideoPlayer's token renewal). Nothing here switches what plays.
   const refreshStream = useCallback(async (stale: PlayerLink): Promise<PlayerLink | null> => {
-    // A link handed out moments ago that is already refused is broken, not expired; the usual
-    // fallback deals with that better than asking for the same thing again.
-    if (!isExpired(stale)) return null;
+    const issuedAt = issuedAtRef.current.get(stale.url);
+    if (issuedAt !== undefined && Date.now() - issuedAt < BROKEN_WITHIN_MS) return null;
     log.info("player", `renewing ${stale.playerName ?? "?"}/${stale.quality ?? "?"} in place`);
-    const candidate = pickRefreshedLink(await fetchList(true), stale);
-    if (!candidate) return null;
-    let renewed: PlayerLink | undefined = candidate;
-    if (candidate.type === "EMBED") renewed = pickResolvedLink((await deps.resolve(candidate)).filter((item) => item.type !== "EMBED"), stale);
-    if (!renewed || renewed.type !== stale.type) return null;
-    issuedAtRef.current.set(renewed.url, Date.now());
-    return renewed;
-  }, [isExpired, fetchList, deps]);
+    return renewStream(machine, deps, stale);
+  }, [machine, deps]);
 
   return {
     link: state.link ?? undefined,

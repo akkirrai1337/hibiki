@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { PlayerLink } from "@shared/types";
-import { menuLinks, runPick, SelectionMachine, type PickDeps } from "./playerSelection";
+import { menuLinks, renewStream, runPick, SelectionMachine, type PickDeps } from "./playerSelection";
 
 const kodik: PlayerLink = { type: "EMBED", url: "https://kodik.info/serial/1", playerName: "Kodik", translation: "AniLibria" };
 const alloha: PlayerLink = { type: "EMBED", url: "https://alloha.tv/1", playerName: "Alloha", translation: "AniLibria" };
@@ -117,6 +117,52 @@ describe("player selection", () => {
     await runPick(machine, d, "hand", direct);
     expect(fresh).toEqual([true]);
     expect(machine.getState().link).toEqual(renewed);
+  });
+
+  it("an expired stream from a player page is renewed from that page, never by asking for the list again", async () => {
+    const machine = new SelectionMachine();
+    let listCalls = 0;
+    let resolves = 0;
+    const d = deps({
+      fetchList: async () => { listCalls++; return [kodik, alloha]; },
+      resolve: async (embed) => { resolves++; return [stream(embed)]; },
+    });
+    await runPick(machine, d, "auto", null);
+    expect(listCalls).toBe(1);
+    await runPick(machine, d, "hand", alloha);
+    // Back to Kodik's stream, its token gone by now.
+    const expired = deps({ ...d, isExpired: (link) => link.url === stream(kodik).url });
+    await runPick(machine, expired, "hand", stream(kodik));
+    expect(listCalls).toBe(1);
+    expect(resolves).toBe(3);
+    expect(machine.getState().link).toEqual(stream(kodik));
+  });
+
+  it("a stream still in date is played again as it is", async () => {
+    const machine = new SelectionMachine();
+    let resolves = 0;
+    const d = deps({ resolve: async (embed) => { resolves++; return [stream(embed)]; } });
+    await runPick(machine, d, "hand", kodik);
+    await runPick(machine, d, "hand", alloha);
+    await runPick(machine, d, "hand", stream(kodik));
+    expect(resolves).toBe(2);
+    expect(machine.getState().link).toEqual(stream(kodik));
+  });
+
+  it("a playing stream is renewed from its player page without touching what plays", async () => {
+    const machine = new SelectionMachine();
+    let listCalls = 0;
+    let n = 0;
+    const d = deps({
+      fetchList: async () => { listCalls++; return []; },
+      resolve: async (embed) => [{ ...stream(embed), url: `${stream(embed).url}?t=${++n}` }],
+    });
+    await runPick(machine, d, "hand", kodik);
+    const playing = machine.getState().link!;
+    const renewed = await renewStream(machine, d, playing);
+    expect(renewed?.url).toBe(`${stream(kodik).url}?t=2`);
+    expect(machine.getState().link).toBe(playing);
+    expect(listCalls).toBe(0);
   });
 
   it("an embed is never treated as expired: picking it resolves it directly", async () => {
