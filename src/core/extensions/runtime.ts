@@ -729,16 +729,30 @@ export class ExtensionRuntime {
     return snapshot;
   }
 
-  getPlayerLinks(sourceId: string, titleId: string, groupId: string, episodeId: string, preference?: PlayerLinkPreference): Promise<PlayerLink[]> {
-    return this.shareRead("getPlayerLinks", sourceId, [titleId, groupId, episodeId, preference ?? null], async () => {
+  /**
+   * What the source lists for an episode, less the retired players. The full call and the list-only one
+   * (which the player menu is filled from while the first is still resolving a stream) run it at the
+   * same time, and share one read of the source.
+   */
+  private sourceLinks(sourceId: string, titleId: string, groupId: string, episodeId: string, fresh: boolean): Promise<PlayerLink[]> {
+    return this.shareRead("sourcePlayerLinks", sourceId, [titleId, groupId, episodeId, fresh], async () => {
       // Asked for fresh links (the old ones expired): the snapshot they came from is stale too.
-      if (preference?.fresh) await forgetSnapshot(sourceId, titleId);
-      const snapshot = isApkSource(sourceId) || preference?.fresh ? null : await this.snapshotFor(sourceId, titleId, "links");
+      if (fresh) await forgetSnapshot(sourceId, titleId);
+      const snapshot = isApkSource(sourceId) || fresh ? null : await this.snapshotFor(sourceId, titleId, "links");
       const sourceLinks = await this.run<PlayerLink[]>("getPlayerLinks", sourceId, [titleId, groupId, episodeId], snapshot ? { snapshot: { serve: snapshot.responses } } : undefined);
       const links = sourceLinks.filter((link) => !isRetiredPlayerLink(link));
       if (links.length !== sourceLinks.length) {
         logger.info("resolve", `removed ${sourceLinks.length - links.length} retired CVH/Sibnet link(s) before playback`);
       }
+      return links;
+    });
+  }
+
+  getPlayerLinks(sourceId: string, titleId: string, groupId: string, episodeId: string, preference?: PlayerLinkPreference): Promise<PlayerLink[]> {
+    return this.shareRead("getPlayerLinks", sourceId, [titleId, groupId, episodeId, preference ?? null], async () => {
+      const links = await this.sourceLinks(sourceId, titleId, groupId, episodeId, preference?.fresh === true);
+      // The list alone, for a menu that should not wait for a stream to resolve.
+      if (preference?.listOnly) return this.withoutUnplayableEmbeds(links);
       const preferredIndex = this.preferredLinkIndex(links, preference);
       // A source-provided direct link needs no resolver at all. Let the renderer adopt the saved
       // choice from the returned list instead of resolving an unrelated EMBED first.

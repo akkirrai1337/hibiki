@@ -289,6 +289,19 @@ function WatchPage() {
     refetchOnWindowFocus: false,
   });
 
+  // The same list without waiting for a stream to be resolved: a slow player (Kodik answering after half
+  // a minute) held the whole list back, and with it the menu's player row - so the one thing to do about
+  // a slow player, pick another, could only be done once it had finished. Both calls share one read of the
+  // source (core/extensions/runtime.ts), so this costs nothing more.
+  const rawLinksQuery = useQuery({
+    queryKey: ["playerLinksRaw", sourceId, animeId, groupId, episodeId],
+    queryFn: () => hibiki.sources.playerLinks(sourceId, animeId, groupId, episodeId, { listOnly: true }),
+    enabled: !linksQuery.data,
+    staleTime: Infinity,
+    refetchOnWindowFocus: false,
+    retry: false,
+  });
+
   // A DASH stream's engine is big (~0.3 s to load the first time, phone log): fetched as soon as the
   // link list shows one, while the pick is still being settled.
   useEffect(() => {
@@ -502,7 +515,10 @@ function WatchPage() {
       void refreshAndSelect(failed);
       return true;
     }
-    const candidates = queryClient.getQueryData<PlayerLink[]>(["playerLinks", sourceId, animeId, groupId, episodeId]) ?? [];
+    // The full list may still be resolving (a pick was made from the plain list meanwhile).
+    const candidates = queryClient.getQueryData<PlayerLink[]>(["playerLinks", sourceId, animeId, groupId, episodeId])
+      ?? queryClient.getQueryData<PlayerLink[]>(["playerLinksRaw", sourceId, animeId, groupId, episodeId])
+      ?? [];
     const fallback = pickPlaybackFallback(candidates, failed, failedPlaybackUrlsRef.current);
     if (!fallback) return false;
     log.warn(
@@ -996,7 +1012,7 @@ function WatchPage() {
       {videoPlayerMounted && (
         <VideoPlayer
           link={link}
-          availableLinks={linksQuery.data}
+          availableLinks={linksQuery.data ?? rawLinksQuery.data}
           offlinePlayback={!!downloadedQuery.data}
           dubOptions={playerGroups}
           selectedDubId={groupId}

@@ -709,6 +709,9 @@ export interface PlayerLinkPreference {
   dataSaver?: boolean;
   /** The links handed out before have expired: ask the source again, not its saved episode list. */
   fresh?: boolean;
+  /** Only the list the source gives, at once: no embed is resolved into a stream. The player's menu is
+   * filled from it while the full (resolving) call is still working. */
+  listOnly?: boolean;
 }
 
 /** An episode-group list read from the on-disk cache, with when it was last refreshed. */
