@@ -34,6 +34,7 @@ import { log, logger, recentEntries, type LogEntry, type LogLevel } from "../cor
 import { initLogger } from "./logFile";
 import { getPlatform, installPlatform } from "../core/platform";
 import { createElectronPlatform } from "../platform/electron";
+import { APK_IMAGE_SCHEME, getApkHost } from "../platform/electron/apkHost";
 import { exportLog, openLogFolder } from "./logExport";
 import { isHardwareAccelerationEnabled, setHardwareAccelerationEnabled } from "./hardwareAcceleration";
 import { collectMemorySnapshot, formatMemorySnapshot } from "./memoryDiagnostics";
@@ -56,6 +57,7 @@ const PROFILE_FILE_SCHEME = "hibiki-profile";
 protocol.registerSchemesAsPrivileged([
   { scheme: DOWNLOAD_FILE_SCHEME, privileges: { standard: true, secure: true, stream: true, supportFetchAPI: true, corsEnabled: true } },
   { scheme: PROFILE_FILE_SCHEME, privileges: { standard: true, secure: true, stream: true, supportFetchAPI: true, corsEnabled: true } },
+  { scheme: APK_IMAGE_SCHEME, privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true } },
 ]);
 
 // Keep the taskbar identity independent from Electron's development executable name.
@@ -331,6 +333,29 @@ app.whenReady().then(async () => {
     }
   });
 
+  // APK sources' pictures and icons, fetched by the APK host (platform/electron/apkHost.ts): a poster
+  // by the source's own headers and cookies, which the page could not send itself.
+  // `hibiki-apk-image://img?s=<source>&u=<url>` and `hibiki-apk-image://icon/<package>`.
+  protocol.handle(APK_IMAGE_SCHEME, async (request) => {
+    const apkHost = getApkHost();
+    if (!apkHost) return new Response("Not found", { status: 404 });
+    const url = new URL(request.url);
+    const target =
+      url.hostname === "img" ? `/image${url.search}` :
+      url.hostname === "icon" ? `/icon?p=${encodeURIComponent(decodeURIComponent(url.pathname.replace(/^\//, "")))}` :
+      null;
+    if (!target) return new Response("Not found", { status: 404 });
+    try {
+      const upstream = await apkHost.fetchRaw(target);
+      return new Response(upstream.body, {
+        status: upstream.status,
+        headers: { "Content-Type": upstream.headers.get("content-type") ?? "application/octet-stream", "Cache-Control": "max-age=86400" },
+      });
+    } catch {
+      return new Response("Bad Gateway", { status: 502 });
+    }
+  });
+
   const runtime = new ExtensionRuntime(EXTENSIONS_DIR);
   // Before any handler exists: a renderer call must never see an empty source list just because
   // the manifests were still being read.
@@ -550,4 +575,5 @@ app.on("before-quit", () => {
   // Idle extension worker threads would otherwise keep the process alive past the last window.
   extensionRuntime?.dispose();
   shutdownDiscordRpc();
+  getApkHost()?.stop();
 });

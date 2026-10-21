@@ -75,7 +75,7 @@ export async function fetchRepositoryIndex(url: string): Promise<MarketplaceExte
  * platform that runs APK sources can use them.
  */
 function apkIndexEntries(indexUrl: string, entries: AniyomiIndexEntry[]): MarketplaceExtension[] {
-  if (!getPlatform().apkSources) throw new Error("APK repositories (Aniyomi extensions) are only supported on Android");
+  if (!getPlatform().apkSources) throw new Error("APK repositories (Aniyomi extensions) are not available in this build");
   const resolve = (path: string) => new URL(path, indexUrl).toString();
   return entries.flatMap((entry) => {
     if (!entry.pkg || !entry.apk) return [];

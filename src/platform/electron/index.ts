@@ -1,4 +1,6 @@
+import path from "node:path";
 import { app, shell, type BrowserWindow } from "electron";
+import { ApkHostProcess, apkSourcesPort, locateApkHost, setApkHost, systemLocateOptions } from "./apkHost";
 import { desktopUpdateKey } from "@shared/appUpdateSelection";
 import { electronSyncTransport } from "./syncTransport";
 import type { Platform } from "../types";
@@ -16,6 +18,11 @@ import { electronSecureStore } from "./secureStore";
 /** `getWindow` is read at emit time: the window can be recreated (macOS `activate`) while the
  * backend keeps running. */
 export function createElectronPlatform(getWindow: () => BrowserWindow | null): Platform {
+  // APK sources run in a JVM process of their own (see apkHost.ts); an install without the jars or
+  // a Java to run them simply has none, and the rest of the app does not know the difference.
+  const apkLocation = locateApkHost(systemLocateOptions(app.getAppPath(), app.isPackaged ? process.resourcesPath : null));
+  const apkHost = apkLocation ? new ApkHostProcess(apkLocation, path.join(app.getPath("userData"), "apk-host")) : null;
+  setApkHost(apkHost);
   return {
     kind: "electron",
     capabilities: {
@@ -52,5 +59,6 @@ export function createElectronPlatform(getWindow: () => BrowserWindow | null): P
     appInstaller: electronAppInstaller,
     // Reaching another computer for device sync; this one also listens (main/sync.ts).
     syncTransport: electronSyncTransport,
+    apkSources: apkHost ? apkSourcesPort(apkHost) : undefined,
   };
 }

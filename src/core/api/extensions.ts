@@ -128,7 +128,7 @@ export function createExtensionsApi(runtime: ExtensionRuntime): Pick<HibikiApi["
   async function installExtension(extension: MarketplaceExtension, originUrl: string): Promise<SourceInfo[]> {
     if (extension.apkPackage) {
       const port = getPlatform().apkSources;
-      if (!port) throw new Error("APK sources are only supported on Android");
+      if (!port) throw new Error("APK sources are not available in this build");
       await port.install(extension.manifestUrl, extension.apkPackage);
       await runtime.reload();
       notifyChanged();
