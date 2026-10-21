@@ -17,6 +17,7 @@ import { usePlayerSelectionStore } from "@/stores/playerSelectionStore";
 import { useUiStore } from "@/stores/uiStore";
 import { VideoPlayer } from "@/features/player/VideoPlayer";
 import { usePlayerSelection } from "@/features/player/usePlayerSelection";
+import { WatchTally } from "@/features/player/watchTally";
 import { CloudflareCheckButton } from "@/components/CloudflareCheck";
 import { cloudflareCheckOf } from "@shared/cloudflare";
 import { animeTitle } from "@/components/AnimeCard";
@@ -64,10 +65,6 @@ function WatchRoute() {
   }, []);
   return <WatchPage key={`${groupId}/${episodeId}`} />;
 }
-
-// Progress ticks arrive several times a second while playing, so anything past a couple of seconds
-// is a jump rather than elapsed playback.
-const PLAYED_TICK_MAX_MS = 2500;
 
 /** One episode's progress as last seen, waiting to be written when the episode is left. */
 interface PendingSave {
@@ -181,15 +178,8 @@ function WatchPage() {
   const pendingSaveRef = useRef<PendingSave | null>(null);
   const lastDiscordUpdateRef = useRef(0);
   const lastPlaybackRef = useRef({ positionMs: 0, durationMs: 0 });
-  // Time that actually played since the last save, and the position the previous progress tick
-  // reported. A tick that moved further than PLAYED_TICK_MAX_MS is a seek, not playback, and adds
-  // nothing - which is the whole point: skipping to the end of a film is not watching it.
-  const playedMsRef = useRef(0);
-  const lastTickPositionRef = useRef<number | null>(null);
-  // The individual seconds of this episode that actually played, not yet reported to the source's
-  // account. A count would not do: the account counts distinct seconds seen, so rewatching the
-  // same minute twice is one minute there, and only the offsets themselves can say that.
-  const unreportedSecondsRef = useRef(new Set<number>());
+  // What this visit actually watched: time played, the distinct seconds, watched or not (watchTally.ts).
+  const tallyRef = useRef(new WatchTally());
   const queryClient = useQueryClient();
   // Starting playback only needs the route ids. Fetch the full groups payload when the user
   // opens the dub or episode picker, not on every player entry.
@@ -237,13 +227,6 @@ function WatchPage() {
   });
 
   // A manual pick, a fallback, a refresh, the saved pick: all of it is features/player/playerSelection.ts.
-  useEffect(() => {
-    // The new episode starts wherever it starts; carrying the previous one's last tick over would
-    // read the jump between them as either playback or a seek, and neither is true.
-    playedMsRef.current = 0;
-    lastTickPositionRef.current = null;
-    unreportedSecondsRef.current = new Set();
-  }, [episodeId]);
 
   // Only ever read once, for the initial resume-seek (VideoPlayer's `startPositionMs`) and the
   // starting pick - a background refetch pulling back the position *we ourselves* just saved would
@@ -517,22 +500,11 @@ function WatchPage() {
   const linkVideoId = link?.videoId ?? null;
   const onProgress = useCallback(
     (positionMs: number, durationMs: number) => {
-      const previousTickPosition = lastTickPositionRef.current;
-      lastTickPositionRef.current = positionMs;
-      if (previousTickPosition !== null) {
-        const tickMs = positionMs - previousTickPosition;
-        if (tickMs > 0 && tickMs <= PLAYED_TICK_MAX_MS) {
-          playedMsRef.current += tickMs;
-          for (let second = Math.floor(previousTickPosition / 1000); second <= Math.floor(positionMs / 1000); second++) {
-            unreportedSecondsRef.current.add(second);
-          }
-        }
-      }
+      tallyRef.current.tick(positionMs, durationMs, watchedThreshold);
       lastPlaybackRef.current = { positionMs, durationMs };
       // Only remembered here. The progress is written once, when the episode is left (see
       // saveProgress below): a row rewritten every few seconds meant every screen and every account
       // saw a moving target - the AniList count went up at the credits while still watching.
-      const watched = durationMs > 0 && positionMs / durationMs >= watchedThreshold;
       pendingSaveRef.current = {
         sourceId,
         titleId: animeId,
@@ -545,9 +517,7 @@ function WatchPage() {
         thumbnail: thumbnailCache,
         positionMs,
         durationMs,
-        // Sticky for the visit, as it is in the database: reaching the end and seeking back is
-        // still having watched it.
-        watched: watched || (pendingSaveRef.current?.watched ?? false),
+        watched: tallyRef.current.isWatched,
       };
       const now = Date.now();
       const meta = discordMetaRef.current;
@@ -579,8 +549,7 @@ function WatchPage() {
     const pending = pendingSaveRef.current;
     if (!pending) return;
     pendingSaveRef.current = null;
-    const watchedDeltaMs = playedMsRef.current;
-    playedMsRef.current = 0;
+    const watchedDeltaMs = tallyRef.current.takePlayedMs();
     const percent = pending.durationMs > 0 ? Math.round((pending.positionMs / pending.durationMs) * 100) : 0;
     log.info(
       "player",
@@ -606,9 +575,8 @@ function WatchPage() {
     // spent in it, which is what fills the day squares on a YummyAnime profile. Fire and forget - a
     // website being unreachable must not matter here, and seconds that were not accepted go back
     // to be sent with the next save.
-    const seconds = [...unreportedSecondsRef.current];
+    const seconds = pending.videoId ? tallyRef.current.takeSeconds() : [];
     if (pending.videoId && seconds.length > 0) {
-      unreportedSecondsRef.current = new Set();
       void hibiki.sources
         .reportPlayback(pending.sourceId, {
           videoId: pending.videoId,
@@ -616,9 +584,7 @@ function WatchPage() {
           durationSeconds: Math.round(pending.durationMs / 1000),
           watchedSeconds: seconds,
         })
-        .catch(() => {
-          for (const second of seconds) unreportedSecondsRef.current.add(second);
-        });
+        .catch(() => tallyRef.current.giveBack(seconds));
     }
     // Whatever shows progress is behind until these refetch - the title page and the continue-watching
     // row are usually the very next screen.

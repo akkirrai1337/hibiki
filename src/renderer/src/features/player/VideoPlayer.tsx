@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { AnimatePresence, motion } from "motion/react";
 import type Hls from "hls.js";
 import type { MediaPlayerClass } from "dashjs";
+import { clampToDuration, DashErrorPolicy, MAX_NETWORK_RETRIES, stallVerdict, startPosition, StreamErrorPolicy } from "./streamPolicy";
 import {
   ArrowLeft,
   AudioLines,
@@ -152,7 +153,6 @@ interface VideoPlayerProps {
 const CONTROLS_HIDE_DELAY_MS = 3000;
 const PLAYBACK_LOAD_TIMEOUT_MS = 15_000;
 // What a CDN answers a request whose signed URL has expired.
-const TOKEN_EXPIRED_STATUSES = new Set([401, 403, 410]);
 let playbackTraceSequence = 0;
 
 function playbackUrlLabel(raw: string): string {
@@ -971,15 +971,17 @@ export function VideoPlayer({ link, availableLinks, offlinePlayback, dubOptions,
       // it had hung - and the next quality/player then started from nothing on the same slow link.
       // Anything at all arriving in the last window means the stream is alive; keep waiting. Only
       // a window with not a single byte counts as the stream having given nothing.
-      if (activity && activity === loadActivityRef.current && activity.bytes() > bytesAtArm) {
-        const received = Math.round((activity.bytes() - bytesAtArm) / 1024);
+      const bytesArrived = !!activity && activity === loadActivityRef.current && activity.bytes() > bytesAtArm;
+      const verdict = stallVerdict(stage, bytesArrived, !!video && (!video.paused || video.readyState >= HTMLMediaElement.HAVE_FUTURE_DATA));
+      if (verdict === "wait") {
+        const received = Math.round((activity!.bytes() - bytesAtArm) / 1024);
         playbackTraceRef.current?.write(`still loading slowly (${received} KB in the last ${PLAYBACK_LOAD_TIMEOUT_MS / 1000}s); waiting instead of a ${stage} timeout`);
         armPlaybackTimeout(stage);
         return;
       }
       // Network startup can outlive the timeout even after the browser has enough data to play.
       // Don't leave a stale fatal overlay on top of media that's already healthy.
-      if (stage === "startup" && video && (!video.paused || video.readyState >= HTMLMediaElement.HAVE_FUTURE_DATA)) {
+      if (verdict === "healthy") {
         setPlaybackError(null);
         setBuffering(false);
         return;
@@ -1338,12 +1340,7 @@ export function VideoPlayer({ link, availableLinks, offlinePlayback, dubOptions,
         // it hls.js always fetched segment 1 first and only then the one the seek needed: seen
         // live, 871 KB downloaded and thrown away before resuming at 0:40, on every resume, retry
         // and fallback - on mobile data that one wasted segment was seconds of the startup.
-        const pendingSwitch = pendingSourceSwitchRef.current;
-        const startAt = pendingSwitch && pendingSwitch.fromUrl !== link.url
-          ? pendingSwitch.position
-          : retryPositionMsRef.current !== null
-            ? retryPositionMsRef.current / 1000
-            : (startPositionMsRef.current ?? 0) / 1000;
+        const startAt = startPosition(link.url, pendingSourceSwitchRef.current, retryPositionMsRef.current, startPositionMsRef.current).seconds;
         if (startAt > 0) trace(`starting hls.js at ${startAt.toFixed(1)}s`);
         const bufferSeconds = playerBufferSeconds();
         trace(`buffer ahead: ${bufferSeconds}s`);
@@ -1421,8 +1418,7 @@ export function VideoPlayer({ link, availableLinks, offlinePlayback, dubOptions,
           const loading = data.frag.stats?.loading;
           if (loading && !fromDisk) recordThroughput(data.frag.stats.loaded, loading.end - loading.first);
           if (!fromDisk) countVideoBytes(data.frag.stats.loaded, data.frag.url);
-          // A segment arrived: whatever token renewal came before it worked.
-          tokenRenewals = 0;
+          errors.fragmentLoaded();
           if (firstFragmentLoaded) return;
           firstFragmentLoaded = true;
           if (fragmentTimer !== null) window.clearTimeout(fragmentTimer);
@@ -1435,8 +1431,7 @@ export function VideoPlayer({ link, availableLinks, offlinePlayback, dubOptions,
             if (bufferedTimer !== null) window.clearTimeout(bufferedTimer);
             trace(`first fragment buffered; sn=${data.frag.sn}; buffer=${video.buffered.length ? `${video.buffered.start(0).toFixed(2)}-${video.buffered.end(video.buffered.length - 1).toFixed(2)}s` : "empty"}`);
           }
-          networkRetries = 0;
-          mediaRetries = 0;
+          errors.fragmentBuffered();
         });
         let appendedSegmentsLogged = 0;
         hls.on(HlsEngine.Events.BUFFER_APPENDED, (_event, data) => {
@@ -1448,46 +1443,10 @@ export function VideoPlayer({ link, availableLinks, offlinePlayback, dubOptions,
           const pending = (data as typeof data & { pending?: number }).pending ?? "?";
           trace(`buffer append completed: parent=${data.parent}, sn=${data.frag.sn}, pending=${pending}`, ranges.join("; "));
         });
-        // Without this, a failed manifest/segment load (CORS, a dead CDN host, ...) just leaves
-        // the "buffering" spinner turning forever with nothing in the console to explain why -
-        // network/media errors are usually transient (hls.js's own recommended recovery), but a
-        // fatal, unrecoverable one should at least surface instead of spinning silently.
-        //
-        // A bare hls?.startLoad() on every NETWORK_ERROR (hls.js's own suggested pattern) assumes
-        // the failure is transient - fine for a blip, but a manifest URL that's just plain dead
-        // (an expired token from a browser-runtime resolver, a 403/404) fails the exact same way
-        // on every retry, forever: error → startLoad() → same error → startLoad() → ... with
-        // nothing ever reaching the user but an eternal spinner (seen live: exactly this, on a
-        // YummyAnime stream resolved through the Alloha browser-resolver). Capping retries and
-        // giving up into the visible error overlay after a few tries fixes that without losing
-        // the recovery behavior for genuinely transient blips.
-        let networkRetries = 0;
-        const MAX_NETWORK_RETRIES = 3;
-        // A manifest that came back with an HTTP status has been answered: the server has looked
-        // for this rendition and said what it found. Retrying it three times on a backoff spends
-        // twenty-odd seconds of the user's time before reaching the fallback link that was sitting
-        // there the whole while (seen live: Kodik listing a 720p that resolves to a file its CDN
-        // does not have, answered with a 500 every time). Only the statuses that actually mean
-        // "ask again later" are worth the wait; everything else goes straight to the fallback.
-        // 500 and Cloudflare's own 52x are in here for the same reason 502/503/504 are: a CDN edge
-        // hiccuping on one segment is not the server saying this stream is gone, and dropping the
-        // whole link over it would move a playable stream to the back of the fallback list.
-        const RETRYABLE_MANIFEST_STATUSES = new Set([408, 429, 500, 502, 503, 504, 520, 521, 522, 523, 524, 525, 526, 527]);
-        // recoverMediaError() was uncapped - a stream with a genuinely broken fragment (not a
-        // transient decode hiccup) just re-throws the same fatal MEDIA_ERROR immediately after
-        // every recovery attempt, forever: error → recover → same error → recover → ... which
-        // looks exactly like a freeze/lag from the outside (seen live: repeated fragParsingError/
-        // bufferStalledError/bufferAppendNoProgress with playback stuck). Capped the same way
-        // NETWORK_ERROR already was, giving up into the visible error overlay after a few tries.
-        let mediaRetries = 0;
-        const MAX_MEDIA_RETRIES = 3;
-        let emptyFragment = { sn: "", count: 0 };
-        // Token renewals since the last segment that loaded - one at a time: a renewed link that is
-        // refused straight away is not a token problem, and goes to the usual fallback.
-        let tokenRenewals = 0;
-        let renewal: Promise<void> | null = null;
-        let stalledDuringRenewal = false;
-        const MAX_EMPTY_FRAGMENT_REPEATS = 4;
+        // What every error means - retry, renew the token, move on, give up - is streamPolicy.ts's call;
+        // this only carries it out. Without it a dead manifest (an expired token, a 403/404) was retried
+        // forever behind an eternal spinner.
+        const errors = new StreamErrorPolicy();
         // The startup watchdogs only describe a stream still on its way. Left running past a give-up,
         // they logged "still waiting for HLS manifest response" for a stream already failed with 403.
         const giveUp = () => {
@@ -1495,7 +1454,7 @@ export function VideoPlayer({ link, availableLinks, offlinePlayback, dubOptions,
           hls?.destroy();
         };
         hls.on(HlsEngine.Events.MANIFEST_PARSED, (_event, data) => {
-          networkRetries = 0;
+          errors.manifestParsed();
           // A master playlist with several renditions picks its own; auto quality keeps that pick at
           // or under the same height a source's separate quality links are held to.
           const heightCap = autoQualityCap();
@@ -1554,131 +1513,84 @@ export function VideoPlayer({ link, availableLinks, offlinePlayback, dubOptions,
             : "incomplete";
           const failedUrl = data.response?.url ?? request?.responseURL ?? data.url ?? data.frag?.url ?? streamUrl;
           write("player", `[${traceId} +${Math.round(performance.now() - traceStartedAt)}ms] hls.js ${data.fatal ? "fatal" : "non-fatal"} error:`, data.type, data.details, data.reason ?? "", data.response ? `http ${data.response.code}` : "", `url=${playbackUrlLabel(failedUrl)}`, `fragment=${data.frag?.sn ?? "?"}`, `level=${data.level ?? data.frag?.level ?? "?"}`, `context=${data.context?.type ?? "?"}`, `buffer=${data.buffer ?? data.bufferInfo?.len ?? "?"}`, `appendNoProgress=${data.appendsWithoutProgress ?? "?"}`, `requestStatus=${request?.status ?? "?"}`, request?.getResponseHeader?.("X-Hibiki-Error") ? `proxy=${request.getResponseHeader("X-Hibiki-Error")}` : "", `loaded=${stats?.loaded ?? "?"}`, `requestDuration=${requestDuration}`);
-          // hls.js treats a fragment that parses to no media as non-fatal and asks for it again, without
-          // end: seen live with Kodik after a seek, the same segment came back empty for fifteen seconds
-          // until the startup timeout moved on. The CDN answers that segment the same way each time, so
-          // a few repeats are enough to call the stream broken and go to the next link.
-          if (!data.fatal && data.details === HlsEngine.ErrorDetails.FRAG_PARSING_ERROR && data.frag) {
-            const sn = String(data.frag.sn);
-            emptyFragment = emptyFragment.sn === sn ? { sn, count: emptyFragment.count + 1 } : { sn, count: 1 };
-            if (emptyFragment.count >= MAX_EMPTY_FRAGMENT_REPEATS) {
-              const reason = `fragment ${sn} has no media`;
-              log.warn("player", `${reason} after ${emptyFragment.count} tries; giving up on this stream`);
-              if (!reportPlaybackFailure(link, reason)) setPlaybackError(reason);
-              giveUp();
+          const status = data.response?.code;
+          const action = errors.decide({
+            fatal: data.fatal,
+            kind: data.type === HlsEngine.ErrorTypes.NETWORK_ERROR ? "network" : data.type === HlsEngine.ErrorTypes.MEDIA_ERROR ? "media" : "other",
+            details: data.details,
+            status: typeof status === "number" ? status : undefined,
+            manifest: data.details === HlsEngine.ErrorDetails.MANIFEST_LOAD_ERROR || data.details === HlsEngine.ErrorDetails.MANIFEST_LOAD_TIMEOUT,
+            manifestLoadError: data.details === HlsEngine.ErrorDetails.MANIFEST_LOAD_ERROR,
+            emptyFragment: data.details === HlsEngine.ErrorDetails.FRAG_PARSING_ERROR && data.frag ? String(data.frag.sn) : undefined,
+          }, firstFragmentLoaded && !audioUrl && refreshStreamRef.current !== undefined);
+          const fail = (reason: string) => {
+            if (cancelled || !hls) return;
+            if (!reportPlaybackFailure(link, reason)) setPlaybackError(reason);
+            giveUp();
+          };
+          switch (action.kind) {
+            case "ignore":
+              return;
+            case "fail":
+              if (action.answeredStatus !== undefined) log.info("player", `stream answered http ${action.answeredStatus}, not retrying`);
+              else log.warn("player", `giving up on this stream: ${action.reason}`);
+              fail(action.reason);
+              return;
+            case "recoverMedia":
+              hls?.recoverMediaError();
+              return;
+            case "renew": {
+              // Renewed beside the playback instead of tearing the stream down: the buffer keeps
+              // playing while a fresh link is fetched, and the requests move over to it.
+              trace(`stream answered http ${status} mid-play; renewing its link while the buffer plays`);
+              const renewStartedAt = performance.now();
+              void refreshStreamRef.current!(link).then(async (fresh) => {
+                if (cancelled || !hls) return;
+                if (!fresh || fresh.type !== "DIRECT_HLS" || fresh.audioUrl) {
+                  trace("no fresh link to continue on; switching the way a failure does");
+                  errors.renewalSettled();
+                  fail(action.reason);
+                  return;
+                }
+                const freshUrl = playbackUrl(fresh.url);
+                // Desktop injects headers per origin, and a renewed link may come from another edge host.
+                if (headerSessionId && /^https?:/i.test(freshUrl)) await hibiki.player.registerHeaderOrigin(headerSessionId, freshUrl).catch(() => undefined);
+                if (cancelled || !hls) return;
+                rebase.rebase(streamUrl, freshUrl);
+                trace(`continuing on a renewed link after ${Math.round(performance.now() - renewStartedAt)}ms: ${playbackUrlLabel(freshUrl)}`);
+                // hls.js stops loading after a fatal error; a non-fatal one it is still retrying itself.
+                if (errors.renewalSettled()) hls.startLoad();
+              }, (error: unknown) => {
+                trace(`renewing the link failed: ${error instanceof Error ? error.message : String(error)}`);
+                errors.renewalSettled();
+                fail(action.reason);
+              });
               return;
             }
-          }
-          // Mid-play, a segment the CDN now refuses is a token that has run out (seen live: Alloha's,
-          // six minutes in). Renewed beside the playback instead of tearing the stream down: the buffer
-          // keeps playing while a fresh link is fetched, and the requests move over to it. Started on
-          // the first refusal, fatal or not - hls.js retries a 403 segment on its own for half a
-          // minute first (Kodik, live), and those retries then already go to the renewed link.
-          const refusedStatus = data.response?.code;
-          const tokenRefused = data.type === HlsEngine.ErrorTypes.NETWORK_ERROR &&
-            data.details !== HlsEngine.ErrorDetails.MANIFEST_LOAD_ERROR &&
-            typeof refusedStatus === "number" && TOKEN_EXPIRED_STATUSES.has(refusedStatus) &&
-            firstFragmentLoaded && !audioUrl && refreshStreamRef.current !== undefined;
-          if (tokenRefused && renewal === null && tokenRenewals < 1) {
-            tokenRenewals += 1;
-            stalledDuringRenewal = data.fatal;
-            trace(`stream answered http ${refusedStatus} mid-play; renewing its link while the buffer plays`);
-            const renewStartedAt = performance.now();
-            const reason = data.details || "playback failed";
-            const fail = () => {
-              if (cancelled || !hls) return;
-              if (!reportPlaybackFailure(link, reason)) setPlaybackError(reason);
-              giveUp();
-            };
-            renewal = refreshStreamRef.current!(link).then(async (fresh) => {
-              if (cancelled || !hls) return;
-              if (!fresh || fresh.type !== "DIRECT_HLS" || fresh.audioUrl) {
-                trace("no fresh link to continue on; switching the way a failure does");
-                fail();
-                return;
-              }
-              const freshUrl = playbackUrl(fresh.url);
-              // Desktop injects headers per origin, and a renewed link may come from another edge host.
-              if (headerSessionId && /^https?:/i.test(freshUrl)) await hibiki.player.registerHeaderOrigin(headerSessionId, freshUrl).catch(() => undefined);
-              if (cancelled || !hls) return;
-              rebase.rebase(streamUrl, freshUrl);
-              trace(`continuing on a renewed link after ${Math.round(performance.now() - renewStartedAt)}ms: ${playbackUrlLabel(freshUrl)}`);
-              // hls.js stops loading after a fatal error; a non-fatal one it is still retrying itself.
-              if (stalledDuringRenewal) hls.startLoad();
-            }, (error: unknown) => {
-              trace(`renewing the link failed: ${error instanceof Error ? error.message : String(error)}`);
-              fail();
-            }).finally(() => {
-              renewal = null;
-            });
-            return;
-          }
-          // Gave up while the renewal is still on its way: it restarts loading once it lands.
-          if (tokenRefused && renewal !== null) {
-            if (data.fatal) stalledDuringRenewal = true;
-            return;
-          }
-          if (!data.fatal) return;
-          switch (data.type) {
-            case HlsEngine.ErrorTypes.NETWORK_ERROR: {
-              const isManifestFailure = data.details === HlsEngine.ErrorDetails.MANIFEST_LOAD_ERROR ||
-                data.details === HlsEngine.ErrorDetails.MANIFEST_LOAD_TIMEOUT;
-              const status = data.response?.code;
-              // A 4xx/5xx on a level/fragment is just as definitive as one on the master. The old
-              // manifest-only check retried every MegaPlay 403 three times before trying the next
-              // mirror, turning a finite fallback list into minutes of apparent endless loading.
-              const answered = typeof status === "number" && status > 0 &&
-                !RETRYABLE_MANIFEST_STATUSES.has(status);
-              networkRetries += 1;
-              if (answered || networkRetries > MAX_NETWORK_RETRIES) {
-                const reason = data.details || "playback failed";
-                if (answered) log.info("player", `${isManifestFailure ? "manifest" : "stream"} answered http ${status}, not retrying`);
-                if (!reportPlaybackFailure(link, reason)) setPlaybackError(reason);
-                giveUp();
-                break;
-              }
-              // startLoad() resumes fragment loading, but does not reliably recreate the loader
-              // after the initial manifest itself failed. Reload that URL explicitly; later
-              // fragment failures can resume from the current position. A short backoff prevents
-              // a dead edge host from being hammered while still recovering quickly from a blip.
+            case "retry":
+              // A short backoff keeps a dead edge host from being hammered while still recovering
+              // quickly from a blip.
               if (networkRetryTimer !== null) window.clearTimeout(networkRetryTimer);
               networkRetryTimer = window.setTimeout(() => {
                 networkRetryTimer = null;
                 if (cancelled || !hls) return;
-                log.info("player", `retrying ${isManifestFailure ? "manifest" : "stream"} load (${networkRetries}/${MAX_NETWORK_RETRIES})`);
-                if (!isManifestFailure) {
+                log.info("player", `retrying ${action.reloadManifest ? "manifest" : "stream"} load (${action.attempt}/${MAX_NETWORK_RETRIES})`);
+                // startLoad() resumes fragment loading, but does not reliably recreate the loader after
+                // the manifest itself failed.
+                if (!action.reloadManifest) {
                   hls.startLoad();
                   return;
                 }
-                // Retrying the *same* URL is a coin flip when what failed is the CDN's own
-                // load-balancing redirect (Kodik hands out p14.solodcdn.com and 302s to p13 -
-                // verified live). A redirected XHR has to pass the CORS check on the redirect hop
-                // too, and these CDNs send no Access-Control-Allow-Origin of their own, so the
-                // retry only started working once Chromium had cached the redirect and stopped
-                // making one. Ask the main process where the URL actually lands (no CORS there)
-                // and load that instead, so the retry has nothing left to redirect through.
-                // Relative segment URLs resolve against it as well, keeping the rest of the
-                // stream on the host that answered.
+                // Retrying the *same* URL is a coin flip when what failed is the CDN's load-balancing
+                // redirect (Kodik's p14.solodcdn.com 302s to p13, with no CORS headers on the hop).
+                // Ask the main process where the URL actually lands and load that instead.
                 void hibiki.player.resolveStreamUrl(streamUrl, link.headers).then((finalUrl) => {
                   if (cancelled || !hls) return;
-                if (finalUrl !== streamUrl) trace(`retrying manifest at redirect target ${playbackUrlLabel(finalUrl)}`);
+                  if (finalUrl !== streamUrl) trace(`retrying manifest at redirect target ${playbackUrlLabel(finalUrl)}`);
                   hls.loadSource(finalUrl);
                 });
-              }, 500 * (2 ** (networkRetries - 1)));
-              break;
-            }
-            case HlsEngine.ErrorTypes.MEDIA_ERROR:
-              mediaRetries += 1;
-              if (mediaRetries > MAX_MEDIA_RETRIES) {
-                setPlaybackError(data.details || "playback failed");
-                giveUp();
-                break;
-              }
-              hls?.recoverMediaError();
-              break;
-            default:
-              setPlaybackError(data.details || "playback failed");
-              giveUp();
+              }, action.delayMs);
+              return;
           }
         });
         hls.loadSource(streamUrl);
@@ -1711,18 +1623,14 @@ export function VideoPlayer({ link, availableLinks, offlinePlayback, dubOptions,
         // Same reasoning as hls.js above: dash.js retries transient errors on its own, but a
         // manifest that's simply dead keeps re-erroring forever with nothing surfaced unless
         // this caps it and gives up into the visible error overlay.
-        let dashErrors = 0;
-        const MAX_DASH_RETRIES = 3;
-        dash.on(DashMediaPlayer.events.STREAM_INITIALIZED, () => {
-          dashErrors = 0;
-        });
+        const dashErrors = new DashErrorPolicy();
+        dash.on(DashMediaPlayer.events.STREAM_INITIALIZED, () => dashErrors.initialized());
         dash.on(DashMediaPlayer.events.ERROR, (e) => {
           log.error("player", "dash.js error:", e);
-          dashErrors += 1;
           // Nothing in the manifest is playable: dash.js gives up on its own, so waiting for more
           // errors (or the startup timeout) would only keep the spinner turning.
           const code = typeof e.error === "object" && e.error ? e.error.code : undefined;
-          if (code === DashMediaPlayer.errors.MANIFEST_ERROR_ID_NOSTREAMS_CODE || dashErrors > MAX_DASH_RETRIES) {
+          if (dashErrors.error(code === DashMediaPlayer.errors.MANIFEST_ERROR_ID_NOSTREAMS_CODE)) {
             const detail = typeof e.error === "object" && e.error ? e.error.message : e.error;
             const reason = detail || "playback failed";
             if (!reportPlaybackFailure(link, reason)) setPlaybackError(reason);
@@ -1859,16 +1767,13 @@ export function VideoPlayer({ link, availableLinks, offlinePlayback, dubOptions,
     const onLoadedMetadata = () => {
       setDuration(video.duration);
       observe("loadedmetadata", { elapsedMs: playbackStartedAtRef.current > 0 ? Date.now() - playbackStartedAtRef.current : null });
+      // The same start hls.js was told up front (streamPolicy.startPosition), for the paths that can't be.
       const pendingSwitch = pendingSourceSwitchRef.current;
-      const isReplacementStream = !!pendingSwitch && pendingSwitch.fromUrl !== link?.url;
-      if (isReplacementStream && video.duration) {
-        video.currentTime = Math.min(pendingSwitch.position, Math.max(0, video.duration - 1));
-        if (!pendingSwitch.resume) video.pause();
-      } else if (retryPositionMsRef.current !== null && video.duration) {
-        video.currentTime = Math.min(retryPositionMsRef.current / 1000, video.duration - 1);
-        retryPositionMsRef.current = null;
-      } else if (startPositionMs && video.duration) {
-        video.currentTime = Math.min(startPositionMs / 1000, video.duration - 1);
+      const start = startPosition(link?.url, pendingSwitch, retryPositionMsRef.current, startPositionMs);
+      if (video.duration) {
+        if (start.seconds > 0) video.currentTime = clampToDuration(start.seconds, video.duration);
+        if (start.from === "switch" && !pendingSwitch!.resume) video.pause();
+        if (start.from === "retry") retryPositionMsRef.current = null;
       }
       video.playbackRate = playbackSpeed;
     };
