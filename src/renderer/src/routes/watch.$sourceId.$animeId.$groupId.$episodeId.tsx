@@ -7,9 +7,8 @@ import { useTranslation } from "react-i18next";
 import { ArrowLeft, TriangleAlert } from "lucide-react";
 import type { DownloadedEpisodeFile, PlaybackGroup, PlayerLink } from "@shared/types";
 import { fetchSkipTimes } from "@/lib/skipTimes";
-import { pickDataSaverLink, pickDefaultLink, pickPlaybackFallback, pickPreferredLink, pickRefreshedLink, pickResolvedLink, qualityVariant } from "@/lib/playerLinks";
+import { qualityVariant } from "@/lib/playerLinks";
 import { usePlaybackGroups } from "@/lib/playbackGroups";
-import { autoQualityCap, describeConnection, isDataSaverActive } from "@/lib/connectionQuality";
 import { isGenericDubTitle } from "@/lib/dubTitle";
 import { hibiki, downloadFileUrl } from "@/lib/hibiki";
 import { log } from "@/lib/log";
@@ -17,6 +16,7 @@ import { usePlayerPrefsStore } from "@/stores/playerPrefsStore";
 import { usePlayerSelectionStore } from "@/stores/playerSelectionStore";
 import { useUiStore } from "@/stores/uiStore";
 import { VideoPlayer } from "@/features/player/VideoPlayer";
+import { usePlayerSelection } from "@/features/player/usePlayerSelection";
 import { CloudflareCheckButton } from "@/components/CloudflareCheck";
 import { cloudflareCheckOf } from "@shared/cloudflare";
 import { animeTitle } from "@/components/AnimeCard";
@@ -31,28 +31,6 @@ const STREAK_TOAST_HOLD_MS = 2000;
 // Longer than the streak toast's hold - this one carries two link labels worth of actual reading,
 // not just a number ticking up.
 const PLAYER_SWITCH_TOAST_HOLD_MS = 4500;
-// How long a stream URL is trusted before it is discovered again instead of played or fallen back
-// to. Alloha's vkvideo tokens were seen dying six minutes after being issued, so this stays well
-// under that; a link that fails sooner than this is broken, not expired, and goes to the fallback.
-const LINK_TOKEN_TTL_MS = 3 * 60 * 1000;
-
-// Where an automatic pick starts: at the height the connection's speed allows (lib/connectionQuality.ts).
-// Read at the moment of picking, never subscribed to: the verdict changing mid-episode must not
-// reload the stream that is playing. Picks of a named quality never come through here.
-function withDataSaver(links: PlayerLink[], picked: PlayerLink): PlayerLink {
-  const cap = autoQualityCap();
-  if (cap === null) return picked;
-  const lighter = pickDataSaverLink(links, picked, cap);
-  if (lighter !== picked) log.info("player", `auto quality: starting at ${lighter.quality ?? "?"} instead of ${picked.quality ?? "?"}, up to ${cap}p (${describeConnection()})`);
-  return lighter;
-}
-
-// What PlayerSwitchToast shows for one end of the switch - playerName is the only field every link
-// reliably has; quality is worth adding when it's there since two links from the same player most
-// often differ by quality, not by identity.
-function playerSwitchLabel(link: PlayerLink): string {
-  return link.quality ? `${link.playerName ?? "?"} (${link.quality})` : (link.playerName ?? "?");
-}
 
 export const Route = createFileRoute("/watch/$sourceId/$animeId/$groupId/$episodeId")({
   component: WatchRoute,
@@ -248,66 +226,6 @@ function WatchPage() {
     queryClient.invalidateQueries({ queryKey: ["progress", sourceId, animeId, episodeId] });
   }, [queryClient, sourceId, animeId, episodeId]);
 
-  // When each stream URL was handed out. Those URLs carry CDN tokens that expire - Kodik's after
-  // some hours, Alloha's (vkvideo) within minutes - and the list below is kept for the whole
-  // episode, so a link that has been sitting here a while is not worth trying as it is.
-  const linkIssuedAtRef = useRef(new Map<string, number>());
-  // `fresh`: the links handed out before have expired - the source is asked again, not the episode
-  // list it saved for this title (core/extensions/titleSnapshots.ts).
-  const discoverLinks = useCallback(async (fresh = false) => {
-    const startedAt = performance.now();
-    log.info("player", `link discovery started: source=${sourceId}, anime=${animeId}, group=${groupId}, episode=${episodeId}${fresh ? " (fresh)" : ""}`);
-    try {
-      const links = await hibiki.sources.playerLinks(
-        sourceId,
-        animeId,
-        groupId,
-        episodeId,
-        { ...usePlayerSelectionStore.getState().get(sourceId, animeId, groupId), dataSaver: isDataSaverActive(), ...(fresh ? { fresh: true } : {}) },
-      );
-      log.info("player", `link discovery finished in ${Math.round(performance.now() - startedAt)}ms: ${links.length} link(s); ${links.map((item) => `${item.type}:${item.playerName ?? "?"}/${item.translation ?? "?"}/${item.quality ?? "?"}`).join(", ") || "none"}`);
-      const issuedAt = Date.now();
-      for (const item of links) linkIssuedAtRef.current.set(item.url, issuedAt);
-      return links;
-    } catch (error) {
-      log.error("player", `link discovery failed after ${Math.round(performance.now() - startedAt)}ms:`, error);
-      throw error;
-    }
-  }, [sourceId, animeId, groupId, episodeId]);
-  // staleTime: Infinity + refetchOnWindowFocus: false - a resolved episode's links don't change
-  // while you're actively watching it, but the global default (60s staleTime, refetch on focus)
-  // would otherwise silently refetch this in the background on any window blur/refocus during a
-  // watch session longer than a minute (alt-tab, opening DevTools, ...). That refetch returns a
-  // fresh array *reference* even when the content is identical, which - through pickDefaultLink()
-  // below and VideoPlayer's `link` prop - looked exactly like "the player randomly resets/reloads
-  // itself mid-episode": the source-setup effect keys off `link`, so a new reference re-triggers
-  // the whole hls.js (re)attach, snapping playback back near the last saved progress checkpoint.
-  const linksQuery = useQuery({
-    queryKey: ["playerLinks", sourceId, animeId, groupId, episodeId],
-    queryFn: () => discoverLinks(),
-    staleTime: Infinity,
-    refetchOnWindowFocus: false,
-  });
-
-  // The same list without waiting for a stream to be resolved: a slow player (Kodik answering after half
-  // a minute) held the whole list back, and with it the menu's player row - so the one thing to do about
-  // a slow player, pick another, could only be done once it had finished. Both calls share one read of the
-  // source (core/extensions/runtime.ts), so this costs nothing more.
-  const rawLinksQuery = useQuery({
-    queryKey: ["playerLinksRaw", sourceId, animeId, groupId, episodeId],
-    queryFn: () => hibiki.sources.playerLinks(sourceId, animeId, groupId, episodeId, { listOnly: true }),
-    enabled: !linksQuery.data,
-    staleTime: Infinity,
-    refetchOnWindowFocus: false,
-    retry: false,
-  });
-
-  // A DASH stream's engine is big (~0.3 s to load the first time, phone log): fetched as soon as the
-  // link list shows one, while the pick is still being settled.
-  useEffect(() => {
-    if (linksQuery.data?.some((item) => item.type === "DIRECT_DASH")) void import("dashjs");
-  }, [linksQuery.data]);
-
   // A downloaded copy always wins over resolving a live link - there's no network dependency to
   // fail while offline, no ads/embed page, and no reason to re-download bandwidth you already
   // spent once. `staleTime: Infinity` since a file that's already on disk doesn't need re-checking
@@ -318,23 +236,8 @@ function WatchPage() {
     staleTime: Infinity,
   });
 
-  // A manual pick (from the in-player "Player"/"Quality" menu) only applies to the episode it was
-  // made on - a new episode goes back to the auto-picked default rather than carrying forward a
-  // choice that might not even exist for it.
-  const [manualLink, setManualLink] = useState<PlayerLink | null>(null);
-  const [sourceSwitching, setSourceSwitching] = useState(false);
-  const selectionRequestRef = useRef(0);
-  const failedPlaybackUrlsRef = useRef(new Set<string>());
-  // A pick by hand made before the full list arrived (from the plain one): the saved pick must not
-  // be adopted over it when that list comes in.
-  const handPickedRef = useRef(false);
+  // A manual pick, a fallback, a refresh, the saved pick: all of it is features/player/playerSelection.ts.
   useEffect(() => {
-    selectionRequestRef.current += 1;
-    handPickedRef.current = false;
-    failedPlaybackUrlsRef.current.clear();
-    linkIssuedAtRef.current.clear();
-    setManualLink(null);
-    setSourceSwitching(false);
     // The new episode starts wherever it starts; carrying the previous one's last tick over would
     // read the jump between them as either playback or a seek, and neither is true.
     playedMsRef.current = 0;
@@ -342,144 +245,47 @@ function WatchPage() {
     unreportedSecondsRef.current = new Set();
   }, [episodeId]);
 
-  // A pick whose player page could not be turned into a stream - shown as an error, never as the
-  // page itself. Cleared by the next pick or episode.
-  const [resolveFailed, setResolveFailed] = useState(false);
-  useEffect(() => { setResolveFailed(false); }, [episodeId]);
-  // The last pick, for asking again when its page could not be resolved.
-  const lastPickedRef = useRef<PlayerLink | null>(null);
-  const selectLink = useCallback(async (selected: PlayerLink) => {
-    lastPickedRef.current = selected;
-    const requestId = ++selectionRequestRef.current;
-    setResolveFailed(false);
-    if (selected.type !== "EMBED") {
-      setSourceSwitching(false);
-      setManualLink(selected);
-      return;
-    }
+  // Only ever read once, for the initial resume-seek (VideoPlayer's `startPositionMs`) and the
+  // starting pick - a background refetch pulling back the position *we ourselves* just saved would
+  // otherwise change that number and, through the source-setup effect, reset the player mid-episode.
+  const progressQuery = useQuery({
+    queryKey: ["progress", sourceId, animeId, episodeId],
+    queryFn: () => hibiki.progress.get(sourceId, animeId, episodeId),
+    staleTime: Infinity,
+    refetchOnWindowFocus: false,
+  });
 
-    setSourceSwitching(true);
-    const startedAt = performance.now();
-    log.info("player", `embed resolve started: player=${selected.playerName ?? "?"}, translation=${selected.translation ?? "?"}`);
-    try {
-      const resolved = await hibiki.sources.resolvePlayerLink(selected, { dataSaver: isDataSaverActive() });
-      log.info("player", `embed resolve finished in ${Math.round(performance.now() - startedAt)}ms: player=${selected.playerName ?? "?"}, links=${resolved.length}; ${resolved.map((item) => `${item.type}/${item.quality ?? "?"}`).join(", ") || "none"}`);
-      // Superseded while it was resolving. Whatever superseded it owns the outcome now, and that
-      // is worth saying out loud: from the outside this is indistinguishable from a resolve that
-      // simply never came back, and the screen sits on a spinner either way.
-      if (requestId !== selectionRequestRef.current) {
-        log.info("player", `discarding stale resolve ${requestId} (current ${selectionRequestRef.current})`);
-        return;
-      }
-      const playable = resolved.filter((candidate) => candidate.type !== "EMBED");
-      const issuedAt = Date.now();
-      for (const candidate of playable) linkIssuedAtRef.current.set(candidate.url, issuedAt);
-      // An EMBED link resolves into a whole set of renditions, so the pick that got us here has to
-      // survive that expansion: taking pickDefaultLink()'s own default outright is what made an
-      // explicit quality choice look like it silently snapped back to whatever the source lists
-      // first. Keep the requested quality when the resolved set actually offers it.
-      const resolvedPick = pickResolvedLink(playable, selected);
-      // A quality asked for by name stays; a player picked without one starts light when saving.
-      const next = resolvedPick && !selected.quality ? withDataSaver(playable, resolvedPick) : resolvedPick;
-      if (!next) {
-        // Nothing direct came out of the resolve. There is no embed-page fallback: the player only
-        // plays streams of its own, so this pick simply isn't supported right now.
-        log.warn("player", `no playable link from ${selected.playerName ?? "?"}`);
-        setResolveFailed(true);
-        return;
-      }
+  // The saved per-title/dub pick wins over this episode's own watch_progress row: both describe a
+  // deliberate choice, but the stored one is by definition the most recent. Read when the starting
+  // pick is made - subscribing to the store would re-run things on every pick.
+  const readPreference = useCallback(() => {
+    const remembered = usePlayerSelectionStore.getState().get(sourceId, animeId, groupId);
+    return {
+      translation: remembered?.translation ?? progressQuery.data?.translation,
+      playerName: remembered?.playerName ?? progressQuery.data?.playerName,
+      variant: remembered?.variant,
+      audioTrack: remembered?.audioTrack,
+    };
+  }, [sourceId, animeId, groupId, progressQuery.data]);
+  const selection = usePlayerSelection({
+    sourceId,
+    animeId,
+    groupId,
+    episodeId,
+    // A downloaded copy wins over any link; the saved progress says which player to start on.
+    autoReady: downloadedQuery.isSuccess && !downloadedQuery.data && progressQuery.isFetched,
+    preference: readPreference,
+  });
+  const linksQuery = selection.listQuery;
 
-      queryClient.setQueryData<PlayerLink[]>(
-        ["playerLinks", sourceId, animeId, groupId, episodeId],
-        (current) => current?.flatMap((candidate) =>
-          candidate.url === selected.url &&
-          candidate.playerName === selected.playerName &&
-          candidate.translation === selected.translation
-            ? playable
-            : [candidate]
-        ),
-      );
-      setManualLink(next);
-    } catch (error) {
-      if (requestId !== selectionRequestRef.current) {
-        log.info("player", `discarding stale failed resolve ${requestId} (current ${selectionRequestRef.current})`);
-        return;
-      }
-      log.warn("player", `embed resolve failed for ${selected.playerName ?? "?"} after ${Math.round(performance.now() - startedAt)}ms:`, error);
-      setResolveFailed(true);
-    } finally {
-      if (requestId === selectionRequestRef.current) setSourceSwitching(false);
-    }
-  }, [queryClient, sourceId, animeId, groupId, episodeId]);
+  // A DASH stream's engine is big (~0.3 s to load the first time, phone log): fetched as soon as the
+  // link list shows one, while the pick is still being settled.
+  useEffect(() => {
+    if (selection.links?.some((item) => item.type === "DIRECT_DASH")) void import("dashjs");
+  }, [selection.links]);
 
-  // A link whose CDN token has probably expired by now. One never seen being issued (a cache entry
-  // from an earlier visit) counts as old: asking again costs one discovery, playing it a 403.
-  const isExpiredLink = useCallback((candidate: PlayerLink) => {
-    const issuedAt = linkIssuedAtRef.current.get(candidate.url);
-    return issuedAt === undefined || Date.now() - issuedAt > LINK_TOKEN_TTL_MS;
-  }, []);
-  // Seen live: an episode paused overnight came back to Kodik URLs that answered 403, fell back to
-  // Alloha, which itself expired six minutes into playback, and from there every fallback and
-  // every pick by hand went to a URL from the night before - nine 403s in a row with the episode
-  // never playing again. The list itself has to be asked for again, then the same stream found
-  // in it under its new URL.
-  const linksRefreshingRef = useRef(false);
-  // The same stream under a freshly issued URL, for the player to move a playing stream onto
-  // without restarting it (VideoPlayer's token renewal). Nothing here switches what plays: the
-  // link list in the cache stays as it was, since replacing it would hand the player a new `link`
-  // and reload exactly the stream this is keeping alive.
-  const refreshStream = useCallback(async (stale: PlayerLink): Promise<PlayerLink | null> => {
-    // A link handed out moments ago that is already refused is broken, not expired; the usual
-    // fallback deals with that better than asking for the same thing again.
-    if (!isExpiredLink(stale)) return null;
-    const startedAt = performance.now();
-    log.info("player", `renewing ${stale.playerName ?? "?"}/${stale.quality ?? "?"} in place`);
-    const fresh = await discoverLinks(true);
-    const candidate = pickRefreshedLink(fresh, stale);
-    if (!candidate) return null;
-    let renewed: PlayerLink | undefined = candidate;
-    if (candidate.type === "EMBED") {
-      const resolved = await hibiki.sources.resolvePlayerLink(candidate, { dataSaver: isDataSaverActive() });
-      renewed = pickResolvedLink(resolved.filter((item) => item.type !== "EMBED"), stale);
-    }
-    if (!renewed || renewed.type !== stale.type) return null;
-    linkIssuedAtRef.current.set(renewed.url, Date.now());
-    log.info("player", `renewed ${stale.playerName ?? "?"}/${stale.quality ?? "?"} in ${Math.round(performance.now() - startedAt)}ms`);
-    return renewed;
-  }, [discoverLinks, isExpiredLink]);
-  const refreshAndSelect = useCallback(async (target: PlayerLink) => {
-    const requestId = ++selectionRequestRef.current;
-    linksRefreshingRef.current = true;
-    setResolveFailed(false);
-    setSourceSwitching(true);
-    log.info("player", `links for ${target.playerName ?? "?"}/${target.quality ?? "?"} have likely expired; discovering them again`);
-    try {
-      const fresh = await queryClient.fetchQuery({
-        queryKey: ["playerLinks", sourceId, animeId, groupId, episodeId],
-        queryFn: () => discoverLinks(true),
-        staleTime: 0,
-      });
-      if (requestId !== selectionRequestRef.current) return;
-      const next = pickRefreshedLink(fresh, target) ?? pickPlaybackFallback(fresh, target, failedPlaybackUrlsRef.current);
-      if (!next) {
-        log.warn("player", `nothing left to play after discovering links again for ${target.playerName ?? "?"}`);
-        setResolveFailed(true);
-        return;
-      }
-      await selectLink(next);
-    } catch (error) {
-      if (requestId !== selectionRequestRef.current) return;
-      log.warn("player", "discovering links again failed:", error);
-      setResolveFailed(true);
-    } finally {
-      linksRefreshingRef.current = false;
-      if (requestId === selectionRequestRef.current) setSourceSwitching(false);
-    }
-  }, [queryClient, discoverLinks, selectLink, sourceId, animeId, groupId, episodeId]);
-
-  // Only the *explicit* picks (the in-player settings menu) get remembered - selectLink itself is
-  // also called by the resume logic below, and letting that write back would just re-save what it
-  // had already read, turning a one-off fallback into a sticky preference.
+  // Only the *explicit* picks (the in-player settings menu) get remembered - the starting pick and
+  // the fallbacks would just turn a one-off into a sticky preference.
   const rememberSelection = usePlayerSelectionStore((s) => s.remember);
   const selectLinkManually = useCallback((selected: PlayerLink) => {
     log.info("player", `picked by hand: ${selected.translation ?? "?"}/${selected.playerName ?? "?"} ${selected.quality ?? "?"}`);
@@ -493,13 +299,8 @@ function WatchPage() {
       // A stream with its own audio tracks keeps the one picked inside it (rememberAudioTrack).
       audioTrack: selected.audioTrack ?? previous?.audioTrack ?? null,
     });
-    handPickedRef.current = true;
-    // A pick from the plain list (the full one is still resolving) is fresh by definition, and asking
-    // for the list again would only wait on that same slow call.
-    const fullListIn = !!queryClient.getQueryData<PlayerLink[]>(["playerLinks", sourceId, animeId, groupId, episodeId]);
-    if (fullListIn && isExpiredLink(selected)) void refreshAndSelect(selected);
-    else void selectLink(selected);
-  }, [queryClient, rememberSelection, selectLink, isExpiredLink, refreshAndSelect, sourceId, animeId, groupId, episodeId]);
+    selection.pickByHand(selected);
+  }, [rememberSelection, selection.pickByHand, sourceId, animeId, groupId]);
 
   // An audio track picked inside an HLS stream (several dubs in one playlist): kept for the title's
   // next episodes, which start on it when their stream has it.
@@ -508,92 +309,18 @@ function WatchPage() {
     rememberSelection(sourceId, animeId, groupId, { ...previous, audioTrack });
   }, [rememberSelection, sourceId, animeId, groupId]);
 
-  // A silent auto-recovery (see handlePlaybackFailure below) used to be indistinguishable, from the
-  // outside, from the episode just randomly changing player/quality on its own mid-watch - this is
-  // the only thing that tells the person watching that it was deliberate, not a glitch.
-  const [playerSwitchToast, setPlayerSwitchToast] = useState<{ fromLabel: string; toLabel: string } | null>(null);
+  const { onPlaybackFailure: selectionPlaybackFailure, switchToast: playerSwitchToast, clearSwitchToast } = selection;
   const handlePlaybackFailure = useCallback((failed: PlayerLink, reason: string): boolean => {
+    // A downloaded copy has nowhere else to go.
     if (downloadedQuery.data) return false;
-    failedPlaybackUrlsRef.current.add(failed.url);
-    // A stream that played for a while and then failed has most likely just outlived its token:
-    // the same stream under a fresh URL is the right recovery, not another provider.
-    if (isExpiredLink(failed)) {
-      const issuedAt = linkIssuedAtRef.current.get(failed.url);
-      log.warn("player", `stream failed (${reason}) on a link issued ${issuedAt === undefined ? "before this visit" : `${Math.round((Date.now() - issuedAt) / 60000)}m ago`}`);
-      void refreshAndSelect(failed);
-      return true;
-    }
-    // The full list may still be resolving (a pick was made from the plain list meanwhile).
-    const candidates = queryClient.getQueryData<PlayerLink[]>(["playerLinks", sourceId, animeId, groupId, episodeId])
-      ?? queryClient.getQueryData<PlayerLink[]>(["playerLinksRaw", sourceId, animeId, groupId, episodeId])
-      ?? [];
-    const fallback = pickPlaybackFallback(candidates, failed, failedPlaybackUrlsRef.current);
-    if (!fallback) return false;
-    log.warn(
-      "player",
-      `stream failed (${reason}); falling back ${failed.playerName ?? "?"}/${failed.quality ?? "?"} -> ${fallback.playerName ?? "?"}/${fallback.quality ?? "?"}`,
-    );
-    setPlayerSwitchToast({ fromLabel: playerSwitchLabel(failed), toLabel: playerSwitchLabel(fallback) });
-    if (isExpiredLink(fallback)) void refreshAndSelect(fallback);
-    else void selectLink(fallback);
-    return true;
-  }, [downloadedQuery.data, queryClient, sourceId, animeId, groupId, episodeId, selectLink, isExpiredLink, refreshAndSelect]);
+    return selectionPlaybackFailure(failed, reason);
+  }, [downloadedQuery.data, selectionPlaybackFailure]);
   useEffect(() => {
     if (!playerSwitchToast) return;
-    const timer = setTimeout(() => setPlayerSwitchToast(null), PLAYER_SWITCH_TOAST_HOLD_MS);
+    const timer = setTimeout(clearSwitchToast, PLAYER_SWITCH_TOAST_HOLD_MS);
     return () => clearTimeout(timer);
-  }, [playerSwitchToast]);
+  }, [playerSwitchToast, clearSwitchToast]);
 
-  // Same reasoning as linksQuery above: this is only ever read once, for the initial resume-seek
-  // (VideoPlayer's `startPositionMs`) - a background refetch pulling back the position *we
-  // ourselves* just saved a moment ago (via onProgress below) would otherwise change that number
-  // and, through the source-setup effect's dependency on it, reset/reload the player mid-episode.
-  const progressQuery = useQuery({
-    queryKey: ["progress", sourceId, animeId, episodeId],
-    queryFn: () => hibiki.progress.get(sourceId, animeId, episodeId),
-    staleTime: Infinity,
-    refetchOnWindowFocus: false,
-  });
-  // Resuming a title should keep the dub/player you actually picked last time, not silently
-  // revert to pickDefaultLink()'s own default ordering - once both the saved progress and the
-  // live link list are in, look for a link matching what was last watched through and adopt it as
-  // this episode's own starting pick (still a plain `manualLink`, so an explicit pick from the
-  // settings menu during this session overrides it exactly the same way as always).
-  //
-  // This has to settle *before* anything starts playing: `link` below used to fall back to
-  // pickDefaultLink()'s default the moment the link list arrived, so resuming an Alloha episode
-  // visibly loaded Kodik first and only then swapped over once the saved preference was applied.
-  // `preferencePending` keeps `link` undefined (plain loading spinner) until either the saved
-  // pick has been adopted or there turns out to be nothing to adopt.
-  const [preferencePending, setPreferencePending] = useState(true);
-  useEffect(() => { setPreferencePending(true); }, [episodeId]);
-  useEffect(() => {
-    if (manualLink || handPickedRef.current) { setPreferencePending(false); return; }
-    // A refresh picks its own link from the new list; adopting the saved pick here would race it.
-    if (linksRefreshingRef.current) return;
-    // A downloaded copy wins over any link list anyway, so there's nothing to wait for.
-    if (downloadedQuery.data) { setPreferencePending(false); return; }
-    // Still loading: stay pending rather than reading "no saved pick" out of a query that simply
-    // hasn't answered yet (progress legitimately resolves to null for a first watch).
-    if (!progressQuery.isFetched || !linksQuery.data) return;
-    // The saved per-title/dub pick wins over this episode's own watch_progress row: both describe
-    // a deliberate choice, but the stored one is by definition the most recent (it's written on
-    // every pick, while progress only records what an episode happened to be watched through).
-    // Read imperatively - subscribing to the store here would re-run this effect on every pick.
-    const remembered = usePlayerSelectionStore.getState().get(sourceId, animeId, groupId);
-    const translation = remembered?.translation ?? progressQuery.data?.translation;
-    const playerName = remembered?.playerName ?? progressQuery.data?.playerName;
-    const preferred = pickPreferredLink(linksQuery.data, { translation, playerName, variant: remembered?.variant, audioTrack: remembered?.audioTrack });
-    // Nothing saved at all, or no link matches it any more (source reshuffled its players, the dub
-    // is gone) - release the gate and let the default pick play.
-    if (!preferred) {
-      log.debug("player", "no saved pick to adopt, releasing the preference gate");
-      setPreferencePending(false);
-      return;
-    }
-    log.debug("player", `adopting saved pick ${preferred.translation ?? "?"}/${preferred.playerName ?? "?"}`);
-    void selectLink(preferred.type === "EMBED" ? preferred : withDataSaver(linksQuery.data, preferred));
-  }, [manualLink, downloadedQuery.data, progressQuery.isFetched, progressQuery.data, linksQuery.data, selectLink, sourceId, animeId, groupId, episodeId]);
 
   // Reused from the title-detail page's own queries (same queryKeys) so these are normally cache
   // hits, not extra network calls. Same staleTime/refetchOnWindowFocus reasoning as linksQuery -
@@ -689,15 +416,12 @@ function WatchPage() {
   // basically any unrelated re-render, not just background refetches (see the queries above).
   const link = useMemo((): PlayerLink | undefined => {
     if (downloadedQuery.data) return localFileLink(downloadedQuery.data);
-    if (manualLink) return manualLink;
-    if (preferencePending) return undefined;
-    const picked = pickDefaultLink(linksQuery.data);
-    return picked && linksQuery.data ? withDataSaver(linksQuery.data, picked) : picked;
-  }, [downloadedQuery.data, manualLink, preferencePending, linksQuery.data]);
+    return selection.link;
+  }, [downloadedQuery.data, selection.link]);
   // Why this link: the engine's own trace (VideoPlayer) says what it is, not where it came from.
   useEffect(() => {
     if (!link) return;
-    const origin = downloadedQuery.data ? "downloaded copy" : manualLink ? "picked" : "default pick";
+    const origin = downloadedQuery.data ? "downloaded copy" : `${selection.linkOwner ?? "?"} pick`;
     log.info("player", `playing the ${origin}: ${link.type} ${link.translation ?? "?"}/${link.playerName ?? "?"} ${link.quality ?? "?"}, subtitles=${link.subtitles?.length ?? 0}`);
     // Where this source's playback goes, for warming next time (lib/preconnect.ts).
     if (!downloadedQuery.data) rememberPlaybackOrigins(sourceId, [link.url, link.headers?.Referer ?? link.headers?.referer]);
@@ -705,11 +429,12 @@ function WatchPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [link]);
   // With a stream already playing the message is a passing notice, not a state to stay in.
+  const { failure, dismissFailure } = selection;
   useEffect(() => {
-    if (!resolveFailed || !link) return;
-    const timer = setTimeout(() => setResolveFailed(false), 4000);
+    if (!failure || !link) return;
+    const timer = setTimeout(dismissFailure, 4000);
     return () => clearTimeout(timer);
-  }, [resolveFailed, link]);
+  }, [failure, link, dismissFailure]);
   // Currently playing a downloaded copy, and this particular neighbor isn't one itself.
   const prevBlockedOffline = !!prevEpisode && !!downloadedQuery.data && !prevDownloaded;
   const nextBlockedOffline = !!nextEpisode && !!downloadedQuery.data && !nextDownloaded;
@@ -959,8 +684,7 @@ function WatchPage() {
   // Mounted from the start, while the links are still being asked for too: its settings (the dub, the
   // speed, ...) are reachable the whole time, and the player rows fill in the moment the links arrive.
   // The same moment the route showed its own bare spinner for.
-  const linksPending = !link && !linksQuery.data && !linksQuery.isError;
-  const videoPlayerMounted = !!(link || (linksQuery.data && linksQuery.data.length > 0) || linksPending);
+  const videoPlayerMounted = !!(link || linksQuery.isPending || (linksQuery.data && linksQuery.data.length > 0));
 
   return (
     <div className="relative h-full w-full bg-black">
@@ -984,8 +708,6 @@ function WatchPage() {
       {/* Gated on `!link` too, not just the query's own state - once a downloaded copy makes `link`
           available, whatever linksQuery is doing (still loading, or failed because there's no
           network to resolve a live link with) no longer matters, since it isn't what's playing. */}
-      {/* `preferencePending` covers the window where the links are in but the saved player/dub pick
-          is still being applied (or its EMBED link resolved) - the spinner belongs there too. */}
       {!link && linksQuery.isError && (
         <div className="flex h-full flex-col items-center justify-center gap-3 px-8 text-center">
           <TriangleAlert className="h-8 w-8 text-rose-400" strokeWidth={2} />
@@ -1011,7 +733,7 @@ function WatchPage() {
         </div>
       )}
       {/* Mounted as soon as there is *something* to choose between, not only once a link has been
-          settled on. While `preferencePending` is still resolving a remembered EMBED pick there is
+          settled on. While the starting pick is still resolving a remembered EMBED pick there is
           no `link` yet, and the player shows its own spinner over the normal chrome (see
           VideoPlayer's optional `link` prop) - which is the difference between "wait a moment" and
           "you are locked out": picking a player that resolves slowly, or never, used to leave a
@@ -1020,21 +742,21 @@ function WatchPage() {
       {videoPlayerMounted && (
         <VideoPlayer
           link={link}
-          availableLinks={linksQuery.data ?? rawLinksQuery.data}
+          availableLinks={selection.links}
           offlinePlayback={!!downloadedQuery.data}
           dubOptions={playerGroups}
           selectedDubId={groupId}
           onSelectDub={selectDub}
-          sourceSwitching={sourceSwitching || (!link && preferencePending)}
-          unplayable={!link && !preferencePending && !sourceSwitching && !!linksQuery.data && linksQuery.data.length > 0 || resolveFailed}
-          unplayableReason={resolveFailed ? "failed" : "unsupported"}
-          onRetryUnplayable={() => { if (lastPickedRef.current) void selectLink(lastPickedRef.current); }}
+          sourceSwitching={selection.switching}
+          unplayable={!!failure && !selection.switching}
+          unplayableReason={failure?.reason}
+          onRetryUnplayable={selection.retry}
           onSelectLink={selectLinkManually}
           preferredAudioTrack={usePlayerSelectionStore.getState().get(sourceId, animeId, groupId)?.audioTrack ?? null}
           onAudioTrackPicked={rememberAudioTrack}
           fetchSkipTimes={fetchEpisodeSkipTimes}
           onPlaybackFailure={handlePlaybackFailure}
-          onRefreshStream={refreshStream}
+          onRefreshStream={selection.refreshStream}
           startPositionMs={progressQuery.data?.positionMs}
           onProgress={onProgress}
           onPlayStateChange={onPlayStateChange}
