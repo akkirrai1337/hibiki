@@ -103,6 +103,9 @@ interface ResolverManifest {
   // Provider.browserScript(linkJson), which runs inside a real browser engine (see
   // BrowserPort.resolve) via runBrowserResolver() below.
   runtime?: "NODE" | "BROWSER";
+  // How long the streams this resolver hands out keep working (their CDN tokens), in ms - each
+  // provider knows its own, the app does not. Carried onto every stream it resolves (tokenLifetimeMs).
+  streamLifetimeMs?: number;
 }
 
 interface ResolverHealth {
@@ -329,6 +332,7 @@ export class ExtensionRuntime {
         version: manifest.version ?? "0.0.0",
         hosts: manifest.hosts ?? [],
         runtime: manifest.runtime,
+        streamLifetimeMs: typeof manifest.streamLifetimeMs === "number" && manifest.streamLifetimeMs > 0 ? manifest.streamLifetimeMs : undefined,
       });
     }
 
@@ -980,6 +984,7 @@ export class ExtensionRuntime {
         segments: candidate.segments && candidate.segments.length > 0 ? candidate.segments : link.segments,
         videoId: candidate.videoId ?? link.videoId,
         subtitles: candidate.subtitles && candidate.subtitles.length > 0 ? candidate.subtitles : link.subtitles,
+        tokenLifetimeMs: candidate.tokenLifetimeMs ?? resolver.streamLifetimeMs ?? null,
       }))
       .filter((candidate): candidate is PlayerLink => candidate.type !== undefined);
   }

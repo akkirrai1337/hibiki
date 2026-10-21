@@ -157,6 +157,9 @@ export interface PlayerLink {
   audioUrl?: string | null;
   audioHeaders?: Record<string, string> | null;
   subtitles?: SubtitleTrack[];
+  /** How long this stream's URL keeps working after being handed out (its CDN token), as the player's
+   * resolver declares it (its manifest's `streamLifetimeMs`). Unset: the app's cautious default. */
+  tokenLifetimeMs?: number | null;
 }
 
 /** DNS-over-HTTPS provider for the desktop app's requests; "off" uses the system's DNS. */

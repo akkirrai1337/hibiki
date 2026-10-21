@@ -7,14 +7,13 @@ import { hibiki } from "@/lib/hibiki";
 import { log } from "@/lib/log";
 import { menuLinks, renewStream, runPick, SelectionMachine, type PickDeps } from "./playerSelection";
 
-// How long a stream URL is trusted before it is renewed instead of played as it is. Alloha's (vkvideo)
-// tokens were seen dying six minutes after being issued, so the default stays well under that;
-// Kodik's last hours, so a Kodik stream picked again within the hour plays without asking anew. One
-// that dies sooner anyway is renewed mid-play (VideoPlayer) on the first refusal.
+// How long a stream URL is trusted before it is renewed instead of played as it is. The player's
+// resolver says how long its streams last (its manifest's streamLifetimeMs, as tokenLifetimeMs);
+// one that says nothing gets this cautious default - Alloha's (vkvideo) tokens were seen dying six
+// minutes in. A stream that dies sooner anyway is renewed mid-play (VideoPlayer) on the first refusal.
 const DEFAULT_TOKEN_LIFETIME_MS = 3 * 60 * 1000;
-const TOKEN_LIFETIME_MS: Record<string, number> = { kodik: 60 * 60 * 1000 };
 function tokenLifetime(link: PlayerLink): number {
-  return TOKEN_LIFETIME_MS[(link.playerName ?? "").trim().toLowerCase()] ?? DEFAULT_TOKEN_LIFETIME_MS;
+  return link.tokenLifetimeMs && link.tokenLifetimeMs > 0 ? link.tokenLifetimeMs : DEFAULT_TOKEN_LIFETIME_MS;
 }
 // A stream refused this soon after being handed out is broken, not expired: renewing it would hand
 // out the same thing, the fallback deals with it better.
