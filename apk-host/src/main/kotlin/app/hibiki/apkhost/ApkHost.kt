@@ -5,6 +5,8 @@ import app.hibiki.apk.ApkPreferences
 import app.hibiki.apk.ApkSourceAdapter
 import app.hibiki.apk.InstalledApkExtension
 import eu.kanade.tachiyomi.network.NetworkHelper
+import eu.kanade.tachiyomi.network.interceptor.Clearances
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import eu.kanade.tachiyomi.network.await
 import okhttp3.Request
 import org.json.JSONArray
@@ -95,6 +97,18 @@ class ApkHost(val dataDir: File) {
         }
     }
 
+
+    /**
+     * What a Cloudflare check passed in the application's window earned: its cookies go into the
+     * shared store, and the site is spoken to with that window's User-Agent from now on (a clearance
+     * is bound to the browser that earned it).
+     */
+    fun applyClearance(url: String, userAgent: String, cookies: Map<String, String>) {
+        val host = url.toHttpUrlOrNull()?.host ?: throw IllegalArgumentException("Not a web address: $url")
+        val manager = android.webkit.CookieManager.getInstance()
+        for ((name, value) in cookies) manager.setCookie(url, "$name=$value; Domain=$host; Path=/")
+        Clearances.remember(url, userAgent)
+    }
     fun trust(packageName: String, fingerprint: String) {
         val installed = store.find(packageName) ?: throw IllegalStateException("$packageName is not installed")
         check(installed.signingFingerprint == fingerprint) { "The extension's signature changed" }

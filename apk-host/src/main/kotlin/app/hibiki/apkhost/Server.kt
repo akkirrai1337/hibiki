@@ -25,6 +25,7 @@ import java.util.concurrent.Executors
  *   POST /install      {url, packageName?}
  *   POST /trust        {packageName, fingerprint}
  *   POST /uninstall    {packageName}
+ *   POST /clearance    {url, userAgent, cookies}   what a passed Cloudflare check earned
  *   POST /source/<id>/<method>  {…}        search, latest, getById, playbackGroups, playerLinks,
  *                                          filterCatalog, readSettings, writeSetting
  *   GET  /image?s=<source>&u=<url>        a picture fetched the way the source fetches
@@ -69,6 +70,12 @@ class Server(private val host: ApkHost, private val token: String) {
                     val body = body(exchange)
                     host.trust(body.getString("packageName"), body.getString("fingerprint"))
                     reply(exchange, 200, host.describe())
+                }
+                method == "POST" && path == "/clearance" -> {
+                    val body = body(exchange)
+                    val cookies = body.getJSONObject("cookies")
+                    host.applyClearance(body.getString("url"), body.getString("userAgent"), cookies.keys().asSequence().associateWith { cookies.getString(it) })
+                    reply(exchange, 200, JSONObject())
                 }
                 method == "POST" && path == "/uninstall" -> {
                     host.uninstall(body(exchange).getString("packageName"))

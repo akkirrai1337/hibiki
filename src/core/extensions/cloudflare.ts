@@ -137,6 +137,8 @@ export function solveChallenge(url: string): Promise<boolean> {
       return false;
     }
     rememberClearance(url, session);
+    // APK sources run in a process of their own on the desktop, with a cookie store of their own.
+    await getPlatform().apkSources?.applyClearance?.(url, session).catch((error: unknown) => logger.warn("cloudflare", `APK sources did not take the clearance for ${host}: ${error}`));
     logger.info("cloudflare", `check passed for ${host}`);
     return true;
   })().finally(() => solving.delete(host));

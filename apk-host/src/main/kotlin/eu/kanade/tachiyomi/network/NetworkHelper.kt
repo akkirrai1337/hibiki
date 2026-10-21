@@ -2,6 +2,8 @@ package eu.kanade.tachiyomi.network
 
 import android.content.Context
 import android.webkit.WebSettings
+import eu.kanade.tachiyomi.network.interceptor.ClearanceInterceptor
+import eu.kanade.tachiyomi.network.interceptor.CloudflareInterceptor
 import eu.kanade.tachiyomi.network.interceptor.IgnoreGzipInterceptor
 import eu.kanade.tachiyomi.network.interceptor.UncaughtExceptionInterceptor
 import eu.kanade.tachiyomi.network.interceptor.UserAgentInterceptor
@@ -16,7 +18,8 @@ import java.util.concurrent.TimeUnit
  * Host implementation of the Aniyomi network service, the desktop twin of the Android build's:
  * cookies shared with the page backend (android.webkit.CookieManager), User-Agent defaulting,
  * Brotli, a small response cache. DNS falls back to DNS-over-HTTPS when the network's resolver
- * refuses a host. Cloudflare challenges are solved by a page backend the host plugs in.
+ * refuses a host. A Cloudflare challenge is passed by the person in the application's window (see
+ * CloudflareInterceptor); what that earns is sent from then on.
  */
 class NetworkHelper(context: Context) {
     private val appContext = context.applicationContext
@@ -30,6 +33,7 @@ class NetworkHelper(context: Context) {
         .readTimeout(30, TimeUnit.SECONDS)
         .callTimeout(120, TimeUnit.SECONDS)
         .cache(Cache(File(appContext.cacheDir, "network_cache"), 5L * 1024 * 1024))
+        .addInterceptor(ClearanceInterceptor())
         .addInterceptor(FailureRecordingInterceptor())
         .addInterceptor(UncaughtExceptionInterceptor())
         .addInterceptor(UserAgentInterceptor(::defaultUserAgentProvider))
@@ -46,17 +50,7 @@ class NetworkHelper(context: Context) {
             .build()
     }
 
-    @Volatile
-    private var extraInterceptors: List<okhttp3.Interceptor> = emptyList()
-
-    /** Lets the host add what needs its page backend (the Cloudflare solver) before [client] is first used. */
-    fun addInterceptor(interceptor: okhttp3.Interceptor) {
-        check(clientDelegate.isInitialized().not()) { "The client is already in use" }
-        extraInterceptors = extraInterceptors + interceptor
-    }
-
-    private val clientDelegate = lazy { clientBuilder().apply { extraInterceptors.forEach(::addInterceptor) }.build() }
-    val client: OkHttpClient by clientDelegate
+    val client: OkHttpClient by lazy { clientBuilder().addInterceptor(CloudflareInterceptor()).build() }
 
     /** Retained for older sources; [client] already handles Cloudflare. */
     @Deprecated("The regular client handles Cloudflare by default")

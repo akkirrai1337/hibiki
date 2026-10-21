@@ -288,6 +288,9 @@ export interface ApkSourcesPort {
    * update signed by anyone else is refused. */
   install(url: string, packageName: string): Promise<void>;
   uninstall(packageName: string): Promise<void>;
+  /** Hands over what a passed Cloudflare check earned, for a platform whose sources do not share the
+   * check window's cookies (Android's do). Later requests to the site carry them. */
+  applyClearance?(url: string, session: ChallengeSession): Promise<void>;
 }
 
 // --- Extension workers -------------------------------------------------------------------------
