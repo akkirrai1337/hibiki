@@ -647,7 +647,45 @@
       }
     },
     "achievementLevels": "Levels",
-    "achievementMaxed": "All levels completed"
+    "achievementMaxed": "All levels completed",
+    "style": {
+      "title": "Watch style",
+      "allTime": "All time",
+      "axes": {
+        "binge": "Binging",
+        "consistency": "Consistency",
+        "completion": "Completion",
+        "variety": "Variety",
+        "night": "Night owl",
+        "ongoing": "Ongoing"
+      },
+      "bingeDetail": "{{value}} ep. on a day you watch",
+      "consistencyDetail_one": "{{count}} day with watching out of the last 30",
+      "consistencyDetail_other": "{{count}} days with watching out of the last 30",
+      "completionDetail": "{{value}}% of started titles finished",
+      "varietyDetail_one": "{{count}} genre among what you watched",
+      "varietyDetail_other": "{{count}} genres among what you watched",
+      "nightDetail": "{{value}}% of episodes between 22:00 and 5:00",
+      "ongoingDetail": "{{value}}% of episodes from currently airing titles",
+      "empty": "Watch a few episodes and your watch style will show up here.",
+      "perDay": "Episodes per watching day",
+      "minutesPerDay": "Minutes per watching day",
+      "activeDays": "Days with watching",
+      "bestDay": "Most episodes in a day",
+      "longestStreak": "Longest streak of days",
+      "finished": "Titles finished",
+      "dropped": "Titles dropped",
+      "ratingAverage_one": "Average rating ({{count}} title)",
+      "ratingAverage_other": "Average rating ({{count}} titles)",
+      "peakHour": "You watch most at",
+      "topDub": "Favourite dub:",
+      "clockTitle": "When you watch",
+      "byHour": "By hour",
+      "byWeekday": "By weekday",
+      "modeStyle": "Style",
+      "modeGenres": "Genres",
+      "genreDetail": "{{name}}: {{value}}% of what you watched"
+    }
   },
   "settings": {
     "subtitle": "Fine-tune how hibiki looks and plays",

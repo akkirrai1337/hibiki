@@ -9,6 +9,8 @@ import type {
   CachedAnimeEntry,
   CachedPlaybackGroupsEntry,
   DailyActivity,
+  StatsEpisode,
+  TitleRatingEntry,
   DeepLinkWatchTarget,
   DiscordPresence,
   DownloadedEpisode,
@@ -185,6 +187,7 @@ const api: HibikiApi = {
     /** null clears it. Resolves once the source's account has been told, when it can be. */
     set: (sourceId: string, animeId: string, rating: number | null): Promise<RatingSyncResult> =>
       ipcRenderer.invoke(IPC.ratingSet, sourceId, animeId, rating),
+    list: (): Promise<TitleRatingEntry[]> => ipcRenderer.invoke(IPC.ratingList),
   },
   profile: {
     /** Writes the banner's bytes to disk and returns its filename (see profileBannerUrl in lib/hibiki.ts). */
@@ -206,6 +209,7 @@ const api: HibikiApi = {
       ipcRenderer.invoke(IPC.progressListForAnime, sourceId, titleId),
     listDailyActivity: (days: number): Promise<DailyActivity[]> =>
       ipcRenderer.invoke(IPC.progressListDailyActivity, days),
+    listForStats: (): Promise<StatsEpisode[]> => ipcRenderer.invoke(IPC.progressListForStats),
     removeForAnime: (sourceId: string, titleId: string): Promise<void> =>
       ipcRenderer.invoke(IPC.progressRemoveForAnime, sourceId, titleId),
     removeEpisode: (sourceId: string, titleId: string, episodeId: string): Promise<void> =>

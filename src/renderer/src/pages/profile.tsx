@@ -23,6 +23,8 @@ import { AchievementGrid } from "@/components/AchievementCards";
 import { ACHIEVEMENT_TIER_BY_ID } from "@/lib/achievements";
 import { computeLevelProgress, totalXpEarned, type LevelProgress } from "@/lib/levelProgress";
 import { ACTIVITY_DAYS, buildActivitySeries, computeStreaks, StreakBadge, type StreakInfo } from "@/components/StreakBadge";
+import { WatchClock, WatchStyleCard } from "@/components/WatchStyle";
+import { computeWatchStats, type WatchStats } from "@/lib/watchStats";
 import type { DailyActivity, LibraryEntry, XpEvent } from "@shared/types";
 
 const RECENT_LIMIT = 5;
@@ -106,6 +108,14 @@ export function ProfilePage() {
   const achievements = useAchievementsStore((s) => s.achievements);
 
   const xpEventsQuery = useQuery({ queryKey: ["xpEvents"], queryFn: () => hibiki.xp.list() });
+  // Read fresh on every visit: both change from the player and the title page, which don't tell
+  // these queries so.
+  const statsEpisodesQuery = useQuery({ queryKey: ["statsEpisodes"], queryFn: () => hibiki.progress.listForStats(), staleTime: 0 });
+  const ratingsQuery = useQuery({ queryKey: ["ratings", "all"], queryFn: () => hibiki.ratings.list(), staleTime: 0 });
+  const watchStats = useMemo(
+    () => computeWatchStats({ library: entries, episodes: statsEpisodesQuery.data ?? [], ratings: ratingsQuery.data ?? [], activity: lifetimeActivityQuery.data ?? [] }),
+    [entries, statsEpisodesQuery.data, ratingsQuery.data, lifetimeActivityQuery.data],
+  );
   const queryClient = useQueryClient();
   const [clearHistoryOpen, setClearHistoryOpen] = useState(false);
   const clearXpHistory = async () => {
@@ -135,7 +145,7 @@ export function ProfilePage() {
   // lifetime-activity are already warmed at the app shell level (see __root.tsx's own
   // useAchievementUnlocks), so in practice this only actually shows on a genuinely cold first
   // load, not once per profile visit.
-  const isLoading = libraryQuery.isLoading || activityQuery.isLoading || lifetimeActivityQuery.isLoading || xpEventsQuery.isLoading;
+  const isLoading = libraryQuery.isLoading || activityQuery.isLoading || lifetimeActivityQuery.isLoading || xpEventsQuery.isLoading || statsEpisodesQuery.isLoading;
   if (isLoading) return <ProfileSkeleton />;
 
   if (isMobile) {
@@ -157,6 +167,7 @@ export function ProfilePage() {
           weeklyPace={weeklyPace}
           librarySize={entries.length}
           activitySeries={activitySeries}
+          watchStats={watchStats}
           achievements={achievements}
           xpEvents={xpEventsQuery.data ?? []}
           onClearXpHistory={() => setClearHistoryOpen(true)}
@@ -198,6 +209,8 @@ export function ProfilePage() {
             <StatCard icon={Gauge} label={t("profile.statPace")} value={t("common.episodesShort", { count: weeklyPace })} />
           </div>
 
+          <WatchStyleCard stats={watchStats} />
+
           {hasHistory && (
             <section>
               <h2 className="mb-3 text-sm font-bold text-text">{t("profile.continueWatchingTitle")}</h2>
@@ -209,6 +222,8 @@ export function ProfilePage() {
             <h2 className="mb-4 text-sm font-bold text-text">{t("profile.activityTitle")}</h2>
             <ActivityBars series={activitySeries} locale={i18n.language} />
           </section>
+
+          <WatchClock stats={watchStats} />
 
           <section>
             <h2 className="mb-3 text-sm font-bold text-text">{t("profile.recentTitle")}</h2>
@@ -276,6 +291,7 @@ function MobileProfileLayout({
   weeklyPace,
   librarySize,
   activitySeries,
+  watchStats,
   achievements,
   xpEvents,
   onClearXpHistory,
@@ -291,6 +307,7 @@ function MobileProfileLayout({
   weeklyPace: number;
   librarySize: number;
   activitySeries: DailyActivity[];
+  watchStats: WatchStats;
   achievements: ReturnType<typeof useAchievementsStore.getState>["achievements"];
   xpEvents: XpEvent[];
   onClearXpHistory: () => void;
@@ -344,6 +361,9 @@ function MobileProfileLayout({
         <section className="rounded-2xl border border-border bg-text/[.03] p-3.5">
           <MobileActivityBars series={activitySeries} locale={i18n.language} />
         </section>
+
+        <WatchStyleCard stats={watchStats} compact />
+        <WatchClock stats={watchStats} compact />
 
         <section className="pt-2">
           <button onClick={() => setSheet("achievements")} className="mb-2.5 flex w-full items-center justify-between">

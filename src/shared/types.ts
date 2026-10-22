@@ -616,6 +616,26 @@ export interface WatchProgress {
   watchedDeltaMs?: number;
 }
 
+/** One episode's progress as the profile's statistics read it: no thumbnail, nothing to resume from. */
+export interface StatsEpisode {
+  sourceId: string;
+  titleId: string;
+  episodeNumber: number;
+  durationMs: number;
+  watched: boolean;
+  /** When this episode was last played - the only time of day there is for it. */
+  updatedAt: number;
+  translation: string | null;
+}
+
+/** A title the user rated (see ratings.list). */
+export interface TitleRatingEntry {
+  sourceId: string;
+  animeId: string;
+  rating: number;
+  ratedAt: number;
+}
+
 export interface DailyActivity {
   date: string; // YYYY-MM-DD, local time
   watchedMs: number;

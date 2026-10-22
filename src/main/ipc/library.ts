@@ -8,6 +8,7 @@ export function registerLibraryHandlers(runtime: ExtensionRuntime): void {
   const { ratings, library, progress } = createLibraryApi(runtime);
 
   ipcMain.handle(IPC.ratingGet, (_e, sourceId: string, animeId: string) => ratings.get(sourceId, animeId));
+  ipcMain.handle(IPC.ratingList, () => ratings.list());
   ipcMain.handle(IPC.ratingSet, (_e, sourceId: string, animeId: string, rating: number | null) => ratings.set(sourceId, animeId, rating));
 
   ipcMain.handle(IPC.libraryList, () => library.list());
@@ -26,4 +27,5 @@ export function registerLibraryHandlers(runtime: ExtensionRuntime): void {
     progress.saveThumbnail(sourceId, titleId, episodeId, dataUrl),
   );
   ipcMain.handle(IPC.progressListDailyActivity, (_e, days: number) => progress.listDailyActivity(days));
+  ipcMain.handle(IPC.progressListForStats, () => progress.listForStats());
 }

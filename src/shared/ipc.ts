@@ -62,12 +62,14 @@ export const IPC = {
   // db/schema.ts): scoring a title and listing it are separate acts.
   ratingGet: "rating:get",
   ratingSet: "rating:set",
+  ratingList: "rating:list",
 
   progressGet: "progress:get",
   progressUpsert: "progress:upsert",
   progressListRecent: "progress:listRecent",
   progressListForAnime: "progress:listForAnime",
   progressListDailyActivity: "progress:listDailyActivity",
+  progressListForStats: "progress:listForStats",
   progressRemoveForAnime: "progress:removeForAnime",
   progressRemoveEpisode: "progress:removeEpisode",
   progressSaveThumbnail: "progress:saveThumbnail",

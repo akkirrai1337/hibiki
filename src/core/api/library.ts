@@ -1,6 +1,6 @@
 import { eq, and, gte, desc, sql } from "drizzle-orm";
 import type { HibikiApi } from "@shared/hibikiApi";
-import type { DailyActivity, LibraryEntry, RatingSyncResult, SourceAccount, SourceInfo, SourceLibraryEntry, WatchProgress } from "@shared/types";
+import type { DailyActivity, LibraryEntry, RatingSyncResult, SourceAccount, SourceInfo, SourceLibraryEntry, StatsEpisode, TitleRatingEntry, WatchProgress } from "@shared/types";
 import { library, watchProgress, dailyActivity, titleRatings } from "../db/schema";
 import { logger } from "../logger";
 import { getPlatform } from "../platform";
@@ -112,6 +112,13 @@ export function createLibraryApi(runtime: LibrarySyncRuntime): Pick<HibikiApi, "
           .where(and(eq(titleRatings.sourceId, sourceId), eq(titleRatings.animeId, animeId)))
           .get();
         return row?.rating ?? null;
+      },
+
+      async list(): Promise<TitleRatingEntry[]> {
+        return await getDb()
+          .select({ sourceId: titleRatings.sourceId, animeId: titleRatings.animeId, rating: titleRatings.rating, ratedAt: titleRatings.ratedAt })
+          .from(titleRatings)
+          .all();
       },
 
       async set(sourceId: string, animeId: string, rating: number | null): Promise<RatingSyncResult> {
@@ -323,6 +330,22 @@ export function createLibraryApi(runtime: LibrarySyncRuntime): Pick<HibikiApi, "
           .set({ thumbnailDataUrl: dataUrl })
           .where(and(eq(watchProgress.sourceId, sourceId), eq(watchProgress.titleId, titleId), eq(watchProgress.episodeId, episodeId)))
           .run();
+      },
+
+      // Without thumbnail_data_url, which is most of a row's weight - this reads every row there is.
+      async listForStats(): Promise<StatsEpisode[]> {
+        return await getDb()
+          .select({
+            sourceId: watchProgress.sourceId,
+            titleId: watchProgress.titleId,
+            episodeNumber: watchProgress.episodeNumber,
+            durationMs: watchProgress.durationMs,
+            watched: watchProgress.watched,
+            updatedAt: watchProgress.updatedAt,
+            translation: watchProgress.translation,
+          })
+          .from(watchProgress)
+          .all();
       },
 
       async listDailyActivity(days: number): Promise<DailyActivity[]> {

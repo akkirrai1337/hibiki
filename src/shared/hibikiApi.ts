@@ -9,6 +9,8 @@ import type {
   CachedAnimeEntry,
   CachedPlaybackGroupsEntry,
   DailyActivity,
+  StatsEpisode,
+  TitleRatingEntry,
   DeepLinkWatchTarget,
   DiscordPresence,
   DownloadedEpisode,
@@ -164,6 +166,7 @@ export interface HibikiApi {
   ratings: {
     get(sourceId: string, animeId: string): Promise<number | null>;
     set(sourceId: string, animeId: string, rating: number | null): Promise<RatingSyncResult>;
+    list(): Promise<TitleRatingEntry[]>;
   };
   profile: {
     setBanner(bytes: ArrayBuffer, mimeType: string): Promise<string>;
@@ -185,6 +188,8 @@ export interface HibikiApi {
     listRecent(limit: number): Promise<WatchProgress[]>;
     listForAnime(sourceId: string, titleId: string): Promise<WatchProgress[]>;
     listDailyActivity(days: number): Promise<DailyActivity[]>;
+    /** Every episode with progress, light enough to read whole - for the profile's statistics. */
+    listForStats(): Promise<StatsEpisode[]>;
     removeForAnime(sourceId: string, titleId: string): Promise<void>;
     removeEpisode(sourceId: string, titleId: string, episodeId: string): Promise<void>;
     saveThumbnail(sourceId: string, titleId: string, episodeId: string, dataUrl: string): Promise<void>;
