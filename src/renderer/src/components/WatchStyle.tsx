@@ -56,7 +56,7 @@ function genreAxes(genres: GenreShare[], t: ReturnType<typeof useTranslation>["t
   return shown.map((g) => ({ id: g.name, label: g.name, value: g.share / top, detail: t("profile.style.genreDetail", { name: g.name, value: Math.round(g.share * 100) }) }));
 }
 
-function Radar({ axes, label }: { axes: RadarAxis[]; label: string }) {
+function Radar({ axes, label, footer }: { axes: RadarAxis[]; label: string; footer?: React.ReactNode }) {
   const gradientId = useId();
   const [hovered, setHovered] = useState<string | null>(null);
   const count = axes.length;
@@ -67,7 +67,7 @@ function Radar({ axes, label }: { axes: RadarAxis[]; label: string }) {
 
   return (
     <div className="flex flex-col items-center">
-      <svg viewBox={`-72 -6 ${SIZE + 144} ${SIZE + 12}`} className="w-full max-w-[460px] overflow-visible" role="img" aria-label={label}>
+      <svg viewBox={`-72 -2 ${SIZE + 144} ${SIZE + 4}`} className="w-full max-w-[480px] overflow-visible" role="img" aria-label={label}>
         <defs>
           <radialGradient id={gradientId}>
             <stop offset="0%" stopColor="rgb(var(--color-accent))" stopOpacity="0.75" />
@@ -110,8 +110,12 @@ function Radar({ axes, label }: { axes: RadarAxis[]; label: string }) {
           );
         })}
       </svg>
-      {/* Fixed height, so hovering doesn't push the page around. */}
-      <p className="h-5 text-center text-xs text-muted">{active?.detail ?? ""}</p>
+      {/* Under the radar, where the column would otherwise stand empty beside the taller list of
+          numbers: a couple of facts, and in their place what a hovered corner was measured from.
+          Fixed height, so hovering doesn't push the page around. */}
+      <div className="mt-1 flex h-10 w-full flex-col items-center justify-center gap-0.5 text-center text-xs text-muted">
+        {active ? <p>{active.detail}</p> : footer}
+      </div>
     </div>
   );
 }
@@ -148,7 +152,7 @@ export function WatchStyleCard({ stats, compact }: { stats: WatchStats; compact?
         <h2 className={cn("font-bold text-text", compact ? "text-[15px]" : "text-sm")}>{t("profile.style.title")}</h2>
         <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted/70">{t("profile.style.allTime")}</span>
         {canShowGenres && (
-          <div className="ml-auto flex rounded-lg bg-text/[.05] p-0.5" role="tablist">
+          <div className="ml-1 flex self-center rounded-lg bg-text/[.05] p-0.5" role="tablist">
             {(["style", "genres"] as const).map((m) => (
               <button
                 key={m}
@@ -167,7 +171,17 @@ export function WatchStyleCard({ stats, compact }: { stats: WatchStats; compact?
 
       <div className={cn("mt-2 grid items-center gap-6", compact ? "grid-cols-1" : "grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]")}>
         {/* Keyed by mode, so the shape grows out of the middle again when switched. */}
-        <Radar key={showGenres ? "genres" : "style"} axes={axes} label={t("profile.style.title")} />
+        <Radar
+          key={showGenres ? "genres" : "style"}
+          axes={axes}
+          label={t("profile.style.title")}
+          footer={!empty && (stats.peakHour !== null || stats.topDub) && (
+            <>
+              {stats.peakHour !== null && <p>{t("profile.style.peakHour")} <span className="font-semibold text-text">{hourLabel(stats.peakHour, i18n.language)}</span></p>}
+              {stats.topDub && <p className="truncate">{t("profile.style.topDub")} <span className="font-semibold text-text">{stats.topDub.name}</span></p>}
+            </>
+          )}
+        />
 
         {empty ? (
           <p className="text-sm text-muted">{t("profile.style.empty")}</p>
@@ -185,12 +199,6 @@ export function WatchStyleCard({ stats, compact }: { stats: WatchStats; compact?
               <StatLine value={stats.titlesDropped} label={t("profile.style.dropped")} />
               {stats.ratingAverage !== null && <StatLine value={round1(stats.ratingAverage)} label={t("profile.style.ratingAverage", { count: stats.ratingCount })} />}
             </div>
-            {(stats.peakHour !== null || stats.topDub) && (
-              <div className={cn("flex flex-col gap-1 border-t border-border text-xs text-muted", compact ? "pt-4" : "mt-4 pt-4")}>
-                {stats.peakHour !== null && <p>{t("profile.style.peakHour")} <span className="font-semibold text-text">{hourLabel(stats.peakHour, i18n.language)}</span></p>}
-                {stats.topDub && <p className="truncate">{t("profile.style.topDub")} <span className="font-semibold text-text">{stats.topDub.name}</span></p>}
-              </div>
-            )}
           </div>
         )}
       </div>
