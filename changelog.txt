@@ -1,13 +1,46 @@
-## hibiki 3.2.1
+## hibiki 3.3.0
+
+**Profile**
+- Watch statistics: a radar of how you watch - binging, consistency, finishing what you start, variety, night watching, ongoing titles - with a switch to your six most watched genres. Hover or tap a corner to see what it was measured from.
+- Beside it, the plain numbers: episodes and minutes on a day you watch, days with watching, the most episodes in a day, the longest streak, titles finished and dropped, your average rating, the hour you watch most and your usual dub. On the phone they sit under the radar as tiles.
+- Your avatar is the profile entry in the tab bar and the sidebar.
 
 **Player**
-- Every row of the player's settings menu has an icon, so the list reads at a glance.
-- The row that picks portrait or landscape is called "Orientation" now (it was "Screen"), with a rotate-screen icon.
-- The next episode starts in the dub you picked, not back in sub: the sound you choose (sub or dub where a source lists them as qualities, or an audio track) is remembered per title, on another server too if the first has none. Data saver no longer swaps your dub for sub when it lowers the quality.
+- Subtitle style: size (75-200%), font, colour and what sits behind the letters - the dark plate, a lighter one, an outline or a shadow. Shown live on the video and in a sample.
+- Subtitle timing: when the lines run ahead of or behind the speech, move them by 0.1 or 0.5 s in Subtitles > Timing offset, or with Z and X on the desktop.
+- Skip buttons for openings and endings on many more episodes: when the source marks none, the times come from AniSkip.
+- The settings menu works while the player is still loading, and the list of players shows at once instead of waiting for a stream - a slow or stuck player can be switched away from straight away. A player you pick stays picked.
+- A player whose site is down says so and offers Retry, instead of "This player isn't supported".
+- A stream that expires is renewed from its own player, without reloading the episode's whole list; switching players back and forth plays the same stream again.
+- A paused video shows the right subtitle line after a seek.
+- "Auto" quality stops at 720p on mobile data.
 
-**Settings**
-- Network: each setting (data saver, buffer, home refresh, parallel downloads, request timeout, DNS-over-HTTPS) is one line with its current value instead of a row of buttons. On the phone a tap opens the choices in a sheet with the explanation; on desktop they are a dropdown beside the name.
+**Downloads**
+- Download a whole title (season) at once: dub, quality and player picked once, all or only unwatched episodes, already downloaded ones left out.
+- A downloads indicator in the title bar (and next to search on the phone) shows what is downloading from anywhere, with a panel to pause, resume, cancel or retry.
+- The downloaded episodes screen is redesigned: a card per title, full-width episode rows with progress and a delete button that also works on the phone. How much they take is in Settings > Network.
+- Two titles whose episodes share a number no longer get in each other's way in the queue.
 
-**Aniyomi sources (Android)**
-- A title opened from a list keeps the poster its card had, instead of "No poster" on the title page (seen with Anikoto).
-- A score that an extension writes into the description ("★★★★★ 9.63") is shown as a rating next to the year, and the description starts with the story.
+**Home and title pages**
+- "Because you watched X" rows on the home screen, from the site's own "similar" lists.
+- The title page shows the title and its episodes first and the recommendations after, instead of waiting for the slowest request.
+- Episode lists are kept per title until the details say something changed, so opening a title and starting episodes downloads much less.
+- Posters are fetched at the size the card shows (a catalog scroll on the phone uses about a third of the traffic).
+- A title keeps the cover its card had when the details come without one.
+
+**New-episode notifications (Android)**
+- Ongoing titles in "Watching" (or any title with the bell on) are checked for new episodes in the dub you watch, and a notification opens the episode. The bell is on the title page and in Settings > General. Checks run while the app is open.
+
+**Aniyomi sources on the desktop**
+- Aniyomi APK sources now run on Windows, macOS and Linux too, bundled with the app (no Java to install): install them from repositories like on the phone, with Cloudflare checks passed in the app's window.
+
+**Device sync**
+- Changes are no longer lost when they land mid-sync or after restoring a backup, and received rows are not sent straight back.
+- Pairing works only while the pairing window is open; the code changes every 2 minutes and five wrong tries close the window. "Forget this device" reaches the other device at once.
+
+**macOS and Linux**
+- Builds for macOS (Apple silicon and Intel) and Linux (AppImage), with a one-command install script, and updates that replace the app in place.
+- On macOS the window has no system title bar; the traffic lights sit over the app's own.
+
+**Updates**
+- Updates are picked from a manifest in each release and verified by checksum on the desktop.
