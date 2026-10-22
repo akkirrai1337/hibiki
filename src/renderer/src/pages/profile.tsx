@@ -23,7 +23,7 @@ import { AchievementGrid } from "@/components/AchievementCards";
 import { ACHIEVEMENT_TIER_BY_ID } from "@/lib/achievements";
 import { computeLevelProgress, totalXpEarned, type LevelProgress } from "@/lib/levelProgress";
 import { ACTIVITY_DAYS, buildActivitySeries, computeStreaks, StreakBadge, type StreakInfo } from "@/components/StreakBadge";
-import { WatchClock, WatchStyleCard } from "@/components/WatchStyle";
+import { WatchStyleCard } from "@/components/WatchStyle";
 import { computeWatchStats, type WatchStats } from "@/lib/watchStats";
 import type { DailyActivity, LibraryEntry, XpEvent } from "@shared/types";
 
@@ -223,7 +223,6 @@ export function ProfilePage() {
             <ActivityBars series={activitySeries} locale={i18n.language} />
           </section>
 
-          <WatchClock stats={watchStats} />
 
           <section>
             <h2 className="mb-3 text-sm font-bold text-text">{t("profile.recentTitle")}</h2>
@@ -363,7 +362,6 @@ function MobileProfileLayout({
         </section>
 
         <WatchStyleCard stats={watchStats} compact />
-        <WatchClock stats={watchStats} compact />
 
         <section className="pt-2">
           <button onClick={() => setSheet("achievements")} className="mb-2.5 flex w-full items-center justify-between">

@@ -720,7 +720,6 @@
       "nightDetail": "{{value}}% епізодів - з 22:00 до 5:00",
       "ongoingDetail": "{{value}}% епізодів - з тайтлів, що виходять зараз",
       "empty": "Перегляньте кілька епізодів - тут з'явиться ваш стиль перегляду.",
-      "perDay": "Епізодів на день перегляду",
       "minutesPerDay": "Хвилин на день перегляду",
       "activeDays": "Днів з переглядом",
       "bestDay": "Рекорд епізодів за день",
@@ -733,12 +732,18 @@
       "ratingAverage_other": "Середня оцінка ({{count}} тайтлу)",
       "peakHour": "Найчастіше дивитесь о",
       "topDub": "Улюблена озвучка:",
-      "clockTitle": "Коли ви дивитесь",
-      "byHour": "За годинами",
-      "byWeekday": "За днями тижня",
       "modeStyle": "Стиль",
       "modeGenres": "Жанри",
-      "genreDetail": "{{name}}: {{value}}% переглянутого"
+      "genreDetail": "{{name}}: {{value}}% переглянутого",
+      "bingeShort": "{{value}} еп./день",
+      "consistencyShort_one": "{{count}} день з 30",
+      "consistencyShort_few": "{{count}} дні з 30",
+      "consistencyShort_many": "{{count}} днів з 30",
+      "consistencyShort_other": "{{count}} дня з 30",
+      "varietyShort_one": "{{count}} жанр",
+      "varietyShort_few": "{{count}} жанри",
+      "varietyShort_many": "{{count}} жанрів",
+      "varietyShort_other": "{{count}} жанру"
     }
   },
   "settings": {

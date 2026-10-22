@@ -5,7 +5,7 @@ import { cn } from "@/lib/cn";
 import type { GenreShare, StyleAxis, WatchStats } from "@/lib/watchStats";
 
 // The profile's statistics, laid out the way a game's career screen is: a radar of how you watch
-// (or of genres) next to a column of plain numbers, then when you watch - hours of the day, weekdays.
+// (or of genres) next to a column of plain numbers.
 
 const SIZE = 260;
 const CENTER = SIZE / 2;
@@ -33,12 +33,26 @@ function axisDetail(axis: StyleAxis, t: ReturnType<typeof useTranslation>["t"]):
   }
 }
 
+/** The same measure in a few characters, for under the axis's name: "0.9 ep./day", "64%". */
+function axisShort(axis: StyleAxis, t: ReturnType<typeof useTranslation>["t"], locale: string): string {
+  const percent = `${Math.round(axis.raw * 100)}%`;
+  switch (axis.id) {
+    case "binge": return t("profile.style.bingeShort", { value: (Math.round(axis.raw * 10) / 10).toLocaleString(locale) });
+    case "consistency": return t("profile.style.consistencyShort", { count: axis.raw });
+    case "variety": return t("profile.style.varietyShort", { count: axis.raw });
+    default: return percent;
+  }
+}
+
 /** One corner of the radar, already in words. */
 interface RadarAxis {
   id: string;
   label: string;
   /** 0..1 */
   value: number;
+  /** Under the name, always shown. */
+  short: string;
+  /** Under the radar, on hover. */
   detail: string;
 }
 
@@ -53,21 +67,28 @@ function genreAxes(genres: GenreShare[], t: ReturnType<typeof useTranslation>["t
   const shown = genres.slice(0, GENRE_AXES);
   // Scaled to the leading genre, so the shape shows the balance between them rather than a speck.
   const top = shown[0]?.share || 1;
-  return shown.map((g) => ({ id: g.name, label: g.name, value: g.share / top, detail: t("profile.style.genreDetail", { name: g.name, value: Math.round(g.share * 100) }) }));
+  return shown.map((g) => ({
+    id: g.name,
+    label: g.name,
+    value: g.share / top,
+    short: `${Math.round(g.share * 100)}%`,
+    detail: t("profile.style.genreDetail", { name: g.name, value: Math.round(g.share * 100) }),
+  }));
 }
 
 function Radar({ axes, label, footer }: { axes: RadarAxis[]; label: string; footer?: React.ReactNode }) {
   const gradientId = useId();
   const [hovered, setHovered] = useState<string | null>(null);
   const count = axes.length;
-  // An empty radar still shows a speck in the middle, not nothing - same as the reference's
-  // inner pentagon, which is where every shape starts from.
-  const shape = axes.map((a, i) => point(i, count, Math.max(0.06, a.value)));
+  // Drawn on a square-root scale: most people sit in the lower part of most axes, and on a straight
+  // one the shape was a thin spike lost in the middle of the grid. The order of the corners, and
+  // the numbers under the names, are unchanged. An empty radar still shows a speck in the middle.
+  const shape = axes.map((a, i) => point(i, count, Math.max(0.06, Math.sqrt(a.value))));
   const active = axes.find((a) => a.id === hovered) ?? null;
 
   return (
     <div className="flex flex-col items-center">
-      <svg viewBox={`-72 -2 ${SIZE + 144} ${SIZE + 4}`} className="w-full max-w-[480px] overflow-visible" role="img" aria-label={label}>
+      <svg viewBox={`-72 -16 ${SIZE + 144} ${SIZE + 32}`} className="w-full max-w-[480px] overflow-visible" role="img" aria-label={label}>
         <defs>
           <radialGradient id={gradientId}>
             <stop offset="0%" stopColor="rgb(var(--color-accent))" stopOpacity="0.75" />
@@ -75,8 +96,10 @@ function Radar({ axes, label, footer }: { axes: RadarAxis[]; label: string; foot
           </radialGradient>
         </defs>
 
-        {RINGS.map((r) => (
-          <polygon key={r} points={polygon(axes.map((_, i) => point(i, count, r)))} fill={r === 1 ? "rgb(var(--color-text) / 0.025)" : "none"} stroke="rgb(var(--color-text) / 0.09)" strokeWidth={1} />
+        {/* Outermost first, each band a shade lighter than the one inside it, so the grid reads as
+            a solid backdrop rather than lines on nothing. */}
+        {[...RINGS].reverse().map((r, i) => (
+          <polygon key={r} points={polygon(axes.map((_, j) => point(j, count, r)))} fill={`rgb(var(--color-text) / ${i % 2 === 0 ? 0.035 : 0.02})`} stroke="rgb(var(--color-text) / 0.09)" strokeWidth={1} />
         ))}
         {axes.map((a, i) => {
           const [x, y] = point(i, count, 1);
@@ -92,19 +115,28 @@ function Radar({ axes, label, footer }: { axes: RadarAxis[]; label: string; foot
 
         {axes.map((a, i) => {
           const [x, y] = point(i, count, 1.13);
-          const anchor = Math.abs(x - CENTER) < 4 ? "middle" : x > CENTER ? "start" : "end";
+          const centred = Math.abs(x - CENTER) < 4;
+          const anchor = centred ? "middle" : x > CENTER ? "start" : "end";
+          // Name and value as two lines, kept clear of the grid: above it at the top corner the
+          // value goes over the name, everywhere else under it.
+          const top = centred && y < CENTER;
+          const nameY = top ? y + 2 : centred ? y - 2 : y - 6;
+          const valueY = top ? y - 12 : centred ? y + 12 : y + 8;
           return (
             <g key={a.id} onMouseEnter={() => setHovered(a.id)} onMouseLeave={() => setHovered((h) => (h === a.id ? null : h))} onClick={() => setHovered((h) => (h === a.id ? null : a.id))} className="cursor-default">
               {/* A wider invisible target than the letters themselves. */}
               <circle cx={x} cy={y} r={26} fill="transparent" />
               <text
                 x={x}
-                y={y}
+                y={nameY}
                 textAnchor={anchor}
                 dominantBaseline="middle"
                 className={cn("select-none text-[10.5px] font-semibold uppercase tracking-[0.14em] transition-colors", hovered === a.id ? "fill-text" : "fill-muted")}
               >
                 {shorten(a.label)}
+              </text>
+              <text x={x} y={valueY} textAnchor={anchor} dominantBaseline="middle" className="select-none fill-accent-text text-[12px] font-semibold tabular-nums">
+                {a.short}
               </text>
             </g>
           );
@@ -113,7 +145,7 @@ function Radar({ axes, label, footer }: { axes: RadarAxis[]; label: string; foot
       {/* Under the radar, where the column would otherwise stand empty beside the taller list of
           numbers: a couple of facts, and in their place what a hovered corner was measured from.
           Fixed height, so hovering doesn't push the page around. */}
-      <div className="mt-1 flex h-10 w-full flex-col items-center justify-center gap-0.5 text-center text-xs text-muted">
+      <div className="mt-2.5 flex h-10 w-full flex-col items-center justify-center gap-0.5 text-center text-xs text-muted">
         {active ? <p>{active.detail}</p> : footer}
       </div>
     </div>
@@ -144,11 +176,25 @@ export function WatchStyleCard({ stats, compact }: { stats: WatchStats; compact?
   const showGenres = mode === "genres" && canShowGenres;
   const axes: RadarAxis[] = showGenres
     ? genres
-    : stats.axes.map((a) => ({ id: a.id, label: t(`profile.style.axes.${a.id}`), value: a.value, detail: axisDetail(a, t) }));
+    : stats.axes.map((a) => ({ id: a.id, label: t(`profile.style.axes.${a.id}`), value: a.value, short: axisShort(a, t, i18n.language), detail: axisDetail(a, t) }));
+  // How much is watched, then the records - two groups on the desktop, one run of tiles on the phone.
+  // Episodes a day is not among them: it is the value under the radar's "binging" corner.
+  const pace = [
+    { value: Math.round(stats.minutesPerActiveDay), label: t("profile.style.minutesPerDay") },
+    { value: stats.activeDays, label: t("profile.style.activeDays") },
+  ];
+  const records = [
+    { value: stats.bestDayEpisodes, label: t("profile.style.bestDay") },
+    { value: stats.longestStreak, label: t("profile.style.longestStreak") },
+    { value: stats.titlesFinished, label: t("profile.style.finished") },
+    { value: stats.titlesDropped, label: t("profile.style.dropped") },
+    ...(stats.ratingAverage !== null ? [{ value: round1(stats.ratingAverage), label: t("profile.style.ratingAverage", { count: stats.ratingCount }) }] : []),
+  ];
 
   return (
     <section className={cn("rounded-2xl border border-border bg-text/[.03]", compact ? "p-3.5" : "p-5")}>
-      <div className="flex items-baseline gap-3">
+      {/* Wraps on a narrow phone, so the switch drops under the title instead of squeezing it. */}
+      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-2">
         <h2 className={cn("font-bold text-text", compact ? "text-[15px]" : "text-sm")}>{t("profile.style.title")}</h2>
         <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted/70">{t("profile.style.allTime")}</span>
         {canShowGenres && (
@@ -185,69 +231,27 @@ export function WatchStyleCard({ stats, compact }: { stats: WatchStats; compact?
 
         {empty ? (
           <p className="text-sm text-muted">{t("profile.style.empty")}</p>
+        ) : compact ? (
+          // The phone has no room beside the radar, and a column of lines under it ran a screen long:
+          // tiles two to a row instead, an odd last one across both.
+          <div className="grid grid-cols-2 gap-2">
+            {[...pace, ...records].map((s, i, all) => (
+              <div key={s.label} className={cn("rounded-xl bg-text/[.04] px-3 py-2.5", all.length % 2 === 1 && i === all.length - 1 && "col-span-2")}>
+                <p className="text-lg font-semibold tabular-nums leading-tight text-accent-text">{s.value}</p>
+                <p className="mt-0.5 text-[11px] leading-tight text-muted">{s.label}</p>
+              </div>
+            ))}
+          </div>
         ) : (
-          <div className={cn("flex flex-col", compact ? "gap-4" : "border-l border-border pl-6")}>
+          <div className="flex flex-col border-l border-border pl-6">
             <div className="flex flex-col gap-2">
-              <StatLine value={round1(stats.episodesPerActiveDay)} label={t("profile.style.perDay")} />
-              <StatLine value={Math.round(stats.minutesPerActiveDay)} label={t("profile.style.minutesPerDay")} />
-              <StatLine value={stats.activeDays} label={t("profile.style.activeDays")} />
+              {pace.map((s) => <StatLine key={s.label} value={s.value} label={s.label} />)}
             </div>
-            <div className={cn("flex flex-col gap-2 border-t border-border", compact ? "pt-4" : "mt-4 pt-4")}>
-              <StatLine value={stats.bestDayEpisodes} label={t("profile.style.bestDay")} />
-              <StatLine value={stats.longestStreak} label={t("profile.style.longestStreak")} />
-              <StatLine value={stats.titlesFinished} label={t("profile.style.finished")} />
-              <StatLine value={stats.titlesDropped} label={t("profile.style.dropped")} />
-              {stats.ratingAverage !== null && <StatLine value={round1(stats.ratingAverage)} label={t("profile.style.ratingAverage", { count: stats.ratingCount })} />}
+            <div className="mt-4 flex flex-col gap-2 border-t border-border pt-4">
+              {records.map((s) => <StatLine key={s.label} value={s.value} label={s.label} />)}
             </div>
           </div>
         )}
-      </div>
-    </section>
-  );
-}
-
-function MiniBars({ values, labels, highlight, height }: { values: number[]; labels: (string | null)[]; highlight: number | null; height: string }) {
-  const max = Math.max(1, ...values);
-  return (
-    <div>
-      <div className={cn("flex items-end gap-[3px]", height)}>
-        {values.map((v, i) => (
-          <motion.div
-            key={i}
-            initial={{ height: 0 }}
-            animate={{ height: v > 0 ? `${Math.max(6, (v / max) * 100)}%` : 3 }}
-            transition={{ duration: 0.4, ease: "easeOut", delay: i * 0.01 }}
-            className={cn("flex-1 rounded-[3px]", v === 0 ? "bg-text/[.07]" : i === highlight ? "bg-accent" : "bg-accent/40")}
-          />
-        ))}
-      </div>
-      <div className="mt-1.5 flex gap-[3px]">
-        {labels.map((l, i) => (
-          <span key={i} className="flex-1 text-center text-[10px] text-muted/70">{l ?? ""}</span>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-export function WatchClock({ stats, compact }: { stats: WatchStats; compact?: boolean }) {
-  const { t, i18n } = useTranslation();
-  // 2024-01-01 was a Monday.
-  const weekdays = Array.from({ length: 7 }, (_, i) => new Date(2024, 0, 1 + i).toLocaleDateString(i18n.language, { weekday: "short" }));
-  const peakWeekday = stats.byWeekday.some((v) => v > 0) ? stats.byWeekday.indexOf(Math.max(...stats.byWeekday)) : null;
-  const hourLabels = stats.byHour.map((_, h) => (h % 6 === 0 ? String(h) : null));
-  return (
-    <section className={cn("rounded-2xl border border-border bg-text/[.03]", compact ? "p-3.5" : "p-5")}>
-      <h2 className={cn("mb-4 font-bold text-text", compact ? "text-[15px]" : "text-sm")}>{t("profile.style.clockTitle")}</h2>
-      <div className={cn("grid gap-5", compact ? "grid-cols-1" : "grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] gap-8")}>
-        <div>
-          <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted/70">{t("profile.style.byHour")}</p>
-          <MiniBars values={stats.byHour} labels={hourLabels} highlight={stats.peakHour} height="h-20" />
-        </div>
-        <div>
-          <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted/70">{t("profile.style.byWeekday")}</p>
-          <MiniBars values={stats.byWeekday} labels={weekdays} highlight={peakWeekday} height="h-14" />
-        </div>
       </div>
     </section>
   );

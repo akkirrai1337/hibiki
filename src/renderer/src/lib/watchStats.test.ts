@@ -99,11 +99,4 @@ describe("computeWatchStats", () => {
     expect(stats.topDub).toEqual({ name: "AniLibria", episodes: 3 });
     expect(stats.ratingAverage).toBe(7.5);
   });
-
-  it("puts time watched on its weekday, Monday first", () => {
-    // 2026-10-19 is a Monday.
-    const stats = computeWatchStats({ library: [], episodes: [], ratings: [], activity: [{ date: "2026-10-19", completedCount: 1, watchedMs: 5 }, { date: "2026-10-18", completedCount: 1, watchedMs: 7 }], now: NOW });
-    expect(stats.byWeekday[0]).toBe(5);
-    expect(stats.byWeekday[6]).toBe(7);
-  });
 });

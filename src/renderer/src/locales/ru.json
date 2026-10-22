@@ -720,7 +720,6 @@
       "nightDetail": "{{value}}% эпизодов - с 22:00 до 5:00",
       "ongoingDetail": "{{value}}% эпизодов - из выходящих сейчас тайтлов",
       "empty": "Посмотрите несколько эпизодов - здесь появится ваш стиль просмотра.",
-      "perDay": "Эпизодов в день просмотра",
       "minutesPerDay": "Минут в день просмотра",
       "activeDays": "Дней с просмотром",
       "bestDay": "Рекорд эпизодов за день",
@@ -733,12 +732,18 @@
       "ratingAverage_other": "Средняя оценка ({{count}} тайтла)",
       "peakHour": "Чаще всего смотрите в",
       "topDub": "Любимая озвучка:",
-      "clockTitle": "Когда вы смотрите",
-      "byHour": "По часам",
-      "byWeekday": "По дням недели",
       "modeStyle": "Стиль",
       "modeGenres": "Жанры",
-      "genreDetail": "{{name}}: {{value}}% просмотренного"
+      "genreDetail": "{{name}}: {{value}}% просмотренного",
+      "bingeShort": "{{value}} эп./день",
+      "consistencyShort_one": "{{count}} день из 30",
+      "consistencyShort_few": "{{count}} дня из 30",
+      "consistencyShort_many": "{{count}} дней из 30",
+      "consistencyShort_other": "{{count}} дня из 30",
+      "varietyShort_one": "{{count}} жанр",
+      "varietyShort_few": "{{count}} жанра",
+      "varietyShort_many": "{{count}} жанров",
+      "varietyShort_other": "{{count}} жанра"
     }
   },
   "settings": {

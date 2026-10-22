@@ -34,10 +34,6 @@ export interface WatchStats {
   minutesPerActiveDay: number;
   bestDayEpisodes: number;
   longestStreak: number;
-  /** Watched episodes by the local hour they were last played in, 0..23. */
-  byHour: number[];
-  /** Time watched by weekday, Monday first. */
-  byWeekday: number[];
   /** The hour with the most episodes, or null with none. */
   peakHour: number | null;
   genres: GenreShare[];
@@ -120,10 +116,8 @@ export function computeWatchStats(input: {
   const windowStart = dateKey(new Date(today.getFullYear(), today.getMonth(), today.getDate() - (CONSISTENCY_WINDOW_DAYS - 1)));
   const recentActiveDays = activeRows.filter((d) => d.date >= windowStart).length;
 
-  const byWeekday = Array<number>(7).fill(0);
-  for (const d of input.activity) byWeekday[(dayOf(d.date).getDay() + 6) % 7] += d.watchedMs;
-
   // --- Hours --------------------------------------------------------------------------------------
+  // Watched episodes by the local hour they were last played in.
   const byHour = Array<number>(24).fill(0);
   for (const e of watched) byHour[new Date(e.updatedAt).getHours()]++;
   const nightEpisodes = byHour.reduce((s, n, h) => (isNightHour(h) ? s + n : s), 0);
@@ -229,8 +223,6 @@ export function computeWatchStats(input: {
     minutesPerActiveDay,
     bestDayEpisodes,
     longestStreak,
-    byHour,
-    byWeekday,
     peakHour,
     genres,
     topDub: topDubEntry ? { name: topDubEntry[0], episodes: topDubEntry[1] } : null,

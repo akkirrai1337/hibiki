@@ -706,7 +706,6 @@
       "nightDetail": "{{value}}% of episodes between 22:00 and 5:00",
       "ongoingDetail": "{{value}}% of episodes from currently airing titles",
       "empty": "Watch a few episodes and your watch style will show up here.",
-      "perDay": "Episodes per watching day",
       "minutesPerDay": "Minutes per watching day",
       "activeDays": "Days with watching",
       "bestDay": "Most episodes in a day",
@@ -717,12 +716,14 @@
       "ratingAverage_other": "Average rating ({{count}} titles)",
       "peakHour": "You watch most at",
       "topDub": "Favourite dub:",
-      "clockTitle": "When you watch",
-      "byHour": "By hour",
-      "byWeekday": "By weekday",
       "modeStyle": "Style",
       "modeGenres": "Genres",
-      "genreDetail": "{{name}}: {{value}}% of what you watched"
+      "genreDetail": "{{name}}: {{value}}% of what you watched",
+      "bingeShort": "{{value}} ep./day",
+      "consistencyShort_one": "{{count}} day of 30",
+      "consistencyShort_other": "{{count}} days of 30",
+      "varietyShort_one": "{{count}} genre",
+      "varietyShort_other": "{{count}} genres"
     }
   },
   "settings": {
