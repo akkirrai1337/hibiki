@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { UpscaleMode } from "@/features/player/upscaler";
+import { DEFAULT_SUBTITLE_STYLE, normalizeSubtitleStyle, type SubtitleStyle } from "@/lib/subtitleStyle";
 
 // Mirrors the player-related fields of Android's AppPreferencesState. Lives in its own store
 // (rather than uiStore) since most of these are set from the in-player quick settings menu, not
@@ -69,6 +70,9 @@ interface PlayerPrefsState {
   subtitleOffset: number;
   // Horizontal shift from centre, in pixels (negative = left) - dragged the same way.
   subtitleOffsetX: number;
+  /** Size, typeface, colour and backing of the subtitle overlay (lib/subtitleStyle.ts). */
+  subtitleStyle: SubtitleStyle;
+  setSubtitleStyle: (patch: Partial<SubtitleStyle>) => void;
   // Whether the player starts episodes in a lighter quality - see lib/connectionQuality.ts for
   // what "auto" reads.
   dataSaver: DataSaverMode;
@@ -111,6 +115,8 @@ export const usePlayerPrefsStore = create<PlayerPrefsState>()(
       showRemainingTime: false,
       subtitleOffset: 72,
       subtitleOffsetX: 0,
+      subtitleStyle: DEFAULT_SUBTITLE_STYLE,
+      setSubtitleStyle: (patch) => set((state) => ({ subtitleStyle: normalizeSubtitleStyle({ ...state.subtitleStyle, ...patch }) })),
       dataSaver: "auto",
       upscale: "off",
       setUpscale: (upscale) => set({ upscale }),
@@ -130,6 +136,13 @@ export const usePlayerPrefsStore = create<PlayerPrefsState>()(
       setSubtitlePosition: (offset, offsetX) =>
         set({ subtitleOffset: Number.isFinite(offset) ? Math.max(0, offset) : 72, subtitleOffsetX: Number.isFinite(offsetX) ? offsetX : 0 }),
     }),
-    { name: "hibiki-player-prefs" },
+    {
+      name: "hibiki-player-prefs",
+      // A stored style from before a choice existed (or after one was removed) falls back per field.
+      merge: (persisted, current) => {
+        const saved = (persisted ?? {}) as Partial<PlayerPrefsState>;
+        return { ...current, ...saved, subtitleStyle: normalizeSubtitleStyle(saved.subtitleStyle) };
+      },
+    },
   ),
 );

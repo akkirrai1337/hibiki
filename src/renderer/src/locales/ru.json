@@ -260,7 +260,36 @@
       "addFile": "Добавить файл",
       "dragHint": "Перетащите, чтобы изменить положение"
     },
-    "toggleTimeDisplay": "Переключить на оставшееся время"
+    "toggleTimeDisplay": "Переключить на оставшееся время",
+    "subtitleStyle": {
+      "title": "Стиль субтитров",
+      "sample": "Пример субтитров",
+      "size": "Размер",
+      "font": "Шрифт",
+      "color": "Цвет",
+      "background": "Подложка",
+      "reset": "Сбросить стиль",
+      "fonts": {
+        "default": "Обычный",
+        "sans": "Arial",
+        "serif": "С засечками",
+        "mono": "Моноширинный",
+        "casual": "Рукописный"
+      },
+      "colors": {
+        "white": "Белый",
+        "yellow": "Жёлтый",
+        "cyan": "Голубой",
+        "green": "Зелёный",
+        "pink": "Розовый"
+      },
+      "backgrounds": {
+        "box": "Плашка",
+        "translucent": "Прозрачная",
+        "outline": "Обводка",
+        "shadow": "Тень"
+      }
+    }
   },
   "library": {
     "title": "Библиотека",

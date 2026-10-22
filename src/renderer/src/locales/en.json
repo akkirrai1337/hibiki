@@ -256,7 +256,36 @@
       "addFile": "Add file",
       "dragHint": "Drag to reposition"
     },
-    "toggleTimeDisplay": "Switch between elapsed and remaining"
+    "toggleTimeDisplay": "Switch between elapsed and remaining",
+    "subtitleStyle": {
+      "title": "Subtitle style",
+      "sample": "Sample subtitle",
+      "size": "Size",
+      "font": "Font",
+      "color": "Color",
+      "background": "Background",
+      "reset": "Reset style",
+      "fonts": {
+        "default": "Default",
+        "sans": "Arial",
+        "serif": "Serif",
+        "mono": "Monospace",
+        "casual": "Casual"
+      },
+      "colors": {
+        "white": "White",
+        "yellow": "Yellow",
+        "cyan": "Cyan",
+        "green": "Green",
+        "pink": "Pink"
+      },
+      "backgrounds": {
+        "box": "Box",
+        "translucent": "Translucent",
+        "outline": "Outline",
+        "shadow": "Shadow"
+      }
+    }
   },
   "search": {
     "prompt": "Start typing an anime title",

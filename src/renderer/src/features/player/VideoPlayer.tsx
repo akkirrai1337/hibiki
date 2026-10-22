@@ -37,6 +37,7 @@ import {
   SlidersHorizontal,
   Sparkles,
   TriangleAlert,
+  Type,
   Volume1,
   Volume2,
   VolumeX,
@@ -55,6 +56,9 @@ import { separateAudioMaster, syntheticManifestLoader } from "@/lib/hlsSeparateA
 import { fillMissingCodecs } from "@/lib/dashCodecs";
 import { isGenericDubTitle } from "@/lib/dubTitle";
 import { subtitleFormatFromUrl, subtitleTextToVtt, toVtt } from "@/lib/subtitles";
+import {
+  DEFAULT_SUBTITLE_STYLE, SUBTITLE_BACKGROUNDS, SUBTITLE_COLOR_VALUES, SUBTITLE_COLORS, SUBTITLE_FONTS, SUBTITLE_SIZES, subtitleBoxStyle, type SubtitleStyle,
+} from "@/lib/subtitleStyle";
 import { hibiki } from "@/lib/hibiki";
 import { cn } from "@/lib/cn";
 import { log } from "@/lib/log";
@@ -331,11 +335,13 @@ function ListPage({ title, options, selected, onSelect, onBack }: { title: strin
 // that doesn't pick anything at all - two shapes ListPage's plain string-in/string-out contract
 // has no room for.
 function SubtitleListPage({
-  title, offLabel, addLabel, options, selectedId, onSelect, onAdd, onBack,
+  title, offLabel, addLabel, styleLabel, options, selectedId, onSelect, onAdd, onStyle, onBack,
 }: {
   title: string;
   offLabel: string;
   addLabel: string;
+  styleLabel: string;
+  onStyle: () => void;
   options: { id: string; label: string }[];
   selectedId: string | null;
   onSelect: (id: string | null) => void;
@@ -368,6 +374,87 @@ function SubtitleListPage({
       <Plus className="h-4 w-4 shrink-0" strokeWidth={2.5} />
       <span className="truncate">{addLabel}</span>
     </button>
+    <button onClick={onStyle} className="flex w-full items-center justify-between gap-2 rounded-lg px-2.5 py-2 text-left text-sm mobile:py-3 mobile:text-[15px] text-zinc-200 transition-colors hover:bg-white/[.06]">
+      <span className="flex min-w-0 items-center gap-2"><Type className="h-4 w-4 shrink-0" strokeWidth={2.5} /><span className="truncate">{styleLabel}</span></span>
+      <ChevronRight className="h-4 w-4 shrink-0 text-zinc-500" strokeWidth={2.5} />
+    </button>
+  </div>;
+}
+
+/** One labelled row of choices on the subtitle style page. */
+function StyleChoices<T extends string | number>({ label, options, selected, onSelect, render, columns }: {
+  label: string;
+  /** Choices per row, so a row that wraps still lines up. */
+  columns: number;
+  options: readonly T[];
+  selected: T;
+  onSelect: (value: T) => void;
+  render: (value: T) => React.ReactNode;
+}) {
+  return <div className="px-2.5 py-1.5">
+    <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-zinc-500">{label}</p>
+    <div className="grid gap-1.5" style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}>
+      {options.map((option) => (
+        <button
+          key={option}
+          onClick={() => onSelect(option)}
+          aria-pressed={selected === option}
+          className={cn(
+            "flex h-8 min-w-0 items-center justify-center truncate rounded-lg px-1.5 text-xs text-zinc-200 ring-1 transition-colors mobile:h-10 mobile:text-sm",
+            selected === option ? "bg-white/[.12] ring-accent-text" : "ring-white/[.08] hover:bg-white/[.06]",
+          )}
+        >
+          {render(option)}
+        </button>
+      ))}
+    </div>
+  </div>;
+}
+
+// Changes apply at once - the subtitles on the video behind the menu show them too, and a sample
+// at the top shows them when no line happens to be on screen.
+function SubtitleStylePage({ title, onBack, t }: { title: string; onBack: () => void; t: (key: string, options?: Record<string, unknown>) => string }) {
+  const style = usePlayerPrefsStore((s) => s.subtitleStyle);
+  const setStyle = usePlayerPrefsStore((s) => s.setSubtitleStyle);
+  const isDefault = (Object.keys(DEFAULT_SUBTITLE_STYLE) as (keyof SubtitleStyle)[]).every((key) => style[key] === DEFAULT_SUBTITLE_STYLE[key]);
+  const boxStyle = subtitleBoxStyle(style);
+  return <div className="w-80 p-1.5 mobile:w-full mobile:p-2">
+    <button onClick={onBack} className="mb-1 flex w-full items-center gap-1 rounded-lg px-1.5 py-2 text-left text-sm mobile:py-3 mobile:text-[15px] font-semibold text-white transition-colors hover:bg-white/[.06]">
+      <ChevronLeft className="h-4 w-4 shrink-0" strokeWidth={2.5} />
+      {title}
+    </button>
+    <div className="mx-2.5 mb-1.5 flex h-20 items-center justify-center overflow-hidden rounded-lg bg-gradient-to-br from-zinc-500 via-zinc-700 to-zinc-900 px-2">
+      {/* Capped so the largest size still fits the sample's box; the real overlay has no cap. */}
+      <span className="max-w-full truncate rounded-md px-3 py-1 font-medium leading-snug" style={{ ...boxStyle, fontSize: `min(${boxStyle.fontSize}, 1.6rem)` }}>
+        {t("watch.subtitleStyle.sample")}
+      </span>
+    </div>
+    <StyleChoices label={t("watch.subtitleStyle.size")} options={SUBTITLE_SIZES} columns={5} selected={style.size} onSelect={(size) => setStyle({ size })} render={(size) => `${size}%`} />
+    <StyleChoices
+      label={t("watch.subtitleStyle.font")}
+      options={SUBTITLE_FONTS}
+      columns={3}
+      selected={style.font}
+      onSelect={(font) => setStyle({ font })}
+      render={(font) => <span style={{ fontFamily: subtitleBoxStyle({ ...style, font }).fontFamily }}>{t(`watch.subtitleStyle.fonts.${font}`)}</span>}
+    />
+    <StyleChoices
+      label={t("watch.subtitleStyle.color")}
+      options={SUBTITLE_COLORS}
+      columns={5}
+      selected={style.color}
+      onSelect={(color) => setStyle({ color })}
+      render={(color) => <span aria-label={t(`watch.subtitleStyle.colors.${color}`)} title={t(`watch.subtitleStyle.colors.${color}`)} className="h-4 w-4 rounded-full ring-1 ring-black/40" style={{ background: SUBTITLE_COLOR_VALUES[color] }} />}
+    />
+    <StyleChoices label={t("watch.subtitleStyle.background")} options={SUBTITLE_BACKGROUNDS} columns={2} selected={style.background} onSelect={(background) => setStyle({ background })} render={(background) => t(`watch.subtitleStyle.backgrounds.${background}`)} />
+    {!isDefault && (
+      <>
+        <div className="my-1 border-t border-white/[.08]" />
+        <button onClick={() => setStyle(DEFAULT_SUBTITLE_STYLE)} className="flex w-full items-center rounded-lg px-2.5 py-2 text-left text-sm text-zinc-300 transition-colors hover:bg-white/[.06] mobile:py-3 mobile:text-[15px]">
+          {t("watch.subtitleStyle.reset")}
+        </button>
+      </>
+    )}
   </div>;
 }
 
@@ -484,7 +571,7 @@ function PlayerSettingsMenu({
   onAddSubtitleFile: () => void;
   t: (key: string, options?: Record<string, unknown>) => string;
 }) {
-  const [page, setPage] = useState<"main" | "speed" | "dub" | "translation" | "player" | "quality" | "audio" | "subtitles" | "orientation" | "upscale" | "sleep">("main");
+  const [page, setPage] = useState<"main" | "speed" | "dub" | "translation" | "player" | "quality" | "audio" | "subtitles" | "orientation" | "upscale" | "sleep" | "subtitleStyle">("main");
   const sleepChoice = useSleepTimerStore((s) => s.choice);
   const sleepEndsAt = useSleepTimerStore((s) => s.endsAt);
   const setSleepTimer = useSleepTimerStore((s) => s.set);
@@ -587,11 +674,16 @@ function PlayerSettingsMenu({
       onBack={() => setPage("main")}
     />;
   }
+  if (page === "subtitleStyle") {
+    return <SubtitleStylePage title={t("watch.subtitleStyle.title")} onBack={() => setPage("subtitles")} t={t} />;
+  }
   if (page === "subtitles") {
     return <SubtitleListPage
       title={t("watch.settings.subtitles")}
       offLabel={t("watch.subtitles.off")}
       addLabel={t("watch.subtitles.addFile")}
+      styleLabel={t("watch.subtitleStyle.title")}
+      onStyle={() => setPage("subtitleStyle")}
       options={subtitleOptions}
       selectedId={selectedSubtitleId}
       onSelect={(id) => { onSelectSubtitle(id); setPage("main"); }}
@@ -857,6 +949,7 @@ export function VideoPlayer({ link, availableLinks, offlinePlayback, dubOptions,
   }, [selectedSubtitleId, subtitleOptions]);
   const subtitleOffset = usePlayerPrefsStore((s) => s.subtitleOffset);
   const subtitleOffsetX = usePlayerPrefsStore((s) => s.subtitleOffsetX);
+  const subtitleStyle = usePlayerPrefsStore((s) => s.subtitleStyle);
   const setSubtitlePosition = usePlayerPrefsStore((s) => s.setSubtitlePosition);
   // Dragged live in component state during the gesture (writing straight to the persisted store on
   // every pointermove would hit localStorage synchronously each time - zustand's persist has no
@@ -3002,9 +3095,9 @@ export function VideoPlayer({ link, availableLinks, offlinePlayback, dubOptions,
             onContextMenu={(e) => e.preventDefault()}
             onClick={(e) => e.stopPropagation()}
             title={t("watch.subtitles.dragHint")}
-            style={{ transform: `translateX(${draggingSubtitle?.x ?? subtitleOffsetX}px)` }}
+            style={{ ...subtitleBoxStyle(subtitleStyle), transform: `translateX(${draggingSubtitle?.x ?? subtitleOffsetX}px)` }}
             className={cn(
-              "pointer-events-auto max-w-[85%] cursor-grab touch-none select-none whitespace-pre-line rounded-md bg-black/75 px-3 py-1.5 text-center text-lg font-medium leading-snug text-white shadow-lg active:cursor-grabbing",
+              "pointer-events-auto max-w-[85%] cursor-grab touch-none select-none whitespace-pre-line rounded-md px-3 py-1.5 text-center font-medium leading-snug shadow-lg active:cursor-grabbing",
               draggingSubtitle && "ring-1 ring-white/40",
             )}
           >
