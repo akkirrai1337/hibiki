@@ -289,6 +289,15 @@
         "outline": "Обведення",
         "shadow": "Тінь"
       }
+    },
+    "subtitleDelay": {
+      "title": "Зсув у часі",
+      "secondsUnit": "с",
+      "earlier": "← раніше",
+      "later": "пізніше →",
+      "keys": "Клавіші Z і X - на 0,1 с раніше або пізніше",
+      "reset": "Скинути зсув",
+      "notice": "Субтитри: {{value}}"
     }
   },
   "search": {

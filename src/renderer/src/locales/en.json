@@ -285,6 +285,15 @@
         "outline": "Outline",
         "shadow": "Shadow"
       }
+    },
+    "subtitleDelay": {
+      "title": "Timing offset",
+      "secondsUnit": "s",
+      "earlier": "← earlier",
+      "later": "later →",
+      "keys": "Z and X keys move them 0.1 s earlier or later",
+      "reset": "Reset offset",
+      "notice": "Subtitles: {{value}}"
     }
   },
   "search": {

@@ -36,6 +36,7 @@ import {
   SkipForward,
   SlidersHorizontal,
   Sparkles,
+  Timer,
   TriangleAlert,
   Type,
   Volume1,
@@ -59,6 +60,7 @@ import { subtitleFormatFromUrl, subtitleTextToVtt, toVtt } from "@/lib/subtitles
 import {
   DEFAULT_SUBTITLE_STYLE, SUBTITLE_BACKGROUNDS, SUBTITLE_COLOR_VALUES, SUBTITLE_COLORS, SUBTITLE_FONTS, SUBTITLE_SIZES, subtitleBoxStyle, type SubtitleStyle,
 } from "@/lib/subtitleStyle";
+import { clampSubtitleDelay, formatSubtitleDelay, shiftCues, SUBTITLE_DELAY_STEP_MS, SUBTITLE_DELAY_STEPS_MS } from "@/lib/subtitleDelay";
 import { hibiki } from "@/lib/hibiki";
 import { cn } from "@/lib/cn";
 import { log } from "@/lib/log";
@@ -335,12 +337,14 @@ function ListPage({ title, options, selected, onSelect, onBack }: { title: strin
 // that doesn't pick anything at all - two shapes ListPage's plain string-in/string-out contract
 // has no room for.
 function SubtitleListPage({
-  title, offLabel, addLabel, styleLabel, options, selectedId, onSelect, onAdd, onStyle, onBack,
+  title, offLabel, addLabel, styleLabel, delay, options, selectedId, onSelect, onAdd, onStyle, onBack,
 }: {
   title: string;
   offLabel: string;
   addLabel: string;
   styleLabel: string;
+  /** The row that opens the timing page - only while a track is on, there is nothing to move otherwise. */
+  delay: { label: string; value: string; onOpen: () => void } | null;
   onStyle: () => void;
   options: { id: string; label: string }[];
   selectedId: string | null;
@@ -374,10 +378,64 @@ function SubtitleListPage({
       <Plus className="h-4 w-4 shrink-0" strokeWidth={2.5} />
       <span className="truncate">{addLabel}</span>
     </button>
+    {delay && (
+      <button onClick={delay.onOpen} className="flex w-full items-center justify-between gap-2 rounded-lg px-2.5 py-2 text-left text-sm mobile:py-3 mobile:text-[15px] text-zinc-200 transition-colors hover:bg-white/[.06]">
+        <span className="flex min-w-0 items-center gap-2"><Timer className="h-4 w-4 shrink-0" strokeWidth={2.5} /><span className="truncate">{delay.label}</span></span>
+        <span className="flex shrink-0 items-center gap-1">
+          <span className="text-xs tabular-nums text-zinc-400 mobile:text-sm">{delay.value}</span>
+          <ChevronRight className="h-4 w-4 shrink-0 text-zinc-500" strokeWidth={2.5} />
+        </span>
+      </button>
+    )}
     <button onClick={onStyle} className="flex w-full items-center justify-between gap-2 rounded-lg px-2.5 py-2 text-left text-sm mobile:py-3 mobile:text-[15px] text-zinc-200 transition-colors hover:bg-white/[.06]">
       <span className="flex min-w-0 items-center gap-2"><Type className="h-4 w-4 shrink-0" strokeWidth={2.5} /><span className="truncate">{styleLabel}</span></span>
       <ChevronRight className="h-4 w-4 shrink-0 text-zinc-500" strokeWidth={2.5} />
     </button>
+  </div>;
+}
+
+// The selected track's timing: the current shift in large type, buttons to move it either way and
+// what each direction means, since "+" alone doesn't say whether the lines come sooner or later.
+function SubtitleDelayPage({ title, delayMs, onChange, onReset, onBack, t, locale }: {
+  title: string;
+  delayMs: number;
+  onChange: (deltaMs: number) => void;
+  onReset: () => void;
+  onBack: () => void;
+  t: (key: string, options?: Record<string, unknown>) => string;
+  locale: string;
+}) {
+  const seconds = t("watch.subtitleDelay.secondsUnit");
+  return <div className="w-72 p-1.5 mobile:w-full mobile:p-2">
+    <button onClick={onBack} className="mb-1 flex w-full items-center gap-1 rounded-lg px-1.5 py-2 text-left text-sm mobile:py-3 mobile:text-[15px] font-semibold text-white transition-colors hover:bg-white/[.06]">
+      <ChevronLeft className="h-4 w-4 shrink-0" strokeWidth={2.5} />
+      {title}
+    </button>
+    <p className="py-2 text-center text-2xl font-semibold tabular-nums text-white">{formatSubtitleDelay(delayMs, locale, seconds)}</p>
+    <div className="grid grid-cols-4 gap-1.5 px-2.5">
+      {SUBTITLE_DELAY_STEPS_MS.map((step) => (
+        <button
+          key={step}
+          onClick={() => onChange(step)}
+          className="flex h-9 items-center justify-center rounded-lg text-xs tabular-nums text-zinc-200 ring-1 ring-white/[.08] transition-colors hover:bg-white/[.06] mobile:h-11 mobile:text-sm"
+        >
+          {formatSubtitleDelay(step, locale, seconds)}
+        </button>
+      ))}
+    </div>
+    <div className="mt-2 flex justify-between px-2.5 text-[11px] text-zinc-500">
+      <span>{t("watch.subtitleDelay.earlier")}</span>
+      <span>{t("watch.subtitleDelay.later")}</span>
+    </div>
+    {!isMobile && <p className="mt-2 px-2.5 text-[11px] text-zinc-500">{t("watch.subtitleDelay.keys")}</p>}
+    {delayMs !== 0 && (
+      <>
+        <div className="my-1 border-t border-white/[.08]" />
+        <button onClick={onReset} className="flex w-full items-center rounded-lg px-2.5 py-2 text-left text-sm text-zinc-300 transition-colors hover:bg-white/[.06] mobile:py-3 mobile:text-[15px]">
+          {t("watch.subtitleDelay.reset")}
+        </button>
+      </>
+    )}
   </div>;
 }
 
@@ -535,6 +593,7 @@ function PlayerSettingsMenu({
   qualityOptions, selectedQuality, onSelectQuality, qualityLocked,
   audioTrackOptions, selectedAudioTrack, onSelectAudioTrack,
   subtitleOptions, selectedSubtitleId, onSelectSubtitle, onAddSubtitleFile,
+  subtitleDelayMs, onChangeSubtitleDelay, onResetSubtitleDelay,
   t,
 }: {
   playbackSpeed: number;
@@ -569,9 +628,14 @@ function PlayerSettingsMenu({
   selectedSubtitleId: string | null;
   onSelectSubtitle: (id: string | null) => void;
   onAddSubtitleFile: () => void;
+  /** The selected track's shift; null with subtitles off. */
+  subtitleDelayMs: number | null;
+  onChangeSubtitleDelay: (deltaMs: number) => void;
+  onResetSubtitleDelay: () => void;
   t: (key: string, options?: Record<string, unknown>) => string;
 }) {
-  const [page, setPage] = useState<"main" | "speed" | "dub" | "translation" | "player" | "quality" | "audio" | "subtitles" | "orientation" | "upscale" | "sleep" | "subtitleStyle">("main");
+  const [page, setPage] = useState<"main" | "speed" | "dub" | "translation" | "player" | "quality" | "audio" | "subtitles" | "orientation" | "upscale" | "sleep" | "subtitleStyle" | "subtitleDelay">("main");
+  const { i18n } = useTranslation();
   const sleepChoice = useSleepTimerStore((s) => s.choice);
   const sleepEndsAt = useSleepTimerStore((s) => s.endsAt);
   const setSleepTimer = useSleepTimerStore((s) => s.set);
@@ -677,12 +741,28 @@ function PlayerSettingsMenu({
   if (page === "subtitleStyle") {
     return <SubtitleStylePage title={t("watch.subtitleStyle.title")} onBack={() => setPage("subtitles")} t={t} />;
   }
-  if (page === "subtitles") {
+  if (page === "subtitleDelay" && subtitleDelayMs !== null) {
+    return <SubtitleDelayPage
+      title={t("watch.subtitleDelay.title")}
+      delayMs={subtitleDelayMs}
+      onChange={onChangeSubtitleDelay}
+      onReset={onResetSubtitleDelay}
+      onBack={() => setPage("subtitles")}
+      t={t}
+      locale={i18n.language}
+    />;
+  }
+  if (page === "subtitles" || page === "subtitleDelay") {
     return <SubtitleListPage
       title={t("watch.settings.subtitles")}
       offLabel={t("watch.subtitles.off")}
       addLabel={t("watch.subtitles.addFile")}
       styleLabel={t("watch.subtitleStyle.title")}
+      delay={subtitleDelayMs === null ? null : {
+        label: t("watch.subtitleDelay.title"),
+        value: formatSubtitleDelay(subtitleDelayMs, i18n.language, t("watch.subtitleDelay.secondsUnit")),
+        onOpen: () => setPage("subtitleDelay"),
+      }}
       onStyle={() => setPage("subtitleStyle")}
       options={subtitleOptions}
       selectedId={selectedSubtitleId}
@@ -739,7 +819,7 @@ function pipLabels(t: (key: string) => string) {
 }
 
 export function VideoPlayer({ link, availableLinks, offlinePlayback, dubOptions, selectedDubId, onSelectDub, sourceSwitching, unplayable, unplayableReason, onRetryUnplayable, onSelectLink, preferredAudioTrack, onAudioTrackPicked, fetchSkipTimes, onPlaybackFailure, onRefreshStream, startPositionMs, onProgress, onPlayStateChange, onCaptureThumbnail, title, episodeLabel, onBack, onPrevEpisode, onNextEpisode, onOpenEpisodes, episodesLoading, episodes, currentEpisodeId, onSelectEpisode, streakToast, playerSwitchToast }: VideoPlayerProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   // Held in a ref, deliberately not read as a prop from inside the effects below. Both the source
   // setup and the media-element wiring would otherwise have to list it as a dependency, and the
   // watch route rebuilds this callback whenever its own inputs change - which would tear down and
@@ -917,6 +997,51 @@ export function VideoPlayer({ link, availableLinks, offlinePlayback, dubOptions,
     };
   }, [selectedSubtitleId, subtitleOptions]);
 
+  // --- subtitle timing (lib/subtitleDelay.ts) ---
+  // Per track, by its option id, for as long as this player is open: a locally added file keeps its
+  // shift from episode to episode (it stays in the list), a source's track starts in sync again.
+  const [subtitleDelays, setSubtitleDelays] = useState<Record<string, number>>({});
+  const selectedSubtitleDelay = selectedSubtitleId ? (subtitleDelays[selectedSubtitleId] ?? 0) : 0;
+  const [subtitleDelayNotice, setSubtitleDelayNotice] = useState<{ ms: number; id: number } | null>(null);
+  useEffect(() => {
+    if (!subtitleDelayNotice) return;
+    const timer = setTimeout(() => setSubtitleDelayNotice(null), 1200);
+    return () => clearTimeout(timer);
+  }, [subtitleDelayNotice]);
+  // Read through refs so the keyboard handler (attached once) always moves the track now on.
+  const selectedSubtitleIdRef = useRef(selectedSubtitleId);
+  selectedSubtitleIdRef.current = selectedSubtitleId;
+  const subtitleDelaysRef = useRef(subtitleDelays);
+  subtitleDelaysRef.current = subtitleDelays;
+  /** Moves the selected track by `deltaMs`; null puts it back in sync. */
+  const changeSubtitleDelay = useCallback((deltaMs: number | null) => {
+    const id = selectedSubtitleIdRef.current;
+    if (!id) return;
+    const next = deltaMs === null ? 0 : clampSubtitleDelay((subtitleDelaysRef.current[id] ?? 0) + deltaMs);
+    setSubtitleDelays((prev) => ({ ...prev, [id]: next }));
+    setSubtitleDelayNotice({ ms: next, id: Date.now() });
+  }, []);
+  // How far each loaded track's cues have already been moved - they are shifted where they are, so a
+  // change only moves them by the difference. Keyed by the TextTrack itself: a re-rendered <track>
+  // is a fresh one, with its cues back where the file put them.
+  const appliedDelaysRef = useRef(new WeakMap<TextTrack, number>());
+  useEffect(() => {
+    const video = videoRef.current;
+    const index = subtitleOptions.findIndex((option) => option.id === selectedSubtitleId);
+    const element = index >= 0 ? video?.querySelectorAll("track")[index] : undefined;
+    if (!element) return;
+    const apply = () => {
+      const track = element.track;
+      if (!track.cues) return;
+      shiftCues(track.cues as unknown as ArrayLike<TextTrackCue>, selectedSubtitleDelay - (appliedDelaysRef.current.get(track) ?? 0));
+      appliedDelaysRef.current.set(track, selectedSubtitleDelay);
+    };
+    // The cues arrive once the track has loaded, which turning it on starts.
+    apply();
+    element.addEventListener("load", apply);
+    return () => element.removeEventListener("load", apply);
+  }, [selectedSubtitleId, subtitleOptions, selectedSubtitleDelay]);
+
   const [activeSubtitleLines, setActiveSubtitleLines] = useState<string[]>([]);
   useEffect(() => {
     const video = videoRef.current;
@@ -930,23 +1055,32 @@ export function VideoPlayer({ link, availableLinks, offlinePlayback, dubOptions,
       setActiveSubtitleLines([]);
       return;
     }
+    // The lines are worked out from the cues and the current time rather than read from
+    // `activeCues`: while paused the browser doesn't recompute those, so a seek or a timing shift
+    // (see subtitleDelays) left the old line on screen. "cuechange" still says when to look.
     const onCueChange = () => {
-      const cues = track.activeCues;
+      const cues = track.cues;
+      const time = video.currentTime;
       const lines: string[] = [];
       for (let i = 0; i < (cues?.length ?? 0); i++) {
         const cue = cues![i];
+        if (cue.startTime > time || cue.endTime <= time) continue;
         const text = "text" in cue ? String((cue as VTTCue).text) : "";
         if (text) lines.push(text.replace(/<[^>]+>/g, ""));
       }
-      setActiveSubtitleLines(lines);
+      setActiveSubtitleLines((prev) => (prev.length === lines.length && prev.every((line, i) => line === lines[i]) ? prev : lines));
     };
     track.addEventListener("cuechange", onCueChange);
+    video.addEventListener("seeked", onCueChange);
     onCueChange();
     return () => {
       track.removeEventListener("cuechange", onCueChange);
+      video.removeEventListener("seeked", onCueChange);
       setActiveSubtitleLines([]);
     };
-  }, [selectedSubtitleId, subtitleOptions]);
+    // The shift is listed so a change shows at once, paused or not - the effect above has already
+    // moved the cues by the time this runs.
+  }, [selectedSubtitleId, subtitleOptions, selectedSubtitleDelay]);
   const subtitleOffset = usePlayerPrefsStore((s) => s.subtitleOffset);
   const subtitleOffsetX = usePlayerPrefsStore((s) => s.subtitleOffsetX);
   const subtitleStyle = usePlayerPrefsStore((s) => s.subtitleStyle);
@@ -2725,6 +2859,13 @@ export function VideoPlayer({ link, availableLinks, offlinePlayback, dubOptions,
           toggleMute();
           wake();
           break;
+        // Subtitle timing, the keys mpv uses: Z shows the lines sooner, X later.
+        case "KeyZ":
+        case "KeyX":
+          if (!selectedSubtitleIdRef.current || e.ctrlKey || e.metaKey || e.altKey) break;
+          e.preventDefault();
+          changeSubtitleDelay(e.code === "KeyZ" ? -SUBTITLE_DELAY_STEP_MS : SUBTITLE_DELAY_STEP_MS);
+          break;
       }
     };
     const onKeyUp = (e: KeyboardEvent) => {
@@ -2752,7 +2893,7 @@ export function VideoPlayer({ link, availableLinks, offlinePlayback, dubOptions,
       window.removeEventListener("keyup", onKeyUp);
       if (spaceHold.timer) clearTimeout(spaceHold.timer);
     };
-  }, [togglePlay, toggleMute, toggleFullscreenNow, onBack, wake, playbackSpeed, flashSeek]);
+  }, [togglePlay, toggleMute, toggleFullscreenNow, onBack, wake, playbackSpeed, flashSeek, changeSubtitleDelay]);
 
   const ratioFromClientX = useCallback((clientX: number) => {
     const bar = seekBarRef.current;
@@ -2898,6 +3039,9 @@ export function VideoPlayer({ link, availableLinks, offlinePlayback, dubOptions,
     selectedSubtitleId={selectedSubtitleId}
     onSelectSubtitle={setSelectedSubtitleId}
     onAddSubtitleFile={() => subtitleFileInputRef.current?.click()}
+    subtitleDelayMs={selectedSubtitleId ? selectedSubtitleDelay : null}
+    onChangeSubtitleDelay={changeSubtitleDelay}
+    onResetSubtitleDelay={() => changeSubtitleDelay(null)}
     t={t}
   />;
 
@@ -3125,6 +3269,25 @@ export function VideoPlayer({ link, availableLinks, offlinePlayback, dubOptions,
             <div className="flex items-center gap-2 rounded-2xl bg-black/70 px-3 py-[7px] text-base font-medium text-white">
               {zoomNotice.kind === "fit" ? <Shrink className="h-[18px] w-[18px]" strokeWidth={2} /> : <Expand className="h-[18px] w-[18px]" strokeWidth={2} />}
               {zoomNotice.kind === "zoom" ? `${zoomNotice.scale.toFixed(1)}×` : t(zoomNotice.kind === "fill" ? "watch.player.zoomFill" : "watch.player.zoomFit")}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* The same pill as the zoom one above, for a shift made with Z/X or the timing page. */}
+      <AnimatePresence>
+        {subtitleDelayNotice && (
+          <motion.div
+            key={subtitleDelayNotice.id}
+            initial={{ opacity: 0, scale: 0.92 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.96 }}
+            transition={{ duration: 0.15, ease: "easeOut" }}
+            className="pointer-events-none absolute inset-x-0 top-7 z-10 flex justify-center"
+          >
+            <div className="flex items-center gap-2 rounded-2xl bg-black/70 px-3 py-[7px] text-base font-medium tabular-nums text-white">
+              <Timer className="h-[18px] w-[18px]" strokeWidth={2} />
+              {t("watch.subtitleDelay.notice", { value: formatSubtitleDelay(subtitleDelayNotice.ms, i18n.language, t("watch.subtitleDelay.secondsUnit")) })}
             </div>
           </motion.div>
         )}
